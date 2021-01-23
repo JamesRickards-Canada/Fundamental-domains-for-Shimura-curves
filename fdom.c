@@ -38,21 +38,21 @@ static GEN mobius_line(GEN M, GEN l, GEN tol, long prec);
 static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long prec);
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
 
 //3: STATIC HELPER METHODS
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
-static GEN qalg_fdarea(GEN Q, long prec);
+static GEN qalg_fdomarea(GEN Q, long prec);
 static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, long prec);
 static GEN qalg_normform(GEN Q);
 static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec);
-static GEN qalg_fdinitialize(GEN A, long prec);
+static GEN qalg_fdominitialize(GEN A, long prec);
 
 //3: BASIC OPERATIONS FOR NORMALIZED BASIS
-static GEN qalg_fdinv(GEN *data, GEN x);
-static GEN qalg_fdm2rembed(GEN *data, GEN x, long prec);
-static GEN qalg_fdmul(GEN *data, GEN x, GEN y);
+static GEN qalg_fdominv(GEN *data, GEN x);
+static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec);
+static GEN qalg_fdommul(GEN *data, GEN x, GEN y);
 static int qalg_istriv(GEN *data, GEN x);
 
 //3: SHALLOW RETRIEVAL METHODS
@@ -2857,18 +2857,18 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 
 
 //Initializes and checks the inputs, and computes the fundamental domain
-GEN algfd(GEN A, GEN p, int dispprogress, GEN ANRdata, GEN area, long prec){
+GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdinitialize(A, prec);
-  return gerepileupto(top, qalg_fd(Q, p, dispprogress, ANRdata, area, tol, prec));
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, qalg_fdom(Q, p, dispprogress, area, ANRdata, tol, prec));
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
-GEN algfdarea(GEN A, long prec){
+GEN algfdomarea(GEN A, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdinitialize(A, prec);
-  return gerepileupto(top, qalg_fdarea(Q, prec));
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, qalg_fdomarea(Q, prec));
 }
 
 //Returns the vector of finite ramified places of the algebra A.
@@ -2887,7 +2887,7 @@ GEN algramifiedplacesf(GEN A){
 //Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdinitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z, prec));
   
 }
@@ -2897,11 +2897,11 @@ GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
 
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long prec){
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN Alg=qalg_get_alg(Q);
-  if(gequal0(area)) area=qalg_fdarea(Q, prec);
+  if(gequal0(area)) area=qalg_fdomarea(Q, prec);
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
@@ -2950,7 +2950,7 @@ static GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN to
 	}
 	points=shallowconcat1(points);
 	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
-	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdm2rembed, &qalg_fdmul, &qalg_fdinv, &qalg_istriv, tol, prec);
+	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
     if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
 	N=gmul(N, opnu);//Updating N_n
@@ -2990,7 +2990,7 @@ static GEN qalg_basis_conj(GEN Q, GEN x){
 }
 
 //Returns the area of the fundamental domain of Q. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.13 to update when Eichler; very easy)
-static GEN qalg_fdarea(GEN Q, long prec){
+static GEN qalg_fdomarea(GEN Q, long prec){
   pari_sp top=avma;
   long bits=bit_accuracy(prec);
   GEN A=qalg_get_alg(Q);
@@ -3011,7 +3011,7 @@ static GEN qalg_fdarea(GEN Q, long prec){
 }
 
 //Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
-static GEN qalg_fdinitialize(GEN A, long prec){
+static GEN qalg_fdominitialize(GEN A, long prec){
   GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
   GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
   GEN ramdat=algramifiedplacesf(A);//Finite ramified places
@@ -3035,12 +3035,12 @@ static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, long prec){
   GEN basisimage=cgetg(n, t_VEC);//The image of the basis elements in M_2(R)
   GEN belt=zerocol(n-1);
   gel(belt, 1)=gen_1;
-  gel(basisimage, 1)=qalg_fdm2rembed(&Q, belt, prec);
+  gel(basisimage, 1)=qalg_fdomm2rembed(&Q, belt, prec);
 
   for(long i=2;i<n;i++){
 	gel(belt, i-1)=gen_0;
 	gel(belt, i)=gen_1;//Updating belt to have a 1 only in the ith place
-	gel(basisimage, i)=qalg_fdm2rembed(&Q, belt, prec);
+	gel(basisimage, i)=qalg_fdomm2rembed(&Q, belt, prec);
   }
 
   GEN tvars=cgetg(n, t_VECSMALL);
@@ -3151,12 +3151,12 @@ static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec){
 
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-static GEN qalg_fdinv(GEN *data, GEN x){
+static GEN qalg_fdominv(GEN *data, GEN x){
   return alginv(qalg_get_alg(*data), x);
 }
 
 //Must pass *data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
-static GEN qalg_fdm2rembed(GEN *data, GEN x, long prec){
+static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec){
   pari_sp top=avma;
   GEN A=qalg_get_alg(*data);
   GEN rts=qalg_get_roots(*data);
@@ -3177,7 +3177,7 @@ static GEN qalg_fdm2rembed(GEN *data, GEN x, long prec){
 }
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-static GEN qalg_fdmul(GEN *data, GEN x, GEN y){
+static GEN qalg_fdommul(GEN *data, GEN x, GEN y){
   return algmul(qalg_get_alg(*data), x, y);
 }
 

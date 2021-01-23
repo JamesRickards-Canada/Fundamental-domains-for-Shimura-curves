@@ -156,7 +156,7 @@ int toleq(GEN x, GEN y, GEN tol, long prec);
 
 
 //QUATERNION METHODS
-GEN algfdarea(GEN A, long prec);
-GEN algfd(GEN A, GEN p, int dispprogress, GEN ANRdata, GEN area, long prec);
+GEN algfdomarea(GEN A, long prec);
+GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
 GEN algramifiedplacesf(GEN A);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec);
