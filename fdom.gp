@@ -1,9 +1,18 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for Shimura curves (the PARI code can be easily adapted to compute fundamental domains for any discrete subgroup of PSL(2, R)).\n For each subtopic ``P (p)'', call ?p to access a basic description and list of methods. Subtopics:\n Visualizing fundamental domains with Python (vfd)\n Quaternion methods (quat)");
+addhelp(fdom, "This package can be used to compute fundamental domains for Shimura curves (the PARI code can be easily adapted to compute fundamental domains for any discrete subgroup of PSL(2, R)).\n For each subtopic ``P (p)'', call ?p to access a basic description and list of methods. Subtopics:\n Geometry (geo)\n Visualizing fundamental domains with Python (vfd)\n Quaternion methods (quat)");
 default(help, "gphelp -detex");
 
+\\GEOMETRY
+	addhelp(geo,"These methods deal with geometry. Available methods:\n hdist, hdist_ud");
+	
+	install("hdist","GGp","hdist","./libfdom.so");
+	addhelp(hdist,"Inputs z1, z2 complex numbers in the upper half plane.\n Returns the hyperbolic distance between z1 and z2.");
+	install("hdist_ud","GGp","hdist_ud","./libfdom.so");
+	addhelp(hdist_ud,"Inputs z1, z2 complex numbers inside the unit disc.\n Returns the hyperbolic distance between z1 and z2 in the unit disc model.");
+
+
 \\Visualization
-	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods: python_plotviewer, python_printarcs, python_printfdom.");
+	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods:\n python_plotviewer, python_printarcs, python_printfdom.");
 	
 	install("python_plotviewer","vr","python_plotviewer","./libfdom.so");
 	addhelp(python_plotviewer,"Input S: string denoting the file names of data fundamental domains/geodesics.\n Launches the python file fdviewer.py to view the domain/geodesics. Enter the files separated by spaces (they must be stored in the sub-folder 'fdoms').");
@@ -14,7 +23,7 @@ default(help, "gphelp -detex");
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods: algfdomarea, algfdom, algramifiedplacesf, algsmallnorm1elts.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algramifiedplacesf, algsmallnorm1elts.");
 
 	install("algfdomarea","Gp","algfdomarea","./libfdom.so");
 	addhelp(algfdomarea,"Input A, a quaternion algebra split at one real place.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''.");

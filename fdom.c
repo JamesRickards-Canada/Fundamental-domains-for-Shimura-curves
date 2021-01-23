@@ -32,10 +32,55 @@ static int opp_gcmp(void *data, GEN x, GEN y);
 static GEN quadraticinteger(GEN A, GEN B, GEN C);
 
 //2: BASIC LINE, CIRCLE, AND POINT OPERATIONS
+static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec);
+static GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec);
+static GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec);
+static GEN circle_fromcp(GEN cent, GEN p, long prec);
+static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec);
+static GEN circle_tangentslope(GEN c, GEN p, long prec);
+static GEN line_fromsp(GEN s, GEN p);
+static GEN line_frompp(GEN p1, GEN p2);
+static GEN mat_eval(GEN M, GEN x);
+static GEN midpoint(GEN p1, GEN p2);
+static GEN mobius(GEN M, GEN c, GEN tol, long prec);
 static GEN mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec);
 static GEN mobius_circle(GEN M, GEN c, GEN tol, long prec);
 static GEN mobius_line(GEN M, GEN l, GEN tol, long prec);
+static GEN perpbis(GEN p1, GEN p2);
+static GEN radialangle(GEN c, GEN p, GEN tol, long prec);
+static GEN slope(GEN p1, GEN p2);
+
+//2: INTERSECTION OF LINES/CIRCLES
+static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec);
+static GEN arcseg_int(GEN c, GEN l, GEN tol, long prec);
+static GEN circle_int(GEN c1, GEN c2, GEN tol, long prec);
+static GEN circleline_int(GEN c, GEN l, GEN tol, long prec);
+static GEN line_int(GEN l1, GEN l2, GEN tol, long prec);
+static int onarc(GEN c, GEN p, GEN tol, long prec);
+static int onseg(GEN l, GEN p, GEN tol, long prec);
+
+//2: DISTANCES
+static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
+
+//2: FUNDAMENTAL DOMAIN COMPUTATION
+static GEN edgepairing(GEN U, GEN tol, int rboth, long prec);
 static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
+static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec);
+static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec);
+static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec);
+static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec);
+static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec);
+static GEN psl_roots(GEN M, GEN tol, long prec);
+
+//2: GEOMETRIC HELPER METHODS
+static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
+static GEN atanoo(GEN x, long prec);
+static int gcmp_strict(void *data, GEN x, GEN y);
+static int geom_check(GEN c);
+static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec);
+static long tolcmp(GEN x, GEN y, GEN tol, long prec);
+static int tolcmp_sort(void *data, GEN x, GEN y);
+static int toleq(GEN x, GEN y, GEN tol, long prec);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
@@ -69,19 +114,6 @@ static GEN qalg_get_roots(GEN Q);
 
 //INFINITY 
 
-
-//Adds a,b, and allows for oo
-GEN addoo(GEN a, GEN b){//No need to do garbage collection
-  if(typ(a)==t_INFINITY){
-    if(inf_get_sign(a)==1) return mkoo();
-	else return mkmoo();
-  }
-  if(typ(b)==t_INFINITY){
-    if(inf_get_sign(b)==1) return mkoo();
-	else return mkmoo();
-  }
-  return gadd(a,b);
-}
 
 //Divides a and b, and allows for oo and division by 0. Returns oo for 0/0.
 GEN divoo(GEN a, GEN b){//No garbage collection necessary
@@ -657,7 +689,7 @@ GEN mat_choleskydecomp_tc(GEN A, int rcoefs, long prec){
 
 
 //Creates the arc on circle c going from p1 to p2 counterclockwise. if dir=1, the arc is oriented counterclockwise, else it is clockwise (i.e. clockwise from p2 to p1). If dir=0, we take it to be unoriented
-GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec){
+static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec){
   pari_sp top=avma;
   GEN ang2=radialangle(c, p2, gen_0, prec);//No tolerance need
   GEN arc=cgetg(ARCLEN, t_VEC);
@@ -674,15 +706,8 @@ GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec){
   return gerepileupto(top, arc);
 }
 
-//arc_init with checking of c
-GEN arc_init_tc(GEN c, GEN p1, GEN p2, int dir, long prec){
-  int i1=geom_check(c);
-  if(i1!=0 && i1!=2) pari_err_TYPE("Please input a circle", c);
-  return arc_init(c, p1, p2, dir, prec);
-}
-
 //Returns the midpoint of the arc between p1 and p2 (counterclockwise) on c.
-GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec){
+static GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec){
   pari_sp top=avma;
   GEN pts=circleline_int(c, perpbis(p1, p2), tol, prec);
   GEN a1=radialangle(c, p1, gen_0, prec);
@@ -692,17 +717,8 @@ GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec){
   return gerepilecopy(top, gel(pts, 2));
 }
 
-//arc_midpoint with checking c and presetting tol
-GEN arc_midpoint_tc(GEN c, GEN p1, GEN p2, long prec){
-  int i1=geom_check(c);
-  if(i1!=0 && i1!=2) pari_err_TYPE("Please input a circle", c);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, arc_midpoint(c, p1, p2, tol, prec));
-}
-
 //Returns the angle of intersection between circles c1 and c2 which intersect at p, with the angle formed by rotating the tangent to c1 at p counterclockwise to the tangent to c2 at p.
-GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec){
+static GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec){
   pari_sp top=avma;
   GEN s1=circle_tangentslope(c1, p, prec);
   GEN s2=circle_tangentslope(c2, p, prec);
@@ -713,19 +729,8 @@ GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec){
   return gerepileupto(top, gsub(ang, pi));//Subtract off pi
 }
 
-//Circle_angle with typechecking
-GEN circle_angle_tc(GEN c1, GEN c2, GEN p, long prec){
-  pari_sp top=avma;
-  int i1=geom_check(c1);
-  if(i1!=0 && i1!=2) pari_err_TYPE("Please input a circle", c1);
-  int i2=geom_check(c2);
-  if(i2!=0 && i2!=2) pari_err_TYPE("Please input a circle", c2);
-  GEN tol=deftol(prec);
-  return gerepileupto(top, circle_angle(c1, c2, p, tol, prec));
-}
-
 //Circle with centre cent passing through p
-GEN circle_fromcp(GEN cent, GEN p, long prec){
+static GEN circle_fromcp(GEN cent, GEN p, long prec){
   pari_sp top=avma;
   GEN pmcent=gsub(p, cent);
   GEN ret=cgetg(4, t_VEC);
@@ -736,7 +741,7 @@ GEN circle_fromcp(GEN cent, GEN p, long prec){
 }
 
 //Circle through 3 points (with one allowed to be oo, making a line instead)
-GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec){
+static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec){
   if(typ(p1)==t_INFINITY) return line_frompp(p2, p3);
   if(typ(p2)==t_INFINITY) return line_frompp(p1, p3);
   if(typ(p3)==t_INFINITY) return line_frompp(p1, p2);//Lines
@@ -747,15 +752,8 @@ GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec){
   return gerepileupto(top, circle_fromcp(centre, p1, prec));//The circle!
 }
 
-//circle_fromppp with presetting of tolerance.
-GEN circle_fromppp_tc(GEN p1, GEN p2, GEN p3, long prec){
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, circle_fromppp(p1, p2, p3, tol, prec));
-}
-
 //Returns the slope of the tangent to c at p
-GEN circle_tangentslope(GEN c, GEN p, long prec){
+static GEN circle_tangentslope(GEN c, GEN p, long prec){
   pari_sp top=avma;
   GEN c1mp=gsub(gel(c, 1), p);//c[1]-p
   GEN c1mpr=real_i(c1mp);
@@ -763,31 +761,8 @@ GEN circle_tangentslope(GEN c, GEN p, long prec){
   return gerepileupto(top, divoo(c1mpr, gneg(c1mpi)));//divoo(real(c[1])-real(p),imag(p)-imag(c[1])));
 }
 
-//Checks c is a circle or circle arc and calls circle_tangentslope
-GEN circle_tangentslope_tc(GEN c, GEN p, long prec){
-  int i1=geom_check(c);
-  if(i1!=0 && i1!=2) pari_err_TYPE("Please input a circle", c);
-  return circle_tangentslope(c, p, prec);
-}
-
-//Crossratio, allows one entry to be infinite.
-GEN crossratio(GEN a, GEN b, GEN c, GEN d){
-  pari_sp top=avma;
-  if (typ(a)==t_INFINITY) return gerepileupto(top,divoo(gsub(d, b), gsub(c, b)));
-  if (typ(b)==t_INFINITY) return gerepileupto(top,divoo(gsub(c, a), gsub(d, a)));
-  if (typ(c)==t_INFINITY) return gerepileupto(top,divoo(gsub(d, b), gsub(d, a)));
-  if (typ(d)==t_INFINITY) return gerepileupto(top,divoo(gsub(c, a), gsub(c, b)));
-  return gerepileupto(top,divoo(gmul(gsub(c, a), gsub(d, b)), gmul(gsub(c, b), gsub(d, a))));
-}
-
-//Angle between l1, l2, formed by rotating l1 counterclockwise (result is in [0, Pi)
-GEN line_angle(GEN l1, GEN l2, long prec){
-  pari_sp top=avma;
-  return gerepileupto(top, gmod(gsub(atanoo(gel(l2, 1), prec), atanoo(gel(l1, 1), prec)), mppi(prec)));
-}
-
 //The line through p with slope s
-GEN line_fromsp(GEN s, GEN p){
+static GEN line_fromsp(GEN s, GEN p){
   if(typ(s)==t_INFINITY){//oo slope
     GEN ret=cgetg(4, t_VEC);
     gel(ret, 1)=mkoo();
@@ -805,33 +780,26 @@ GEN line_fromsp(GEN s, GEN p){
 }
 
 //Line through two points
-GEN line_frompp(GEN p1, GEN p2){
+static GEN line_frompp(GEN p1, GEN p2){
   pari_sp top=avma;
   return gerepileupto(top, line_fromsp(slope(p1, p2), p1));
 }
 
 //Mx, where M is a 2x2 matrix and x is complex or infinite.
-GEN mat_eval(GEN M, GEN x){
+static GEN mat_eval(GEN M, GEN x){
   pari_sp top = avma;
   if(typ(x)==t_INFINITY) return gerepileupto(top,divoo(gcoeff(M, 1, 1), gcoeff(M, 2, 1)));
   return gerepileupto(top,divoo(gadd(gmul(gcoeff(M, 1, 1), x), gcoeff(M, 1, 2)), gadd(gmul(gcoeff(M, 2, 1), x), gcoeff(M, 2, 2))));
 }
 
-//This checks that the inputs are valid.
-GEN mat_eval_tc(GEN M, GEN x){
-  if(typ(M)!=t_MAT) pari_err(e_TYPE,"mat_eval. M should be a 2x2 matrix",M);
-  if(lg(M)!=3 || lg(gel(M,1))!=3) pari_err(e_DIM,"mat_eval. M should be a 2x2 matrix");
-  return mat_eval(M,x);
-}
-
 //Midpoint of p1 and p2
-GEN midpoint(GEN p1, GEN p2){
+static GEN midpoint(GEN p1, GEN p2){
   pari_sp top=avma;
   return gerepileupto(top, gdivgs(gadd(p1, p2), 2));
 }
 
 //Returns M(c), for c a circle/line/arc/segment
-GEN mobius(GEN M, GEN c, GEN tol, long prec){
+static GEN mobius(GEN M, GEN c, GEN tol, long prec){
   int i=geom_check(c);
   switch(i){
     case 0: return mobius_circle(M, c, tol, prec);
@@ -841,15 +809,6 @@ GEN mobius(GEN M, GEN c, GEN tol, long prec){
   }
   pari_err_TYPE("Please input a circle/line/arc/segment", c);
   return gen_0;//Never reach this far
-}
-
-//mobius, where we check the type of M and set the default tolerance
-GEN mobius_tc(GEN M, GEN c, long prec){
-  if(typ(M)!=t_MAT) pari_err_TYPE("M should be a 2x2 matrix", M);
-  if(lg(M)!=3 || lg(gel(M,1))!=3) pari_err(e_DIM,"M should be a 2x2 matrix");
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, mobius(M, c, tol, prec));
 }
 
 //Mobius map acting on an arc or segment
@@ -952,28 +911,19 @@ static GEN mobius_line(GEN M, GEN l, GEN tol, long prec){
 }
 
 //Perpendicular bisector of distinct points
-GEN perpbis(GEN p1, GEN p2){
+static GEN perpbis(GEN p1, GEN p2){
   pari_sp top=avma;
   return gerepileupto(top, line_fromsp(divoo(gen_m1, slope(p1, p2)), midpoint(p1, p2)));
 }
 
 //Angle between p and the centre of c, in the range [0, 2*Pi)
-GEN radialangle(GEN c, GEN p, GEN tol, long prec){
+static GEN radialangle(GEN c, GEN p, GEN tol, long prec){
   pari_sp top=avma;
   return gerepileupto(top, shiftangle(garg(gsub(p, gel(c, 1)), prec), gen_0, tol, prec));
 }
 
-//Radialangle with default tolerance.
-GEN radialangle_tc(GEN c, GEN p, long prec){
-  int i1=geom_check(c);
-  if(i1!=0 && i1!=2) pari_err_TYPE("Please input a circle/arc", c);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, radialangle(c, p, tol, prec));
-}
-
 //The slope of the line through p1, p2
-GEN slope(GEN p1, GEN p2){
+static GEN slope(GEN p1, GEN p2){
   pari_sp top=avma;
   return gerepileupto(top, divoo(imag_i(gsub(p2, p1)), real_i(gsub(p2, p1))));
 }
@@ -984,7 +934,7 @@ GEN slope(GEN p1, GEN p2){
 
 
 //Returns the intersection points of two arcs
-GEN arc_int(GEN c1, GEN c2, GEN tol, long prec){
+static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec){
   pari_sp top=avma;
   GEN ipts=circle_int(c1, c2, tol, prec);
   if(lg(ipts)==1){avma=top;return cgetg(1, t_VEC);}//No intersection
@@ -1011,17 +961,8 @@ GEN arc_int(GEN c1, GEN c2, GEN tol, long prec){
   return gerepileupto(top, ret);
 }
 
-//arc_int with typecheck
-GEN arc_int_tc(GEN c1, GEN c2, long prec){
-  int i1=geom_check(c1), i2=geom_check(c2);
-  if(i1!=2 || i2!=2) pari_err_TYPE("Please input circle arcs", c1);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, arc_int(c1, c2, tol, prec));
-}
-
 //Returns the intersection points of an arc and a segment
-GEN arcseg_int(GEN c, GEN l, GEN tol, long prec){
+static GEN arcseg_int(GEN c, GEN l, GEN tol, long prec){
   pari_sp top=avma;
   GEN ipts=circleline_int(c, l, tol, prec);
   if(lg(ipts)==1){avma=top;return cgetg(1, t_VEC);}//No intersection
@@ -1048,17 +989,8 @@ GEN arcseg_int(GEN c, GEN l, GEN tol, long prec){
   return gerepileupto(top, ret);
 }
 
-//arc_int with typecheck
-GEN arcseg_int_tc(GEN c, GEN l, long prec){
-  int i1=geom_check(c), i2=geom_check(l);
-  if(i1!=2 || i2!=3) pari_err_TYPE("Please input a circle arc and line segment", c);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, arcseg_int(c, l, tol, prec));
-}
-
 //Returns the set of points in the intersection of circles c1, c2
-GEN circle_int(GEN c1, GEN c2, GEN tol, long prec){
+static GEN circle_int(GEN c1, GEN c2, GEN tol, long prec){
   pari_sp top=avma;
   GEN a1=real_i(gel(c1, 1)), b1=imag_i(gel(c1, 1)), r1=gel(c1, 2);//x, y coords and radius of c1
   GEN a2=real_i(gel(c2, 1)), b2=imag_i(gel(c2, 1)), r2=gel(c2, 2);//x, y coords and radius of c2
@@ -1121,17 +1053,8 @@ GEN circle_int(GEN c1, GEN c2, GEN tol, long prec){
   return gerepileupto(top, ret);
 }
 
-//Checks that c1, c2 are circles and calls circle_int with the default tolerance.
-GEN circle_int_tc(GEN c1, GEN c2, long prec){
-  int i1=geom_check(c1), i2=geom_check(c2);
-  if(i1!=0 || i2!=0) pari_err_TYPE("Please input circles", c1);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, circle_int(c1, c2, tol, prec));
-}
-
 //Returns the intersection points of c and l
-GEN circleline_int(GEN c, GEN l, GEN tol, long prec){
+static GEN circleline_int(GEN c, GEN l, GEN tol, long prec){
   pari_sp top=avma;
   if(typ(gel(l, 1))==t_INFINITY){
     GEN x1=gel(l, 2);
@@ -1186,62 +1109,8 @@ GEN circleline_int(GEN c, GEN l, GEN tol, long prec){
   return gerepileupto(top, ret);
 }
 
-//Checks that c is a circle and l is a line and calls circleline_int with the default tolerance.
-GEN circleline_int_tc(GEN c, GEN l, long prec){
-  int i1=geom_check(c), i2=geom_check(l);
-  if(i1!=0 || i2!=1) pari_err_TYPE("Please input a line and circle", c);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, circleline_int(c, l, tol, prec));
-}
-
-//Returns the intersection of two circles/lines/arcs/segments (in any combination)
-GEN genseg_int(GEN s1, GEN s2, GEN tol, long prec){
-  int t1=geom_check(s1), t2=geom_check(s2);
-  if(t1==-1 || t2==-1)  pari_err_TYPE("Please input two circles/lines/arcs/segments", s1);
-  switch(t1){
-    case 0:
-      switch(t2){
-        case 0: return circle_int(s1, s2, tol, prec);//Circle circle
-        case 1: return circleline_int(s1, s2, tol, prec);//Circle line
-        case 2: return arc_int(s1, s2, tol, prec);//Circle arc
-        case 3: return arcseg_int(s1, s2, tol, prec);//Circle segment
-      }
-    case 1:
-      switch(t2){
-        case 0: return circleline_int(s2, s1, tol, prec);//Line circle
-        case 1: return line_int(s1, s2, tol, prec);//Line line
-        case 2: return arcseg_int(s2, s1, tol, prec);//Line arc
-        case 3: return seg_int(s1, s2, tol, prec);//Line segment
-      }
-    case 2:
-      switch(t2){
-        case 0: return arc_int(s1, s2, tol, prec);//Arc circle
-        case 1: return arcseg_int(s1, s2, tol, prec);//Arc line
-        case 2: return arc_int(s1, s2, tol, prec);//Arc arc
-        case 3: return arcseg_int(s1, s2, tol, prec);//Arc segment
-      }
-    case 3:
-      switch(t2){
-        case 0: return arcseg_int(s2, s1, tol, prec);//segment circle
-        case 1: return seg_int(s1, s2, tol, prec);//segment line
-        case 2: return arcseg_int(s2, s1, tol, prec);//segment arc
-        case 3: return seg_int(s1, s2, tol, prec);//segment seg
-      }
-  }
-  pari_err_TYPE("ERROR: UNEXPECTED INPUT TYPES", mkvec2(s1, s2));
-  return gen_0;
-}
-
-//genseg_int with default tolerance.
-GEN genseg_int_tc(GEN s1, GEN s2, long prec){
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, genseg_int(s1, s2, tol, prec));
-}
-
 //The intersection of two lines
-GEN line_int(GEN l1, GEN l2, GEN tol, long prec){
+static GEN line_int(GEN l1, GEN l2, GEN tol, long prec){
   GEN s1=gel(l1, 1), s2=gel(l2, 1);//Slopes
   if(toleq(s1, s2, tol, prec)) return mkoo();//Parallel or equal
   pari_sp top=avma;
@@ -1267,17 +1136,8 @@ GEN line_int(GEN l1, GEN l2, GEN tol, long prec){
   return gerepileupto(top, ipt);
 }
 
-//Checks that l1, l2 are lines and calls line_int with the default tolerance.
-GEN line_int_tc(GEN l1, GEN l2, long prec){
-  int i1=geom_check(l1), i2=geom_check(l2);
-  if(i1!=1 || i2!=1) pari_err_TYPE("Please input lines", l1);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, line_int(l1, l2, tol, prec));
-}
-
 //p is assumed to be on the circle defined by c; this checks if it is actually on the arc (running counterclockwise from c[3] to c[4]).
-int onarc(GEN c, GEN p, GEN tol, long prec){
+static int onarc(GEN c, GEN p, GEN tol, long prec){
   if(lg(c)==CIRCLEN) return 1;//Allow input of just a circle, so the return is trivially 1
   if(toleq(gel(c, 3), p, tol, prec)) return 1;//p=the start point. We have this done seperately in case rounding errors take the angle to <c[5], as this will cause issues with the shifting angle.
   pari_sp top=avma;
@@ -1287,19 +1147,8 @@ int onarc(GEN c, GEN p, GEN tol, long prec){
   return 0;//Beyond the arc.
 }
 
-//onarc with checking c and passing the default tolerance.
-int onarc_tc(GEN c, GEN p, long prec){
-  int i1=geom_check(c);
-  if(i1!=0 && i1!=2) pari_err_TYPE("Please input a circle arc and point", c);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  int oa=onarc(c, p, tol, prec);
-  avma=top;
-  return oa;
-}
-
 //p is assumed to be on the line defined by l; this checks if it is actually on the segment l
-int onseg(GEN l, GEN p, GEN tol, long prec){
+static int onseg(GEN l, GEN p, GEN tol, long prec){
   if(lg(l)==CIRCLEN) return 1;//Allow input of a line, so return is trivially 1
   if(typ(p)==t_INFINITY){//p is the point at oo
     if(!gequal0(gel(l, 6)) || gequal(gel(l, 7), gen_m1)) return 1;//oo is an endpoint OR the seg passes through oo
@@ -1372,39 +1221,6 @@ int onseg(GEN l, GEN p, GEN tol, long prec){
   return 0;//through oo
 }
 
-//onseg with checking l and passing the default tolerance.
-int onseg_tc(GEN l, GEN p, long prec){
-  int i1=geom_check(l);
-  if(i1!=1 && i1!=3) pari_err_TYPE("Please input a line segment and point", l);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  int os=onseg(l, p, tol, prec);
-  avma=top;
-  return os;
-}
-
-//Returns the intersection points of l1 and l2 (length 0 or 1 vector)
-GEN seg_int(GEN l1, GEN l2, GEN tol, long prec){
-  pari_sp top=avma;
-  GEN in=line_int(l1, l2, tol, prec);//Line intersection
-  if(onseg(l1, in, tol, prec) && onseg(l2, in, tol, prec)){//On the segments
-    GEN ret=cgetg(2, t_VEC);
-    gel(ret, 1)=gcopy(in);
-    return gerepileupto(top, ret);
-  }
-  avma=top;
-  return cgetg(1, t_VEC);//Not on at least one segment.
-}
-
-//Checks that l1, l2 are line segments and calls seg_int with the default tolerance.
-GEN seg_int_tc(GEN l1, GEN l2, long prec){
-  int i1=geom_check(l1), i2=geom_check(l2);
-  if(i1!=3 || i2!=3) pari_err_TYPE("Please input line segments", l1);
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, seg_int(l1, l2, tol, prec));
-}
-
 
 
 //DISTANCES
@@ -1413,20 +1229,23 @@ GEN seg_int_tc(GEN l1, GEN l2, long prec){
 //z1 and z2 are complex numbers, this computes the hyperbolic distance between them.
 GEN hdist(GEN z1, GEN z2, long prec){
   pari_sp top=avma;
-  GEN x1=gel(z1,1);
-  GEN y1=gel(z1,2);
-  GEN x2=gel(z2,1);
-  GEN y2=gel(z2,2);
-  GEN x=gaddsg(1,gdiv(gadd(gsqr(gsub(x2,x1)),gsqr(gsub(y2,y1))),gmul(gmulsg(2,y1),y2)));
-  GEN expd=gadd(x,gsqrt(gsubgs(gsqr(x), 1), prec));
+  GEN expd;
+  pari_CATCH(CATCH_ALL){
+	avma=top;
+	pari_CATCH_reset();
+	pari_err_TYPE("Please enter two complex numbers in the upper half plane", mkvec2(z1, z2));
+	return gen_0;
+  }
+  pari_TRY{
+    GEN x1=gel(z1,1);
+    GEN y1=gel(z1,2);
+    GEN x2=gel(z2,1);
+    GEN y2=gel(z2,2);
+    GEN x=gaddsg(1,gdiv(gadd(gsqr(gsub(x2,x1)),gsqr(gsub(y2,y1))),gmul(gmulsg(2,y1),y2)));
+    expd=gadd(x,gsqrt(gsubgs(gsqr(x), 1), prec));
+  }
+  pari_ENDCATCH
   return gerepileupto(top,glog(expd, prec));
-}
-
-//hdist with typechecking
-GEN hdist_tc(GEN z1, GEN z2, long prec){
-  if(typ(z1)!=t_COMPLEX || signe(gel(z1,2))!=1) pari_err_TYPE("Please input complex numbers in the upper half plane", z1);
-  if(typ(z2)!=t_COMPLEX || signe(gel(z2,2))!=1) pari_err_TYPE("Please input complex numbers in the upper half plane", z2);
-  return hdist(z1, z2, prec);
 }
 
 //The hyperbolic distance between z1 and z2 in the unit disc model
@@ -1439,6 +1258,7 @@ GEN hdist_ud(GEN z1, GEN z2, long prec){
   GEN ret;
   pari_CATCH(e_INV){
     avma=top;
+	pari_CATCH_reset();
     return mkoo();
   }
   pari_TRY{
@@ -1449,7 +1269,7 @@ GEN hdist_ud(GEN z1, GEN z2, long prec){
 }
 
 //Given the isometric circles (in order) and the vertices (so that circles[i] intersect circles[i+1] is vertices[i]), returns the area of the convex hyperbolic polygon. If one of the sides is oo (an entry of circles is 0), the answer will be oo. If there are n vertices with angles a1,...,an, then the area is is (n-2)Pi-sum(ai)
-GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec){
+static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec){
   pari_sp top=avma;
   long blen=lg(circles);
   if(blen==1 || gequal0(gel(circles, 1))) return mkoo();//No cicles or the first is 0, i.e. an infinite side
@@ -1462,15 +1282,6 @@ GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec){
   ang=circle_angle(gel(circles, 1), gel(circles, blen-1), gel(vertices, blen-1), tol, prec);//The last side wraps around.
   area=gsub(area, ang);
   return gerepileupto(top, area);
-}
-
-//Normalized boundary area with typechecking
-GEN hpolygon_area_tc(GEN circles, GEN vertices, long prec){
-  pari_sp top=avma;
-  if(typ(circles)!=t_VEC || typ(vertices)!=t_VEC) pari_err_TYPE("Please enter the edges and vertices as vectors", circles);
-  if(lg(circles)!=lg(vertices)) pari_err_TYPE("There needs to be the same number of edges as vertices", vertices);
-  GEN tol=deftol(prec);
-  return gerepileupto(top, hpolygon_area(circles, vertices, tol, prec));
 }
 
 
@@ -1490,7 +1301,7 @@ We do computations mostly in PSU, and shift from PSL to PSU via phi(z):=(z-p)/(z
 //Some of the methods may not be that useful (i.e. assuming we have p only and not the matrices).
 
 //Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j. If not all edges can be paired, instead returns [v1, v2, ...] where vi is a VECSMALL that is either [gind, v1ind] or [gind, v1ind, v2ind]. gind is the index of the unpaired side, and the viind are the corresponding unpaired vertices (1 or 2). If rboth=1, returns [paired, unpaired], where this time paired is a vector of vecsmalls [i, j] meaning i is paired to j (differing to the output format when rboth=0 and everything is paired)
-GEN edgepairing(GEN U, GEN tol, int rboth, long prec){
+static GEN edgepairing(GEN U, GEN tol, int rboth, long prec){
   pari_sp top=avma;
   GEN vangles=gel(U, 4);//Vertex angles
   GEN baseangle=gel(vangles, 1);//Base angle
@@ -1540,14 +1351,6 @@ GEN edgepairing(GEN U, GEN tol, int rboth, long prec){
   return gerepilecopy(top, unpair);//Unpaired vertices!
 }
 
-//Edgepairing with typecheck
-GEN edgepairing_tc(GEN U, long prec){
-  pari_sp top=avma;
-  if(typ(U)!=t_VEC || lg(U)!=NORMBOUND) pari_err_TYPE("Please enter a normalized boundary", U);
-  GEN tol=deftol(prec);
-  return gerepileupto(top, edgepairing(U, tol, 1, prec));
-}
-
 //Computes the isometric circle for g, returning [g, image in PSU(1, 1), circle]. Must pass in mats (psltopsu_transmats(p)), and a method that translates g to an element of PSL(2, R).
 GEN isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec){
   pari_sp top=avma;
@@ -1586,22 +1389,6 @@ GEN isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN,
     return gerepileupto(top, ret);
   }
   pari_ENDCATCH
-}
-
-//Not sure if useful
-//Returns the isometric circle of an element of PSL
-GEN isometriccircle_psl(GEN g, GEN p, GEN tol, long prec){
-  pari_sp top=avma;
-  GEN mats=psltopsu_transmats(p);
-  return gerepileupto(top, isometriccircle_psl_mats(g, mats, tol, prec));
-}
-
-//Not sure if useful
-//Given the mats to translate to PSU, this returns the isometric circle of g in the unit disc model
-GEN isometriccircle_psl_mats(GEN g, GEN mats, GEN tol, long prec){
-  pari_sp top=avma;
-  GEN gpsu=psltopsu_mats(g, mats);//Image in PSU
-  return gerepileupto(top, isometriccircle_psu(gpsu, tol, prec));
 }
 
 //Given an element g of PSU(1, 1), this returns the isometric circle associated to it.
@@ -1719,7 +1506,7 @@ static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec){
 }
 
 //Given a normalized boundary U, this appends the elements of G to it (G is the set of [elt, image in PSU(1, 1), isometric circle].
-GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec){
+static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec){
   pari_sp top=avma, mid;
   long nGp1=lg(G), nG=nGp1-1;//nG=number of elements in G
   long nUp1=lg(gel(Ubase, 1)), nU=nUp1-1;//nUp1=number of elts in Ubase+1
@@ -2089,7 +1876,7 @@ GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long 
 }
 
 //Initializes the inputs for normalizedboundary_append. Works BEST if p is given as an EXACT number.
-GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec){
+static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec){
   pari_sp top=avma;
   long lx;
   GEN Gnew=cgetg_copy(G, &lx);
@@ -2113,7 +1900,7 @@ GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN
 }
 
 //G is the set of [elt, image in PSU(1, 1), isometric circle]. This returns the normalized boundary of the exterior domain. The output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to an angle and circle of -1. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).
-GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec){
+static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec){
   pari_sp top=avma, mid;
   long np1=lg(G), n=np1-1, twonp3=2*n+3;
   GEN U=cgetg(twonp3, t_VECSMALL);//Stores the indices in U in order. The initial ordering may not have v_1 correct (may need to do a cyclic shift at the end). We double since there are at most n sides coming from G and n sides coming from the unit circle.
@@ -2289,7 +2076,7 @@ GEN normalizedboundary(GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *
 }
 
 //This returns [v, vecsmall(ind)], where the first side of U that c intersects has index ind, and the point of intersection is v. If start=1, we are searching near the start point of c, else we seach near the end point of c (c is either an arc or a segment with start/end points on the unit circle. If we intersect an oo side, returns [v, vecsmall(-1)] instead.
-GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec){
+static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec){
   pari_sp top=avma;
   GEN v, ret, inter, d1, d2;
   long ind;
@@ -2369,7 +2156,7 @@ GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec){
 }
 
 //Returns -1 if z is in the interior of the normalized boundary or on the edge, and ind if in the exterior (i.e. between the boundary and the unit circle), where ind is the index of the side it is on (projecting from the origin to z). Does not behave well if z is a vertex of U that is on the unit disc.
-long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec){
+static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec){
   pari_sp top=avma;
   int outside;
   pari_CATCH(CATCH_ALL){//Catching if U is trivial OR z=0
@@ -2390,16 +2177,6 @@ long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec){
   pari_ENDCATCH
   avma=top;
   return outside;//There is no tolerance issues with our search for ind; they are taken care of by the tolerance check with inside (the only possible issues occur if z and v[ind] or v[ind-1] are equal up to tolerance, but of course that is solved by the one tolcmp).
-}
-
-//normalizedboundary_inside with typechecking
-long normalizedboundary_outside_tc(GEN U, GEN z, long prec){
-  pari_sp top=avma;
-  if(typ(U)!=t_VEC || lg(U)!=NORMBOUND) pari_err_TYPE("Please enter a normalized boundary", U);
-  GEN tol=deftol(prec);
-  int ins=normalizedboundary_outside(U, z, tol, prec);
-  avma=top;
-  return ins;
 }
 
 //Given g in PSL(2, R) and p in the upper half plane, this returns the image of g in PSU(1, 1) via phi(z)=(z-p)/(z-conj(p)).
@@ -2429,7 +2206,7 @@ GEN psltopsu_transmats(GEN p){
 }
 
 //Returns the roots of the hyperbolic matrix M in PSL(2, R) in order.
-GEN psl_roots(GEN M, GEN tol, long prec){
+static GEN psl_roots(GEN M, GEN tol, long prec){
   pari_sp top = avma;
   GEN trace=gadd(gcoeff(M, 1, 1), gcoeff(M, 2, 2));
   int sgn=tolcmp(trace, gen_0, tol, prec);
@@ -2666,14 +2443,6 @@ GEN rootgeodesic_uhp(GEN M, GEN tol, long prec){
   return gerepileupto(top, arc);
 }
 
-//rootgeodesic_uhp with typechecking
-GEN rootgeodesic_uhp_tc(GEN M, long prec){
-  pari_sp top=avma;
-  if(typ(M)!=t_MAT || lg(M)!=3 || lg(gel(M, 1))!=3) pari_err_TYPE("Please enter a hyperbolic 2x2 matrix in PSL(2, R)", M);
-  GEN tol=deftol(prec);
-  return gerepileupto(top, rootgeodesic_uhp(M, tol, prec));
-}
-
 
 
 //PRINTING TO PLOTVIEWER
@@ -2757,7 +2526,7 @@ void python_printfdom(GEN U, char *filename, long prec){
 
 
 //Returns the angle ang-bot in the range [0, 2*Pi)
-GEN anglediff(GEN ang, GEN bot, GEN tol, long prec){
+static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec){
   pari_sp top=avma;
   GEN twopi=Pi2n(1, prec);
   GEN angdiff=gmod(gsub(ang, bot), twopi);
@@ -2766,21 +2535,21 @@ GEN anglediff(GEN ang, GEN bot, GEN tol, long prec){
 }
 
 //Arctan of x, where oo is allowed as input (returning Pi/2)
-GEN atanoo(GEN x, long prec){
+static GEN atanoo(GEN x, long prec){
   pari_sp top=avma;
   if(typ(x)==t_INFINITY) return gerepileupto(top, gdivgs(mppi(prec), 2));
   return gatan(x, prec);
 }
 
 //Returns gcmp(x, y), except if x==y, returns -1. Useful for gen_search when you ALWAYS want to return the index where it should be inserted/is
-int gcmp_strict(void *data, GEN x, GEN y){
+static int gcmp_strict(void *data, GEN x, GEN y){
   int c=gcmp(x, y);
   if(c==0) c=-1;
   return c;
 }
 
 //Returns 0 if c is a circle, 1 if c is a line, 2 if c is a circle arc, 3 if c is line segment, and -1 if none of the above
-int geom_check(GEN c){
+static int geom_check(GEN c){
   if(typ(c)!=t_VEC) return -1;
   int len=lg(c);
   if(len==CIRCLEN){//Circle or line
@@ -2803,7 +2572,7 @@ GEN deftol(long prec){
 }
 
 //Shifts the given angle ang by multiples of 2*Pi into the range [bot, bot+2*Pi).
-GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec){
+static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec){
   pari_sp top=avma;
   GEN diff=anglediff(ang, bot, tol, prec);
   if(gequal0(diff)){avma=top;return gcopy(bot);}
@@ -2811,7 +2580,7 @@ GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec){
 }
 
 //Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact
-long tolcmp(GEN x, GEN y, GEN tol, long prec){
+static long tolcmp(GEN x, GEN y, GEN tol, long prec){
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY) return gcmp(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
@@ -2826,12 +2595,12 @@ long tolcmp(GEN x, GEN y, GEN tol, long prec){
 }
 
 //Data points to [tol, vecsmall(prec)]. Used to sort/search a list with tolerance.
-int tolcmp_sort(void *data, GEN x, GEN y){
+static int tolcmp_sort(void *data, GEN x, GEN y){
   return tolcmp(x, y, gel(*(GEN*)data, 1), gel(*(GEN*)data, 2)[1]);
 }
 
 //Returns 1 if x==y, and 0 if x!=y. If x or y is not a precise objects (e.g. t_REAL), will return 1 if they are equal up to the tolerance tol.
-int toleq(GEN x, GEN y, GEN tol, long prec){
+static int toleq(GEN x, GEN y, GEN tol, long prec){
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY || gequal0(tol)) return gequal(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
