@@ -156,28 +156,7 @@ int toleq(GEN x, GEN y, GEN tol, long prec);
 
 
 //QUATERNION METHODS
-long algsplitoo(GEN A);
+GEN algfdarea(GEN A, long prec);
+GEN algfd(GEN A, GEN p, int dispprogress, GEN ANRdata, GEN area, long prec);
 GEN algramifiedplacesf(GEN A);
-GEN qalg_init(GEN F, GEN a, GEN b, long v, long prec);
-GEN qalg_basis_conj(GEN Q, GEN x);
-GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec);
-GEN qalg_normform(GEN Q);
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec);
-
-GEN qalg_fdinv(GEN *data, GEN x);
-GEN qalg_fdm2rembed(GEN *data, GEN x, long prec);
-GEN qalg_fdmul(GEN *data, GEN x, GEN y);
-int qalg_istriv(GEN *data, GEN x);
-
-GEN qalg_fdarea(GEN Q, long prec);
-GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long prec);
-GEN qalg_fd_tc(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, long prec);
-
-
-//SHALLOW RETRIEVAL METHODS
-GEN qalg_get_alg(GEN Q);
-GEN qalg_get_a(GEN Q);
-GEN qalg_get_b(GEN Q);
-GEN qalg_get_rams(GEN Q);
-GEN qalg_get_varnos(GEN Q);
-GEN qalg_get_roots(GEN Q);
+GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec);

@@ -1,9 +1,10 @@
-install("algsplitoo","lG","algsplitoo","./libfdom.so");
+default(help, "gphelp -detex");
+
+install("algfdarea","Gp","algfdarea","./libfdom.so");
+install("algfd","GGD1,L,D0,G,D0,G,p","algfd","./libfdom.so");
 install("algramifiedplacesf","G","algramifiedplacesf","./libfdom.so");
-install("qalg_init","GGGD0,L,p","qalg_init","./libfdom.so");
-install("qalg_smallnorm1elts_qfminim","GGGD0,G,p","qalg_smallnorm1elts_qfminim","./libfdom.so");
-install("qalg_fd_tc","GGD1,L,D0,G,D0,G,p","qalg_fd","./libfdom.so");
-install("qalg_fdarea","Gp","qalg_fdarea","./libfdom.so");
+install("algsmallnorm1elts","GGGD0,G,p","algsmallnorm1elts","./libfdom.so");
+
 
 install("python_printarcs","vGrD0,L,Drp","python_printarcs","./libfdom.so");
 addhelp(python_printarcs,"Inputs arcs, filename, {view=0}, {extrainput=NULL}: a set of arcs arcs, string filename, view=0, 1, and extrainput=NULL or a string.\n Prints the arcs specified by arcs to the file fdoms/filename.dat, ready for plotviewer. If view=1, calls plotviewer with the additional input of extrainput if you want to include other arcs/fundamental domains.");

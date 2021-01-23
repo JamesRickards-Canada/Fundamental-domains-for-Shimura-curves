@@ -1,4 +1,8 @@
-//Geometry methods
+//Fundamental domain computation
+
+
+//INCLUSIONS
+
 
 #ifndef PARILIB
 #define PARILIB
@@ -10,26 +14,52 @@
 #include "fdomdecl.h"
 #endif
 
+
+//DEFINITIONS
+
+
 //The length (lg, so technically length+1) of a circle/line and arc/segment, and a normalized boundary
 #define CIRCLEN 4
 #define ARCLEN 9
 #define NORMBOUND 9
 
+
 //STATIC DECLARATIONS
+
+
+//1: SHORT VECTORS IN LATTICES
 static int opp_gcmp(void *data, GEN x, GEN y);
 static GEN quadraticinteger(GEN A, GEN B, GEN C);
 
+//2: BASIC LINE, CIRCLE, AND POINT OPERATIONS
 static GEN mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec);
 static GEN mobius_circle(GEN M, GEN c, GEN tol, long prec);
 static GEN mobius_line(GEN M, GEN l, GEN tol, long prec);
 static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
 
-//Circle is stored as [centre, radius, 0], where 0 means a bona fide cicle (and not a line)
-//Circle arc is [centre, radius, start pt, end pt, start angle, end angle, dir, 0]. It is the arc counterclockwise from startpt to endpt, and dir=1 means oriented counterclockwise, and dir=-1 means oriented clockwise. This can also be left uninitialized if arc is not oriented. The final 0 represents that we have an arc and not a segment.
-//Line is stored as [slope, intercept, 1], where the line is y=slope*x+intercept unless slope=oo, where it is x=intercept instead, and the 1 just means a bona fide line (not circle).
-//Line segment is stored as [slope, intercept, startpt, endpt, 0, ooendptor, dir, 1] (the extra 0 is to format it the same as a circle arc). The final 1 is to signal a segment. dir=1 means we go from startpt to endpt in the upper half plane, and -1 means we go through infinity (only when neither endpoint is infinite). If one endpoint is oo, ooendptor stores which way we get to it. If ooendptor=1, this means the segment travels either vertically up or right, and -1 means the arc is vertically down or left.
+//3: FUNDAMENTAL DOMAIN COMPUTATION
+static GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long prec);
 
-//GEN tol -> The tolerance.
+//3: STATIC HELPER METHODS
+static long algsplitoo(GEN A);
+static GEN qalg_basis_conj(GEN Q, GEN x);
+static GEN qalg_fdarea(GEN Q, long prec);
+static GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec);
+static GEN qalg_normform(GEN Q);
+static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec);
+static GEN qalg_fdinitialize(GEN A, long prec);
+
+//3: BASIC OPERATIONS FOR NORMALIZED BASIS
+static GEN qalg_fdinv(GEN *data, GEN x);
+static GEN qalg_fdm2rembed(GEN *data, GEN x, long prec);
+static GEN qalg_fdmul(GEN *data, GEN x, GEN y);
+static int qalg_istriv(GEN *data, GEN x);
+
+//3: SHALLOW RETRIEVAL METHODS
+static GEN qalg_get_alg(GEN Q);
+static GEN qalg_get_rams(GEN Q);
+static GEN qalg_get_varnos(GEN Q);
+static GEN qalg_get_roots(GEN Q);
 
 
 
@@ -613,6 +643,14 @@ GEN mat_choleskydecomp_tc(GEN A, int rcoefs, long prec){
 
 //SECTION 2: GEOMETRY METHODS
 
+
+
+//Circle is stored as [centre, radius, 0], where 0 means a bona fide cicle (and not a line)
+//Circle arc is [centre, radius, start pt, end pt, start angle, end angle, dir, 0]. It is the arc counterclockwise from startpt to endpt, and dir=1 means oriented counterclockwise, and dir=-1 means oriented clockwise. This can also be left uninitialized if arc is not oriented. The final 0 represents that we have an arc and not a segment.
+//Line is stored as [slope, intercept, 1], where the line is y=slope*x+intercept unless slope=oo, where it is x=intercept instead, and the 1 just means a bona fide line (not circle).
+//Line segment is stored as [slope, intercept, startpt, endpt, 0, ooendptor, dir, 1] (the extra 0 is to format it the same as a circle arc). The final 1 is to signal a segment. dir=1 means we go from startpt to endpt in the upper half plane, and -1 means we go through infinity (only when neither endpoint is infinite). If one endpoint is oo, ooendptor stores which way we get to it. If ooendptor=1, this means the segment travels either vertically up or right, and -1 means the arc is vertically down or left.
+
+//GEN tol -> The tolerance.
 
 
 //BASIC LINE, CIRCLE, AND POINT OPERATIONS
@@ -2810,28 +2848,30 @@ int toleq(GEN x, GEN y, GEN tol, long prec){
 
 
 /*
-We store the quaternion algebra as [A, a, b, ramdat, varnos, roots], where A=(a, b/K), ramdat=algramifiedplaces(A), varnos are the variable numbers for K, L (L the splitting field of K), and roots are approximations to the defining variables for K, L.
-We store the quaternion order as [ord, 0, lev, pfac], where ord is the matrix whose columns represent the basis, it has level lev, and the prime factorization of the level is pfac.
+To compute the fundamental domain, we store the quaternion algebra as [A, ramdat, varnos, roots], where A=the algebra, ramdat=algramifiedplaces(A), varnos are the variable numbers for K, L (L the splitting field of K), and roots are approximations to the defining variables for K, L that correspond to the split real embedding. Such an entry is called a "qalg" and uses the variable name Q, so any methods with the name "qalg" expect this as input (whereas "alg" expects an algebra that was output by alginit, and this uses the variable name A).
 */
+
+
 
 //QUATERNION ALGEBRA METHODS
 
 
-
-//Returns the index of the unique infinite split place of A, and if A has 0 or >=2 such places, returns 0.
-long algsplitoo(GEN A){
-  GEN infram=alg_get_hasse_i(A);//shallow
-  long split=0;
-  for(long i=1;i<lg(infram);i++){//Finding the split place
-	if(infram[i]==0){//Split place
-	  if(split>0) return 0;
-	  split=i;
-	}
-  }
-  return split;//No garbage!!
+//Initializes and checks the inputs, and computes the fundamental domain
+GEN algfd(GEN A, GEN p, int dispprogress, GEN ANRdata, GEN area, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  GEN Q=qalg_fdinitialize(A, prec);
+  return gerepileupto(top, qalg_fd(Q, p, dispprogress, ANRdata, area, tol, prec));
 }
 
-//Returns the vector of finite ramified places.
+//Returns the area of the fundamental domain of the order stored in A.
+GEN algfdarea(GEN A, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdinitialize(A, prec);
+  return gerepileupto(top, qalg_fdarea(Q, prec));
+}
+
+//Returns the vector of finite ramified places of the algebra A.
 GEN algramifiedplacesf(GEN A){
   pari_sp top=avma;
   GEN hass=alg_get_hasse_f(A);//Shallow
@@ -2844,234 +2884,20 @@ GEN algramifiedplacesf(GEN A){
   return gerepilecopy(top, rp);
 }
 
-//Initializes the quaternion algebra (a, b/K) split at one real place using the algebras framework.
-GEN qalg_init(GEN K, GEN a, GEN b, long v, long prec){
+//Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
+GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
   pari_sp top=avma;
-  GEN A=alginit(K, mkvec2(a, b), v, 1);//Initialize the quaternion algebra and maximal order.
-  GEN ramdat=algramifiedplacesf(A);//Finite ramified places
-  GEN varnos=mkvecsmall2(nf_get_varn(K), v);//Stores the variable numbers for K and L, in that order (L being the splitting field of A, representing K(sqrt(a)).
-  long split=algsplitoo(A);//The split real place
-  if(split==0) pari_err_TYPE("Quaternion algebra has 0 or >=2 split real infinite places, not valid for fundamental domains.", A);  
-  GEN Kroot=gel(nf_get_roots(K), split);//The split root
-  GEN aval=poleval(a, Kroot);
-  if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
-  GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
-  return gerepilecopy(top, mkvecn(6, A, a, b, ramdat, varnos, roots));
-}
-
-//Given the basis representation of an element, this returns the conjugate in the basis representation.
-GEN qalg_basis_conj(GEN Q, GEN x){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(Q);
-  GEN varnos=qalg_get_varnos(Q);
-  GEN Lx=pol_x(varnos[2]);//The variable for L
-  GEN algx=liftall(algbasistoalg(A, x));
-  gel(algx, 1)=gsubst(gel(algx, 1), varnos[2], gneg(Lx));//Conjugating
-  gel(algx, 2)=gneg(gel(algx, 2));//The conjugate of l1+jl2 is sigma(l1)-jl2
-  return gerepileupto(top, algalgtobasis(A, algx));//Converting back
-}
-
-//Returns the qf invrad as a matrix. If order has basis v1, ..., vn, then this is invrad(e1*v1+...+en*vn), with invrad defined as on page 477 of Voight. We take the basepoint to be z, so if z!=0, we shift it so the 1/radius part is centred at z (and so isometric circles near z are weighted more).
-GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec){
-  pari_sp top=avma;
-  //First we find the part coming from |f_g(p)|
-  GEN A=qalg_get_alg(Q);
-  long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
-  GEN basisimage=cgetg(n, t_VEC);//The image of the basis elements in M_2(R)
-  GEN belt=zerocol(n-1);
-  gel(belt, 1)=gen_1;
-  gel(basisimage, 1)=qalg_fdm2rembed(&Q, belt, prec);
-  for(long i=2;i<n;i++){
-	gel(belt, i-1)=gen_0;
-	gel(belt, i)=gen_1;//Updating belt to have a 1 only in the ith place
-	gel(basisimage, i)=qalg_fdm2rembed(&Q, belt, prec);
-  }
-  GEN tvars=cgetg(n, t_VECSMALL);
-  GEN xvars=cgetg(n, t_VEC);
-  for(long i=1;i<n;i++){
-	tvars[i]=fetch_var();//The temporary variable numbers
-	gel(xvars, i)=pol_x(tvars[i]);//The variables
-  }
-  GEN elt=zeromatcopy(2, 2);//Will represent the general element
-  for(long i=1;i<n;i++) elt=gadd(elt, gmul(gel(basisimage, i), gel(xvars, i)));//The general element
-  if(!gequal0(z)){//Shift by M^(-1), where M=phi^(-1)*W*phi, and W=[a,b;conj(b), a] with a=1/sqrt(1-|z|^2) and b=za
-	GEN a=gdivsg(1, gsqrt(gsubsg(1, gsqr(gabs(z, prec))), prec));//1/sqrt(1-|z|^2)
-	GEN mb=gneg(gmul(z, a));//-za=-b
-	GEN Winv=mkmat22(a, mb, conj_i(mb), a);//W^(-1)
-	GEN Minv=gmul(gel(mats, 2), gmul(Winv, gel(mats, 1)));//M^(-1)
-	elt=gmul(Minv, elt);//Shifting it by the appropriate amount.
-  }
-  GEN p=gel(mats, 3);//p
-  GEN fg=gmul(gcoeff(elt, 2, 1), p);//elt[2, 1]*p
-  fg=gadd(fg, gsub(gcoeff(elt, 2, 2), gcoeff(elt, 1, 1)));//PSLelt[2, 1]*p+PSLelt[2, 2]-PSLelt[2, 1]
-  fg=gsub(gmul(fg, p), gcoeff(elt, 1, 2));//PSLelt[2, 1]*p^2+(PSLelt[2, 2]-PSLelt[2, 1])*p-PSLelt[1, 2], i.e. f_g(p) (page 477 of Voight)
-  GEN invrad1=gadd(gsqr(greal(fg)), gsqr(gimag(fg)));//real(fg)^2+imag(fg)^2
-
-  GEN K=alg_get_center(A);
-  GEN invrad2=qalg_normform(Q);
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
-	  gcoeff(invrad2, i, j)=nftrace(K, gcoeff(invrad2, i, j));//Taking the trace to Q
-	}
-  }
-  invrad2=gmulsg(2, gmul(gsqr(gimag(p)), invrad2));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  //At this point, invrad1 is a polynomial in the temporary variables, and invrad2 is a matrix in the correct form.
+  GEN Q=qalg_fdinitialize(A, prec);
+  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z, prec));
   
-  GEN qf=cgetg(n, t_MAT);//Creating the return matrix
-  for(long i=1;i<n;i++) gel(qf, i)=cgetg(n, t_COL);
-  GEN part1=invrad1;//This stores the part we are working on.
-  long var=qalg_get_varnos(Q)[1];//The variable number for K
-  GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
-  for(long i=1;i<n;i++){//Working with the ith variable
-	gcoeff(qf, i, i)=gadd(gsubst(lift(polcoef_i(part1, 2, tvars[i])), var, Kx), gcoeff(invrad2, i, i));//iith coefficient
-	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
-	for(long j=i+1;j<n;j++){
-	  gcoeff(qf, i, j)=gadd(gdivgs(gsubst(lift(polcoef_i(linpart, 1, tvars[j])), var, Kx), 2), gcoeff(invrad2, i, j));//the ijth coefficient
-	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
-	}
-	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
-  }
-  /*
-  GEN invrad2=gmulsg(2, gmul(gsqr(gimag(p)), qalg_normform(Q)));//2*imag(p)^2*nrd(elt);
-  //At this point, invrad1 is a polynomial in the temporary variables, and invrad2 is a matrix in the correct form.
-  
-  GEN qf=cgetg(n, t_MAT);//Creating the return matrix
-  for(long i=1;i<n;i++) gel(qf, i)=cgetg(n, t_COL);
-  GEN part1=invrad1;//This stores the part we are working on.
-  long var=qalg_get_varnos(Q)[1];//The variable number for K
-  GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
-  for(long i=1;i<n;i++){//Working with the ith variable
-	gcoeff(qf, i, i)=gsubst(lift(gadd(polcoef_i(part1, 2, tvars[i]), gcoeff(invrad2, i, i))), var, Kx);//iith coefficient
-	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
-	for(long j=i+1;j<n;j++){
-	  gcoeff(qf, i, j)=gsubst(lift(gadd(gdivgs(polcoef_i(linpart, 1, tvars[j]), 2), gcoeff(invrad2, i, j))), var, Kx);//the ijth coefficient
-	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
-	}
-	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
-  }*/
-  long delv;
-  do{delv=delete_var();} while(delv && delv<=tvars[1]);//Delete the temporary variables
-  return gerepilecopy(top, qf);
-}
-
-//Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of A. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
-GEN qalg_normform(GEN Q){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(Q);
-  long n=lg(gel(alg_get_basis(A), 1)), nm1=n-1;//The lg of a normal entry
-  GEN basis=cgetg(n, t_VEC);
-  for(long i=1;i<n;i++){
-	gel(basis, i)=zerocol(nm1);
-	gel(gel(basis, i), i)=gen_1;
-  }
-  GEN basisconj=cgetg(n, t_VEC);
-  for(long i=1;i<n;i++){
-	gel(basisconj, i)=qalg_basis_conj(Q, gel(basis, i));//The conjugate of the basis element.
-  }
-  GEN M=cgetg(n, t_MAT);//Initialize the matrix
-  for(long i=1;i<n;i++) gel(M, i)=cgetg(n, t_COL);
-  for(long i=1;i<n;i++) gcoeff(M, i, i)=lift0(algnorm(A, gel(basis, i), 0), -1);
-  for(long i=1;i<n;i++){
-	for(long j=i+1;j<n;j++){
-	  GEN prod=algmul(A, gel(basis, i), gel(basisconj, j));
-	  GEN tr=gdivgs(algtrace(A, prod, 0), 2);
-	  gcoeff(M, i, j)=tr;
-	  gcoeff(M, j, i)=tr;
-	}
-  }
-  return gerepilecopy(top, M);
-}
-
-//Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v. Here, invrad is already passed in.
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec){
-  pari_sp top=avma, mid;
-  GEN A=qalg_get_alg(Q);
-  GEN mats=psltopsu_transmats(p);
-  GEN invrad=qalg_invradqf(Q, mats, z, prec);
-  GEN MAXEACH=stoi(1000);//Set to NULL to get all
-  GEN vposs=gel(qfminim0(invrad, C, MAXEACH, 2, prec), 3), norm;
-  long nvposs=lg(vposs);
-  GEN ret=vectrunc_init(nvposs);
-  for(long i=1;i<nvposs;i++){
-	mid=avma;
-	norm=algnorm(A, gel(vposs, i), 0);
-	if(gequal(norm, gen_1)){
-	  avma=mid;
-	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
-	  continue;
-	}
-	avma=mid;
-  }
-  return gerepilecopy(top, ret);
 }
 
 
+//FUNDAMENTAL DOMAIN COMPUTATION
 
-
-//Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-GEN qalg_fdinv(GEN *data, GEN x){
-  return alginv(qalg_get_alg(*data), x);
-}
-
-//Must pass *data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
-GEN qalg_fdm2rembed(GEN *data, GEN x, long prec){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(*data);
-  GEN rts=qalg_get_roots(*data);
-  GEN varnos=qalg_get_varnos(*data);
-  GEN b=gsubst(qalg_get_b(*data), varnos[1], gel(rts, 1));//Inputting the real value of K into b
-  if(lg(x)!=3) x=algbasistoalg(A, x);//Converting it to algebraic representation
-  x=liftall(x);//Lifiting x
-  GEN l1K=gsubst(gel(x, 1), varnos[1], gel(rts, 1));//Inputting the real value of K into l1
-  GEN l2K=gsubst(gel(x, 2), varnos[1], gel(rts, 1));//Inputting the real value of K into l2
-  GEN mLrt=gneg(gel(rts, 2));//The negative root of L
-  GEN M=cgetg(3, t_MAT);
-  gel(M, 1)=cgetg(3, t_COL), gel(M, 2)=cgetg(3, t_COL);//Initializing the matrix
-  gcoeff(M, 1, 1)=gsubst(l1K, varnos[2], gel(rts, 2));//l1
-  gcoeff(M, 1, 2)=gmul(gsubst(l2K, varnos[2], mLrt), b);//sigma(l2)*b, i.e. substitute in the negative root of L into l2
-  gcoeff(M, 2, 1)=gsubst(l2K, varnos[2], gel(rts, 2));//l2
-  gcoeff(M, 2, 2)=gsubst(l1K, varnos[2], mLrt);//sigma(l1)
-  return gerepilecopy(top, M);
-}
-
-//Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-GEN qalg_fdmul(GEN *data, GEN x, GEN y){
-  return algmul(qalg_get_alg(*data), x, y);
-}
-
-//Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
-int qalg_istriv(GEN *data, GEN x){
-  if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
-  for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;
-  return 1;
-}
-
-
-
-
-//Returns the area of the fundamental domain of Q. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.13 to update when Eichler; very easy)
-GEN qalg_fdarea(GEN Q, long prec){
-  pari_sp top=avma;
-  long bits=bit_accuracy(prec);
-  GEN A=qalg_get_alg(Q);
-  GEN F=alg_get_center(A);
-  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
-  GEN rams=qalg_get_rams(Q);
-  GEN norm=gen_1;
-  for(long i=1;i<lg(rams);i++){
-	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
-	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
-  }
-  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), prec), norm);//d_F^(3/2)*phi(D)
-  long n=nf_get_degree(F), twon=2*n;
-  ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
-  ar=gmul(ar, gpowgs(gen_2, 3-twon));
-  ar=gmul(ar, gpowgs(mppi(prec), 1-twon));//2^(3-2n)*Pi*(1-n)*zeta_F(2)*d_F^(3/2)*phi(D)
-  return gerepileupto(top, ar);
-}
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
-GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long prec){
+static GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN Alg=qalg_get_alg(Q);
@@ -3133,33 +2959,266 @@ GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN tol, long
   }
 }
 
-//qalg_fd with typecheck
-GEN qalg_fd_tc(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, long prec){
+
+
+//STATIC HELPER METHODS
+
+
+//If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.
+static long algsplitoo(GEN A){
+  GEN infram=alg_get_hasse_i(A);//shallow
+  long split=0;
+  for(long i=1;i<lg(infram);i++){//Finding the split place
+	if(infram[i]==0){//Split place
+	  if(split>0) return 0;
+	  split=i;
+	}
+  }
+  return split;//No garbage!!
+}
+
+//Given the (assumed) basis representation of an element, this returns the conjugate in the basis representation.
+static GEN qalg_basis_conj(GEN Q, GEN x){
   pari_sp top=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(top, qalg_fd(Q, p, dispprogress, ANRdata, area, tol, prec));
+  GEN A=qalg_get_alg(Q);
+  GEN varnos=qalg_get_varnos(Q);
+  GEN Lx=pol_x(varnos[2]);//The variable for L
+  GEN algx=liftall(algbasistoalg(A, x));
+  gel(algx, 1)=gsubst(gel(algx, 1), varnos[2], gneg(Lx));//Conjugating
+  gel(algx, 2)=gneg(gel(algx, 2));//The conjugate of l1+jl2 is sigma(l1)-jl2
+  return gerepileupto(top, algalgtobasis(A, algx));//Converting back
+}
+
+//Returns the area of the fundamental domain of Q. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.13 to update when Eichler; very easy)
+static GEN qalg_fdarea(GEN Q, long prec){
+  pari_sp top=avma;
+  long bits=bit_accuracy(prec);
+  GEN A=qalg_get_alg(Q);
+  GEN F=alg_get_center(A);
+  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
+  GEN rams=qalg_get_rams(Q);
+  GEN norm=gen_1;
+  for(long i=1;i<lg(rams);i++){
+	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
+	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
+  }
+  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), prec), norm);//d_F^(3/2)*phi(D)
+  long n=nf_get_degree(F), twon=2*n;
+  ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
+  ar=gmul(ar, gpowgs(gen_2, 3-twon));
+  ar=gmul(ar, gpowgs(mppi(prec), 1-twon));//2^(3-2n)*Pi*(1-n)*zeta_F(2)*d_F^(3/2)*phi(D)
+  return gerepileupto(top, ar);
+}
+
+//Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
+static GEN qalg_fdinitialize(GEN A, long prec){
+  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
+  GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
+  GEN ramdat=algramifiedplacesf(A);//Finite ramified places
+  GEN varnos=mkvecsmall2(nf_get_varn(K), rnf_get_varn(L));//Stores the variable numbers for K and L, in that order
+  long split=algsplitoo(A);//The split real place
+  if(split==0) pari_err_TYPE("Quaternion algebra has 0 or >=2 split real infinite places, not valid for fundamental domains.", A);  
+  GEN Kroot=gel(nf_get_roots(K), split);//The split root
+  GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
+  if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
+  GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
+  return mkvec4(A, ramdat, varnos, roots);
+}
+
+//Returns the qf invrad as a matrix. If order has basis v1, ..., vn, then this is invrad(e1*v1+...+en*vn), with invrad defined as on page 477 of Voight. We take the basepoint to be z, so if z!=0, we shift it so the 1/radius part is centred at z (and so isometric circles near z are weighted more).
+static GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec){
+  pari_sp top=avma;
+  //First we find the part coming from |f_g(p)|
+
+  GEN A=qalg_get_alg(Q);
+  long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
+  GEN basisimage=cgetg(n, t_VEC);//The image of the basis elements in M_2(R)
+  GEN belt=zerocol(n-1);
+  gel(belt, 1)=gen_1;
+  gel(basisimage, 1)=qalg_fdm2rembed(&Q, belt, prec);
+
+  for(long i=2;i<n;i++){
+	gel(belt, i-1)=gen_0;
+	gel(belt, i)=gen_1;//Updating belt to have a 1 only in the ith place
+	gel(basisimage, i)=qalg_fdm2rembed(&Q, belt, prec);
+  }
+
+  GEN tvars=cgetg(n, t_VECSMALL);
+  GEN xvars=cgetg(n, t_VEC);
+  for(long i=1;i<n;i++){
+	tvars[i]=fetch_var();//The temporary variable numbers
+	gel(xvars, i)=pol_x(tvars[i]);//The variables
+  }
+
+  GEN elt=zeromatcopy(2, 2);//Will represent the general element
+  for(long i=1;i<n;i++) elt=gadd(elt, gmul(gel(basisimage, i), gel(xvars, i)));//The general element
+  if(!gequal0(z)){//Shift by M^(-1), where M=phi^(-1)*W*phi, and W=[a,b;conj(b), a] with a=1/sqrt(1-|z|^2) and b=za
+	GEN a=gdivsg(1, gsqrt(gsubsg(1, gsqr(gabs(z, prec))), prec));//1/sqrt(1-|z|^2)
+	GEN mb=gneg(gmul(z, a));//-za=-b
+	GEN Winv=mkmat22(a, mb, conj_i(mb), a);//W^(-1)
+	GEN Minv=gmul(gel(mats, 2), gmul(Winv, gel(mats, 1)));//M^(-1)
+	elt=gmul(Minv, elt);//Shifting it by the appropriate amount.
+  }
+  GEN p=gel(mats, 3);//p
+  GEN fg=gmul(gcoeff(elt, 2, 1), p);//elt[2, 1]*p
+  fg=gadd(fg, gsub(gcoeff(elt, 2, 2), gcoeff(elt, 1, 1)));//PSLelt[2, 1]*p+PSLelt[2, 2]-PSLelt[2, 1]
+  fg=gsub(gmul(fg, p), gcoeff(elt, 1, 2));//PSLelt[2, 1]*p^2+(PSLelt[2, 2]-PSLelt[2, 1])*p-PSLelt[1, 2], i.e. f_g(p) (page 477 of Voight)
+  GEN invrad1=gadd(gsqr(greal(fg)), gsqr(gimag(fg)));//real(fg)^2+imag(fg)^2
+
+  GEN K=alg_get_center(A);
+  GEN invrad2=qalg_normform(Q);
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(invrad2, i, j)=nftrace(K, gcoeff(invrad2, i, j));//Taking the trace to Q
+	}
+  }
+  invrad2=gmulsg(2, gmul(gsqr(gimag(p)), invrad2));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  //At this point, invrad1 is a polynomial in the temporary variables, and invrad2 is a matrix in the correct form.
+
+  GEN qf=cgetg(n, t_MAT);//Creating the return matrix
+  for(long i=1;i<n;i++) gel(qf, i)=cgetg(n, t_COL);
+  GEN part1=invrad1;//This stores the part we are working on.
+  long var=qalg_get_varnos(Q)[1];//The variable number for K
+  GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
+  for(long i=1;i<n;i++){//Working with the ith variable
+	gcoeff(qf, i, i)=gadd(gsubst(lift(polcoef_i(part1, 2, tvars[i])), var, Kx), gcoeff(invrad2, i, i));//iith coefficient
+	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
+	for(long j=i+1;j<n;j++){
+	  gcoeff(qf, i, j)=gadd(gdivgs(gsubst(lift(polcoef_i(linpart, 1, tvars[j])), var, Kx), 2), gcoeff(invrad2, i, j));//the ijth coefficient
+	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
+	}
+	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
+  }
+  /*
+  GEN invrad2=gmulsg(2, gmul(gsqr(gimag(p)), qalg_normform(Q)));//2*imag(p)^2*nrd(elt);
+  //At this point, invrad1 is a polynomial in the temporary variables, and invrad2 is a matrix in the correct form.
+  
+  GEN qf=cgetg(n, t_MAT);//Creating the return matrix
+  for(long i=1;i<n;i++) gel(qf, i)=cgetg(n, t_COL);
+  GEN part1=invrad1;//This stores the part we are working on.
+  long var=qalg_get_varnos(Q)[1];//The variable number for K
+  GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
+  for(long i=1;i<n;i++){//Working with the ith variable
+	gcoeff(qf, i, i)=gsubst(lift(gadd(polcoef_i(part1, 2, tvars[i]), gcoeff(invrad2, i, i))), var, Kx);//iith coefficient
+	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
+	for(long j=i+1;j<n;j++){
+	  gcoeff(qf, i, j)=gsubst(lift(gadd(gdivgs(polcoef_i(linpart, 1, tvars[j]), 2), gcoeff(invrad2, i, j))), var, Kx);//the ijth coefficient
+	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
+	}
+	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
+  }*/
+  long delv;
+  do{delv=delete_var();} while(delv && delv<=tvars[1]);//Delete the temporary variables
+  return gerepilecopy(top, qf);
+}
+
+//Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of A. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
+static GEN qalg_normform(GEN Q){
+  pari_sp top=avma;
+  GEN A=qalg_get_alg(Q);
+  long n=lg(gel(alg_get_basis(A), 1)), nm1=n-1;//The lg of a normal entry
+  GEN basis=cgetg(n, t_VEC);
+  for(long i=1;i<n;i++){
+	gel(basis, i)=zerocol(nm1);
+	gel(gel(basis, i), i)=gen_1;
+  }
+  GEN basisconj=cgetg(n, t_VEC);
+  for(long i=1;i<n;i++){
+	gel(basisconj, i)=qalg_basis_conj(Q, gel(basis, i));//The conjugate of the basis element.
+  }
+  GEN M=cgetg(n, t_MAT);//Initialize the matrix
+  for(long i=1;i<n;i++) gel(M, i)=cgetg(n, t_COL);
+  for(long i=1;i<n;i++) gcoeff(M, i, i)=lift0(algnorm(A, gel(basis, i), 0), -1);
+  for(long i=1;i<n;i++){
+	for(long j=i+1;j<n;j++){
+	  GEN prod=algmul(A, gel(basis, i), gel(basisconj, j));
+	  GEN tr=gdivgs(algtrace(A, prod, 0), 2);
+	  gcoeff(M, i, j)=tr;
+	  gcoeff(M, j, i)=tr;
+	}
+  }
+  return gerepilecopy(top, M);
+}
+
+//Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
+static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec){
+  pari_sp top=avma, mid;
+  GEN A=qalg_get_alg(Q);
+  GEN mats=psltopsu_transmats(p);
+  GEN invrad=qalg_invradqf(Q, mats, z, prec);
+  GEN MAXEACH=stoi(1000);//Set to NULL to get all
+  GEN vposs=gel(qfminim0(invrad, C, MAXEACH, 2, prec), 3), norm;
+  long nvposs=lg(vposs);
+  GEN ret=vectrunc_init(nvposs);
+  for(long i=1;i<nvposs;i++){
+	mid=avma;
+	norm=algnorm(A, gel(vposs, i), 0);
+	if(gequal(norm, gen_1)){
+	  avma=mid;
+	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
+	  continue;
+	}
+	avma=mid;
+  }
+  return gerepilecopy(top, ret);
+}
+
+
+
+//BASIC OPERATIONS FOR NORMALIZED BASIS
+
+
+//Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
+static GEN qalg_fdinv(GEN *data, GEN x){
+  return alginv(qalg_get_alg(*data), x);
+}
+
+//Must pass *data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
+static GEN qalg_fdm2rembed(GEN *data, GEN x, long prec){
+  pari_sp top=avma;
+  GEN A=qalg_get_alg(*data);
+  GEN rts=qalg_get_roots(*data);
+  GEN varnos=qalg_get_varnos(*data); 
+  GEN b=gsubst(lift(alg_get_b(A)), varnos[1], gel(rts, 1));//Inputting the real value of K into b
+  if(lg(x)!=3) x=algbasistoalg(A, x);//Converting it to algebraic representation
+  x=liftall(x);//Lifiting x
+  GEN l1K=gsubst(gel(x, 1), varnos[1], gel(rts, 1));//Inputting the real value of K into l1
+  GEN l2K=gsubst(gel(x, 2), varnos[1], gel(rts, 1));//Inputting the real value of K into l2
+  GEN mLrt=gneg(gel(rts, 2));//The negative root of L
+  GEN M=cgetg(3, t_MAT);
+  gel(M, 1)=cgetg(3, t_COL), gel(M, 2)=cgetg(3, t_COL);//Initializing the matrix
+  gcoeff(M, 1, 1)=gsubst(l1K, varnos[2], gel(rts, 2));//l1
+  gcoeff(M, 1, 2)=gmul(gsubst(l2K, varnos[2], mLrt), b);//sigma(l2)*b, i.e. substitute in the negative root of L into l2
+  gcoeff(M, 2, 1)=gsubst(l2K, varnos[2], gel(rts, 2));//l2
+  gcoeff(M, 2, 2)=gsubst(l1K, varnos[2], mLrt);//sigma(l1)
+  return gerepilecopy(top, M);
+}
+
+//Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
+static GEN qalg_fdmul(GEN *data, GEN x, GEN y){
+  return algmul(qalg_get_alg(*data), x, y);
+}
+
+//Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
+static int qalg_istriv(GEN *data, GEN x){
+  if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
+  for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;
+  return 1;
 }
 
 
 
 //SHALLOW RETRIEVAL METHODS
 
+
 //Shallow method to return the algebra
-GEN qalg_get_alg(GEN Q){return gel(Q, 1);}
-
-//Shallow method to get a
-GEN qalg_get_a(GEN Q){return gel(Q, 2);}
-
-//Shallow method to get b
-GEN qalg_get_b(GEN Q){return gel(Q, 3);}
+static GEN qalg_get_alg(GEN Q){return gel(Q, 1);}
 
 //Shallow method to get the ramification
-GEN qalg_get_rams(GEN Q){return gel(Q, 4);}
+static GEN qalg_get_rams(GEN Q){return gel(Q, 2);}
 
 //Shallow method to return the variable numbers of K and L
-GEN qalg_get_varnos(GEN Q){return gel(Q, 5);}
+static GEN qalg_get_varnos(GEN Q){return gel(Q, 3);}
 
 //Shallow method to return the roots of K and L.
-GEN qalg_get_roots(GEN Q){return gel(Q, 6);}
-
-
+static GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
