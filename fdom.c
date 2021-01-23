@@ -44,7 +44,7 @@ static GEN qalg_fd(GEN Q, GEN p, int dispprogress, GEN ANRdata, GEN area, GEN to
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 static GEN qalg_fdarea(GEN Q, long prec);
-static GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec);
+static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, long prec);
 static GEN qalg_normform(GEN Q);
 static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec);
 static GEN qalg_fdinitialize(GEN A, long prec);
@@ -3025,8 +3025,8 @@ static GEN qalg_fdinitialize(GEN A, long prec){
   return mkvec4(A, ramdat, varnos, roots);
 }
 
-//Returns the qf invrad as a matrix. If order has basis v1, ..., vn, then this is invrad(e1*v1+...+en*vn), with invrad defined as on page 477 of Voight. We take the basepoint to be z, so if z!=0, we shift it so the 1/radius part is centred at z (and so isometric circles near z are weighted more).
-static GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec){
+//Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm(e1*v1+...+en*vn), with absrednorm defined as on page 478 of Voight. We take the basepoint to be z, so if z!=0, we shift it so the 1/radius part is centred at z (and so isometric circles near z are weighted more).
+static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, long prec){
   pari_sp top=avma;
   //First we find the part coming from |f_g(p)|
 
@@ -3089,24 +3089,6 @@ static GEN qalg_invradqf(GEN Q, GEN mats, GEN z, long prec){
 	}
 	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
   }
-  /*
-  GEN invrad2=gmulsg(2, gmul(gsqr(gimag(p)), qalg_normform(Q)));//2*imag(p)^2*nrd(elt);
-  //At this point, invrad1 is a polynomial in the temporary variables, and invrad2 is a matrix in the correct form.
-  
-  GEN qf=cgetg(n, t_MAT);//Creating the return matrix
-  for(long i=1;i<n;i++) gel(qf, i)=cgetg(n, t_COL);
-  GEN part1=invrad1;//This stores the part we are working on.
-  long var=qalg_get_varnos(Q)[1];//The variable number for K
-  GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
-  for(long i=1;i<n;i++){//Working with the ith variable
-	gcoeff(qf, i, i)=gsubst(lift(gadd(polcoef_i(part1, 2, tvars[i]), gcoeff(invrad2, i, i))), var, Kx);//iith coefficient
-	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
-	for(long j=i+1;j<n;j++){
-	  gcoeff(qf, i, j)=gsubst(lift(gadd(gdivgs(polcoef_i(linpart, 1, tvars[j]), 2), gcoeff(invrad2, i, j))), var, Kx);//the ijth coefficient
-	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
-	}
-	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
-  }*/
   long delv;
   do{delv=delete_var();} while(delv && delv<=tvars[1]);//Delete the temporary variables
   return gerepilecopy(top, qf);
@@ -3145,9 +3127,9 @@ static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec){
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
   GEN mats=psltopsu_transmats(p);
-  GEN invrad=qalg_invradqf(Q, mats, z, prec);
+  GEN absrednorm=qalg_absrednormqf(Q, mats, z, prec);
   GEN MAXEACH=stoi(1000);//Set to NULL to get all
-  GEN vposs=gel(qfminim0(invrad, C, MAXEACH, 2, prec), 3), norm;
+  GEN vposs=gel(qfminim0(absrednorm, C, MAXEACH, 2, prec), 3), norm;
   long nvposs=lg(vposs);
   GEN ret=vectrunc_init(nvposs);
   for(long i=1;i<nvposs;i++){
