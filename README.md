@@ -1,4 +1,4 @@
-# Fundamental Domains for Shimura curves
+# Fundamental domains for Shimura curves
 
 This package is a PARI/GP implementation of fundamental domains for Shimura curves. You can compute fundamental domains and view them with a Python application (using Matplotlib).
 
