@@ -2617,7 +2617,7 @@ static int toleq(GEN x, GEN y, GEN tol, long prec){
 
 
 /*
-To compute the fundamental domain, we store the quaternion algebra as [A, ramdat, varnos, roots], where A=the algebra, ramdat=algramifiedplaces(A), varnos are the variable numbers for K, L (L the splitting field of K), and roots are approximations to the defining variables for K, L that correspond to the split real embedding. Such an entry is called a "qalg" and uses the variable name Q, so any methods with the name "qalg" expect this as input (whereas "alg" expects an algebra that was output by alginit, and this uses the variable name A).
+To compute the fundamental domain, we store the quaternion algebra as [A, ramdat, varnos, roots], where A=the algebra, ramdat=finite ramified places of A, varnos are the variable numbers for K, L (L the splitting field of K), and roots are approximations to the defining variables for K, L that correspond to the split real embedding. Such an entry is called a "qalg" and uses the variable name Q, so any methods with the name "qalg" expect this as input (whereas "alg" expects an algebra that was output by alginit, and this uses the variable name A).
 */
 
 
@@ -2638,6 +2638,43 @@ GEN algfdomarea(GEN A, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, qalg_fdomarea(Q, prec));
+}
+
+//Reduces the norm 1 element x with respect to the fundamental domain fdom and the point z (default z=0)
+GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, reduceelt_givennormbound(U, g, z, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, tol, prec));
+}
+
+//Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
+GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, rootgeodesic_fd(U, g, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
+	
+}
+
+//Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
+GEN algmulvec(GEN A, GEN G, GEN L){
+  pari_sp top=avma;
+  GEN Lsmall=gtovecsmall(L);//L in vecsmall
+  GEN elt=gel(alg_get_basis(A), 1);//The identity
+  pari_CATCH(CATCH_ALL){
+	avma=top;
+    pari_CATCH_reset();
+	pari_err_TYPE("Invalid inputs; perhaps G is not formatted correctly or L has indices that are too large?", mkvec2(G, L));
+	return gen_0;
+  }
+  pari_TRY{
+    for(long i=1;i<lg(Lsmall);i++) elt=algmul(A, elt, gel(G, Lsmall[i]));
+  }
+  pari_ENDCATCH
+  return gerepileupto(top, elt);
 }
 
 //Returns the vector of finite ramified places of the algebra A.
@@ -2662,6 +2699,7 @@ GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
 }
 
 
+
 //FUNDAMENTAL DOMAIN COMPUTATION
 
 
@@ -2678,10 +2716,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	GEN orderpart=gen_1;
 	GEN rams=qalg_get_rams(Q);
 	GEN spf=alg_get_center(Alg);
-	for(long i=1;i<lg(rams);i++){
-	  if(typ(gel(rams, i))==t_INT) continue;//Don't want to count the infinite places
-	  orderpart=gmul(orderpart, idealnorm(spf, gel(rams, i)));
-	}
+	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(spf, gel(rams, i)));
 	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(spf)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(spf)), prec)));
   }
   else A=gel(ANRdata, 1);

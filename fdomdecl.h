@@ -88,5 +88,8 @@ GEN deftol(long prec);
 //QUATERNION METHODS
 GEN algfdomarea(GEN A, long prec);
 GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
+GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
+GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec);
+GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algramifiedplacesf(GEN A);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec);

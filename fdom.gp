@@ -23,12 +23,18 @@ default(help, "gphelp -detex");
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algramifiedplacesf, algsmallnorm1elts.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algfdomreduce, algfdomrootgeodesic, algmulvec, algramifiedplacesf, algsmallnorm1elts.");
 
 	install("algfdomarea","Gp","algfdomarea","./libfdom.so");
 	addhelp(algfdomarea,"Input A, a quaternion algebra split at one real place.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''.");
 	install("algfdom","GGD1,L,D0,G,D0,G,p","algfdom","./libfdom.so");
 	addhelp(algfdom,"Inputs A, p, {dispprogress=1}, {area=0}, {ANRdata=0}: quaternion algebra A split at one real place, upper half plane point p, dispprogress=0,1, ANRdata=0 or a length 5 vector, area=0 or the area of the fundamental domain.\n Computes and returns the fundamental domain for the group of units of norm 1 in A. We use the unit disc model, which the upper half plane is mapped to via p->0. p need to NOT be a fixed point of this group under the standard embedding into PSL(2, R) (p=I/2 is safe for quaternion algebras over Q). If area is passed in, this method will not re-compute it, which can save a little bit of time. ANRdata is a technical entry, and can be passed in to specify some/all constants used in the enumeration of Page (they greatly affect the running time, but the optimal choices are not totally clear).");
+	install("algfdomreduce","GGGD0,G,p","algfdomreduce","./libfdom.so");
+	addhelp(algfdomreduce,"Inputs A, U, g, {z=0}: quaternion algebra A split at one real place, the fundamental domain U of the group of units of norm 1 of the order in A, an element g of this group, and a point z in the unit disc.\n Returns the triple [gammabar, delta, decomp], where gammabar=delta*g is (G,z)-reduced (i.e. distance between gammabar*z and 0 is less than or equal to the distance between g'*gammabar*z for all g' in G), and decomp is the vecsmall [i1, i2, ..., in] with delta=G[i1]*G[i2]*...*G[in]. If z=0, then gammabar=+/-1.");
+	install("algfdomrootgeodesic","GGGp","algfdomrootgeodesic","./libfdom.so");
+	addhelp(algfdomrootgeodesic,"Inputs A, U, g: quaternion algebra A split at one real place, the fundamental domain U of the group of units of norm 1 of the order in A, an element g of this group.\n Returns the root geodesic of g in the fundamental domain. The format is [g's, circle arcs, vecsmall(sides hit), vecsmall(sides emenating from)].");
+	install("algmulvec","GGG","algmulvec","./libfdom.so");
+	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
 	install("algramifiedplacesf","G","algramifiedplacesf","./libfdom.so");
 	addhelp(algramifiedplacesf,"Input A, an algebra.\n Returns the vector of finite places that ramify.");
 	install("algsmallnorm1elts","GGGD0,G,p","algsmallnorm1elts","./libfdom.so");
