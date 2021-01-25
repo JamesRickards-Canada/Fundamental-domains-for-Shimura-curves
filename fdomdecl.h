@@ -26,10 +26,6 @@ typedef struct listtype3{//A generic linked list of longs, stores data and next 
 GEN divoo(GEN a, GEN b);
 
 //LISTS
-void clist_free(clist *l, long length);
-void clist_putbefore(clist **head_ref, GEN new_data);
-void clist_putafter(clist **head_ref, GEN new_data);
-GEN clist_togvec(clist *l, long length, int dir);
 void glist_free(glist *l);
 GEN glist_pop(glist **head_ref);
 void glist_putstart(glist **head_ref, GEN new_data);
@@ -42,12 +38,7 @@ GEN llist_togvec(llist *l, long length, int dir);
 GEN llist_tovecsmall(llist *l, long length, int dir);
 
 //SHORT VECTORS IN LATTICES
-GEN lat_smallvectors(GEN A, GEN C1, GEN C2, GEN condition, int onesign, int isintegral, int rdataonly, long prec);
-GEN lat_smallvectors_givendata(GEN chol, GEN U, GEN perminv, GEN C1, GEN C2, GEN condition, int onesign, long prec);
-GEN lat_smallvectors_tc(GEN A, GEN C1, GEN C2, int onesign, int isintegral, long prec);
-GEN lat_smallvectors_cholesky(GEN Q, GEN C1, GEN C2, GEN condition, int onesign, long prec);
 GEN mat_choleskydecomp(GEN A, int rcoefs, long prec);
-GEN mat_choleskydecomp_tc(GEN A, int rcoefs, long prec);
 
 
 //SECTION 2: GEOMETRY METHODS

@@ -29,7 +29,10 @@
 
 //1: SHORT VECTORS IN LATTICES
 static int opp_gcmp(void *data, GEN x, GEN y);
-static GEN quadraticinteger(GEN A, GEN B, GEN C);
+static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
+static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long prec);
+static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long prec);
+static GEN smallvectors_extractpol(GEN nf, GEN M, GEN x);
 
 //2: BASIC LINE, CIRCLE, AND POINT OPERATIONS
 static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec);
@@ -89,10 +92,11 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 static GEN qalg_fdomarea(GEN Q, long prec);
+static GEN qalg_fdominitialize(GEN A, long prec);
 static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, long prec);
 static GEN qalg_normform(GEN Q);
-static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec);
-static GEN qalg_fdominitialize(GEN A, long prec);
+static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, GEN maxN, long prec);
+static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, long prec);
 
 //3: BASIC OPERATIONS FOR NORMALIZED BASIS
 static GEN qalg_fdominv(GEN *data, GEN x);
@@ -132,82 +136,6 @@ GEN divoo(GEN a, GEN b){//No garbage collection necessary
 
 
 //LISTS
-
-
-//Circular list of GENs
-
-//Frees the memory pari_malloc'ed by clist
-void clist_free(clist *l, long length){
-  clist *temp=l;
-  long i=1;
-  while(i<length){
-	temp=l;
-	l=l->next;
-	pari_free(temp);
-	i++;
-  }
-  pari_free(l);
-}
-
-//Put an element before *head_ref, and update *head_ref to point there
-void clist_putbefore(clist **head_ref, GEN new_data){
-  clist *new_elt = (clist*)pari_malloc(sizeof(clist)); 
-  new_elt->data = new_data;
-  if(*head_ref!=NULL){
-    new_elt->next = *head_ref; 
-    new_elt->prev = (*head_ref)->prev;
-    (*head_ref)->prev = new_elt;
-	(new_elt->prev)->next=new_elt;
-  }
-  else{
-    new_elt->next = new_elt; 
-    new_elt->prev = new_elt;
-  }
-  *head_ref = new_elt;
-}
-
-//Put an element after *head_ref, and update *head_ref to point there
-void clist_putafter(clist **head_ref, GEN new_data){
-  clist *new_elt = (clist*)pari_malloc(sizeof(clist)); 
-  new_elt->data = new_data;
-  if(*head_ref!=NULL){
-    new_elt->prev = *head_ref; 
-    new_elt->next = (*head_ref)->next;
-    (*head_ref)->next = new_elt;
-	(new_elt->next)->prev=new_elt;
-  }
-  else{
-    new_elt->next = new_elt; 
-    new_elt->prev = new_elt;
-  }
-  *head_ref = new_elt;
-}
-
-//dir=1 means forward, dir=-1 means backwards. Returns the list as a vector, and makes a clean copy. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN clist_togvec(clist *l, long length, int dir){
-  if(l==NULL){//Empty list, return the empty vector.
-    GEN rvec=cgetg(1,t_VEC);
-    return(rvec);	  
-  }
-  GEN rvec=cgetg(length+1, t_VEC);
-  long lind=1;
-  if(dir==1){
-    while(lind<=length){
-	  gel(rvec,lind)=gcopy(l->data);
-	  l=l->next;
-	  lind++;
-    }
-  }
-  else{
-    while(lind<=length){
-	  gel(rvec,lind)=gcopy(l->data);
-	  l=l->prev;
-	  lind++;
-    }
-  }
-  clist_free(l,length);
-  return rvec;
-}
 
 
 //List of GENs
@@ -397,242 +325,6 @@ GEN llist_tovecsmall(llist *l, long length, int dir){//No garbage collection nec
 //SHORT VECTORS IN LATTICES
 
 
-//We follow the article "Improved Methods for Calculating Vectors of Short Length in a Lattice, Including Complexity Analysis" by Fincke and Pohst (Mathematics of Computation, Vol. 44, No. 170 (Apr., 1985), pp 463-471
-
-//Follows Algorithm 2.12 in Fincke-Pohst. If rdataonly=1, returns the data required to run the algorithm (useful if you will use multiple times only changing C).
-GEN lat_smallvectors(GEN A, GEN C1, GEN C2, GEN condition, int onesign, int isintegral, int rdataonly, long prec){
-  pari_sp top=avma, mid;
-  long np1=lg(A);//n+1
-  GEN R=mat_choleskydecomp(A, 0, prec), Rinv=ginv(R);//Step 1
-  GEN Rinvtrans=shallowtrans(Rinv);//We reduce R with LLL, but this works on the columns and we care about the rows.
-  GEN Uinvtrans=lllfp(Rinvtrans, 0.99, 0);//LLL reduce Rinvtrans
-  GEN Uinv=shallowtrans(Uinvtrans);
-  mid=avma;
-  GEN Sinv=gmul(Uinv, Rinv);
-  GEN U=ginv(Uinv);
-  GEN S=gmul(R, U);
-  gerepileallsp(top, mid, 3, &Sinv, &U, &S);//Cleaning up. We are at the end of Step 3, and know S, S^-1 and U (R is forgotten but not needed anymore).
-  mid=avma;
-  GEN Sprimesizes=cgetg(np1, t_VEC);//The sizes of the rows of S^-1 (will store ||s'_i||, which is the ith column of S^(-1)^T, i.e. the ith row of S^-1.
-  for(long i=1;i<np1;i++){
-	gel(Sprimesizes, i)=gen_0;
-	for(long j=1;j<np1;j++) gel(Sprimesizes, i)=gadd(gel(Sprimesizes, i), gsqr(gcoeff(Sinv, i, j)));//Adding up
-  }
-  GEN perm=gerepileupto(mid, gen_indexsort(Sprimesizes, NULL, &opp_gcmp));//Sort Sprimesizes from large to small, returns VECSMALL. This is pi in Step 3.
-  GEN perminv=perm_inv(perm);//pi^(-1)
-  mid=avma;
-  GEN Snew=vecpermute(S, perminv);//S with the columns permuted.
-  GEN SnewtransSnew=gmul(shallowtrans(Snew), Snew);//S^(Tr)*S
-  if(isintegral==1) SnewtransSnew=gerepileupto(mid, gdivgs(ground(gmulgs(SnewtransSnew, 2)), 2));//The entries of SnewtransSnew are half integers, so we double it, round (should generally have enough precision that this is correct), and divide by 2 again to make the entries exact.
-  GEN chol=mat_choleskydecomp(SnewtransSnew, 1, prec), newcond;//Cholesky on Snew
-  if(!gequal0(condition)){//Must update the condition.
-    mid=avma;
-	GEN newcondmat=gmul(shallowtrans(U), gmul(gel(condition, 1), U));//M->U^T*M*U
-	newcondmat=vecpermute(newcondmat, perm);//Permute the columns by perm, ie *W on the right (W is the permutation matrix producing the final vector); we are now solving for y, and x=U*W*y.
-	newcond=cgetg(3, t_VEC);//Remaking so as to not disrupt previous memory
-	gel(newcond, 1)=rowpermute(newcondmat, perm);//Permute the rows by perm, i.e. *W^T on the left
-	gel(newcond, 2)=gcopy(gel(condition, 2));
-  }
-  else newcond=gen_0;
-  if(rdataonly==0) return gerepileupto(top, lat_smallvectors_givendata(chol, U, perminv, C1, C2, newcond, onesign, prec));
-  GEN ret=cgetg(5, t_VEC);//The crucial data is chol, U, perminv, condition.
-  gel(ret, 1)=gcopy(chol);
-  gel(ret, 2)=gcopy(U);
-  gel(ret, 3)=gcopy(perminv);
-  gel(ret, 4)=gcopy(condition);
-  return gerepileupto(top, ret);
-}
-
-//Given the data, finds the small vectors. Use lat_smallvectors to generate [chol, U, perminv, condition], and feed that into here along with C1, C2, onesign, and prec to get the small vectors.
-GEN lat_smallvectors_givendata(GEN chol, GEN U, GEN perminv, GEN C1, GEN C2, GEN condition, int onesign, long prec){
-  pari_sp top=avma;
-  GEN yvals=lat_smallvectors_cholesky(chol, C1, C2, condition, onesign, prec);
-  for(long i=1;i<lg(yvals);i++) gel(gel(yvals, i), 1)=vecpermute(gel(gel(yvals, i), 1), perminv);//Permuting the entries of y, now we just need to apply U to get back to x
-  long lx;
-  GEN ret=cgetg_copy(yvals, &lx);//The return. Must shift back.
-  for(long i=1;i<lx;i++){
-	gel(ret, i)=cgetg(3, t_VEC);
-	gel(gel(ret, i), 1)=gmul(U, gel(gel(yvals, i), 1));//U*y
-	gel(gel(ret, i), 2)=gcopy(gel(gel(yvals, i), 2));//The value
-  }
-  return gerepileupto(top, ret); 
-}
-
-//lat_smallvectors with typechecking We do not allow for a condition to be passed in, and if C2=0 we replace (C1, C2] by (0, C1].
-GEN lat_smallvectors_tc(GEN A, GEN C1, GEN C2, int onesign, int isintegral, long prec){
-  if(typ(A)!=t_MAT) pari_err_TYPE("Please input a nxn symmetric MATRIX", A);
-  if(gequal0(C2)) return lat_smallvectors(A, gen_0, C1, gen_0, onesign, isintegral, 0, prec);
-  return lat_smallvectors(A, C1, C2, gen_0, onesign, isintegral, 0, prec);
-}
-
-//Q is the Cholesky decomposition of a matrix A, this computes all vectors x such that C_1<x^T*A*x<=C2 (i.e. C_1<Q(x)<=C_2 where Q(x)=sum(i=1..n)q_ii(x_i+sum(j=i+1..n)q_ijxj)^2. Algorithm 2.8 of Fincke Pohst. We can also pass in a condition, which is either 0 (no condition) or [M, n] where x^T*M*x=n must also be satisfied. M and n must be integral. (the point: M gives an indefinite norm condition on the vector, and A combines this norm with other info to make a positive definite form. We use the condition when finding small norm 1 elements of a quaternion algebra.)
-GEN lat_smallvectors_cholesky(GEN Q, GEN C1, GEN C2, GEN condition, int onesign, long prec){
-  pari_sp top=avma, mid;
-  long np1=lg(Q), n=np1-1;//Number of variables+1 and n
-  GEN T=zerovec(n);//Stores the ''tail'' of x, as we work from the back to the front (x_m to x_1)
-  GEN U=zerovec(n);//U[i] will store the sum of j=i+1 to n of q_{ij}x_j
-  GEN UB=zerovec(n);//UB represents the upper bould for x_i
-  GEN x=zerocol(n), Z, K, cond, temp;//x represents the solution
-  long i=np1-1, count=0;//i represents the current index, initially set to n. count=the number of solutions
-  gel(T, n)=gcopy(C2);//initialize T[n]=0
-  gel(U, n)=gen_0;//Clearly U[n]=0
-  int step=2;//Represents the current step of algorithm 2.8
-  int C1isnot0=1-gequal0(C1), condisnot0=1-gequal0(condition), xpass0=0;
-  long uvar=0;//In keeping track of the condition, we use a variable.
-  GEN u=gen_0, x1sols;
-  if(condisnot0){
-	uvar=fetch_var();//Creating temporary variable
-    u=pol_x(uvar);//The monomial
-  }
-  glist *S=NULL;//Pointer to the list start
-  GEN v=cgetg(1, t_VEC);//The list, is used for garbage collection partway through
-  while(step>0){
-	if(gc_needed(top, 1)){
-	  mid=avma;
-	  if(onesign==0) count=2*count;//We found double the solutions in this case.
-	  v=glist_togvec_append(S, v, count, 1);
-	  count=0;
-	  S=NULL;
-	  T=gcopy(T);
-	  U=gcopy(U);
-	  UB=gcopy(UB);
-	  x=gcopy(x);
-	  gerepileallsp(top, mid, 5, &v, &T, &U, &UB, &x);
-	  if(condisnot0) u=pol_x(uvar);//Resetting u
-	}
-	if(step==2){
-	  Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
-	  gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
-	  gel(x, i)=gsubgs(gceil(gneg(gadd(Z, gel(U, i)))), 1);//x[i]=ceil(-Z-U[i])-1;
-	  step=3;
-	}
-    if(step==3){
-	  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
-	  if(gcmp(gel(x, i), gel(UB, i))<=0) step=5;//If x[i]<=UB[i], goto step 5
-	  else step=4; //If x[i]>UB[i], goto step 4
-	}
-	if(step==4){
-	  i=i+1;
-	  step=3;
-	  continue;//May as well go back to start
-	}
-	if(step==5){
-	  if(i==1) step=6;
-	  else{
-		i=i-1;
-		gel(U, i)=gen_0;
-		for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));//U[i]=sum(j=i+1,n,q[i,j]*x[j]);
-		gel(T, i)=gsub(gel(T, i+1), gmul(gcoeff(Q, i+1, i+1), gsqr(gadd(gel(x, i+1), gel(U, i+1)))));//T[i]=T[i+1]-q[i+1,i+1]*(x[i+1]+U[i+1])^2;
-		if(condisnot0 && i==1){step=7;}//We have a condition to deal with!
-		else{//Go back now
-		  step=2;
-		  continue;
-		}
-	  }
-	}
-	if(step==6){//Solution found
-	  if(gequal0(x)){step=0;continue;}//Terminate
-	  K=gadd(gsub(C2, gel(T, 1)), gmul(gcoeff(Q, 1, 1), gsqr(gadd(gel(x, 1), gel(U, 1)))));//K=C-T[1]+q[1,1]*(x[1]+U[1])^2;
-	  if(C1isnot0){
-		if(gcmp(C1, K)!=-1){//Result was <C1. Since K is symmetric in x[1] about U[1], we can swap x to the other side.
-		  if(gcmp(gel(x, 1), gel(U, 1))==-1){//-2U[1]-x[1]; i.e. going from -U[1]-V to -U[1]+V.
-			temp=gfloor(gsub(gmulgs(gel(U, 1), -2), gel(x, 1)));//We include the if statement to account for rounding errors; don't want an infinite loop if we keep swapping back to the same value of gel(x, 1)!
-			if(gsigne(temp)>=0){
-			  gel(x, 1)=gen_0;
-			  if(gequal0(x)){step=0;continue;}//If flipping over 0, we must check that we don't pass the stop condition!
-			}
-			gel(x, 1)=temp;
-		  }
-		  step=3;
-		  continue;
-		}
-	  }
-	  glist_putstart(&S, mkvec2copy(x, K));
-	  count++;
-	  if(onesign==0) glist_putstart(&S, mkvec2copy(gneg(x), K));
-	  step=3;
-	}
-	if(step==7){//Dealing with extra condtions
-	  gel(x, 1)=u;
-	  cond=gmul(gmul(shallowtrans(x), gel(condition, 1)), x);
-	  x1sols=quadraticinteger(polcoef_i(cond, 2, uvar), polcoef_i(cond, 1, uvar), subii(polcoef_i(cond, 0, uvar), gel(condition, 2)));
-	  gel(x, 1)=gen_0;
-	  if(gequal0(x)) xpass0=1;//This is the last check
-	  for(long j=1;j<lg(x1sols);j++){
-		K=gadd(gsub(C2, gel(T, 1)), gmul(gcoeff(Q, 1, 1), gsqr(gadd(gel(x1sols, j), gel(U, 1)))));
-		if(gcmp(K, C2)==1) continue;//>C2
-		if(C1isnot0){if(gcmp(C1, K)!=-1) continue;}//<=C1
-		if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
-		gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
-		glist_putstart(&S, mkvec2copy(x, K));
-	    count++;
-	    if(onesign==0) glist_putstart(&S, mkvec2copy(gneg(x), K));
-	  }
-	  if(xpass0){step=0;continue;}//Game over, we are done!
-	  i=2;
-	  step=3;
-	  continue;
-	}
-  }
-  if(condisnot0) delete_var();//Delete the created variable.
-  if(onesign==0) count=2*count;//We found double the solutions in this case.
-  return gerepileupto(top, glist_togvec_append(S, v, count, -1));
-}
-
-//Solves Ax^2+Bx+C=0 in the integers and returns the solution (A, B, C need to be integers, with at least one non-zero).
-static GEN quadraticinteger(GEN A, GEN B, GEN C){
-  pari_sp top=avma;
-  if(gequal0(A)){//Actually a linear. This case occurs when dealing with small vectors in the quaternion algebra ramified nowhere.
-	if(gequal0(B)) return cgetg(1, t_VEC);//We say there are no soln's when A=B=0
-	GEN x=Qdivii(C, B);
-	if(typ(x)!=t_INT){avma=top;return cgetg(1, t_VEC);}//No solution!
-	GEN ret=cgetg(2, t_VEC);
-	gel(ret, 1)=negi(x);
-	return gerepileupto(top, ret);
-  }
-  GEN disc=subii(sqri(B), mulii(A, shifti(C, 2)));//B^2-4AC
-  GEN rt;
-  long israt=Z_issquareall(disc, &rt);
-  if(!israt){avma=top;return cgetg(1, t_VEC);}//Disc is not a square, no solutions.
-  GEN x1, x2, sols;
-  if(gequal0(rt)){
-	x1=Qdivii(gneg(B), shifti(A, 1));//-B/2A
-	if(typ(x1)!=t_INT){avma=top;return cgetg(1, t_VEC);}//No solution
-	sols=cgetg(2, t_VEC);
-	gel(sols, 1)=icopy(x1);
-	return gerepileupto(top, sols);
-  }
-  //Now there could be 2 roots
-  GEN denom=shifti(A, 1);//2A;
-  x1=Qdivii(subii(rt, B), denom);//(sqrt(D)-B)/2A
-  x2=Qdivii(subii(negi(rt), B), denom);//(-sqrt(D)-B)/2A
-  if(typ(x1)==t_INT){
-	if(typ(x2)==t_INT){
-	  sols=cgetg(3, t_VEC);
-	  gel(sols, 1)=icopy(x1);
-	  gel(sols, 2)=icopy(x2);
-	}
-	else{
-	  sols=cgetg(2, t_VEC);
-	  gel(sols, 1)=icopy(x1);
-	}
-  }
-  else{
-	if(typ(x2)==t_INT){
-	  sols=cgetg(2, t_VEC);
-	  gel(sols, 1)=icopy(x2);
-	}
-	else{
-	  avma=top;
-	  return cgetg(1, t_VEC);
-	}
-  }
-  return gerepileupto(top, sols);
-}
-
-//Returns -gcmp(x, y), and used for sorting backwards.
-static int opp_gcmp(void *data, GEN x, GEN y){return -gcmp(x, y);}
-
 //Computes the Cholesky decomposition of A (nxn symmetric matrix). In otherwords, finds R such that R^T*R=A. If rcoefs=0, returns R, otherwise returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2.
 GEN mat_choleskydecomp(GEN A, int rcoefs, long prec){
   pari_sp top=avma;
@@ -664,13 +356,186 @@ GEN mat_choleskydecomp(GEN A, int rcoefs, long prec){
   return gerepilecopy(top, M);
 }
 
-//choleskydecomp with typechecking
-GEN mat_choleskydecomp_tc(GEN A, int rcoefs, long prec){
-  if(typ(A)!=t_MAT) pari_err_TYPE("Please input a nxn symmetric MATRIX", A);
-  if(lg(A)!=lg(gel(A, 1))) pari_err_TYPE("Please input a nxn symmetric matrix", A);
-  return mat_choleskydecomp(A, rcoefs, prec);
+//Returns -gcmp(x, y), and used for sorting backwards.
+static int opp_gcmp(void *data, GEN x, GEN y){return -gcmp(x, y);}
+
+//Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions.
+static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
+  pari_sp top=avma;
+  if(gequal0(A)){//Actually a linear. This case occurs when dealing with small vectors in the quaternion algebra ramified nowhere.
+	if(gequal0(B)) return cgetg(1, t_VEC);//We say there are no soln's when A=B=0
+	GEN x=gneg(nfdiv(nf, C, B));//Solution
+	x=lift(basistoalg(nf, x));
+	if(typ(x)==t_INT) return gerepilecopy(top, mkvec(x));//Solution!
+	avma=top;
+	return cgetg(1, t_VEC);
+  }
+  GEN Ap=nfeltembed(nf, A, gen_1, prec);//Doesn't matter which place, since if we have an integer solution iff it works for all places
+  GEN Bp=nfeltembed(nf, B, gen_1, prec);
+  GEN Cp=nfeltembed(nf, C, gen_1, prec);
+  
+  GEN disc=gsub(gsqr(Bp), gmulsg(4, gmul(Ap, Cp)));//B^2-4AC
+  GEN rt=greal(gsqrt(disc, prec));//We use greal in case disc==0 but it is approximated as -E^(-large).
+  GEN mBp=gneg(Bp), twoAp=gmulsg(2, Ap);//-B, 2A
+  GEN r1=ground(gdiv(gadd(mBp, rt), twoAp));//We have enough precision that the rounded answer will be correct if there is an integral solution
+  GEN r2=ground(gdiv(gsub(mBp, rt), twoAp));
+  GEN rposs;//The possible roots
+  if(equalii(r1, r2)) rposs=mkvec(r1);
+  else rposs=mkvec2(r1, r2);
+  //Now we plug back in and check.
+  GEN rts=vectrunc_init(3), res, r;//At most 2 roots
+  for(long i=1;i<lg(rposs);i++){
+	r=gel(rposs, i);
+	res=nfadd(nf, nfmul(nf, nfadd(nf, nfmul(nf, A, r), B), r), C);//Plug it in
+	if(gequal0(res)) vectrunc_append(rts, r);//gequal0(res)=1 no matter what representation it is in.
+  }
+  return gerepilecopy(top, rts);
 }
 
+
+//We follow the article "Improved Methods for Calculating Vectors of Short Length in a Lattice, Including Complexity Analysis" by Fincke and Pohst (Mathematics of Computation, Vol. 44, No. 170 (Apr., 1985), pp 463-471
+
+//Follows Algorithm 2.12 in Fincke-Pohst, where we pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied, with M and n being elements of the number field nf.
+static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long prec){
+  pari_sp top=avma, mid;
+  long np1=lg(A);//n+1
+  GEN R=mat_choleskydecomp(A, 0, prec), Rinv=ginv(R);//Step 1
+  GEN Rinvtrans=shallowtrans(Rinv);//We reduce R with LLL, but this works on the columns and we care about the rows.
+  GEN Uinvtrans=lllfp(Rinvtrans, 0.99, 0);//LLL reduce Rinvtrans
+  GEN Uinv=shallowtrans(Uinvtrans);
+  mid=avma;
+  GEN Sinv=gmul(Uinv, Rinv);
+  GEN U=ginv(Uinv);
+  GEN S=gmul(R, U);
+  gerepileallsp(top, mid, 3, &Sinv, &U, &S);//Cleaning up. We are at the end of Step 3, and know S, S^-1 and U (R is forgotten but not needed anymore).
+  mid=avma;
+  GEN Sprimesizes=cgetg(np1, t_VEC);//The sizes of the rows of S^-1 (will store ||s'_i||, which is the ith column of S^(-1)^T, i.e. the ith row of S^-1.
+  for(long i=1;i<np1;i++){
+	gel(Sprimesizes, i)=gen_0;
+	for(long j=1;j<np1;j++) gel(Sprimesizes, i)=gadd(gel(Sprimesizes, i), gsqr(gcoeff(Sinv, i, j)));//Adding up
+  }
+  GEN perm=gerepileupto(mid, gen_indexsort(Sprimesizes, NULL, &opp_gcmp));//Sort Sprimesizes from large to small, returns VECSMALL. This is pi in Step 3.
+  GEN perminv=perm_inv(perm);//pi^(-1)
+  mid=avma;
+  GEN Snew=vecpermute(S, perminv);//S with the columns permuted.
+  GEN SnewtransSnew=gmul(shallowtrans(Snew), Snew);//S^(Tr)*S
+  GEN chol=mat_choleskydecomp(SnewtransSnew, 1, prec), newcond;//Cholesky on Snew
+  //Must update the condition.
+  mid=avma;
+  GEN nf=gel(condition, 1);
+  GEN newcondmat=nfM_mul(nf, shallowtrans(U), nfM_mul(nf, gel(condition, 2), U));//M->U^T*M*U
+  newcondmat=vecpermute(newcondmat, perm);//Permute the columns by perm, ie *W on the right (W is the permutation matrix producing the final vector); we are now solving for y, and x=U*W*y.
+  newcond=cgetg(4, t_VEC);
+  gel(newcond, 1)=nf;
+  gel(newcond, 2)=rowpermute(newcondmat, perm);//Permute the rows by perm, i.e. *W^T on the left
+  gel(newcond, 3)=gel(condition, 3);
+
+  GEN yvals=smallvectors_cholesky(chol, C, maxN, newcond, prec);//The small entries
+  for(long i=1;i<lg(yvals);i++) gel(yvals, i)=vecpermute(gel(yvals, i), perminv);//Permuting the entries of y, now we just need to apply U to get back to x
+  long lx;
+  GEN ret=cgetg_copy(yvals, &lx);//The return. Must shift back.
+  for(long i=1;i<lx;i++) gel(ret, i)=gmul(U, gel(yvals, i));//U*y
+  return gerepileupto(top, ret); 
+}
+
+//Q is the Cholesky decomposition of a matrix A, this computes all vectors x such that x^T*A*x<=C (i.e. Q(x)<=C_2 where Q(x)=sum(i=1..n)q_ii(x_i+sum(j=i+1..n)q_ijxj)^2. Algorithm 2.8 of Fincke Pohst. We also pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied (M and n live in the number field nf). (the point: M gives an indefinite norm condition on the vector, and A combines this norm with other info to make a positive definite form. We use the condition when finding small norm 1 elements of a quaternion algebra.)
+static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long prec){
+  pari_sp top=avma, mid;
+  long np1=lg(Q), n=np1-1;//Number of variables+1 and n
+  GEN T=zerovec(n);//Stores the ''tail'' of x, as we work from the back to the front (x_m to x_1)
+  GEN U=zerovec(n);//U[i] will store the sum of j=i+1 to n of q_{ij}x_j
+  GEN UB=zerovec(n);//UB represents the upper bould for x_i
+  GEN x=zerocol(n), Z, K;//x represents the solution
+  long i=np1-1, count=0;//i represents the current index, initially set to n. count=the number of solutions
+  gel(T, n)=gcopy(C);//initialize T[n]=0
+  gel(U, n)=gen_0;//Clearly U[n]=0
+  int step=2;//Represents the current step of algorithm 2.8
+  int xpass0=0;
+  long tries=0;//Represents how many tries we have. If maxN!=0, then after maxN tries at step 7, we return our partial results
+  GEN x1sols;
+  glist *S=NULL;//Pointer to the list start
+  GEN v=cgetg(1, t_VEC);//The list, is used for garbage collection partway through
+  while(step>0){
+	if(gc_needed(top, 1)){
+	  mid=avma;
+	  v=glist_togvec_append(S, v, count, 1);
+	  count=0;
+	  S=NULL;
+	  T=gcopy(T);
+	  U=gcopy(U);
+	  UB=gcopy(UB);
+	  x=gcopy(x);
+	  gerepileallsp(top, mid, 5, &v, &T, &U, &UB, &x);
+	}
+	if(step==2){
+	  Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
+	  gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
+	  gel(x, i)=gsubgs(gceil(gneg(gadd(Z, gel(U, i)))), 1);//x[i]=ceil(-Z-U[i])-1;
+	  step=3;
+	}
+    if(step==3){
+	  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
+	  if(gcmp(gel(x, i), gel(UB, i))<=0) step=5;//If x[i]<=UB[i], goto step 5
+	  else step=4; //If x[i]>UB[i], goto step 4
+	}
+	if(step==4){
+	  i=i+1;
+	  step=3;
+	  continue;//May as well go back to start
+	}
+	if(step==5){
+	  i=i-1;
+	  gel(U, i)=gen_0;
+	  for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));//U[i]=sum(j=i+1,n,q[i,j]*x[j]);
+	  gel(T, i)=gsub(gel(T, i+1), gmul(gcoeff(Q, i+1, i+1), gsqr(gadd(gel(x, i+1), gel(U, i+1)))));//T[i]=T[i+1]-q[i+1,i+1]*(x[i+1]+U[i+1])^2;
+	  if(i==1){step=6;}//We have a condition to deal with!
+	  else{//Go back now
+		step=2;
+		continue;
+	  }
+	}
+	if(step==6){//Dealing with extra condtions
+	  gel(x, 1)=gen_0;
+	  GEN cond=smallvectors_extractpol(gel(condition, 1), gel(condition, 2), x);
+	  x1sols=quadraticintegernf(gel(condition, 1), gel(cond, 1), gel(cond, 2), nfsub(gel(condition, 1), gel(cond, 3), gel(condition, 3)), prec);
+	  if(gequal0(x)) xpass0=1;//This is the last check
+	  for(long j=1;j<lg(x1sols);j++){
+		K=gadd(gsub(C, gel(T, 1)), gmul(gcoeff(Q, 1, 1), gsqr(gadd(gel(x1sols, j), gel(U, 1)))));
+		if(gcmp(K, C)==1) continue;//>C
+		if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
+		gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
+		glist_putstart(&S, gcopy(x));
+	    count++;
+	  }
+	  if(xpass0){step=0;continue;}//Game over, we are done!
+	  i=2;
+	  step=3;
+	  if(maxN!=0){
+		tries++;
+		if(tries<maxN) continue;
+		return gerepileupto(top, glist_togvec_append(S, v, count, -1));//We hit the maximal number of tries
+	  }
+	  continue;
+	}
+  }
+  return gerepileupto(top, glist_togvec_append(S, v, count, -1));
+}
+
+//Let x be a column vector with first component=u, a variable. Then x^T*M*x=Au^2+Bu+C, and this returns [A, B, C]. We input x with first component being 0, and the coefficients of M lie in the number field nf
+static GEN smallvectors_extractpol(GEN nf, GEN M, GEN x){
+  pari_sp top=avma;
+  GEN Mx=nfM_nfC_mul(nf, M, x);//Mx
+  long lM=lg(Mx);
+  GEN Mxtrans=cgetg(lM, t_MAT);
+  for(long i=1;i<lM;i++) gel(Mxtrans, i)=mkcol(gel(Mx, i));//Making (Mx)^T as a matrix
+  GEN C=gel(nfM_nfC_mul(nf, Mxtrans, x), 1);//This is a length 1 column, x^TM^Tx=x^TMx. This is the C coefficient
+  GEN xmat=cgetg_copy(Mxtrans, &lM);//Making x^T into a matrix
+  for(long i=1;i<lM;i++) gel(xmat, i)=mkcol(gel(x, i));
+  GEN B1=gel(nfM_nfC_mul(nf, xmat, gel(M, 1)), 1);//x times the first column, a length 1 column vector
+  GEN B2=gel(nfM_nfC_mul(nf, xmat, shallowtrans(row(M, 1))), 1);//x times the first row, a length 1 column vector
+  GEN B=nfadd(nf, B1, B2);
+  return gerepilecopy(top, mkvec3(gcoeff(M, 1, 1), B, C));//A=M[1,1]
+}
 
 
 //SECTION 2: GEOMETRY METHODS
@@ -2694,7 +2559,7 @@ GEN algramifiedplacesf(GEN A){
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z, prec));
+  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z, NULL, prec));
   
 }
 
@@ -2743,6 +2608,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works okay
   GEN id=gel(alg_get_basis(Alg), 1);//The identity
   mid=avma;
+  //long maxN=100;//The maximal number of passes in the small elements method for CONDITION
+  GEN maxN=stoi(10);//The maximal number of passes in the small elements method for QFMINIM
   long pass=0;//pass tracks which pass we are on
   for(;;){
 	iN=itos(gfloor(N))+1;
@@ -2750,7 +2617,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<iN;i++){
 	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, prec);
+	  //gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, prec);
+	  gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, maxN, prec);
 	}
 	points=shallowconcat1(points);
 	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
@@ -2927,13 +2795,12 @@ static GEN qalg_normform(GEN Q){
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec){
+static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, GEN maxN, long prec){
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z, prec);
-  GEN MAXEACH=stoi(1000);//Set to NULL to get all
-  GEN vposs=gel(qfminim0(absrednorm, C, MAXEACH, 2, prec), 3), norm;
+  GEN vposs=gel(qfminim0(absrednorm, C, maxN, 2, prec), 3), norm;
   long nvposs=lg(vposs);
   GEN ret=vectrunc_init(nvposs);
   for(long i=1;i<nvposs;i++){
@@ -2949,6 +2816,14 @@ static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, long prec){
   return gerepilecopy(top, ret);
 }
 
+//Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
+static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, long prec){
+  pari_sp top=avma;
+  GEN mats=psltopsu_transmats(p);
+  GEN absrednorm=qalg_absrednormqf(Q, mats, z, prec);
+  GEN A=qalg_get_alg(Q);
+  return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxN, mkvec3(alg_get_center(A), qalg_normform(Q), gen_1), prec));
+}
 
 
 //BASIC OPERATIONS FOR NORMALIZED BASIS
