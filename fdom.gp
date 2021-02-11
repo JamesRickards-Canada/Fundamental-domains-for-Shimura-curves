@@ -3,13 +3,14 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 default(help, "gphelp -detex");
 
 \\GEOMETRY
-	addhelp(geo,"These methods deal with geometry. Available methods:\n hdist, hdist_ud");
+	addhelp(geo,"These methods deal with geometry. Available methods:\n hdist, hdist_ud, randompoint_ud");
 	
 	install("hdist","GGp","hdist","./libfdom.so");
 	addhelp(hdist,"Inputs z1, z2 complex numbers in the upper half plane.\n Returns the hyperbolic distance between z1 and z2.");
 	install("hdist_ud","GGp","hdist_ud","./libfdom.so");
 	addhelp(hdist_ud,"Inputs z1, z2 complex numbers inside the unit disc.\n Returns the hyperbolic distance between z1 and z2 in the unit disc model.");
-
+	install("randompoint_ud","Gp","randompoint_ud","./libfdom.so");
+	addhelp(randompoint_ud,"Input R, a positive real number.\n Returns a random point in the ball of radius R centred at 0 in the unit disc model of the hyperbolic plane.");
 
 \\Visualization
 	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods:\n python_plotviewer, python_printarcs, python_printfdom.");
@@ -39,3 +40,8 @@ default(help, "gphelp -detex");
 	addhelp(algramifiedplacesf,"Input A, an algebra.\n Returns the vector of finite places that ramify.");
 	install("algsmallnorm1elts","GGGD0,G,p","algsmallnorm1elts","./libfdom.so");
 	addhelp(algsmallnorm1elts,"Inputs A, C, p, {z=0}: quaternion algebra A split at one real place, positive real number C, upper half plane point p, unit disc point z.\n Computes small norm 1 elements in the order of A, i.e. such that absrednorm(g)<=C, where absrednorm is defined on page 478 of Voight ``Computing fundamental domains''. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z is the basepoint in the unit disc model for absrednorm (the invrad part is computed with respect to z, hence elements with isometric circles close to z are found).");
+	
+\\TEMPORARY
+install("algnormform","Gp","algnormform","./libfdom.so");
+install("algfdom_test","GGD1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
+install("algabsrednorm","GGD0,G,p","algabsrednorm","./libfdom.so");
