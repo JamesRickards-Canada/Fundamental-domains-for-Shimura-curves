@@ -45,3 +45,4 @@ default(help, "gphelp -detex");
 install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
 install("algabsrednorm","GGD0,G,p","algabsrednorm","./libfdom.so");
+install("algsmallnorm1elts_condition","GGGD0,G,p","algsmallnorm1elts1","./libfdom.so");

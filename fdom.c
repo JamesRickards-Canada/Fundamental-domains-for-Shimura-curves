@@ -360,7 +360,7 @@ GEN mat_choleskydecomp(GEN A, int rcoefs, long prec){
 }
 
 //Returns -gcmp(x, y), and used for sorting backwards.
-static int opp_gcmp(void *data, GEN x, GEN y){return -gcmp(x, y);}
+static int opp_gcmp(void *data, GEN x, GEN y){return gcmp(y, x);}
 
 //Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions.
 static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
@@ -400,41 +400,37 @@ static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
 
 //Follows Algorithm 2.12 in Fincke-Pohst, where we pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied, with M and n being elements of the number field nf.
 static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long prec){
-  pari_sp top=avma, mid;
+  pari_sp top=avma;
   long np1=lg(A);//n+1
   GEN R=mat_choleskydecomp(A, 0, prec), Rinv=ginv(R);//Step 1
   GEN Rinvtrans=shallowtrans(Rinv);//We reduce R with LLL, but this works on the columns and we care about the rows.
   GEN Uinvtrans=lllfp(Rinvtrans, 0.99, 0);//LLL reduce Rinvtrans
   GEN Uinv=shallowtrans(Uinvtrans);
-  mid=avma;
   GEN Sinv=gmul(Uinv, Rinv);
   GEN U=ginv(Uinv);
   GEN S=gmul(R, U);
-  gerepileallsp(top, mid, 3, &Sinv, &U, &S);//Cleaning up. We are at the end of Step 3, and know S, S^-1 and U (R is forgotten but not needed anymore).
-  mid=avma;
   GEN Sprimesizes=cgetg(np1, t_VEC);//The sizes of the rows of S^-1 (will store ||s'_i||, which is the ith column of S^(-1)^T, i.e. the ith row of S^-1.
   for(long i=1;i<np1;i++){
 	gel(Sprimesizes, i)=gen_0;
 	for(long j=1;j<np1;j++) gel(Sprimesizes, i)=gadd(gel(Sprimesizes, i), gsqr(gcoeff(Sinv, i, j)));//Adding up
   }
-  GEN perm=gerepileupto(mid, gen_indexsort(Sprimesizes, NULL, &opp_gcmp));//Sort Sprimesizes from large to small, returns VECSMALL. This is pi in Step 3.
+  GEN perm=gen_indexsort(Sprimesizes, NULL, &opp_gcmp);//Sort Sprimesizes from large to small, returns VECSMALL. This is pi in Step 3.
   GEN perminv=perm_inv(perm);//pi^(-1)
-  mid=avma;
   GEN Snew=vecpermute(S, perminv);//S with the columns permuted.
-  GEN SnewtransSnew=gmul(shallowtrans(Snew), Snew);//S^(Tr)*S
-  GEN chol=mat_choleskydecomp(SnewtransSnew, 1, prec), newcond;//Cholesky on Snew
+  GEN SnewtransSnew=gmul(shallowtrans(Snew), Snew);//Snew^(Tr)*Snew
+  GEN chol=mat_choleskydecomp(SnewtransSnew, 1, prec);//Cholesky on Snew
   //Must update the condition.
-  mid=avma;
   GEN nf=gel(condition, 1);
+  //We get values y where we really want UWy. So we must replace the condition matrix M by W^TU^TMUW
   GEN newcondmat=nfM_mul(nf, shallowtrans(U), nfM_mul(nf, gel(condition, 2), U));//M->U^T*M*U
-  newcondmat=vecpermute(newcondmat, perm);//Permute the columns by perm, ie *W on the right (W is the permutation matrix producing the final vector); we are now solving for y, and x=U*W*y.
-  newcond=cgetg(4, t_VEC);
+  newcondmat=vecpermute(newcondmat, perminv);//Permute the columns by perminv, ie *W on the right (W is the permutation matrix producing the final vector)
+  GEN newcond=cgetg(4, t_VEC);
   gel(newcond, 1)=nf;
-  gel(newcond, 2)=rowpermute(newcondmat, perm);//Permute the rows by perm, i.e. *W^T on the left
+  gel(newcond, 2)=rowpermute(newcondmat, perminv);//Permute the rows by perminv, i.e. *W^T on the left
   gel(newcond, 3)=gel(condition, 3);
-
+  
   GEN yvals=smallvectors_cholesky(chol, C, maxN, newcond, prec);//The small entries
-  for(long i=1;i<lg(yvals);i++) gel(yvals, i)=vecpermute(gel(yvals, i), perminv);//Permuting the entries of y, now we just need to apply U to get back to x
+  for(long i=1;i<lg(yvals);i++) gel(yvals, i)=vecpermute(gel(yvals, i), perm);//Permuting the entries of y, now we just need to apply U to get back to x
   long lx;
   GEN ret=cgetg_copy(yvals, &lx);//The return. Must shift back.
   for(long i=1;i<lx;i++) gel(ret, i)=gmul(U, gel(yvals, i));//U*y
@@ -498,6 +494,21 @@ static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long pr
 	  }
 	}
 	if(step==6){//Dealing with extra condtions
+	  if(0>1){//To get all solutions
+		Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
+		gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
+		gel(x, 1)=gceil(gneg(gadd(Z, gel(U, i))));//x[i]=ceil(-Z-U[i]);
+		step=3;
+		for(;;){
+		  if(gcmp(gel(x, i), gel(UB, i))>0) {step=4;break;}
+		  if(gequal0(x)){step=0;break;}//Terminate
+		  glist_putstart(&S, gcopy(x));
+		  count++;
+		  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
+		}
+		continue;
+	  }
+	
 	  gel(x, 1)=gen_0;
 	  GEN cond=smallvectors_extractpol(gel(condition, 1), gel(condition, 2), x);
 	  x1sols=quadraticintegernf(gel(condition, 1), gel(cond, 1), gel(cond, 2), nfsub(gel(condition, 1), gel(cond, 3), gel(condition, 3)), prec);
@@ -2615,16 +2626,16 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
   GEN K=alg_get_center(Alg);
   GEN normformpart=qalg_normform(Q);
-  //GEN normform=gcopy(normformpart);//Only with condition
+  GEN normform=gcopy(normformpart);//Only with condition
   for(long i=1;i<n;i++){
 	for(long j=1;j<n;j++){
 	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
 	}
   }
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  //long maxN=itos(gceil(area));
+  long maxN=itos(gceil(area));
   //long maxN=itos(gceil(gsqrt(area, prec)));//The maximal number of passes in the small elements method for CONDITION
-  GEN maxN=gceil(gsqrt(area, prec));//The maximal number of passes in the small elements method for QFMINIM
+  //GEN maxN=gceil(gsqrt(area, prec));//The maximal number of passes in the small elements method for QFMINIM
   //GEN maxN=stoi(100);
   mid=avma;
   long pass=0;//pass tracks which pass we are on
@@ -2634,8 +2645,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<iN;i++){
 	  w=randompoint_ud(R, prec);//Random point
-	  //gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, normform, normformpart, prec);
-	  gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, maxN, normformpart, prec);
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, normform, normformpart, prec);
+	  //gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, maxN, normformpart, prec);
 	}
 	points=shallowconcat1(points);
 	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
@@ -2718,7 +2729,6 @@ static GEN qalg_fdominitialize(GEN A, long prec){
 static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec){
   pari_sp top=avma;
   //First we find the part coming from |f_g(p)|
-
   GEN A=qalg_get_alg(Q);
   long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
   GEN basisimage=cgetg(n, t_VEC);//The image of the basis elements in M_2(R)
@@ -2922,6 +2932,12 @@ GEN algabsrednorm(GEN A, GEN p, GEN z, long prec){
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z, gen_0, prec));
 }
 
+//Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
+GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z, 0, algnormform(A, prec), gen_0, prec));
+}
 
 //Initializes and checks the inputs, and computes the fundamental domain
 GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec){
