@@ -30,8 +30,8 @@
 //1: SHORT VECTORS IN LATTICES
 static int opp_gcmp(void *data, GEN x, GEN y);
 static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
-static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long prec);
-static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long prec);
+static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
+static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, long maxelts, GEN condition, long prec);
 static GEN smallvectors_extractpol(GEN nf, GEN M, GEN x);
 
 //2: BASIC LINE, CIRCLE, AND POINT OPERATIONS
@@ -96,7 +96,7 @@ static GEN qalg_fdominitialize(GEN A, long prec);
 static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec);
 static GEN qalg_normform(GEN Q);
 static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, GEN maxN, GEN normformpart, long prec);
-static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, GEN normform, GEN normformpart, long prec);
+static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
 //3: BASIC OPERATIONS FOR NORMALIZED BASIS
 static GEN qalg_fdominv(GEN *data, GEN x);
@@ -113,7 +113,8 @@ static GEN qalg_get_roots(GEN Q);
 
 //TEMPORARY TESTING METHODS
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
-
+static GEN smallvectors_cholesky_backup(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
+static GEN normalizedboundary_oosides(GEN U);
 
 //SECTION 1: BASE METHODS
 
@@ -334,9 +335,16 @@ GEN mat_choleskydecomp(GEN A, int rcoefs, long prec){
   long n=lg(A)-1;//A is nxn
   GEN M=gcopy(A);//Will be manipulating the entries, so need to copy A.
   for(long i=1;i<n;i++){
-	for(long j=i+1;j<=n;j++){
-	  gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
-	  gcoeff(M, i, j)=gdiv(gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
+	if(gequal0(gcoeff(M, i, i))){
+	  for(long j=i+1;j<=n;j++){
+	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
+	  }
+	}
+	else{
+	  for(long j=i+1;j<=n;j++){
+	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
+	    gcoeff(M, i, j)=gdiv(gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
+	  }
 	}
 	for(long j=i+1;j<=n;j++){
 	  for(long k=j;k<=n;k++) gcoeff(M, j, k)=gsub(gcoeff(M, j, k), gmul(gcoeff(M, j, i), gcoeff(M, i, k)));//M[j,k]=M[j,k]-M[j,i]*M[i,k];
@@ -359,6 +367,43 @@ GEN mat_choleskydecomp(GEN A, int rcoefs, long prec){
   return gerepilecopy(top, M);
 }
 
+//Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2.
+GEN mat_nfcholesky(GEN nf, GEN A){
+  pari_sp top=avma;
+  long n=lg(A)-1;//A is nxn
+  GEN M=gcopy(A);//Will be manipulating the entries, so need to copy A.
+  for(long i=1;i<n;i++){
+	if(gequal0(gcoeff(M, i, i))){
+	  for(long j=i+1;j<=n;j++){
+	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
+	  }
+	}
+	else{
+	  for(long j=i+1;j<=n;j++){
+	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
+		pari_CATCH(CATCH_ALL){
+		  gcoeff(M, i, j)=gen_0;
+		}
+		pari_TRY{//Only issue is a current bug with pari when M[i,j]=0
+	      gcoeff(M, i, j)=nfdiv(nf, gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
+		}
+		pari_ENDCATCH
+	  }
+	}
+	for(long j=i+1;j<=n;j++){
+	  for(long k=j;k<=n;k++) gcoeff(M, j, k)=nfsub(nf, gcoeff(M, j, k), nfmul(nf, gcoeff(M, j, i), gcoeff(M, i, k)));//M[j,k]=M[j,k]-M[j,i]*M[i,k];
+	}
+  }
+  GEN ret=cgetg_copy(M, &n);//M stores the coeff, but we should delete the lower diagonal
+  for(long i=1;i<n;i++){//Column i
+    gel(ret, i)=cgetg(n, t_COL);
+	for(long j=1;j<=i;j++) gcoeff(ret, j, i)=gcopy(gcoeff(M, j, i));
+	for(long j=i+1;j<n;j++) gcoeff(ret, j, i)=gen_0;
+  }
+  return gerepileupto(top, ret);
+}
+
+
 //Returns -gcmp(x, y), and used for sorting backwards.
 static int opp_gcmp(void *data, GEN x, GEN y){return gcmp(y, x);}
 
@@ -380,6 +425,7 @@ static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
   GEN disc=gsub(gsqr(Bp), gmulsg(4, gmul(Ap, Cp)));//B^2-4AC
   GEN rt=greal(gsqrt(disc, prec));//We use greal in case disc==0 but it is approximated as -E^(-large).
   GEN mBp=gneg(Bp), twoAp=gmulsg(2, Ap);//-B, 2A
+
   GEN r1=ground(gdiv(gadd(mBp, rt), twoAp));//We have enough precision that the rounded answer will be correct if there is an integral solution
   GEN r2=ground(gdiv(gsub(mBp, rt), twoAp));
   GEN rposs;//The possible roots
@@ -399,7 +445,7 @@ static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
 //We follow the article "Improved Methods for Calculating Vectors of Short Length in a Lattice, Including Complexity Analysis" by Fincke and Pohst (Mathematics of Computation, Vol. 44, No. 170 (Apr., 1985), pp 463-471
 
 //Follows Algorithm 2.12 in Fincke-Pohst, where we pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied, with M and n being elements of the number field nf.
-static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long prec){
+static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, long maxelts, GEN condition, long prec){
   pari_sp top=avma;
   long np1=lg(A);//n+1
   GEN R=mat_choleskydecomp(A, 0, prec), Rinv=ginv(R);//Step 1
@@ -428,8 +474,8 @@ static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long
   gel(newcond, 1)=nf;
   gel(newcond, 2)=rowpermute(newcondmat, perminv);//Permute the rows by perminv, i.e. *W^T on the left
   gel(newcond, 3)=gel(condition, 3);
-  
-  GEN yvals=smallvectors_cholesky(chol, C, maxN, newcond, prec);//The small entries
+
+  GEN yvals=smallvectors_cholesky(chol, C, maxN, maxelts, newcond, prec);//The small entries
   for(long i=1;i<lg(yvals);i++) gel(yvals, i)=vecpermute(gel(yvals, i), perm);//Permuting the entries of y, now we just need to apply U to get back to x
   long lx;
   GEN ret=cgetg_copy(yvals, &lx);//The return. Must shift back.
@@ -438,16 +484,132 @@ static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, GEN condition, long
 }
 
 //Q is the Cholesky decomposition of a matrix A, this computes all vectors x such that x^T*A*x<=C (i.e. Q(x)<=C_2 where Q(x)=sum(i=1..n)q_ii(x_i+sum(j=i+1..n)q_ijxj)^2. Algorithm 2.8 of Fincke Pohst. We also pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied (M and n live in the number field nf). (the point: M gives an indefinite norm condition on the vector, and A combines this norm with other info to make a positive definite form. We use the condition when finding small norm 1 elements of a quaternion algebra.)
-static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long prec){
+static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec){
+  pari_sp tiptop=avma, top, mid;
+  GEN nf=gel(condition, 1);
+  GEN condchol=mat_nfcholesky(nf, gel(condition, 2));//Cholesky of the condition.
+
+  top=avma;
+  long np1=lg(Q), n=np1-1;//Number of variables+1 and n
+  GEN T=zerovec(n);//Stores the ''tail'' of x, as we work from the back to the front (x_m to x_1), i.e. C-sum(j=i+1)^n of qii*(x_i+U_i)^2
+  GEN U=zerovec(n);//U[i] will store the sum of j=i+1 to n of q_{ij}x_j
+  GEN UB=zerovec(n);//UB represents the upper bound for x_i
+  
+  GEN Tcond=zerovec(n), Aco, Bco, Cco;//T, but for the condition
+  GEN Ucond=zerovec(n);//U, but for the condition
+  
+  GEN x=zerocol(n), Z;//x represents the solution
+  long i=np1-1, count=0, totcount=0;//i represents the current index, initially set to n. count=the number of solutions
+  gel(T, n)=gcopy(C);//initialize T[n]=C
+  gel(U, n)=gen_0;//Clearly U[n]=0. U[i]=sum(j=i+1,n,q[i,j]*x[j]);
+  
+  gel(Tcond, n)=nfsub(nf, gen_0, gel(condition, 3));
+  gel(Ucond, n)=gen_0;//Clearly 0
+
+  int step=2;//Represents the current step of algorithm 2.8
+  int xpass0=0;
+  long tries=0, maxtries;//Represents how many tries we have. If maxN!=0, then after maxN tries at step 6, we return our partial results
+  if(maxelts!=0) maxtries=maxN*maxelts;//The maximum number of tries
+  else maxtries=maxN;
+  GEN x1sols;
+  glist *S=NULL;//Pointer to the list start
+  GEN v=cgetg(1, t_VEC);//The list, is used for garbage collection partway through
+  while(step>0){
+	if(gc_needed(top, 1)){
+	  mid=avma;
+	  v=glist_togvec_append(S, v, count, 1);
+	  count=0;
+	  S=NULL;
+	  T=gcopy(T);
+	  U=gcopy(U);
+	  UB=gcopy(UB);
+	  x=gcopy(x);
+	  Tcond=gcopy(Tcond);
+	  Ucond=gcopy(Ucond);
+	  gerepileallsp(top, mid, 7, &v, &T, &U, &UB, &x, &Tcond, &Ucond);
+	}
+	if(step==2){
+	  Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
+	  gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
+	  gel(x, i)=gsubgs(gceil(gneg(gadd(Z, gel(U, i)))), 1);//x[i]=ceil(-Z-U[i])-1;
+	  step=3;
+	}
+    if(step==3){
+	  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
+	  if(gcmp(gel(x, i), gel(UB, i))<=0) step=5;//If x[i]<=UB[i], goto step 5
+	  else step=4; //If x[i]>UB[i], goto step 4
+	}
+	if(step==4){
+	  i=i+1;
+	  step=3;
+	  continue;//May as well go back to start
+	}
+	if(step==5){
+	  i=i-1;
+	  gel(U, i)=gen_0;
+	  for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));//U[i]=sum(j=i+1,n,q[i,j]*x[j]);
+	  gel(Ucond, i)=gen_0;
+	  if(!gequal0(gcoeff(condchol, i, i))){//ith row of condchol is non-zero, so something to add to Ucond
+	    for(long j=i+1;j<np1;j++) gel(Ucond, i)=nfadd(nf, gel(Ucond, i), nfmul(nf, gcoeff(condchol, i, j), gel(x, j)));
+	  }
+	  if(!gequal0(gcoeff(condchol, i+1, i+1))){//i+1th row of condchol is non-zero, so something to add to Tcond
+	    gel(Tcond, i)=nfadd(nf, gel(Tcond, i+1), nfmul(nf, gcoeff(condchol, i+1, i+1), nfsqr(nf, nfadd(nf, gel(x, i+1), gel(Ucond, i+1)))));
+	  }
+	  else gel(Tcond, i)=gcopy(gel(Tcond, i+1));//Same
+	  gel(T, i)=gsub(gel(T, i+1), gmul(gcoeff(Q, i+1, i+1), gsqr(gadd(gel(x, i+1), gel(U, i+1)))));//T[i]=T[i+1]-q[i+1,i+1]*(x[i+1]+U[i+1])^2;
+	  if(i==1){step=6;}//We have a condition to deal with!
+	  else{//Go back now
+		step=2;
+		continue;
+	  }
+	}
+	if(step==6){//Dealing with extra condtions
+	  step=3;//The next step, if we make it out.
+	  i=2;//We go back to i=2, if we make it out
+	  GEN q11U1=nfmul(nf, gcoeff(condchol, 1, 1), gel(Ucond, 1));
+	  Aco=gcoeff(condchol, 1, 1);
+	  Bco=nfmul(nf, q11U1, gen_2);
+	  Cco=nfadd(nf, gel(Tcond, 1), nfmul(nf, q11U1, gel(Ucond, 1)));//Ax_1^2+Bx_1+C=0 is necessary
+	  
+	  gel(x, 1)=gen_0;
+	  x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
+	  if(gequal0(x)) xpass0=1;//This is the last check
+	  for(long j=1;j<lg(x1sols);j++){//We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.
+		if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
+		gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
+		glist_putstart(&S, gcopy(x));
+	    count++;
+		if(maxelts!=0){
+		  totcount++;//We can't use count, since this resets if we garbage collect
+		  if(totcount<maxelts) continue;
+		  return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));//We hit the maximal number of return elements
+	    }
+	  }
+	  if(xpass0){step=0;continue;}//Game over, we are done!
+	  if(maxtries!=0){
+		tries++;
+		if(tries<maxtries) continue;
+		return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));//We hit the maximal number of tries
+	  }
+	  continue;
+	}
+  }
+  return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));
+}
+
+
+static GEN smallvectors_cholesky_backup(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec){
   pari_sp top=avma, mid;
   long np1=lg(Q), n=np1-1;//Number of variables+1 and n
   GEN T=zerovec(n);//Stores the ''tail'' of x, as we work from the back to the front (x_m to x_1)
   GEN U=zerovec(n);//U[i] will store the sum of j=i+1 to n of q_{ij}x_j
-  GEN UB=zerovec(n);//UB represents the upper bould for x_i
+  GEN UB=zerovec(n);//UB represents the upper bound for x_i
+  
   GEN x=zerocol(n), Z, K;//x represents the solution
   long i=np1-1, count=0;//i represents the current index, initially set to n. count=the number of solutions
   gel(T, n)=gcopy(C);//initialize T[n]=0
   gel(U, n)=gen_0;//Clearly U[n]=0
+  
   int step=2;//Represents the current step of algorithm 2.8
   int xpass0=0;
   long tries=0;//Represents how many tries we have. If maxN!=0, then after maxN tries at step 7, we return our partial results
@@ -508,7 +670,7 @@ static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long pr
 		}
 		continue;
 	  }
-	
+
 	  gel(x, 1)=gen_0;
 	  GEN cond=smallvectors_extractpol(gel(condition, 1), gel(condition, 2), x);
 	  x1sols=quadraticintegernf(gel(condition, 1), gel(cond, 1), gel(cond, 2), nfsub(gel(condition, 1), gel(cond, 3), gel(condition, 3)), prec);
@@ -523,7 +685,7 @@ static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, GEN condition, long pr
 	  }
 	  if(xpass0){step=0;continue;}//Game over, we are done!
 	  i=2;
-	  step=3;
+	  step=3;//Redundnant if I keep the above work
 	  if(maxN!=0){
 		tries++;
 		if(tries<maxN) continue;
@@ -1778,7 +1940,7 @@ static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *da
   return gerepileupto(top, normalizedboundary_append(Ubase, Gnew, mats, id, tol, prec));
 }
 
-//G is the set of [elt, image in PSU(1, 1), isometric circle]. This returns the normalized boundary of the exterior domain. The output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to an angle and circle of -1. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).
+//G is the set of [elt, image in PSU(1, 1), isometric circle]. This returns the normalized boundary of the exterior domain. The output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).
 static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec){
   pari_sp top=avma, mid;
   long np1=lg(G), n=np1-1, twonp3=2*n+3;
@@ -2132,6 +2294,18 @@ static GEN psl_roots(GEN M, GEN tol, long prec){
 GEN randompoint_ud(GEN R, long prec){
   pari_sp top=avma;
   GEN arg=gmul(randomr(prec), Pi2n(1, prec));//Random angle
+  GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
+  //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
+  GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec));//A random element in [0, a(R)/4Pi].
+  GEN r=gmulsg(2, gasinh(gsqrt(dist, prec), prec));//The radius
+  GEN e2r=gexp(r, prec);
+  return gerepileupto(top, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
+}
+
+//Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).
+GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec){
+  pari_sp top=avma;
+  GEN arg=gadd(ang1, gmul(randomr(prec), gsub(ang2, ang1)));//Random angle in [ang1, ang2]
   GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
   //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
   GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec));//A random element in [0, a(R)/4Pi].
@@ -2587,6 +2761,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN Alg=qalg_get_alg(Q);
+  GEN K=alg_get_center(Alg);
   if(gequal0(area)) area=qalg_fdomarea(Q, prec);
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
@@ -2595,9 +2770,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	GEN alpha=stoi(3);
 	GEN orderpart=gen_1;
 	GEN rams=qalg_get_rams(Q);
-	GEN spf=alg_get_center(Alg);
-	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(spf, gel(rams, i)));
-	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(spf)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(spf)), prec)));
+	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
+	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
   }
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
@@ -2624,7 +2798,6 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   GEN id=gel(alg_get_basis(Alg), 1);//The identity
   
   long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
-  GEN K=alg_get_center(Alg);
   GEN normformpart=qalg_normform(Q);
   GEN normform=gcopy(normformpart);//Only with condition
   for(long i=1;i<n;i++){
@@ -2634,6 +2807,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   }
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
   long maxN=itos(gceil(area));
+  if(maxN<=10) maxN=10;
   //long maxN=itos(gceil(gsqrt(area, prec)));//The maximal number of passes in the small elements method for CONDITION
   //GEN maxN=gceil(gsqrt(area, prec));//The maximal number of passes in the small elements method for QFMINIM
   //GEN maxN=stoi(100);
@@ -2645,7 +2819,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<iN;i++){
 	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, normform, normformpart, prec);
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, 0, normform, normformpart, prec);
 	  //gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, maxN, normformpart, prec);
 	}
 	points=shallowconcat1(points);
@@ -2728,6 +2902,7 @@ static GEN qalg_fdominitialize(GEN A, long prec){
 //Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm(e1*v1+...+en*vn), with absrednorm defined as on page 478 of Voight. We take the basepoint to be z, so if z!=0, we shift it so the 1/radius part is centred at z (and so isometric circles near z are weighted more).
 static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec){
   pari_sp top=avma;
+
   //First we find the part coming from |f_g(p)|
   GEN A=qalg_get_alg(Q);
   long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
@@ -2848,12 +3023,12 @@ static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, GEN maxN, GEN
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, GEN normform, GEN normformpart, long prec){
+static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z, normformpart, prec);
   GEN A=qalg_get_alg(Q);
-  return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxN, mkvec3(alg_get_center(A), normform, gen_1), prec));
+  return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxN, maxelts, mkvec3(alg_get_center(A), normform, gen_1), prec));
 }
 
 
@@ -2936,7 +3111,17 @@ GEN algabsrednorm(GEN A, GEN p, GEN z, long prec){
 GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z, 0, algnormform(A, prec), gen_0, prec));
+  GEN nformpart=qalg_normform(Q);
+  GEN nform=gcopy(nformpart);
+  long n=lg(nform);
+  GEN K=alg_get_center(A);
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }
+  nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z, 0, 0, nform, nformpart, prec));
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain
@@ -2947,23 +3132,29 @@ GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long pre
   return gerepileupto(top, qalg_fdom_tester(Q, p, dispprogress, area, ANRdata, tol, prec));
 }
 
+//Returns the vecsmall of indices of the infinite sides of U.
+static GEN normalizedboundary_oosides(GEN U){
+  long n=lg(gel(U, 1));
+  GEN sides=vecsmalltrunc_init(n);
+  for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
+  return sides;
+}
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN Alg=qalg_get_alg(Q);
+  GEN K=alg_get_center(Alg);
   if(gequal0(area)) area=qalg_fdomarea(Q, prec);
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-    //GEN alpha=stoi(10);//Constants as in Page, page 19.
 	GEN alpha=stoi(3);
 	GEN orderpart=gen_1;
 	GEN rams=qalg_get_rams(Q);
-	GEN spf=alg_get_center(Alg);
-	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(spf, gel(rams, i)));
-	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(spf)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(spf)), prec)));
+	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
+	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
   }
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
@@ -2988,8 +3179,8 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   GEN U=cgetg(2, t_VEC);
   gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works okay
   GEN id=gel(alg_get_basis(Alg), 1);//The identity
+  
   long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
-  GEN K=alg_get_center(Alg);
   GEN normformpart=qalg_normform(Q);
   GEN normform=gcopy(normformpart);//Only with condition
   for(long i=1;i<n;i++){
@@ -2999,18 +3190,52 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   }
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
   long maxN=itos(gceil(area));
-  //long maxN=itos(gceil(gsqrt(area, prec)));//The maximal number of passes in the small elements method for CONDITION
-  //GEN maxN=gceil(gsqrt(area, prec));//The maximal number of passes in the small elements method for QFMINIM
+  if(maxN<=10) maxN=10;
+  long maxelts=3;
+  
   mid=avma;
-  long pass=0;//pass tracks which pass we are on
+  long pass=0, istart=1;//pass tracks which pass we are on
+  GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
+  
+  for(;;){
+	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
+	if(lg(gel(U, 1))>1){//We have a partial domain.
+	  oosides=normalizedboundary_oosides(U);
+	  istart=lg(oosides);
+	  iN=itos(gfloor(N))+istart;
+	  if(dispprogress) pari_printf("%d infinite sides\n", istart-1);
+	}
+	else iN=itos(gfloor(N))+1;
+	points=cgetg(iN, t_VEC);
+	for(long i=1;i<istart;i++){//Points near the oo sides
+	  ang2=gel(gel(U, 4), oosides[i]);
+	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+	  else ang1=gel(gel(U, 4), oosides[i]-1);
+	  w=randompoint_udarc(R, ang1, ang2, prec);
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	}
+	for(long i=istart;i<iN;i++){//Random points in ball of radius R
+	  w=randompoint_ud(R, prec);//Random point
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	}
+	points=shallowconcat1(points);
+	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
+	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
+    if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
+	if(istart==1) N=gmul(N, opnu);//Updating N_n
+	R=gadd(R, epsilon);//Updating R_n
+	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
+  }
+  
+  //Original
   for(;;){
 	iN=itos(gfloor(N))+1;
 	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<iN;i++){
 	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, normform, normformpart, prec);
-	  //gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, maxN, normformpart, prec);
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
 	}
 	points=shallowconcat1(points);
 	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);

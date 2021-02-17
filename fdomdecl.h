@@ -39,7 +39,7 @@ GEN llist_tovecsmall(llist *l, long length, int dir);
 
 //SHORT VECTORS IN LATTICES
 GEN mat_choleskydecomp(GEN A, int rcoefs, long prec);
-
+GEN mat_nfcholesky(GEN nf, GEN A);
 
 //SECTION 2: GEOMETRY METHODS
 
@@ -57,6 +57,7 @@ GEN psltopsu(GEN g, GEN p);
 GEN psltopsu_mats(GEN g, GEN M);
 GEN psltopsu_transmats(GEN p);
 GEN randompoint_ud(GEN R, long prec);
+GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec);
 GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
 GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
 GEN reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
