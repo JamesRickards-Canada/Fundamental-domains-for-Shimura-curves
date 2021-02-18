@@ -83,12 +83,15 @@ GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
 GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec);
 GEN algmulvec(GEN A, GEN G, GEN L);
+GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
+GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algramifiedplacesf(GEN A);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec);
 
 
 
 //TEMPORARY
+GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long triesperelt, long maxelts, long prec);
 GEN algnormform(GEN A, long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);

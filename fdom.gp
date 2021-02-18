@@ -38,6 +38,10 @@ default(help, "gphelp -detex");
 	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
 	install("algramifiedplacesf","G","algramifiedplacesf","./libfdom.so");
 	addhelp(algramifiedplacesf,"Input A, an algebra.\n Returns the vector of finite places that ramify.");
+	install("algnormalizedbasis","GGGp","algnormalizedbasis","./libfdom.so");
+	addhelp(algnormalizedbasis, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized basis associated to G.");
+	install("algnormalizedboundary","GGGp","algnormalizedboundary","./libfdom.so");
+	addhelp(algnormalizedboundary, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized boundary associated to G. The format of the output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).");
 	install("algsmallnorm1elts","GGGD0,G,p","algsmallnorm1elts","./libfdom.so");
 	addhelp(algsmallnorm1elts,"Inputs A, C, p, {z=0}: quaternion algebra A split at one real place, positive real number C, upper half plane point p, unit disc point z.\n Computes small norm 1 elements in the order of A, i.e. such that absrednorm(g)<=C, where absrednorm is defined on page 478 of Voight ``Computing fundamental domains''. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z is the basepoint in the unit disc model for absrednorm (the invrad part is computed with respect to z, hence elements with isometric circles close to z are found).");
 	
@@ -45,4 +49,4 @@ default(help, "gphelp -detex");
 install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
 install("algabsrednorm","GGD0,G,p","algabsrednorm","./libfdom.so");
-install("algsmallnorm1elts_condition","GGGD0,G,p","algsmallnorm1elts1","./libfdom.so");
+install("algsmallnorm1elts_condition","GGGD0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");

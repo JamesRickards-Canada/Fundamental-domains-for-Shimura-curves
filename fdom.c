@@ -86,6 +86,7 @@ static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
+static GEN normalizedboundary_oosides(GEN U);
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
 
 //3: STATIC HELPER METHODS
@@ -114,7 +115,6 @@ static GEN qalg_get_roots(GEN Q);
 //TEMPORARY TESTING METHODS
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
 static GEN smallvectors_cholesky_backup(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
-static GEN normalizedboundary_oosides(GEN U);
 
 //SECTION 1: BASE METHODS
 
@@ -1989,6 +1989,7 @@ static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, lon
     for(long i=1;i<=5;i++) gel(retempty, i)=cgetg(1, t_VEC);//elements, icircs, vertices, matrices, area, sidepairing
     gel(retempty, 6)=mkoo();
     gel(retempty, 7)=gen_0;
+	gel(retempty, 8)=cgetg(1, t_VEC);
     return retempty;
   }
   if(hminind>0 && ordering[startind]!=hminind){//The first side has multiple circles coming out of its terminal point. I'm pretty sure this happens if and only if (well, in the Shimura curve case) Q is unramified everywhere.
@@ -2730,6 +2731,26 @@ GEN algmulvec(GEN A, GEN G, GEN L){
   return gerepileupto(top, elt);
 }
 
+//Returns the normalized basis of the set of elements G
+GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec){
+  pari_sp top=avma;
+  GEN mats=psltopsu_transmats(p);//Transition matrices
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN tol=deftol(prec);
+  return gerepileupto(top, normalizedbasis(G, gen_0, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
+}
+
+//Returns the normalized boundary of the set of elements G
+GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec){
+  pari_sp top=avma;
+  GEN mats=psltopsu_transmats(p);//Transition matrices
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN tol=deftol(prec);
+  return gerepileupto(top, normalizedboundary(G, mats, id, &Q, &qalg_fdomm2rembed, tol, prec));
+}
+
 //Returns the vector of finite ramified places of the algebra A.
 GEN algramifiedplacesf(GEN A){
   pari_sp top=avma;
@@ -2756,6 +2777,14 @@ GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
 //FUNDAMENTAL DOMAIN COMPUTATION
 
 
+//Returns the vecsmall of indices of the infinite sides of U.
+static GEN normalizedboundary_oosides(GEN U){
+  long n=lg(gel(U, 1));
+  GEN sides=vecsmalltrunc_init(n);
+  for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
+  return sides;
+}
+
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
@@ -2766,7 +2795,6 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-    //GEN alpha=stoi(10);//Constants as in Page, page 19.
 	GEN alpha=stoi(3);
 	GEN orderpart=gen_1;
 	GEN rams=qalg_get_rams(Q);
@@ -2808,27 +2836,41 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
   long maxN=itos(gceil(area));
   if(maxN<=10) maxN=10;
-  //long maxN=itos(gceil(gsqrt(area, prec)));//The maximal number of passes in the small elements method for CONDITION
-  //GEN maxN=gceil(gsqrt(area, prec));//The maximal number of passes in the small elements method for QFMINIM
-  //GEN maxN=stoi(100);
+  long maxelts=3;
+  
   mid=avma;
-  long pass=0;//pass tracks which pass we are on
+  long pass=0, istart=1, nsidesp1=1;//pass tracks which pass we are on
+  GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
+  
   for(;;){
-	iN=itos(gfloor(N))+1;
 	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
+	if(nsidesp1>1){//We have a partial domain.
+	  oosides=normalizedboundary_oosides(U);
+	  istart=lg(oosides);
+	  iN=itos(gfloor(N))+istart;
+	  if(dispprogress) pari_printf("%d infinite sides\n", istart-1);
+	}
+	else iN=itos(gfloor(N))+1;
 	points=cgetg(iN, t_VEC);
-	for(long i=1;i<iN;i++){
+	for(long i=1;i<istart;i++){//Points near the oo sides
+	  ang2=gel(gel(U, 4), oosides[i]);
+	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+	  else ang1=gel(gel(U, 4), oosides[i]-1);
+	  w=randompoint_udarc(R, ang1, ang2, prec);
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	}
+	for(long i=istart;i<iN;i++){//Random points in ball of radius R
 	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, 0, normform, normformpart, prec);
-	  //gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, w, maxN, normformpart, prec);
+	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
 	}
 	points=shallowconcat1(points);
 	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
     if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
-	N=gmul(N, opnu);//Updating N_n
+	if(istart==1 || nsidesp1==lg(gel(U, 1))) N=gmul(N, opnu);//Updating N_n
 	R=gadd(R, epsilon);//Updating R_n
+	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
   }
 }
@@ -3108,7 +3150,7 @@ GEN algabsrednorm(GEN A, GEN p, GEN z, long prec){
 }
 
 //Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
-GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long prec){
+GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long triesperelt, long maxelts, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   GEN nformpart=qalg_normform(Q);
@@ -3121,7 +3163,7 @@ GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long prec){
 	}
   }
   nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z, 0, 0, nform, nformpart, prec));
+  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z, triesperelt, maxelts, nform, nformpart, prec));
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain
@@ -3130,14 +3172,6 @@ GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long pre
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, qalg_fdom_tester(Q, p, dispprogress, area, ANRdata, tol, prec));
-}
-
-//Returns the vecsmall of indices of the infinite sides of U.
-static GEN normalizedboundary_oosides(GEN U){
-  long n=lg(gel(U, 1));
-  GEN sides=vecsmalltrunc_init(n);
-  for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
-  return sides;
 }
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
@@ -3194,12 +3228,13 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   long maxelts=3;
   
   mid=avma;
-  long pass=0, istart=1;//pass tracks which pass we are on
+  long pass=0, istart=1, nsidesp1=1;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   
   for(;;){
 	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
-	if(lg(gel(U, 1))>1){//We have a partial domain.
+	FILE *f=fopen("partialdoms.txt", "a");
+	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
 	  istart=lg(oosides);
 	  iN=itos(gfloor(N))+istart;
@@ -3221,29 +3256,13 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	points=shallowconcat1(points);
 	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+	pari_fprintf(f, "%Ps\n", gel(U, 1));
+	fclose(f);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
     if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
-	if(istart==1) N=gmul(N, opnu);//Updating N_n
+	if(istart==1 || nsidesp1==lg(gel(U, 1))) N=gmul(N, opnu);//Updating N_n
 	R=gadd(R, epsilon);//Updating R_n
-	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
-  }
-  
-  //Original
-  for(;;){
-	iN=itos(gfloor(N))+1;
-	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
-	points=cgetg(iN, t_VEC);
-	for(long i=1;i<iN;i++){
-	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
-	}
-	points=shallowconcat1(points);
-	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
-	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
-    if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
-	N=gmul(N, opnu);//Updating N_n
-	R=gadd(R, epsilon);//Updating R_n
+	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
   }
 }
