@@ -89,13 +89,10 @@ static int toleq(GEN x, GEN y, GEN tol, long prec);
 static GEN normalizedboundary_oosides(GEN U);
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
 
-//3: STATIC HELPER METHODS
+//3: (MOSTLY STATIC) HELPER METHODS
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 static GEN qalg_fdomarea(GEN Q, long prec);
-static GEN qalg_fdominitialize(GEN A, long prec);
-static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec);
-static GEN qalg_normform(GEN Q);
 static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z, GEN maxN, GEN normformpart, long prec);
 static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
@@ -2713,6 +2710,32 @@ GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec){
 	
 }
 
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0.
+GEN algfromnormdisc(GEN F, GEN D, GEN infram){
+  pari_sp top=avma;
+  if(typ(D)!=t_INT || signe(D)!=1) pari_err_TYPE("D should be a positive integer", D);//The absolute norm to Q should be a positive integer
+  GEN pfac=Z_factor(D);
+  long nfacsp1=lg(gel(pfac, 1));//# prime factors+1
+  long nramplaces=nfacsp1-1;
+  for(long i=1;i<lg(infram);i++) if(!gequal0(gel(infram, i))) nramplaces++;//Adding the number of oo ramified places
+  if(nramplaces%2==1){avma=top;return gen_0;}//Odd number of ramification places, BAD
+  GEN pfacideals=zerovec(nfacsp1-1), hass=cgetg(nfacsp1, t_VEC), possideals;
+  long expon;
+  for(long i=1;i<nfacsp1;i++){
+	expon=itos(gcoeff(pfac, i, 2));//Coefficient of p we desire.
+	possideals=idealprimedec(F, gcoeff(pfac, i, 1));
+	for(long j=1;j<lg(possideals);j++){
+	  if(pr_get_f(gel(possideals, j))==expon){
+		gel(pfacideals, i)=gel(possideals, j);//We win!
+		break;
+	  }
+	}
+	if(gequal0(gel(pfacideals, i))){avma=top;return gen_0;}//Nope, return 0
+	gel(hass, i)=gen_1;//The vector of 1's
+  }
+  return gerepileupto(top, alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1));//Make the algebra
+}
+
 //Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
 GEN algmulvec(GEN A, GEN G, GEN L){
   pari_sp top=avma;
@@ -2764,12 +2787,43 @@ GEN algramifiedplacesf(GEN A){
   return gerepilecopy(top, rp);
 }
 
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarentee that a>0. F must be a totally real field.
+GEN algshimura(GEN F, GEN D, long place){
+  pari_sp top=avma;
+  if(nf_get_r2(F)>0) return gen_0;//Not totally real!
+  long n=nf_get_degree(F);
+  if(place<=0 || place>n) return gen_0;//Invalid place!
+  GEN infram=cgetg(n+1, t_VEC);
+  for(long i=1;i<=n;i++) gel(infram, i)=gen_1;
+  gel(infram, place)=gen_0;
+  GEN A=algfromnormdisc(F, D, infram);
+  if(gequal0(A)){avma=top;return gen_0;}//Nope
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+  long varn=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
+	GEN b=alg_get_b(A);
+	return gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
+  }
+  return gerepilecopy(top, A);//No swap required.
+}
+
 //Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z, NULL, gen_0, prec));
   
+}
+
+//Returns the algebra where a, b are swapped
+GEN algswapab(GEN A){
+  pari_sp top=avma;
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+  long varn=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN b=alg_get_b(A);
+  return gerepileupto(top, alginit(alg_get_center(A), mkvec2(b, a), -1, 1));
 }
 
 
@@ -2839,11 +2893,13 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   long maxelts=3;
   
   mid=avma;
-  long pass=0, istart=1, nsidesp1=1;//pass tracks which pass we are on
+  long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
+  int anyskipped=0;
   
   for(;;){
-	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
+	pass++;
+	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
 	  istart=lg(oosides);
@@ -2851,24 +2907,46 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	  if(dispprogress) pari_printf("%d infinite sides\n", istart-1);
 	}
 	else iN=itos(gfloor(N))+1;
+	nskip=0;//How many points are skipped due to poor precision
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<istart;i++){//Points near the oo sides
 	  ang2=gel(gel(U, 4), oosides[i]);
 	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
 	  else ang1=gel(gel(U, 4), oosides[i]-1);
 	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  pari_CATCH(e_TYPE){//If R is large
+	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		anyskipped=1;
+		nskip++;
+		gel(points, i)=cgetg(1, t_VEC);
+	  }
+	  pari_TRY{
+	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  }
+	  pari_ENDCATCH
 	}
 	for(long i=istart;i<iN;i++){//Random points in ball of radius R
 	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  pari_CATCH(e_TYPE){//If R is large
+	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		anyskipped=1;
+		nskip++;
+		gel(points, i)=cgetg(1, t_VEC);
+	  }
+	  pari_TRY{
+	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  }
+	  pari_ENDCATCH
 	}
 	points=shallowconcat1(points);
-	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
+	if(dispprogress){
+	  if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
+	  pari_printf("%d elements found\n", lg(points)-1);
+	}
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
     if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
-	if(istart==1 || nsidesp1==lg(gel(U, 1))) N=gmul(N, opnu);//Updating N_n
+	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
 	R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
@@ -2877,57 +2955,10 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 
 
 
-//STATIC HELPER METHODS
-
-
-//If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.
-static long algsplitoo(GEN A){
-  GEN infram=alg_get_hasse_i(A);//shallow
-  long split=0;
-  for(long i=1;i<lg(infram);i++){//Finding the split place
-	if(infram[i]==0){//Split place
-	  if(split>0) return 0;
-	  split=i;
-	}
-  }
-  return split;//No garbage!!
-}
-
-//Given the (assumed) basis representation of an element, this returns the conjugate in the basis representation.
-static GEN qalg_basis_conj(GEN Q, GEN x){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(Q);
-  GEN varnos=qalg_get_varnos(Q);
-  GEN Lx=pol_x(varnos[2]);//The variable for L
-  GEN algx=liftall(algbasistoalg(A, x));
-  gel(algx, 1)=gsubst(gel(algx, 1), varnos[2], gneg(Lx));//Conjugating
-  gel(algx, 2)=gneg(gel(algx, 2));//The conjugate of l1+jl2 is sigma(l1)-jl2
-  return gerepileupto(top, algalgtobasis(A, algx));//Converting back
-}
-
-//Returns the area of the fundamental domain of Q. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.13 to update when Eichler; very easy)
-static GEN qalg_fdomarea(GEN Q, long prec){
-  pari_sp top=avma;
-  long bits=bit_accuracy(prec);
-  GEN A=qalg_get_alg(Q);
-  GEN F=alg_get_center(A);
-  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
-  GEN rams=qalg_get_rams(Q);
-  GEN norm=gen_1;
-  for(long i=1;i<lg(rams);i++){
-	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
-	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
-  }
-  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), prec), norm);//d_F^(3/2)*phi(D)
-  long n=nf_get_degree(F), twon=2*n;
-  ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
-  ar=gmul(ar, gpowgs(gen_2, 3-twon));
-  ar=gmul(ar, gpowgs(mppi(prec), 1-twon));//2^(3-2n)*Pi*(1-n)*zeta_F(2)*d_F^(3/2)*phi(D)
-  return gerepileupto(top, ar);
-}
+//(MOSTLY STATIC) HELPER METHODS
 
 //Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
-static GEN qalg_fdominitialize(GEN A, long prec){
+GEN qalg_fdominitialize(GEN A, long prec){
   GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
   GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
   GEN ramdat=algramifiedplacesf(A);//Finite ramified places
@@ -2942,7 +2973,7 @@ static GEN qalg_fdominitialize(GEN A, long prec){
 }
 
 //Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm(e1*v1+...+en*vn), with absrednorm defined as on page 478 of Voight. We take the basepoint to be z, so if z!=0, we shift it so the 1/radius part is centred at z (and so isometric circles near z are weighted more).
-static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec){
+GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec){
   pari_sp top=avma;
 
   //First we find the part coming from |f_g(p)|
@@ -3015,7 +3046,7 @@ static GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec
 }
 
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of A. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
-static GEN qalg_normform(GEN Q){
+GEN qalg_normform(GEN Q){
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
   long n=lg(gel(alg_get_basis(A), 1)), nm1=n-1;//The lg of a normal entry
@@ -3040,6 +3071,52 @@ static GEN qalg_normform(GEN Q){
 	}
   }
   return gerepilecopy(top, M);
+}
+
+//If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.
+static long algsplitoo(GEN A){
+  GEN infram=alg_get_hasse_i(A);//shallow
+  long split=0;
+  for(long i=1;i<lg(infram);i++){//Finding the split place
+	if(infram[i]==0){//Split place
+	  if(split>0) return 0;
+	  split=i;
+	}
+  }
+  return split;//No garbage!!
+}
+
+//Given the (assumed) basis representation of an element, this returns the conjugate in the basis representation.
+static GEN qalg_basis_conj(GEN Q, GEN x){
+  pari_sp top=avma;
+  GEN A=qalg_get_alg(Q);
+  GEN varnos=qalg_get_varnos(Q);
+  GEN Lx=pol_x(varnos[2]);//The variable for L
+  GEN algx=liftall(algbasistoalg(A, x));
+  gel(algx, 1)=gsubst(gel(algx, 1), varnos[2], gneg(Lx));//Conjugating
+  gel(algx, 2)=gneg(gel(algx, 2));//The conjugate of l1+jl2 is sigma(l1)-jl2
+  return gerepileupto(top, algalgtobasis(A, algx));//Converting back
+}
+
+//Returns the area of the fundamental domain of Q. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.13 to update when Eichler; very easy)
+static GEN qalg_fdomarea(GEN Q, long prec){
+  pari_sp top=avma;
+  long bits=bit_accuracy(prec);
+  GEN A=qalg_get_alg(Q);
+  GEN F=alg_get_center(A);
+  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
+  GEN rams=qalg_get_rams(Q);
+  GEN norm=gen_1;
+  for(long i=1;i<lg(rams);i++){
+	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
+	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
+  }
+  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), prec), norm);//d_F^(3/2)*phi(D)
+  long n=nf_get_degree(F), twon=2*n;
+  ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
+  ar=gmul(ar, gpowgs(gen_2, 3-twon));
+  ar=gmul(ar, gpowgs(mppi(prec), 1-twon));//2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2)*phi(D)
+  return gerepileupto(top, ar);
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near z.
@@ -3223,17 +3300,19 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	}
   }
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  long maxN=itos(gceil(area));
-  if(maxN<=10) maxN=10;
-  long maxelts=3;
+  //long maxN=itos(gceil(area));
+  //if(maxN<=10) maxN=10;
+  long maxN=0;
+  long maxelts=1;
   
   mid=avma;
-  long pass=0, istart=1, nsidesp1=1;//pass tracks which pass we are on
+  long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
+  int anyskipped=0;
   
   for(;;){
-	if(dispprogress){pass++;pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
-	FILE *f=fopen("partialdoms.txt", "a");
+	pass++;
+	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
 	  istart=lg(oosides);
@@ -3241,26 +3320,46 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	  if(dispprogress) pari_printf("%d infinite sides\n", istart-1);
 	}
 	else iN=itos(gfloor(N))+1;
+	nskip=0;//How many points are skipped due to poor precision
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<istart;i++){//Points near the oo sides
 	  ang2=gel(gel(U, 4), oosides[i]);
 	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
 	  else ang1=gel(gel(U, 4), oosides[i]-1);
 	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  pari_CATCH(e_TYPE){//If R is large
+	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		anyskipped=1;
+		nskip++;
+		gel(points, i)=cgetg(1, t_VEC);
+	  }
+	  pari_TRY{
+	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  }
+	  pari_ENDCATCH
 	}
 	for(long i=istart;i<iN;i++){//Random points in ball of radius R
 	  w=randompoint_ud(R, prec);//Random point
-	  gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  pari_CATCH(e_TYPE){//If R is large
+	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		anyskipped=1;
+		nskip++;
+		gel(points, i)=cgetg(1, t_VEC);
+	  }
+	  pari_TRY{
+	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, w, maxN, maxelts, normform, normformpart, prec);
+	  }
+	  pari_ENDCATCH
 	}
 	points=shallowconcat1(points);
-	if(dispprogress) pari_printf("%d elements found\n", lg(points)-1);
+	if(dispprogress){
+	  if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
+	  pari_printf("%d elements found\n", lg(points)-1);
+	}
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-	pari_fprintf(f, "%Ps\n", gel(U, 1));
-	fclose(f);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
     if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
-	if(istart==1 || nsidesp1==lg(gel(U, 1))) N=gmul(N, opnu);//Updating N_n
+	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
 	R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);

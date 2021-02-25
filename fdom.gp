@@ -24,7 +24,7 @@ default(help, "gphelp -detex");
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algfdomreduce, algfdomrootgeodesic, algmulvec, algramifiedplacesf, algsmallnorm1elts.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algfdomreduce, algfdomrootgeodesic, algfromnormdisc, algmulvec, algramifiedplacesf, algnormalizedbasis, algnormalizedboundary, algshimura, algsmallnorm1elts, algswapab.");
 
 	install("algfdomarea","Gp","algfdomarea","./libfdom.so");
 	addhelp(algfdomarea,"Input A, a quaternion algebra split at one real place.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''.");
@@ -34,6 +34,8 @@ default(help, "gphelp -detex");
 	addhelp(algfdomreduce,"Inputs A, U, g, {z=0}: quaternion algebra A split at one real place, the fundamental domain U of the group of units of norm 1 of the order in A, an element g of this group, and a point z in the unit disc.\n Returns the triple [gammabar, delta, decomp], where gammabar=delta*g is (G,z)-reduced (i.e. distance between gammabar*z and 0 is less than or equal to the distance between g'*gammabar*z for all g' in G), and decomp is the vecsmall [i1, i2, ..., in] with delta=G[i1]*G[i2]*...*G[in]. If z=0, then gammabar=+/-1.");
 	install("algfdomrootgeodesic","GGGp","algfdomrootgeodesic","./libfdom.so");
 	addhelp(algfdomrootgeodesic,"Inputs A, U, g: quaternion algebra A split at one real place, the fundamental domain U of the group of units of norm 1 of the order in A, an element g of this group.\n Returns the root geodesic of g in the fundamental domain. The format is [g's, circle arcs, vecsmall(sides hit), vecsmall(sides emenating from)].");
+	install("algfromnormdisc","GGG","algfromnormdisc","./libfdomdata.so");
+	addhelp(algfromnormdisc,"Inputs F, D, infram: number field F, positive real D, vector infram of 0/1's of length deg(F).\n Returns a quaternion algebra over F with infinite ramification infram and discriminant disc, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0.");	
 	install("algmulvec","GGG","algmulvec","./libfdom.so");
 	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
 	install("algramifiedplacesf","G","algramifiedplacesf","./libfdom.so");
@@ -42,8 +44,12 @@ default(help, "gphelp -detex");
 	addhelp(algnormalizedbasis, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized basis associated to G.");
 	install("algnormalizedboundary","GGGp","algnormalizedboundary","./libfdom.so");
 	addhelp(algnormalizedboundary, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized boundary associated to G. The format of the output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).");
+	install("algshimura","GGD1,L,","algshimura","./libfdomdata.so");
+	addhelp(algshimura,"Inputs F, D, {place=1}: totally real number field F, positive integer D, integer place between 1 and deg(F).\n Returns a quaternion algebra over F that is split at the infinite place place only, and has discriminant disc, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods.");
 	install("algsmallnorm1elts","GGGD0,G,p","algsmallnorm1elts","./libfdom.so");
 	addhelp(algsmallnorm1elts,"Inputs A, C, p, {z=0}: quaternion algebra A split at one real place, positive real number C, upper half plane point p, unit disc point z.\n Computes small norm 1 elements in the order of A, i.e. such that absrednorm(g)<=C, where absrednorm is defined on page 478 of Voight ``Computing fundamental domains''. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z is the basepoint in the unit disc model for absrednorm (the invrad part is computed with respect to z, hence elements with isometric circles close to z are found).");
+	install("algswapab","G","algswapab","./libfdom.so");
+	addhelp(algswapab,"Input A, a quaternion algebra=(a, b/F).\n Returns (b, a/F), i.e. swapping a and b.");
 	
 \\TEMPORARY
 install("algnormform","Gp","algnormform","./libfdom.so");
