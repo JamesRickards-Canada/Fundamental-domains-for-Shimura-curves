@@ -2802,7 +2802,10 @@ GEN algshimura(GEN F, GEN D, long place){
   long varn=rnf_get_varn(L);
   GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
   if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
-	GEN b=alg_get_b(A);
+	GEN b=lift(alg_get_b(A));
+	GEN aden=Q_denom(a), bden=Q_denom(b);
+    if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+	if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
 	return gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
   }
   return gerepilecopy(top, A);//No swap required.
@@ -2822,7 +2825,16 @@ GEN algswapab(GEN A){
   GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
   long varn=rnf_get_varn(L);
   GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  GEN b=alg_get_b(A);
+  GEN b=lift(alg_get_b(A));
+  GEN aden=Q_denom(a), bden=Q_denom(b);
+  if(!isint1(aden)){
+	a=gmul(a, gsqr(aden));
+	pari_warn(warner, "b has to have no denominator, so we scaled it by its denominator squared.");
+  }
+  if(!isint1(bden)){
+	b=gmul(b, gsqr(bden));
+	pari_warn(warner, "a has to have no denominator, so we scaled it by its denominator squared.");
+  }
   return gerepileupto(top, alginit(alg_get_center(A), mkvec2(b, a), -1, 1));
 }
 
