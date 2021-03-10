@@ -43,6 +43,8 @@ GEN mat_nfcholesky(GEN nf, GEN A);
 
 //SECTION 2: GEOMETRY METHODS
 
+//BASIC LINE, CIRCLE, AND POINT OPERATIONS
+GEN mat_eval(GEN M, GEN x);
 
 //DISTANCES
 GEN hdist(GEN z1, GEN z2, long prec);
@@ -88,16 +90,17 @@ GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algramifiedplacesf(GEN A);
 GEN algshimura(GEN F, GEN D, long place);
-GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z, long prec);
+GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);
 GEN algswapab(GEN A);
 
 //(MOSTLY STATIC) HELPER METHODS
 GEN qalg_fdominitialize(GEN A, long prec);
-GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z, GEN normformpart, long prec);
+GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec);
 GEN qalg_normform(GEN Q);
 
 //TEMPORARY
-GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z, long triesperelt, long maxelts, long prec);
+GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
 GEN algnormform(GEN A, long prec);
-GEN algabsrednorm(GEN A, GEN p, GEN z, long prec);
+GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
+
