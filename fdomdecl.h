@@ -63,9 +63,11 @@ GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec);
 GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
 GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
 GEN reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
-GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec);
 GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec);
 GEN rootgeodesic_uhp(GEN M, GEN tol, long prec);
+
+//FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
+GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec);
 
 //PRINTING TO PLOTVIEWER
 void python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec);
@@ -90,6 +92,7 @@ GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algramifiedplacesf(GEN A);
 GEN algshimura(GEN F, GEN D, long place);
+GEN algsignature(GEN A, GEN U, long prec);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);
 GEN algswapab(GEN A);
 
@@ -99,8 +102,12 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_normform(GEN Q);
 
 //TEMPORARY
+GEN fdommincyc(GEN U);
+GEN bestAval(GEN Q, GEN p, long prec);
+GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec);
+GEN algenum(GEN A, GEN C, GEN p, GEN R, GEN N, long maxtries, long prec);
 GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
 GEN algnormform(GEN A, long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
-
+GEN balltester(GEN x, GEN y, GEN R, long prec);

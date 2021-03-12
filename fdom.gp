@@ -58,3 +58,12 @@ install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
 install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
 install("algsmallnorm1elts_condition","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");
+install("algenum","GGGGGLp","algenum","./libfdom.so");
+install("balltester","GGGp","balltester","./libfdom.so");
+install("bestAval","GGp","bestAval","./libfdom.so");
+install("Ntries","GGGGGLLp","Ntries","./libfdom.so");
+
+install("fdommincyc","G","fdommincyc","./libfdom.so");
+
+install("algsignature","GGp","algsignature","./libfdom.so");
+

@@ -74,6 +74,10 @@ static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec);
 static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec);
 static GEN psl_roots(GEN M, GEN tol, long prec);
 
+//2: FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
+static GEN minimalcycles(GEN pair);
+static GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
+
 //2: GEOMETRIC HELPER METHODS
 static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
 static GEN atanoo(GEN x, long prec);
@@ -96,11 +100,12 @@ static GEN qalg_fdomarea(GEN Q, long prec);
 static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, GEN maxN, GEN normformpart, long prec);
 static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
-//3: BASIC OPERATIONS FOR NORMALIZED BASIS
+//3: BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
 static GEN qalg_fdominv(GEN *data, GEN x);
 static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec);
 static GEN qalg_fdommul(GEN *data, GEN x, GEN y);
 static int qalg_istriv(GEN *data, GEN x);
+static GEN qalg_fdomtrace(GEN *data, GEN x);
 
 //3: SHALLOW RETRIEVAL METHODS
 static GEN qalg_get_alg(GEN Q);
@@ -110,7 +115,10 @@ static GEN qalg_get_roots(GEN Q);
 
 
 //TEMPORARY TESTING METHODS
+
 static GEN ballradRpt(GEN x, GEN y, GEN R, long prec);
+static GEN betterenumeration(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec);
+static GEN betterenumerationrettries(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec);
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
 static GEN smallvectors_cholesky_backup(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
 
@@ -2391,6 +2399,97 @@ GEN reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GE
   return gerepileupto(top, ret);
 }
 
+//Returns the root geodesic in the unit disc corresponding to M in PSL(2, R) and p the reference point to mapping the upper half plane to the unit disc (mats=[m1, m2, p], with m1 being the mapping).
+GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec){
+  pari_sp top=avma;
+  GEN geod=rootgeodesic_uhp(M, tol, prec);
+  return gerepileupto(top, mobius(gel(mats, 1), geod, tol, prec));
+}
+
+//Returns the upper half plane root geodesic of the hyperbolic element M in PSL(2, R)
+GEN rootgeodesic_uhp(GEN M, GEN tol, long prec){
+  pari_sp top=avma;
+  GEN rts=psl_roots(M, tol, prec), arc;
+  if(typ(gel(rts, 1))==t_INFINITY){//First root infinite; we have a vertical segment from rts[2] to oo
+    arc=cgetg(ARCLEN, t_VEC);
+    gel(arc, 1)=mkoo();
+    gel(arc, 2)=gcopy(gel(rts, 2));
+    gel(arc, 3)=gcopy(gel(rts, 2));//Starts at finite (second) root
+    gel(arc, 4)=mkoo();//Ends at oo
+    gel(arc, 5)=gen_0;
+    gel(arc, 6)=gen_1;//Vertically up
+    gel(arc, 7)=gen_0;//No dir since endpt is oo
+    gel(arc, 8)=gen_1;//Segment
+    return gerepileupto(top, arc);
+  }
+  else if(typ(gel(rts, 2))==t_INFINITY){//Second root infinite; we have a vertical segment fr
+    arc=cgetg(ARCLEN, t_VEC);
+    gel(arc, 1)=mkoo();
+    gel(arc, 2)=gcopy(gel(rts, 1));
+    gel(arc, 3)=mkoo();//Starts at oo
+    gel(arc, 4)=gcopy(gel(rts, 1));//Ends at finite (second) root
+    gel(arc, 5)=gen_0;
+    gel(arc, 6)=gen_m1;//Vertically down
+    gel(arc, 7)=gen_0;//No dir since endpt is oo
+    gel(arc, 8)=gen_1;//Segment
+    return gerepileupto(top, arc);
+  }
+  //Now both roots are finite, so we have a nice circle.
+  GEN centre=gdivgs(gadd(gel(rts, 1), gel(rts, 2)), 2);
+  int firstbigger=gcmp(gel(rts, 1), gel(rts, 2));//=1 if the first root is bigger, and -1 if not (no tolerance needed).
+  if(firstbigger==1){
+    GEN radius=gsub(gel(rts, 1), centre);
+    GEN c=mkvec3(centre, radius, gen_0);//The full circle
+    arc=arc_init(c, gel(rts, 1), gel(rts, 2), -1, prec);//Arc points from second to first root.
+  }
+  else{
+    GEN radius=gabs(gsub(gel(rts, 2), centre), prec);
+    GEN c=mkvec3(centre, radius, gen_0);//The full circle
+    arc=arc_init(c, gel(rts, 2), gel(rts, 1), 1, prec);//Arc points from second to first root.
+  }
+  return gerepileupto(top, arc);
+}
+
+
+
+//FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
+
+
+//Returns the set of minimal cycles of the side pairing pair. A cycle is a vecsmall [i1,i2,...,in] so that the cycle is v_i1, v_i2, ..., v_in. A cycle [-i] means that the "vertex" on side i is is a one element cycle (happens when a side is fixed).
+static GEN minimalcycles(GEN pair){
+  pari_sp top=avma;
+  long np1=lg(pair), n=np1-1, vleft=np1;//Number of sides/vertices (not counting vertices that occur on the middle of a side).
+  GEN vind=cgetg(np1, t_VECSMALL);
+  for(long i=1;i<np1;i++) vind[i]=1;//Tracking if the vertices have run out or not
+  GEN cycles=vectrunc_init(2*np1), cyc;//Max number of cycles, since each side could have a middle vertex. In reality the number is probably much smaller, but this is safe.
+  long startind=1, ind;
+  for(long i=1;i<np1;i++){//We sort the fixed sides first, as later on we would miss the ones that get removed before checking.
+    if(pair[i]==i){//Side fixed!
+	  vectrunc_append(cycles, mkvecsmall(-i));//Middle of the side is fixed.
+	} 
+  }
+  do{
+	cyc=vecsmalltrunc_init(vleft);
+	vecsmalltrunc_append(cyc, startind);//Starting the cycle.
+	vind[startind]=0;
+	vleft--;
+	ind=smodss(pair[startind]-2, n)+1;//Hit it with the side pairing and subtract 1 to reach the paired vertex.
+	while(ind!=startind){//Move along the cycle.
+	  vind[ind]=0;
+	  vleft--;//One less vertex
+	  vecsmalltrunc_append(cyc, ind);//Append it
+	  ind=smodss(pair[ind]-2, n)+1;//Update
+	}
+	vectrunc_append(cycles, cyc);//New cycle.
+    while(startind<np1){//Finding the next vertex we haven't eliminated.
+	  startind++;
+	  if(vind[startind]==1) break;
+	}
+  }
+  while(startind<np1);
+  return gerepilecopy(top, cycles);
+}
+
 //Finds the image of the root geodesic of g in the fundamental domain specified by U.
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec){
   pari_sp top=avma;
@@ -2444,58 +2543,41 @@ GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, G
   return gerepileupto(top, ret);
 }
 
-//Returns the root geodesic in the unit disc corresponding to M in PSL(2, R) and p the reference point to mapping the upper half plane to the unit disc (mats=[m1, m2, p], with m1 being the mapping).
-GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec){
+
+//NOT QUITE WORKING
+
+//Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).
+static GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
   pari_sp top=avma;
-  GEN geod=rootgeodesic_uhp(M, tol, prec);
-  return gerepileupto(top, mobius(gel(mats, 1), geod, tol, prec));
+  GEN G=gel(U, 1);
+  GEN cycles=minimalcycles(gel(U, 7)), cyc, g, trd;//The minimal cycles.
+  long s=0, nfixed=0;//Number of parabolic cycles, and the number of sides fixed by the element.
+  GEN elliptic=vecsmalltrunc_init(lg(cycles));//At most one per cycle.
+  for(long i=1;i<lg(cycles);i++){
+	cyc=gel(cycles, i);
+	if(lg(cyc)==2 && cyc[1]<0){//Middle of a side minimal cycle.
+	  g=gel(G, -cyc[1]);//The word of the cycle.
+	  nfixed++;
+	}
+	else{
+	  g=gamid;
+	  for(long j=1;j<lg(cyc);j++) g=eltmul(data, gel(G, cyc[j]), g);//Multiply on the left by G[cyc[j]]
+	}
+	if(istriv(data, g)) continue;//Accidental cycle, continue on.
+	trd=elttrace(data, g);//The trace
+	if(gequal(trd, gen_2) || gequal(trd, gen_m2)){s++;continue;}//Parabolic cycle.
+    long ord=1;
+	GEN gpow=g;
+	do{//Finding the order of g
+	  ord++;
+	  gpow=eltmul(data, g, gpow);
+	}
+	while(!istriv(data, gpow));
+	vecsmalltrunc_append(elliptic, ord);
+  }
+  long genus=((lg(G)-1+nfixed)/2-lg(cycles)+2)/2;//2*g+t+s=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C.
+  return gerepilecopy(top, mkvec3(stoi(genus), elliptic, stoi(s)));
 }
-
-//Returns the upper half plane root geodesic of the hyperbolic element M in PSL(2, R)
-GEN rootgeodesic_uhp(GEN M, GEN tol, long prec){
-  pari_sp top=avma;
-  GEN rts=psl_roots(M, tol, prec), arc;
-  if(typ(gel(rts, 1))==t_INFINITY){//First root infinite; we have a vertical segment from rts[2] to oo
-    arc=cgetg(ARCLEN, t_VEC);
-    gel(arc, 1)=mkoo();
-    gel(arc, 2)=gcopy(gel(rts, 2));
-    gel(arc, 3)=gcopy(gel(rts, 2));//Starts at finite (second) root
-    gel(arc, 4)=mkoo();//Ends at oo
-    gel(arc, 5)=gen_0;
-    gel(arc, 6)=gen_1;//Vertically up
-    gel(arc, 7)=gen_0;//No dir since endpt is oo
-    gel(arc, 8)=gen_1;//Segment
-    return gerepileupto(top, arc);
-  }
-  else if(typ(gel(rts, 2))==t_INFINITY){//Second root infinite; we have a vertical segment fr
-    arc=cgetg(ARCLEN, t_VEC);
-    gel(arc, 1)=mkoo();
-    gel(arc, 2)=gcopy(gel(rts, 1));
-    gel(arc, 3)=mkoo();//Starts at oo
-    gel(arc, 4)=gcopy(gel(rts, 1));//Ends at finite (second) root
-    gel(arc, 5)=gen_0;
-    gel(arc, 6)=gen_m1;//Vertically down
-    gel(arc, 7)=gen_0;//No dir since endpt is oo
-    gel(arc, 8)=gen_1;//Segment
-    return gerepileupto(top, arc);
-  }
-  //Now both roots are finite, so we have a nice circle.
-  GEN centre=gdivgs(gadd(gel(rts, 1), gel(rts, 2)), 2);
-  int firstbigger=gcmp(gel(rts, 1), gel(rts, 2));//=1 if the first root is bigger, and -1 if not (no tolerance needed).
-  if(firstbigger==1){
-    GEN radius=gsub(gel(rts, 1), centre);
-    GEN c=mkvec3(centre, radius, gen_0);//The full circle
-    arc=arc_init(c, gel(rts, 1), gel(rts, 2), -1, prec);//Arc points from second to first root.
-  }
-  else{
-    GEN radius=gabs(gsub(gel(rts, 2), centre), prec);
-    GEN c=mkvec3(centre, radius, gen_0);//The full circle
-    arc=arc_init(c, gel(rts, 2), gel(rts, 1), 1, prec);//Arc points from second to first root.
-  }
-  return gerepileupto(top, arc);
-}
-
-
 
 //PRINTING TO PLOTVIEWER
 
@@ -2788,7 +2870,7 @@ GEN algramifiedplacesf(GEN A){
   return gerepilecopy(top, rp);
 }
 
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarentee that a>0. F must be a totally real field.
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field.
 GEN algshimura(GEN F, GEN D, long place){
   pari_sp top=avma;
   if(nf_get_r2(F)>0) return gen_0;//Not totally real!
@@ -2810,6 +2892,14 @@ GEN algshimura(GEN F, GEN D, long place){
 	return gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
   }
   return gerepilecopy(top, A);//No swap required.
+}
+
+//Returns the signature of the quaternion algebra A with fundamental domain U.
+GEN algsignature(GEN A, GEN U, long prec){
+  pari_sp top=avma;
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdominv, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
@@ -3191,7 +3281,7 @@ static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, lo
 
 
 
-//BASIC OPERATIONS FOR NORMALIZED BASIS
+//BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
 
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
@@ -3232,6 +3322,11 @@ static int qalg_istriv(GEN *data, GEN x){
   return 1;
 }
 
+//Must pass *data as a quaternion algebra. Returns the trace of x.
+static GEN qalg_fdomtrace(GEN *data, GEN x){
+  return algtrace(qalg_get_alg(*data), x, 0);
+}
+
 
 
 //SHALLOW RETRIEVAL METHODS
@@ -3252,27 +3347,165 @@ static GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 //TEMPORARY TESTING
 
-/*
-static GEN betterenumeration(GEN Q, GEN R, GEN N, long maxtries){
+GEN fdommincyc(GEN U){
+  return minimalcycles(gel(U, 7));
+}
+
+
+//Algebra A, Q<=C, basepoint p, radius R, testdata=max passes OR denominator (betterenumeration), number of points N, whichmethod=0 ->betterenumeration, 1 -> smallnorm1elts_condition 2-> smallnorm1elts_qfminim. Records the number of tries to find a non-trivial element, done N times, and returns the average number of tries.
+GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec){
   pari_sp top=avma;
-  GEN x1=randomi(N), y1=randomi(N), x2=x1, y2=y1;//[xi,yi] represent the two random points
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN nformpart=qalg_normform(Q), z, elts=cgetg(1, t_VEC);
+  GEN nform=gcopy(nformpart);
+  long n=lg(nform);
+  GEN K=alg_get_center(A);
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }
+  nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  long tottries=0, eltsfound=0;
+  
+  if(whichmethod==2){
+	if(gequal0(testdata)) testdata=NULL;
+	for(;;){
+	  tottries++;
+	  z=randompoint_ud(R, prec);
+	  elts=qalg_smallnorm1elts_qfminim(Q, C, p, gen_0, z, testdata, nformpart, prec);
+	  for(long i=1;i<lg(elts);i++){
+		if(qalg_istriv(&Q, gel(elts, i))) continue;
+		eltsfound++;//Found a non-trivial element
+		if(eltsfound>=N) return gerepileupto(top, gtofp(gdivgs(stoi(tottries), N), prec));
+		break;//No need to search for more non-trivial elements
+	  }
+	}
+  }
+  else if(whichmethod==1){
+	long maxN=itos(testdata);
+	for(;;){
+	  tottries++;
+	  z=randompoint_ud(R, prec);
+	  elts=qalg_smallnorm1elts_condition(Q, C, p, gen_0, z, maxN, 1, nform, nformpart, prec);
+	  for(long i=1;i<lg(elts);i++){
+		if(qalg_istriv(&Q, gel(elts, i))) continue;
+		eltsfound++;//Found a non-trivial element
+		if(eltsfound>=N) return gerepileupto(top, gtofp(gdivgs(stoi(tottries), N), prec));
+		break;//No need to search for more non-trivial elements
+	  }
+	}
+  }
+  if(gequal0(testdata)) testdata=stoi(100);
+  long tries=itos(gceil(gsqrt(testdata, prec)));
+  for(;;){
+	elts=betterenumerationrettries(Q, C, p, R, testdata, tries, nform, nformpart, prec);
+	tottries=tottries+itos(gel(elts, 2));
+	for(long i=1;i<lg(gel(elts, 1));i++){
+		if(qalg_istriv(&Q, gel(elts, i))) continue;
+		eltsfound++;//Found a non-trivial element
+		if(eltsfound>=N) return gerepileupto(top, gtofp(gdivgs(stoi(tottries), N), prec));
+		break;//No need to search for more non-trivial elements
+	}
+  }
+}
+
+GEN bestAval(GEN A, GEN p, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, optAval(Q, p, prec));
+}
+
+//Trying the better? enumeration method.
+GEN algenum(GEN A, GEN C, GEN p, GEN R, GEN N, long maxtries, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN nformpart=qalg_normform(Q);
+  GEN nform=gcopy(nformpart);
+  long n=lg(nform);
+  GEN K=alg_get_center(A);
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }
+  nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  return gerepileupto(top, betterenumeration(Q, C, p, R, N, maxtries, nform, nformpart, prec));
+}
+
+static GEN betterenumeration(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec){
+  pari_sp top=avma;
+  GEN x1=randomi(N), y1=randomi(N), x2, y2;//[xi,yi] represent the two random points
   GEN Nm1=subis(N, 1);
   GEN c1=addis(randomi(Nm1), 1), c2=addis(randomi(Nm1), 1);//Random numbers in [1,N-1], for the pseudo-random map [x,y]->[x^2+c1,y^2+c2] mod N (and divide by N to land in [0,1]^2).
-  
-	
+  x2=Fp_add(Fp_sqr(x1, N), c1, N);
+  y2=Fp_add(Fp_sqr(y1, N), c2, N);
+  long triesperelt=0, maxeltsfound=1;
+  GEN z1, z2, elts;
+  for(long try=1;try<maxtries;try++){
+	z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
+	z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
+	elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
+	if(lg(elts)>1) return gerepileupto(top, elts);
+	x1=Fp_add(Fp_sqr(x1, N), c1, N);//Update x1
+    y1=Fp_add(Fp_sqr(y1, N), c2, N);//Update y1
+	x2=Fp_add(Fp_sqr(x2, N), c1, N);x2=Fp_add(Fp_sqr(x2, N), c1, N);//Update x2
+    y2=Fp_add(Fp_sqr(y2, N), c2, N);y2=Fp_add(Fp_sqr(y2, N), c2, N);//Update y2
+  }
+  //Last test
+  z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
+  z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
+  elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
+  if(lg(elts)>1) return gerepileupto(top, elts);
+  avma=top;
+  return cgetg(1, t_VEC);//None found withing maxtries tries
+}
+
+static GEN betterenumerationrettries(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec){
+  pari_sp top=avma;
+  GEN x1=randomi(N), y1=randomi(N), x2, y2;//[xi,yi] represent the two random points
+  GEN Nm1=subis(N, 1);
+  GEN c1=addis(randomi(Nm1), 1), c2=addis(randomi(Nm1), 1);//Random numbers in [1,N-1], for the pseudo-random map [x,y]->[x^2+c1,y^2+c2] mod N (and divide by N to land in [0,1]^2).
+  x2=Fp_add(Fp_sqr(x1, N), c1, N);
+  y2=Fp_add(Fp_sqr(y1, N), c2, N);
+  long triesperelt=0, maxeltsfound=1;
+  GEN z1, z2, elts;
+  for(long try=1;try<maxtries;try++){
+	z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
+	z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
+	elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
+	if(lg(elts)>1) return gerepilecopy(top, mkvec2(elts, stoi(try)));
+	x1=Fp_add(Fp_sqr(x1, N), c1, N);//Update x1
+    y1=Fp_add(Fp_sqr(y1, N), c2, N);//Update y1
+	x2=Fp_add(Fp_sqr(x2, N), c1, N);x2=Fp_add(Fp_sqr(x2, N), c1, N);//Update x2
+    y2=Fp_add(Fp_sqr(y2, N), c2, N);y2=Fp_add(Fp_sqr(y2, N), c2, N);//Update y2
+  }
+  //Last test
+  z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
+  z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
+  elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
+  if(lg(elts)>1) return gerepilecopy(top, mkvec2(elts, stoi(maxtries)));
+  avma=top;
+  GEN ret=cgetg(3, t_VEC);
+  gel(ret, 1)=cgetg(1, t_VEC);
+  gel(ret, 2)=stoi(maxtries);
+  return ret;//None found withing maxtries tries
 }
 
 //We have a map [0,1]^2->ball of radius R in hyperbolic space, such that the uniform distribution on [0,1]^2 is sent to the hyperbolic distribution on B(R).
 static GEN ballradRpt(GEN x, GEN y, GEN R, long prec){
   pari_sp top=avma;
-  GEN arg=gmul(x, Pi2n(1, prec));//Random angle
-  GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
+  GEN zbound=expIPiR(gmulgs(x, 2), prec);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
   //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
   GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), y);//The element in [0, a(R)/4Pi].
   GEN r=gmulsg(2, gasinh(gsqrt(dist, prec), prec));//The radius
   GEN e2r=gexp(r, prec);
   return gerepileupto(top, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
-}*/
+}
+
+GEN balltester(GEN x, GEN y, GEN R, long prec){
+  return ballradRpt(x, y, R, prec);
+}
 
 
 GEN algnormform(GEN A, long prec){
@@ -3323,11 +3556,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-	GEN alpha=stoi(3);
-	GEN orderpart=gen_1;
-	GEN rams=qalg_get_rams(Q);
-	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
-	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
+	A=optAval(Q, p, prec);
   }
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
@@ -3362,15 +3591,17 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	}
   }
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  //long maxN=itos(gceil(area));
-  //if(maxN<=10) maxN=10;
-  long maxN=0;
-  long maxelts=1;
+  long maxN=itos(gceil(area));
+  if(maxN<=10) maxN=10;
+  long maxelts=3;
   
   mid=avma;
   long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
+  
+  GEN Ndenom=gmulgs(gceil(area), 10);
+  long mtries=itos(gceil(gsqrt(Ndenom, prec)));
   
   for(;;){
 	pass++;
@@ -3401,17 +3632,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	  pari_ENDCATCH
 	}
 	for(long i=istart;i<iN;i++){//Random points in ball of radius R
-	  w=randompoint_ud(R, prec);//Random point
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
-	  }
-	  pari_TRY{
-	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
-	  }
-	  pari_ENDCATCH
+	  gel(points, i)=betterenumeration(Q, A, p, R, Ndenom, mtries, normform, normformpart, prec);
 	}
 	points=shallowconcat1(points);
 	if(dispprogress){
