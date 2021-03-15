@@ -2699,7 +2699,7 @@ GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//The minimal cycles and their types.
   long nfixed=0, lgcyc=lg(gel(mcyc, 1));//The number of fixed sides, and number of cycles+1
   for(long i=1;i<lgcyc;i++){if(gmael(mcyc, 1, i)[1]<0) nfixed++;}
-  long genus=((lg(gel(U, 1))-1+nfixed)/2-lgcyc+2)/2;//2*g+t+s=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C.
+  long genus=((lg(gel(U, 1))-1+nfixed)/2-lgcyc+2)/2;//2*g+t+s+1_{t+s>0}=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C. We are actually overcounting by 1 if t+s=0 and there are no accidental cycles, but this is impossible as there is >=1 cycle.
   long s, firstell=lgcyc;//s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.
   int foundlastpar=0;
   for(long i=1;i<lgcyc;i++){
