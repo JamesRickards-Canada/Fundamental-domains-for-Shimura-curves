@@ -76,7 +76,6 @@ static GEN psl_roots(GEN M, GEN tol, long prec);
 
 //2: FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
 static GEN minimalcycles(GEN pair);
-static GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
 
 //2: GEOMETRIC HELPER METHODS
 static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
@@ -2490,6 +2489,157 @@ static GEN minimalcycles(GEN pair){
   return gerepilecopy(top, cycles);
 }
 
+//Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m.
+GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
+  pari_sp top=avma;
+  GEN G=gel(U, 1);
+  GEN cycles=minimalcycles(gel(U, 7)), cyc, g, trd;//The minimal cycles.
+  long ncyc=lg(cycles);
+  GEN types=cgetg(ncyc, t_VECSMALL);//The types
+  for(long i=1;i<ncyc;i++){
+	cyc=gel(cycles, i);
+	if(lg(cyc)==2 && cyc[1]<0) g=gel(G, -cyc[1]);//Minimal cycle that was the middle of a side.
+	else{
+	  g=gamid;
+	  for(long j=1;j<lg(cyc);j++) g=eltmul(data, gel(G, cyc[j]), g);//Multiply on the left by G[cyc[j]]
+	}
+	if(istriv(data, g)){types[i]=1;continue;}//Accidental cycle, continue on.
+	trd=elttrace(data, g);//The trace
+	if(gequal(trd, gen_2) || gequal(trd, gen_m2)){types[i]=0;continue;}//Parabolic cycle.
+    long ord=1;
+	GEN gpow=g;
+	do{//Finding the order of g
+	  ord++;
+	  gpow=eltmul(data, g, gpow);
+	}
+	while(!istriv(data, gpow));
+	types[i]=ord;
+  }
+  GEN ordering=vecsmall_indexsort(types);
+  return gerepilecopy(top, mkvec2(vecpermute(cycles, ordering), vecsmallpermute(types, ordering)));//The return, [cycles, types]
+}
+
+//Returns the group presentation of the fundamental domain U. The return is a vector, where the 1st element is the list of indices of the generators, 2nd element is the vector of relations, whose ith element is a relation of the form [indices, powers], where indices and powers are vecsmall's. If indices=[i1,i2,...,ik] and powers=[p1,p2,...,pk], then this corresponds to g_{i1}^p1*...*g_{ik}^{pk}=1.
+GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
+  pari_sp top=avma;
+  GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//Minimal cycles by type.
+  GEN cyc=gel(mcyc, 1), cyctype=gel(mcyc, 2);
+  long lgelts=lg(gel(U, 1)), lgcyc=lg(cyc), ngens=0;
+  GEN H=cgetg(lgelts, t_VECSMALL);
+  for(long i=1;i<lgelts;i++){//H[i]=1 if g=g^(-1), and for exactly one of [g,g^(-1)] for all other g.
+	if(gel(U, 7)[i]>=i){H[i]=1;ngens++;}
+	else H[i]=0;
+  }
+  long ind=1, k;
+  while(ind<lgcyc && cyctype[ind]==0) ind++;//Find the first accidental cycle.
+  long ellind=ind;
+  while(ellind<lgcyc && cyctype[ellind]==1) ellind++;//Find the first elliptic cycle.
+  long naccident=ellind-ind;//How many accidental cycles
+  GEN r=gen_0;//The accidental relation, if it exists.
+  if(naccident>0){//We have some accidental cycles!
+	r=gcopy(gel(cyc, ind));
+	r=vecsmall_reverse(r);//The relation is r backwards.
+	if(naccident>1){//More than one relation.
+	  ngens=ngens-naccident+1;//Updating the number of generators.
+	  long lastrel=ellind-1;//The last relation we consider in a cycle. We swap this with the relation we find every step and decrease it, so we only need to consider relations from ind+1 to lastrel at each step.
+	  long indrep=1, torep;//Stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement.
+	  GEN repind=gen_0, cycle, newr;//Stores [porm, j, l, m], where term j in relation r is replaced by using term m of relation l. If porm=-1, we need to replace the inverse, otherwise we do not.
+	  for(long i=1;i<naccident;i++){//Each step we solve the relation.
+	    for(long j=indrep;j<lg(r);j++){//Trying to replace index j
+		  torep=r[j];
+		  if(torep<0) torep=-torep;//In case power is -1.
+		  for(long l=ind+1;l<=lastrel;l++){//Looking at cycle l
+			for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
+			  if(gel(cyc, l)[m]==torep){//Replace it!
+			    H[torep]=0;
+				H[gel(U, 7)[torep]]=0;//Make sure it has been deleted from H.
+				repind=mkvecsmall4(1, j, l, m);
+				if(r[j]<0) repind[1]=-1;//Actually the inverse.
+				l=lastrel+1;//Break loop
+				j=lg(r);//Break loop
+				break;//Break loop
+			  }
+			}
+		  }
+		  if(gel(U, 7)[torep]==torep) continue;//g=g^(-1), so no need to search for the inverse.
+		  torep=gel(U, 7)[torep];//Now we try to replace the inverse
+		  for(long l=ind+1;l<=lastrel;l++){//Looking at cycle l
+			for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
+			  if(gel(cyc, l)[m]==torep){//Replace it!
+			    H[torep]=0;
+				H[gel(U, 7)[torep]]=0;//Make sure it has been deleted from H.
+				repind=mkvecsmall4(1, j, l, m);
+				if(r[j]>0) repind[1]=-1;//Actually the inverse.
+				l=lastrel+1;//Break loop
+				j=lg(r);//Break loop
+				break;//Break loop
+			  }
+			}
+		  }
+		}
+		//Now, repind gives us all the information we need to do the replacement.
+		cycle=gel(cyc, repind[3]);
+		newr=cgetg(lg(r)+lg(cycle)-3, t_VECSMALL);
+		for(long j=1;j<repind[2];j++) newr[j]=r[j];//First part is the same.
+		k=repind[2];//Keeps track of the index of newr that we are working on.
+		if(repind[1]==1){//Replace it normally. Cycle [a1,...,an] -> an*...*a1=1 -> a_j=a_{j+1}^(-1)*...*a_n^(-1)*a_1^(-1)*...*a_{j-1}^(-1).
+		  for(long j=repind[4]+1;j<lg(cycle);j++){newr[k]=-cycle[j];k++;}
+		  for(long j=1;j<repind[4];j++){newr[k]=-cycle[j];k++;}
+		}
+		else{//Replace its inverse. Cycle [a1,...,an] -> an*...*a1=1 -> a_j^(-1)=a_{j-1}*...*a_1*a_n*...*a_{j+1}.
+		  for(long j=repind[4]-1;j>0;j--){newr[k]=cycle[j];k++;}
+		  for(long j=lg(cycle)-1;j>repind[4];j--){newr[k]=cycle[j];k++;}
+		}
+		for(long j=repind[2]+1;j<lg(r);j++){newr[k]=r[j];k++;}//The final part is the same.
+		r=newr;
+		indrep=repind[2];//The index we replaced.
+		gel(cyc, repind[3])=gel(cyc, lastrel);//Replace the relation we replaced with the last one.
+		lastrel--;//One less relation.
+	  }
+	}
+  }
+  //Now we have to finalize things. First, we prepare for replacement of g and g^(-1)
+  long oppind;
+  GEN indused=cgetg(ngens+1, t_VECSMALL);//Which indices were used.
+  k=0;
+  for(long i=1;i<lgelts;i++){
+	if(H[i]<=0) continue;//Nothing to do
+	k++;
+	indused[k]=i;
+    H[i]=i;
+	oppind=gel(U, 7)[i];
+	if(oppind==i) continue;//g=g^(-1), continue on
+	H[oppind]=-i;//The inverse of g.
+  }//Now when we see an element with index i, we should replace it with H[i] if H[i]>0, and (-H[i])^(-1) if H[i]<0. Elements with H[i]=0 are guarenteed to not appear now.
+  GEN relations;
+  if(naccident==0) relations=cgetg(lgcyc-ellind+1, t_VEC);//We get 1 relation for every elliptic cycle, and an additional relation if we have >=1 accidental cycles.
+  else relations=cgetg(lgcyc-ellind+2, t_VEC);
+  k=1;
+  long w;
+  for(long i=ellind;i<lgcyc;i++){//Sorting the elliptic cycles first. We assume that they are all of length 1.
+    w=gel(cyc, i)[1];
+	if(w<0) w=-w;//Swap the sign back.
+	w=H[w];//The real element.
+	gel(relations, k)=cgetg(3, t_VEC);
+	if(w>0) gmael(relations, k, 1)=mkvecsmall(w);
+	else gmael(relations, k, 1)=mkvecsmall(-w);
+	gmael(relations, k, 2)=mkvecsmall(cyctype[i]);
+	k++;
+  }
+  if(naccident>0){
+    gel(relations, k)=cgetg(3, t_VEC);//Now we have the last relation, coming from r.
+    long lenr;
+    gmael(relations, k, 1)=cgetg_copy(r, &lenr);
+    gmael(relations, k, 2)=cgetg_copy(r, &lenr);
+    for(long i=1;i<lenr;i++){
+	  w=H[r[i]];
+	  if(w>0){gmael(relations, k, 1)[i]=w;gmael(relations, k, 2)[i]=1;}
+	  else{gmael(relations, k, 1)[i]=-w;gmael(relations, k, 2)[i]=-1;}
+	}
+  }
+  return gerepilecopy(top, mkvec2(indused, relations));
+}
+
 //Finds the image of the root geodesic of g in the fundamental domain specified by U.
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec){
   pari_sp top=avma;
@@ -2543,41 +2693,35 @@ GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, G
   return gerepileupto(top, ret);
 }
 
-
-//NOT QUITE WORKING
-
 //Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).
-static GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
+GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
   pari_sp top=avma;
-  GEN G=gel(U, 1);
-  GEN cycles=minimalcycles(gel(U, 7)), cyc, g, trd;//The minimal cycles.
-  long s=0, nfixed=0;//Number of parabolic cycles, and the number of sides fixed by the element.
-  GEN elliptic=vecsmalltrunc_init(lg(cycles));//At most one per cycle.
-  for(long i=1;i<lg(cycles);i++){
-	cyc=gel(cycles, i);
-	if(lg(cyc)==2 && cyc[1]<0){//Middle of a side minimal cycle.
-	  g=gel(G, -cyc[1]);//The word of the cycle.
-	  nfixed++;
+  GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//The minimal cycles and their types.
+  long nfixed=0, lgcyc=lg(gel(mcyc, 1));//The number of fixed sides, and number of cycles+1
+  for(long i=1;i<lgcyc;i++){if(gmael(mcyc, 1, i)[1]<0) nfixed++;}
+  long genus=((lg(gel(U, 1))-1+nfixed)/2-lgcyc+2)/2;//2*g+t+s=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C.
+  long s, firstell=lgcyc;//s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.
+  int foundlastpar=0;
+  for(long i=1;i<lgcyc;i++){
+	if(!foundlastpar){
+	  if(gel(mcyc, 2)[i]==0) continue;
+	  s=i-1;//Found the last parabolic.
+	  foundlastpar=1;
 	}
-	else{
-	  g=gamid;
-	  for(long j=1;j<lg(cyc);j++) g=eltmul(data, gel(G, cyc[j]), g);//Multiply on the left by G[cyc[j]]
-	}
-	if(istriv(data, g)) continue;//Accidental cycle, continue on.
-	trd=elttrace(data, g);//The trace
-	if(gequal(trd, gen_2) || gequal(trd, gen_m2)){s++;continue;}//Parabolic cycle.
-    long ord=1;
-	GEN gpow=g;
-	do{//Finding the order of g
-	  ord++;
-	  gpow=eltmul(data, g, gpow);
-	}
-	while(!istriv(data, gpow));
-	vecsmalltrunc_append(elliptic, ord);
+	if(gel(mcyc, 2)[i]==1){continue;}
+	firstell=i;//Found the last accidental.
+	break;
   }
-  long genus=((lg(G)-1+nfixed)/2-lg(cycles)+2)/2;//2*g+t+s=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C.
-  return gerepilecopy(top, mkvec3(stoi(genus), elliptic, stoi(s)));
+  long lgell=lgcyc-firstell+1;
+  GEN rvec=cgetg(4, t_VEC);//[g, V, s]
+  gel(rvec, 1)=stoi(genus);
+  gel(rvec, 2)=cgetg(lgell, t_VECSMALL);
+  for(long i=1;i<lgell;i++){gel(rvec, 2)[i]=gel(mcyc, 2)[firstell];firstell++;}
+  gel(rvec, 3)=stoi(s);
+  return gerepileupto(top, rvec);
 }
+
+
 
 //PRINTING TO PLOTVIEWER
 
@@ -2774,6 +2918,22 @@ GEN algfdomarea(GEN A, long prec){
   return gerepileupto(top, qalg_fdomarea(Q, prec));
 }
 
+//Returns the minimal cycles in the fundamental domain U of the algebra A.
+GEN algfdomminimalcycles(GEN A, GEN U, long prec){
+  pari_sp top=avma;
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, minimalcycles_bytype(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+}
+
+//Returns the presentation of the algebra A, obtained from the fundamental domain U.
+GEN algfdompresentation(GEN A, GEN U, long prec){
+  pari_sp top=avma;
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, presentation(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+}
+
 //Reduces the norm 1 element x with respect to the fundamental domain fdom and the point z (default z=0)
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec){
   pari_sp top=avma;
@@ -2791,6 +2951,14 @@ GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec){
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, rootgeodesic_fd(U, g, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 	
+}
+
+//Returns the signature of the quaternion algebra A with fundamental domain U.
+GEN algfdomsignature(GEN A, GEN U, long prec){
+  pari_sp top=avma;
+  GEN id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0.
@@ -2892,14 +3060,6 @@ GEN algshimura(GEN F, GEN D, long place){
 	return gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
   }
   return gerepilecopy(top, A);//No swap required.
-}
-
-//Returns the signature of the quaternion algebra A with fundamental domain U.
-GEN algsignature(GEN A, GEN U, long prec){
-  pari_sp top=avma;
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdominv, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
@@ -3346,11 +3506,6 @@ static GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 
 //TEMPORARY TESTING
-
-GEN fdommincyc(GEN U){
-  return minimalcycles(gel(U, 7));
-}
-
 
 //Algebra A, Q<=C, basepoint p, radius R, testdata=max passes OR denominator (betterenumeration), number of points N, whichmethod=0 ->betterenumeration, 1 -> smallnorm1elts_condition 2-> smallnorm1elts_qfminim. Records the number of tries to find a non-trivial element, done N times, and returns the average number of tries.
 GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec){

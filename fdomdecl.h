@@ -67,7 +67,10 @@ GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec);
 GEN rootgeodesic_uhp(GEN M, GEN tol, long prec);
 
 //FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
+GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec);
+GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
+GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
 
 //PRINTING TO PLOTVIEWER
 void python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec);
@@ -82,17 +85,19 @@ GEN deftol(long prec);
 
 
 //QUATERNION METHODS
-GEN algfdomarea(GEN A, long prec);
 GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
+GEN algfdomarea(GEN A, long prec);
+GEN algfdomminimalcycles(GEN A, GEN U, long prec);
+GEN algfdompresentation(GEN A, GEN U, long prec);
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
 GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec);
+GEN algfdomsignature(GEN A, GEN U, long prec);
 GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algramifiedplacesf(GEN A);
 GEN algshimura(GEN F, GEN D, long place);
-GEN algsignature(GEN A, GEN U, long prec);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);
 GEN algswapab(GEN A);
 
@@ -102,7 +107,6 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_normform(GEN Q);
 
 //TEMPORARY
-GEN fdommincyc(GEN U);
 GEN bestAval(GEN Q, GEN p, long prec);
 GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec);
 GEN algenum(GEN A, GEN C, GEN p, GEN R, GEN N, long maxtries, long prec);

@@ -63,7 +63,10 @@ install("balltester","GGGp","balltester","./libfdom.so");
 install("bestAval","GGp","bestAval","./libfdom.so");
 install("Ntries","GGGGGLLp","Ntries","./libfdom.so");
 
-install("fdommincyc","G","fdommincyc","./libfdom.so");
 
-install("algsignature","GGp","algsignature","./libfdom.so");
+\\MAKE ADDHELP FOR THESE
+install("algfdomminimalcycles","GGp","algfdomminimalcycles","./libfdom.so");
+install("algfdomsignature","GGp","algfdomsignature","./libfdom.so");
+install("algfdompresentation","GGp","algfdompresentation","./libfdom.so");
+
 
