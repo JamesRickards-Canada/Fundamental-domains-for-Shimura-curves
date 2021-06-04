@@ -1,6 +1,5 @@
 //Fundamental domain computation
 
-
 //INCLUSIONS
 
 
@@ -32,7 +31,6 @@ static int opp_gcmp(void *data, GEN x, GEN y);
 static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
 static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
 static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, long maxelts, GEN condition, long prec);
-static GEN smallvectors_extractpol(GEN nf, GEN M, GEN x);
 
 //2: BASIC LINE, CIRCLE, AND POINT OPERATIONS
 static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec);
@@ -119,7 +117,6 @@ static GEN ballradRpt(GEN x, GEN y, GEN R, long prec);
 static GEN betterenumeration(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec);
 static GEN betterenumerationrettries(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec);
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
-static GEN smallvectors_cholesky_backup(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
 
 //SECTION 1: BASE METHODS
 
@@ -479,7 +476,7 @@ static GEN smallvectors_nfcondition(GEN A, GEN C, long maxN, long maxelts, GEN c
   gel(newcond, 1)=nf;
   gel(newcond, 2)=rowpermute(newcondmat, perminv);//Permute the rows by perminv, i.e. *W^T on the left
   gel(newcond, 3)=gel(condition, 3);
-
+  return gerepilecopy(top, gel(newcond, 2));
   GEN yvals=smallvectors_cholesky(chol, C, maxN, maxelts, newcond, prec);//The small entries
   for(long i=1;i<lg(yvals);i++) gel(yvals, i)=vecpermute(gel(yvals, i), perm);//Permuting the entries of y, now we just need to apply U to get back to x
   long lx;
@@ -602,121 +599,6 @@ static GEN smallvectors_cholesky(GEN Q, GEN C, long maxN, long maxelts, GEN cond
   return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));
 }
 
-
-static GEN smallvectors_cholesky_backup(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec){
-  pari_sp top=avma, mid;
-  long np1=lg(Q), n=np1-1;//Number of variables+1 and n
-  GEN T=zerovec(n);//Stores the ''tail'' of x, as we work from the back to the front (x_m to x_1)
-  GEN U=zerovec(n);//U[i] will store the sum of j=i+1 to n of q_{ij}x_j
-  GEN UB=zerovec(n);//UB represents the upper bound for x_i
-  
-  GEN x=zerocol(n), Z, K;//x represents the solution
-  long i=np1-1, count=0;//i represents the current index, initially set to n. count=the number of solutions
-  gel(T, n)=gcopy(C);//initialize T[n]=0
-  gel(U, n)=gen_0;//Clearly U[n]=0
-  
-  int step=2;//Represents the current step of algorithm 2.8
-  int xpass0=0;
-  long tries=0;//Represents how many tries we have. If maxN!=0, then after maxN tries at step 7, we return our partial results
-  GEN x1sols;
-  glist *S=NULL;//Pointer to the list start
-  GEN v=cgetg(1, t_VEC);//The list, is used for garbage collection partway through
-  while(step>0){
-	if(gc_needed(top, 1)){
-	  mid=avma;
-	  v=glist_togvec_append(S, v, count, 1);
-	  count=0;
-	  S=NULL;
-	  T=gcopy(T);
-	  U=gcopy(U);
-	  UB=gcopy(UB);
-	  x=gcopy(x);
-	  gerepileallsp(top, mid, 5, &v, &T, &U, &UB, &x);
-	}
-	if(step==2){
-	  Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
-	  gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
-	  gel(x, i)=gsubgs(gceil(gneg(gadd(Z, gel(U, i)))), 1);//x[i]=ceil(-Z-U[i])-1;
-	  step=3;
-	}
-    if(step==3){
-	  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
-	  if(gcmp(gel(x, i), gel(UB, i))<=0) step=5;//If x[i]<=UB[i], goto step 5
-	  else step=4; //If x[i]>UB[i], goto step 4
-	}
-	if(step==4){
-	  i=i+1;
-	  step=3;
-	  continue;//May as well go back to start
-	}
-	if(step==5){
-	  i=i-1;
-	  gel(U, i)=gen_0;
-	  for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));//U[i]=sum(j=i+1,n,q[i,j]*x[j]);
-	  gel(T, i)=gsub(gel(T, i+1), gmul(gcoeff(Q, i+1, i+1), gsqr(gadd(gel(x, i+1), gel(U, i+1)))));//T[i]=T[i+1]-q[i+1,i+1]*(x[i+1]+U[i+1])^2;
-	  if(i==1){step=6;}//We have a condition to deal with!
-	  else{//Go back now
-		step=2;
-		continue;
-	  }
-	}
-	if(step==6){//Dealing with extra condtions
-	  if(0>1){//To get all solutions
-		Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
-		gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
-		gel(x, 1)=gceil(gneg(gadd(Z, gel(U, i))));//x[i]=ceil(-Z-U[i]);
-		step=3;
-		for(;;){
-		  if(gcmp(gel(x, i), gel(UB, i))>0) {step=4;break;}
-		  if(gequal0(x)){step=0;break;}//Terminate
-		  glist_putstart(&S, gcopy(x));
-		  count++;
-		  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
-		}
-		continue;
-	  }
-
-	  gel(x, 1)=gen_0;
-	  GEN cond=smallvectors_extractpol(gel(condition, 1), gel(condition, 2), x);
-	  x1sols=quadraticintegernf(gel(condition, 1), gel(cond, 1), gel(cond, 2), nfsub(gel(condition, 1), gel(cond, 3), gel(condition, 3)), prec);
-	  if(gequal0(x)) xpass0=1;//This is the last check
-	  for(long j=1;j<lg(x1sols);j++){
-		K=gadd(gsub(C, gel(T, 1)), gmul(gcoeff(Q, 1, 1), gsqr(gadd(gel(x1sols, j), gel(U, 1)))));
-		if(gcmp(K, C)==1) continue;//>C
-		if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
-		gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
-		glist_putstart(&S, gcopy(x));
-	    count++;
-	  }
-	  if(xpass0){step=0;continue;}//Game over, we are done!
-	  i=2;
-	  step=3;//Redundnant if I keep the above work
-	  if(maxN!=0){
-		tries++;
-		if(tries<maxN) continue;
-		return gerepileupto(top, glist_togvec_append(S, v, count, -1));//We hit the maximal number of tries
-	  }
-	  continue;
-	}
-  }
-  return gerepileupto(top, glist_togvec_append(S, v, count, -1));
-}
-
-//Let x be a column vector with first component=u, a variable. Then x^T*M*x=Au^2+Bu+C, and this returns [A, B, C]. We input x with first component being 0, and the coefficients of M lie in the number field nf
-static GEN smallvectors_extractpol(GEN nf, GEN M, GEN x){
-  pari_sp top=avma;
-  GEN Mx=nfM_nfC_mul(nf, M, x);//Mx
-  long lM=lg(Mx);
-  GEN Mxtrans=cgetg(lM, t_MAT);
-  for(long i=1;i<lM;i++) gel(Mxtrans, i)=mkcol(gel(Mx, i));//Making (Mx)^T as a matrix
-  GEN C=gel(nfM_nfC_mul(nf, Mxtrans, x), 1);//This is a length 1 column, x^TM^Tx=x^TMx. This is the C coefficient
-  GEN xmat=cgetg_copy(Mxtrans, &lM);//Making x^T into a matrix
-  for(long i=1;i<lM;i++) gel(xmat, i)=mkcol(gel(x, i));
-  GEN B1=gel(nfM_nfC_mul(nf, xmat, gel(M, 1)), 1);//x times the first column, a length 1 column vector
-  GEN B2=gel(nfM_nfC_mul(nf, xmat, shallowtrans(row(M, 1))), 1);//x times the first row, a length 1 column vector
-  GEN B=nfadd(nf, B1, B2);
-  return gerepilecopy(top, mkvec3(gcoeff(M, 1, 1), B, C));//A=M[1,1]
-}
 
 
 //SECTION 2: GEOMETRY METHODS
@@ -3129,12 +3011,12 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-	GEN alpha=stoi(3);
-	GEN orderpart=gen_1;
-	GEN rams=qalg_get_rams(Q);
-	for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
-	A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
-	//A=optAval(Q, p, prec);
+	//GEN alpha=stoi(3);
+	//GEN orderpart=gen_1;
+	//GEN rams=qalg_get_rams(Q);
+	//for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
+	//A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
+	A=optAval(Q, p, prec);
   }
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
@@ -3203,6 +3085,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	  }
 	  pari_TRY{
 	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		//gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, stoi(maxN), normformpart, prec);
 	  }
 	  pari_ENDCATCH
 	}
@@ -3216,6 +3099,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	  }
 	  pari_TRY{
 	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		//gel(points, i)=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, stoi(maxN), normformpart, prec);
 	  }
 	  pari_ENDCATCH
 	}
