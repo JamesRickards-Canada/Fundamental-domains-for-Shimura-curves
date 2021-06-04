@@ -1497,11 +1497,10 @@ GEN normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN *data, GEN (*gamt
     }
     Gaddnew=vectrunc_init(2*lg(Gadd));//The reductions to add to G
     for(long i=1;i<lg(Gadd);i++){//Doing step 3
-      gbardat=reduceelt_givennormbound(U, gel(Gadd, i), gen_0, gamid, data, gamtopsl, eltmul, tol, prec);//Finding gbar=red_U(g). We actually only need to do this for g^(-1) not in U[1]; maybe add this optimization later.
+      gbardat=reduceelt_givennormbound(U, gel(Gadd, i), gen_0, gamid, data, gamtopsl, eltmul, tol, prec);//Finding gbar=red_U(g).
       gbar=gel(gbardat, 1);
       if(!istriv(data, gbar)){
-        vectrunc_append(Gaddnew, gbar);//If not trivial, add it.
-        vectrunc_append(Gaddnew, eltinv(data, gbar));//Need to add the inverse as well.
+        vectrunc_append(Gaddnew, eltinv(data, gbar));//If not trivial, add the inverse.
       }
     }
     if(lg(Gaddnew)!=1){//We add Gaddnew to G, compute the normalized boundary, and go back to step 3 if U is changed
@@ -3715,7 +3714,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   }
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
-    GEN beta=gdivgs(gen_1, 10);
+    GEN beta=gdivgs(gen_1, 6);
     N=gfloor(gadd(gmul(beta, area), gen_2));//We add 2 to make sure N>=2; errors can happen later otherwise
   }
   else N=gel(ANRdata, 2);
@@ -3754,9 +3753,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
-  
-  GEN Ndenom=gmulgs(gceil(area), 10);
-  long mtries=itos(gceil(gsqrt(Ndenom, prec)));
+  long triesperooside=2, triesperfinside=4;
   
   for(;;){
 	pass++;
@@ -3774,20 +3771,40 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	  ang2=gel(gel(U, 4), oosides[i]);
 	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
 	  else ang1=gel(gel(U, 4), oosides[i]-1);
-	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	  for(long ootry=1;ootry<=triesperooside;ootry++){
+	    w=randompoint_udarc(R, ang1, ang2, prec);
+	    pari_CATCH(e_TYPE){//If R is large
+	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		  anyskipped=1;
+		  nskip++;
+		  gel(points, i)=cgetg(1, t_VEC);
+		  pari_CATCH_reset();
+		  break;
+	    }
+	    pari_TRY{
+	      gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+	    }
+	    pari_ENDCATCH
+		if(!gequal0(gel(points, i))) break;//Continue on when non-zero
 	  }
-	  pari_TRY{
-	    gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
-	  }
-	  pari_ENDCATCH
 	}
 	for(long i=istart;i<iN;i++){//Random points in ball of radius R
-	  gel(points, i)=betterenumeration(Q, A, p, R, Ndenom, mtries, normform, normformpart, prec);
+	  for(long fintry=1;fintry<=triesperfinside;fintry++){
+	    w=randompoint_ud(R, prec);//Random point
+	    pari_CATCH(e_TYPE){//If R is large
+	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		  anyskipped=1;
+		  nskip++;
+		  gel(points, i)=cgetg(1, t_VEC);
+		  pari_CATCH_reset();
+		  break;
+	    }
+	    pari_TRY{
+	      gel(points, i)=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+	    }
+	    pari_ENDCATCH
+		if(!gequal0(gel(points, i))) break;//Continue on when non-zero
+	  }
 	}
 	points=shallowconcat1(points);
 	if(dispprogress){
@@ -3798,6 +3815,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
     if(toleq(area, gel(U, 6), tol, prec)) return gerepileupto(top, U);
 	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
+	else N=gceil(gadd(gsqrt(N, prec), gen_1));
 	R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
