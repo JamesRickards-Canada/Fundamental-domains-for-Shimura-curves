@@ -89,6 +89,7 @@ static GEN optAval(GEN Q, GEN p, long prec);
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
 
 //3: (MOSTLY STATIC) HELPER METHODS
+static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 static GEN qalg_fdomarea(GEN Q, long prec);
@@ -3233,16 +3234,18 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_normform(GEN Q){
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
-  long n=lg(gel(alg_get_basis(A), 1)), nm1=n-1;//The lg of a normal entry
-  GEN basis=cgetg(n, t_VEC);
-  for(long i=1;i<n;i++){
-	gel(basis, i)=zerocol(nm1);
-	gel(gel(basis, i), i)=gen_1;
-  }
-  GEN basisconj=cgetg(n, t_VEC);
-  for(long i=1;i<n;i++){
-	gel(basisconj, i)=qalg_basis_conj(Q, gel(basis, i));//The conjugate of the basis element.
-  }
+  long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
+  GEN basis=matid(n-1);
+  return gerepileupto(top, qalg_normform_givenbasis(Q, basis));
+}
+
+//Basis is a matrix whose columns span a lattice, say v_1, ..., v_k. This returns M such that nrd(e_1*v_1+...+e_k*v_k)=(e1,...,e_k)*M*(e_1,...,e_k)~. The iith coefficient is nrd(v_i) and the ijth coefficient if i!=j is .5*trd(v_iv_j).
+static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
+  pari_sp top=avma;
+  GEN A=qalg_get_alg(Q);
+  long n;
+  GEN basisconj=cgetg_copy(basis, &n);
+  for(long i=1;i<n;i++) gel(basisconj, i)=qalg_basis_conj(Q, gel(basis, i));//The conjugate of the basis element.
   GEN M=cgetg(n, t_MAT);//Initialize the matrix
   for(long i=1;i<n;i++) gel(M, i)=cgetg(n, t_COL);
   for(long i=1;i<n;i++) gcoeff(M, i, i)=lift0(algnorm(A, gel(basis, i), 0), -1);
@@ -3251,7 +3254,7 @@ GEN qalg_normform(GEN Q){
 	  GEN prod=algmul(A, gel(basis, i), gel(basisconj, j));
 	  GEN tr=gdivgs(algtrace(A, prod, 0), 2);
 	  gcoeff(M, i, j)=tr;
-	  gcoeff(M, j, i)=tr;
+	  gcoeff(M, j, i)=tr;//OK since we copy at the end.
 	}
   }
   return gerepilecopy(top, M);
