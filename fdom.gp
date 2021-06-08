@@ -28,8 +28,8 @@ default(help, "gphelp -detex");
 \\Quaternion methods
 	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algfromnormdisc, algmulvec, algramifiedplacesf, algnormalizedbasis, algnormalizedboundary, algshimura, algsmallnorm1elts, algswapab.");
 
-	install("algfdomarea","Gp","algfdomarea","./libfdom.so");
-	addhelp(algfdomarea,"Input A, a quaternion algebra split at one real place.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''.");
+	install("algfdomarea","GD0,L,p","algfdomarea","./libfdom.so");
+	addhelp(algfdomarea,"Input A, {lp=0}: a quaternion algebra A split at one real place, and lp=0 or 1.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''. To compute the answer to less precision, input lp as 1 (this can be significantly faster for large K).");
 	install("algfdom","GGD1,L,D0,G,D0,G,p","algfdom","./libfdom.so");
 	addhelp(algfdom,"Inputs A, p, {dispprogress=1}, {area=0}, {ANRdata=0}: quaternion algebra A split at one real place, upper half plane point p, dispprogress=0,1, ANRdata=0 or a length 5 vector, area=0 or the area of the fundamental domain.\n Computes and returns the fundamental domain for the group of units of norm 1 in A. We use the unit disc model, which the upper half plane is mapped to via p->0. p need to NOT be a fixed point of this group under the standard embedding into PSL(2, R) (p=I/2 is safe for quaternion algebras over Q). If area is passed in, this method will not re-compute it, which can save a little bit of time. ANRdata is a technical entry, and can be passed in to specify some/all constants used in the enumeration of Page (they greatly affect the running time, but the optimal choices are not totally clear).");
 	install("algfdomminimalcycles","GGp","algfdomminimalcycles","./libfdom.so");
@@ -60,7 +60,6 @@ default(help, "gphelp -detex");
 	addhelp(algswapab,"Input A, a quaternion algebra=(a, b/F).\n Returns (b, a/F), i.e. swapping a and b.");
 	
 \\TEMPORARY
-install("completebasisdet1","G","completebasisdet1","./libfdom.so");
 install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
 install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
@@ -70,6 +69,3 @@ install("bestAval","GGp","bestAval","./libfdom.so");
 install("Ntries","GGGGGLLp","Ntries","./libfdom.so");
 
 install("algsmallnorm1elts_condition","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");
-install("algsmallnorm1elts_condition2","GGGD0,G,D0,G,D0,L,D0,L,D0,L,p","algsmallnorm1elts2","./libfdom.so");
-
-

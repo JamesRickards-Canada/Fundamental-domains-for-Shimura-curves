@@ -86,7 +86,7 @@ GEN deftol(long prec);
 
 //QUATERNION METHODS
 GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
-GEN algfdomarea(GEN A, long prec);
+GEN algfdomarea(GEN A, int lessprec, long prec);
 GEN algfdomminimalcycles(GEN A, GEN U, long prec);
 GEN algfdompresentation(GEN A, GEN U, long prec);
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
@@ -107,8 +107,6 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_normform(GEN Q);
 
 //TEMPORARY
-GEN completebasis(GEN Mv, long redflag);
-GEN completebasisdet1(GEN M);
 GEN bestAval(GEN Q, GEN p, long prec);
 GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec);
 GEN algenum(GEN A, GEN C, GEN p, GEN R, GEN N, long maxtries, long prec);
@@ -116,8 +114,3 @@ GEN algnormform(GEN A, long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);
-
-GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
-GEN algsmallnorm1elts_condition2(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, int strict, long prec);
-GEN smallvectors_choleskyTEST(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
-GEN smallvectors_nfconditionTEST(GEN A, GEN C, long maxN, long maxelts, GEN condition, int strict, long prec);
