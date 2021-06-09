@@ -85,7 +85,7 @@ GEN deftol(long prec);
 
 
 //QUATERNION METHODS
-GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
+GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN algfdomarea(GEN A, int lessprec, long prec);
 GEN algfdomminimalcycles(GEN A, GEN U, long prec);
 GEN algfdompresentation(GEN A, GEN U, long prec);

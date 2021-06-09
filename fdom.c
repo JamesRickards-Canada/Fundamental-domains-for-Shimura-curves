@@ -86,7 +86,7 @@ static int toleq(GEN x, GEN y, GEN tol, long prec);
 //3: FUNDAMENTAL DOMAIN COMPUTATION
 static GEN normalizedboundary_oosides(GEN U);
 static GEN optAval(GEN Q, GEN p, long prec);
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
 
 //3: (MOSTLY STATIC) HELPER METHODS
 static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
@@ -2799,11 +2799,11 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 
 
 //Initializes and checks the inputs, and computes the fundamental domain
-GEN algfdom(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec){
+GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom(Q, p, dispprogress, area, ANRdata, tol, prec));
+  return gerepileupto(top, qalg_fdom(Q, p, dispprogress, dumppartial, partialset, ANRdata, tol, prec));
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
@@ -3017,12 +3017,12 @@ static GEN optAval(GEN Q, GEN p, long prec){
 }
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec){
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN Alg=qalg_get_alg(Q);
   GEN K=alg_get_center(Alg);
-  if(gequal0(area)) area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
+  GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
@@ -3051,12 +3051,13 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   else epsilon=gel(ANRdata, 5);
   
   if(dispprogress) pari_printf("Initial constants:\n   A=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", A, N, R, opnu, epsilon, area);
-    
+  
+  GEN id=gel(alg_get_basis(Alg), 1);//The identity  
   long iN;
   GEN points, w;
   GEN U=cgetg(2, t_VEC);
-  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works okay
-  GEN id=gel(alg_get_basis(Alg), 1);//The identity
+  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
+  if(!gequal0(partialset)) U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   
   long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
   GEN normformpart=qalg_normform(Q);
@@ -3070,6 +3071,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
   long maxN=itos(gceil(area));
   if(maxN<=10) maxN=10;
   long maxelts=3;
+  FILE *f;
+  if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
   
   mid=avma;
   long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
@@ -3130,11 +3133,15 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN 
 	}
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
-	if(gcmp(gel(U, 6), areabound)==-1) return gerepileupto(top, U);
+	if(gcmp(gel(U, 6), areabound)==-1){
+	  if(dumppartial) fclose(f);
+	  return gerepileupto(top, U);
+	}
 	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
 	R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
+	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
 
