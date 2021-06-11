@@ -108,9 +108,7 @@ GEN qalg_normform(GEN Q);
 
 //TEMPORARY
 GEN bestAval(GEN Q, GEN p, long prec);
-GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec);
-GEN algenum(GEN A, GEN C, GEN p, GEN R, GEN N, long maxtries, long prec);
 GEN algnormform(GEN A, long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
-GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec);
+GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);

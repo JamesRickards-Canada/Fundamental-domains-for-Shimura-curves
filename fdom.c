@@ -93,7 +93,7 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 static GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
-static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, GEN maxN, GEN normformpart, long prec);
+static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normformpart, long prec);
 static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
 //3: BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
@@ -111,11 +111,9 @@ static GEN qalg_get_roots(GEN Q);
 
 
 //TEMPORARY TESTING METHODS
-
 static GEN ballradRpt(GEN x, GEN y, GEN R, long prec);
-static GEN betterenumeration(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec);
-static GEN betterenumerationrettries(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec);
-static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec);
+static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
+
 
 //SECTION 1: BASE METHODS
 
@@ -2962,7 +2960,7 @@ GEN algshimura(GEN F, GEN D, long place){
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z1, z2, NULL, gen_0, prec));
+  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z1, z2, 0, gen_0, prec));
   
 }
 
@@ -3103,7 +3101,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, stoi(maxN), normformpart, prec);
+		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxelts, normformpart, prec);
 		GEN smallelts=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
@@ -3119,7 +3117,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, stoi(maxN), normformpart, prec);
+		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxelts, normformpart, prec);
 	    GEN smallelts=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
@@ -3320,21 +3318,24 @@ static GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
   return gerepileupto(top, gtofp(ar, prec));
 }
 
-//Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point.
-static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, GEN maxN, GEN normformpart, long prec){
+//Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point. maxret is the maximum number of return elements (or 0 for all norm 1 elts)
+static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normformpart, long prec){
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
-  GEN vposs=gel(qfminim0(absrednorm, C, maxN, 2, prec), 3), norm;
-  long nvposs=lg(vposs);
-  GEN ret=vectrunc_init(nvposs);
+  GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3), norm;
+  long nvposs=lg(vposs), mret;
+  if(maxret) mret=maxret+1;
+  else mret=nvposs;
+  GEN ret=vectrunc_init(mret);
   for(long i=1;i<nvposs;i++){
 	mid=avma;
 	norm=algnorm(A, gel(vposs, i), 0);
 	if(gequal(norm, gen_1)){
 	  avma=mid;
 	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
+	  if(lg(ret)>=mret) break;//Done
 	  continue;
 	}
 	avma=mid;
@@ -3419,144 +3420,10 @@ static GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 //TEMPORARY TESTING
 
-//Algebra A, Q<=C, basepoint p, radius R, testdata=max passes OR denominator (betterenumeration), number of points N, whichmethod=0 ->betterenumeration, 1 -> smallnorm1elts_condition 2-> smallnorm1elts_qfminim. Records the number of tries to find a non-trivial element, done N times, and returns the average number of tries.
-GEN Ntries(GEN A, GEN C, GEN p, GEN R, GEN testdata, long N, int whichmethod, long prec){
-  pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
-  GEN nformpart=qalg_normform(Q), z, elts=cgetg(1, t_VEC);
-  GEN nform=gcopy(nformpart);
-  long n=lg(nform);
-  GEN K=alg_get_center(A);
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
-	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
-	}
-  }
-  nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  long tottries=0, eltsfound=0;
-  
-  if(whichmethod==2){
-	if(gequal0(testdata)) testdata=NULL;
-	for(;;){
-	  tottries++;
-	  z=randompoint_ud(R, prec);
-	  elts=qalg_smallnorm1elts_qfminim(Q, C, p, gen_0, z, testdata, nformpart, prec);
-	  for(long i=1;i<lg(elts);i++){
-		if(qalg_istriv(&Q, gel(elts, i))) continue;
-		eltsfound++;//Found a non-trivial element
-		if(eltsfound>=N) return gerepileupto(top, gtofp(gdivgs(stoi(tottries), N), prec));
-		break;//No need to search for more non-trivial elements
-	  }
-	}
-  }
-  else if(whichmethod==1){
-	long maxN=itos(testdata);
-	for(;;){
-	  tottries++;
-	  z=randompoint_ud(R, prec);
-	  elts=qalg_smallnorm1elts_condition(Q, C, p, gen_0, z, maxN, 1, nform, nformpart, prec);
-	  for(long i=1;i<lg(elts);i++){
-		if(qalg_istriv(&Q, gel(elts, i))) continue;
-		eltsfound++;//Found a non-trivial element
-		if(eltsfound>=N) return gerepileupto(top, gtofp(gdivgs(stoi(tottries), N), prec));
-		break;//No need to search for more non-trivial elements
-	  }
-	}
-  }
-  if(gequal0(testdata)) testdata=stoi(100);
-  long tries=itos(gceil(gsqrt(testdata, prec)));
-  for(;;){
-	elts=betterenumerationrettries(Q, C, p, R, testdata, tries, nform, nformpart, prec);
-	tottries=tottries+itos(gel(elts, 2));
-	for(long i=1;i<lg(gel(elts, 1));i++){
-		if(qalg_istriv(&Q, gel(elts, i))) continue;
-		eltsfound++;//Found a non-trivial element
-		if(eltsfound>=N) return gerepileupto(top, gtofp(gdivgs(stoi(tottries), N), prec));
-		break;//No need to search for more non-trivial elements
-	}
-  }
-}
-
 GEN bestAval(GEN A, GEN p, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, optAval(Q, p, prec));
-}
-
-//Trying the better? enumeration method.
-GEN algenum(GEN A, GEN C, GEN p, GEN R, GEN N, long maxtries, long prec){
-  pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
-  GEN nformpart=qalg_normform(Q);
-  GEN nform=gcopy(nformpart);
-  long n=lg(nform);
-  GEN K=alg_get_center(A);
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
-	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
-	}
-  }
-  nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  return gerepileupto(top, betterenumeration(Q, C, p, R, N, maxtries, nform, nformpart, prec));
-}
-
-static GEN betterenumeration(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec){
-  pari_sp top=avma;
-  GEN x1=randomi(N), y1=randomi(N), x2, y2;//[xi,yi] represent the two random points
-  GEN Nm1=subis(N, 1);
-  GEN c1=addis(randomi(Nm1), 1), c2=addis(randomi(Nm1), 1);//Random numbers in [1,N-1], for the pseudo-random map [x,y]->[x^2+c1,y^2+c2] mod N (and divide by N to land in [0,1]^2).
-  x2=Fp_add(Fp_sqr(x1, N), c1, N);
-  y2=Fp_add(Fp_sqr(y1, N), c2, N);
-  long triesperelt=0, maxeltsfound=1;
-  GEN z1, z2, elts;
-  for(long try=1;try<maxtries;try++){
-	z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
-	z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
-	elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
-	if(lg(elts)>1) return gerepileupto(top, elts);
-	x1=Fp_add(Fp_sqr(x1, N), c1, N);//Update x1
-    y1=Fp_add(Fp_sqr(y1, N), c2, N);//Update y1
-	x2=Fp_add(Fp_sqr(x2, N), c1, N);x2=Fp_add(Fp_sqr(x2, N), c1, N);//Update x2
-    y2=Fp_add(Fp_sqr(y2, N), c2, N);y2=Fp_add(Fp_sqr(y2, N), c2, N);//Update y2
-  }
-  //Last test
-  z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
-  z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
-  elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
-  if(lg(elts)>1) return gerepileupto(top, elts);
-  avma=top;
-  return cgetg(1, t_VEC);//None found withing maxtries tries
-}
-
-static GEN betterenumerationrettries(GEN Q, GEN C, GEN p, GEN R, GEN N, long maxtries, GEN nform, GEN nformpart, long prec){
-  pari_sp top=avma;
-  GEN x1=randomi(N), y1=randomi(N), x2, y2;//[xi,yi] represent the two random points
-  GEN Nm1=subis(N, 1);
-  GEN c1=addis(randomi(Nm1), 1), c2=addis(randomi(Nm1), 1);//Random numbers in [1,N-1], for the pseudo-random map [x,y]->[x^2+c1,y^2+c2] mod N (and divide by N to land in [0,1]^2).
-  x2=Fp_add(Fp_sqr(x1, N), c1, N);
-  y2=Fp_add(Fp_sqr(y1, N), c2, N);
-  long triesperelt=0, maxeltsfound=1;
-  GEN z1, z2, elts;
-  for(long try=1;try<maxtries;try++){
-	z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
-	z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
-	elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
-	if(lg(elts)>1) return gerepilecopy(top, mkvec2(elts, stoi(try)));
-	x1=Fp_add(Fp_sqr(x1, N), c1, N);//Update x1
-    y1=Fp_add(Fp_sqr(y1, N), c2, N);//Update y1
-	x2=Fp_add(Fp_sqr(x2, N), c1, N);x2=Fp_add(Fp_sqr(x2, N), c1, N);//Update x2
-    y2=Fp_add(Fp_sqr(y2, N), c2, N);y2=Fp_add(Fp_sqr(y2, N), c2, N);//Update y2
-  }
-  //Last test
-  z1=ballradRpt(Qdivii(x1, N), Qdivii(y1, N), R, prec);//First point
-  z2=ballradRpt(Qdivii(x2, N), Qdivii(y2, N), R, prec);//Second point
-  elts=qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxeltsfound, nform, nformpart, prec);
-  if(lg(elts)>1) return gerepilecopy(top, mkvec2(elts, stoi(maxtries)));
-  avma=top;
-  GEN ret=cgetg(3, t_VEC);
-  gel(ret, 1)=cgetg(1, t_VEC);
-  gel(ret, 2)=stoi(maxtries);
-  return ret;//None found withing maxtries tries
 }
 
 //We have a map [0,1]^2->ball of radius R in hyperbolic space, such that the uniform distribution on [0,1]^2 is sent to the hyperbolic distribution on B(R).
@@ -3605,20 +3472,21 @@ GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesp
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain
-GEN algfdom_test(GEN A, GEN p, int dispprogress, GEN area, GEN ANRdata, long prec){
+GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom_tester(Q, p, dispprogress, area, ANRdata, tol, prec));
+  return gerepileupto(top, qalg_fdom_tester(Q, p, dispprogress, dumppartial, partialset, ANRdata, tol, prec));
 }
 
+
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdata, GEN tol, long prec){
+static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN Alg=qalg_get_alg(Q);
   GEN K=alg_get_center(Alg);
-  if(gequal0(area)) area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
+  GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
@@ -3643,31 +3511,31 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
   else R=gel(ANRdata, 3);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 4))) opnu=gen_2;
   else opnu=gel(ANRdata, 4);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 5))) epsilon=gdivgs(gen_1, 6);
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 5))) epsilon=gen_0;
   else epsilon=gel(ANRdata, 5);
   
   if(dispprogress) pari_printf("Initial constants:\n   A=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", A, N, R, opnu, epsilon, area);
-    
+  
+  GEN id=gel(alg_get_basis(Alg), 1);//The identity  
   long iN;
   GEN points, w;
   GEN U=cgetg(2, t_VEC);
-  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works okay
-  GEN id=gel(alg_get_basis(Alg), 1);//The identity
+  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
+  if(!gequal0(partialset)) U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   
   long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
   GEN normformpart=qalg_normform(Q);
-  GEN normform=gcopy(normformpart);//Only with condition
   for(long i=1;i<n;i++){
 	for(long j=1;j<n;j++){
 	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
 	}
   }
   normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
-  long maxN=itos(gceil(area));
-  if(maxN<=10) maxN=10;
-  long maxelts=3;
+  FILE *f;
+  if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
   
   mid=avma;
+  long maxret=1;
   long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
@@ -3696,8 +3564,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, stoi(maxN), normformpart, prec);
-		//GEN smallelts=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3712,8 +3579,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, stoi(maxN), normformpart, prec);
-	    //GEN smallelts=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3726,11 +3592,15 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, GEN area, GEN ANRdat
 	}
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
-	if(gcmp(gel(U, 6), areabound)==-1) return gerepileupto(top, U);
+	if(gcmp(gel(U, 6), areabound)==-1){
+	  if(dumppartial) fclose(f);
+	  return gerepileupto(top, U);
+	}
 	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
 	R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
+	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
 
