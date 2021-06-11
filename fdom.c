@@ -418,7 +418,7 @@ static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
   GEN Cp=nfeltembed(nf, C, gen_1, prec);
   
   GEN disc=gsub(gsqr(Bp), gmulsg(4, gmul(Ap, Cp)));//B^2-4AC
-  GEN rt=greal(gsqrt(disc, prec));//We use greal in case disc==0 but it is approximated as -E^(-large).
+  GEN rt=real_i(gsqrt(disc, prec));//We use greal in case disc==0 but it is approximated as -E^(-large).
   GEN mBp=gneg(Bp), twoAp=gmulsg(2, Ap);//-B, 2A
 
   GEN r1=ground(gdiv(gadd(mBp, rt), twoAp));//We have enough precision that the rounded answer will be correct if there is an integral solution
@@ -3007,11 +3007,11 @@ static GEN optAval(GEN Q, GEN p, long prec){
   for(long i=1;i<lg(rpl);i++) algdisc=gmul(algdisc, idealnorm(F, gel(rpl, i)));//Norm to Q of the ramification
   GEN discpart=gmul(nf_get_disc(F), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
-  GEN nint=dbltor(0.871094);
-  GEN nslo=dbltor(0.226692);
+  GEN nint=dbltor(0.435547);
+  GEN nslo=dbltor(0.113346);
   GEN scale=dbltor(1);
   GEN npart=gadd(gmulgs(nslo, n), nint);
-  return gerepileupto(top, gmul(scale, gmul(npart, gmul(gsqr(imag_i(p)), discpartroot))));//scale*(C_1+C_2n)*Im(p)^2*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
+  return gerepileupto(top, gmul(scale, gmul(npart, discpartroot)));//scale*(C_1+C_2n)*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
 }
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
@@ -3064,8 +3064,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	for(long j=1;j<n;j++){
 	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
 	}
-  }
-  normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  }//Tr_{K/Q}(nrd(elt));
   long maxN=itos(gceil(area));
   if(maxN<=10) maxN=10;
   long maxelts=3;
@@ -3207,7 +3206,7 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
   GEN fg=gmul(gcoeff(elt, 2, 1), p);//elt[2, 1]*p
   fg=gadd(fg, gsub(gcoeff(elt, 2, 2), gcoeff(elt, 1, 1)));//elt[2, 1]*p+elt[2, 2]-elt[2, 1]
   fg=gsub(gmul(fg, p), gcoeff(elt, 1, 2));//elt[2, 1]*p^2+(elt[2, 2]-elt[2, 1])*p-elt[1, 2], i.e. f_g(p) (page 477 of Voight)
-  GEN invrad1=gadd(gsqr(greal(fg)), gsqr(gimag(fg)));//real(fg)^2+imag(fg)^2
+  GEN invrad1=gadd(gsqr(real_i(fg)), gsqr(imag_i(fg)));//real(fg)^2+imag(fg)^2
 
   GEN K=alg_get_center(A);
   GEN invrad2;
@@ -3217,22 +3216,22 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 	  for(long j=1;j<n;j++){
 	    gcoeff(invrad2, i, j)=nftrace(K, gcoeff(invrad2, i, j));//Taking the trace to Q
 	  }
-    }
-    invrad2=gmulsg(2, gmul(gsqr(gimag(p)), invrad2));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+    }//invrad2=Tr_{K/Q}(nrd(elt));
   }
   else invrad2=normformpart;
   //At this point, invrad1 is a polynomial in the temporary variables, and invrad2 is a matrix in the correct form.*/
 
+  GEN pscale=gdivsg(1, gmulsg(2, gsqr(imag_i(p))));//1/2y^2 for p=x+iy
   GEN qf=cgetg(n, t_MAT);//Creating the return matrix
   for(long i=1;i<n;i++) gel(qf, i)=cgetg(n, t_COL);
   GEN part1=invrad1;//This stores the part we are working on.
   long var=qalg_get_varnos(Q)[1];//The variable number for K
   GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
   for(long i=1;i<n;i++){//Working with the ith variable
-	gcoeff(qf, i, i)=gadd(gsubst(lift(polcoef_i(part1, 2, tvars[i])), var, Kx), gcoeff(invrad2, i, i));//iith coefficient
+	gcoeff(qf, i, i)=gadd(gmul(gsubst(lift(polcoef_i(part1, 2, tvars[i])), var, Kx), pscale), gcoeff(invrad2, i, i));//iith coefficient
 	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
 	for(long j=i+1;j<n;j++){
-	  gcoeff(qf, i, j)=gadd(gdivgs(gsubst(lift(polcoef_i(linpart, 1, tvars[j])), var, Kx), 2), gcoeff(invrad2, i, j));//the ijth coefficient
+	  gcoeff(qf, i, j)=gadd(gmul(gdivgs(gsubst(lift(polcoef_i(linpart, 1, tvars[j])), var, Kx), 2), pscale), gcoeff(invrad2, i, j));//the ijth coefficient
 	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
 	}
 	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
@@ -3466,8 +3465,7 @@ GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesp
 	for(long j=1;j<n;j++){
 	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
-  }
-  nformpart=gmulsg(2, gmul(gsqr(gimag(p)), nformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  }//Tr_{K/Q}(nrd(elt));
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxelts, nform, nformpart, prec));
 }
 
@@ -3529,8 +3527,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	for(long j=1;j<n;j++){
 	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
 	}
-  }
-  normformpart=gmulsg(2, gmul(gsqr(gimag(p)), normformpart));//2*imag(p)^2*Tr_{K/Q}(nrd(elt));
+  }//Tr_{K/Q}(nrd(elt));
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
   
