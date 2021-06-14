@@ -93,8 +93,8 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static long algsplitoo(GEN A);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 static GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
-static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normformpart, long prec);
-static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
+//static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
+//static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
 //3: BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
 static GEN qalg_fdominv(GEN *data, GEN x);
@@ -2921,7 +2921,10 @@ GEN algshimura(GEN F, GEN D, long place){
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z1, z2, 0, gen_0, prec));
+  GEN nf=alg_get_center(A);
+  GEN nform=qalg_normform(Q);
+  GEN normdecomp=mat_nfcholesky(nf, nform);
+  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z1, z2, 0, normdecomp, gen_0, prec));
   
 }
 
@@ -3107,6 +3110,20 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 
 //(MOSTLY STATIC) HELPER METHODS
 
+//If A is an algebra over nf, let decomp be the Cholesky decomposition of the norm form. This returns the norm of x given the decomposition (this is ~10x faster than algnorm).
+GEN algnorm_givencholesky(GEN nf, GEN decomp, GEN x){
+  pari_sp top=avma;
+  GEN part=gen_0, U;
+  long n=lg(x);
+  for(long i=n-1;i>0;i--){
+	U=gel(x, i);
+	for(long j=i+1;j<n;j++) U=nfadd(nf, U, nfmul(nf, gcoeff(decomp, i, j), gel(x, j)));
+	U=nfmul(nf, gcoeff(decomp, i, i), nfsqr(nf, U));
+	part=nfadd(nf, part, U);
+  }
+  return gerepileupto(top, part);
+}
+
 //Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
 GEN qalg_fdominitialize(GEN A, long prec){
   GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
@@ -3279,9 +3296,10 @@ static GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
 }
 
 //Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point. maxret is the maximum number of return elements (or 0 for all norm 1 elts)
-static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec){
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
+  GEN nf=alg_get_center(A);
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
   GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3), norm;
@@ -3291,7 +3309,7 @@ static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long
   GEN ret=vectrunc_init(mret);
   for(long i=1;i<nvposs;i++){
 	mid=avma;
-	norm=algnorm(A, gel(vposs, i), 0);
+	norm=algnorm_givencholesky(nf, normdecomp, gel(vposs, i));
 	if(gequal(norm, gen_1)){
 	  avma=mid;
 	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
@@ -3304,7 +3322,7 @@ static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
@@ -3464,13 +3482,13 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   }
   else N=gel(ANRdata, 2);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 3))){//R
-	GEN gamma=gadd(gen_2, gdivgs(gen_1, 10));
+	GEN gamma=gadd(gen_2, gdivgs(gen_1, 8));
 	R=gmulsg(2, gasinh(gsqrt(gdiv(gpow(area, gamma, prec), Pi2n(2, prec)), prec), prec));//R0
   }
   else R=gel(ANRdata, 3);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 4))) opnu=gen_2;
   else opnu=gel(ANRdata, 4);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 5))) epsilon=gen_0;
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 5))) epsilon=dbltor(0.04);
   else epsilon=gel(ANRdata, 5);
   
   if(dispprogress) pari_printf("Initial constants:\n   A=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", A, N, R, opnu, epsilon, area);
@@ -3484,6 +3502,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   
   long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
   GEN normformpart=qalg_normform(Q);
+  GEN nfdecomp=mat_nfcholesky(K, normformpart);
   for(long i=1;i<n;i++){
 	for(long j=1;j<n;j++){
 	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
@@ -3493,7 +3512,9 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
   
   mid=avma;
-  long maxret=1;
+  long maxret;
+  if(nf_get_degree(K)==1) maxret=4;
+  else maxret=1;
   long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
@@ -3522,7 +3543,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, nfdecomp, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3537,7 +3558,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, nfdecomp, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }

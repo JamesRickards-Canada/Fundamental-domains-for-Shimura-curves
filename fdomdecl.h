@@ -101,6 +101,7 @@ GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);
 GEN algswapab(GEN A);
 
 //(MOSTLY STATIC) HELPER METHODS
+GEN algnorm_givencholesky(GEN nf, GEN decomp, GEN x);
 GEN qalg_fdominitialize(GEN A, long prec);
 GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec);
 GEN qalg_normform(GEN Q);
@@ -111,3 +112,8 @@ GEN algnormform(GEN A, long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);
+
+
+//TEMPORARILY NON-STATIC
+GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
+GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
