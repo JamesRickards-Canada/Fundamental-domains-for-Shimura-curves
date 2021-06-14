@@ -38,7 +38,6 @@ GEN llist_togvec(llist *l, long length, int dir);
 GEN llist_tovecsmall(llist *l, long length, int dir);
 
 //SHORT VECTORS IN LATTICES
-GEN mat_choleskydecomp(GEN A, int rcoefs, long prec);
 GEN mat_nfcholesky(GEN nf, GEN A);
 
 //SECTION 2: GEOMETRY METHODS

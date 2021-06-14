@@ -327,45 +327,6 @@ GEN llist_tovecsmall(llist *l, long length, int dir){//No garbage collection nec
 
 //SHORT VECTORS IN LATTICES
 
-
-//Computes the Cholesky decomposition of A (nxn symmetric matrix). In otherwords, finds R such that R^T*R=A. If rcoefs=0, returns R, otherwise returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2.
-GEN mat_choleskydecomp(GEN A, int rcoefs, long prec){
-  pari_sp top=avma;
-  long n=lg(A)-1;//A is nxn
-  GEN M=gcopy(A);//Will be manipulating the entries, so need to copy A.
-  for(long i=1;i<n;i++){
-	if(gequal0(gcoeff(M, i, i))){
-	  for(long j=i+1;j<=n;j++){
-	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
-	  }
-	}
-	else{
-	  for(long j=i+1;j<=n;j++){
-	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
-	    gcoeff(M, i, j)=gdiv(gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
-	  }
-	}
-	for(long j=i+1;j<=n;j++){
-	  for(long k=j;k<=n;k++) gcoeff(M, j, k)=gsub(gcoeff(M, j, k), gmul(gcoeff(M, j, i), gcoeff(M, i, k)));//M[j,k]=M[j,k]-M[j,i]*M[i,k];
-	}
-  }
-  if(rcoefs==1){
-	GEN ret=cgetg_copy(M, &n);//M stores the coeff, but we should delete the lower diagonal
-	for(long i=1;i<n;i++){//Column i
-      gel(ret, i)=cgetg(n, t_COL);
-	  for(long j=1;j<=i;j++) gcoeff(ret, j, i)=gcopy(gcoeff(M, j, i));
-	  for(long j=i+1;j<n;j++) gcoeff(ret, j, i)=gen_0;
-	}
-	return gerepileupto(top, ret);
-  }
-  for(long i=1;i<=n;i++){
-	for(long j=1;j<i;j++) gcoeff(M, i, j)=gen_0;
-	gcoeff(M, i, i)=gsqrt(gcoeff(M, i, i), prec);
-	for(long j=i+1;j<=n;j++) gcoeff(M, i, j)=gmul(gcoeff(M, i, j), gcoeff(M, i, i));
-  }
-  return gerepilecopy(top, M);
-}
-
 //Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2.
 GEN mat_nfcholesky(GEN nf, GEN A){
   pari_sp top=avma;
