@@ -3,8 +3,12 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 default(help, "gphelp -detex");
 
 \\GEOMETRY
-	addhelp(geo,"These methods deal with geometry. Available methods:\n hdist, hdist_ud, randompoint_ud");
-	
+	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscarea, hdiscradius, hdist, hdist_ud, randompoint_ud");
+
+	install("hdiscarea","Gp","hdiscarea","./libfdom.so");
+	addhelp(hdiscarea,"Input R, a positive real number.\n Returns the hyperbolic area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2.");
+	install("hdiscradius","Gp","hdiscradius","./libfdom.so");
+	addhelp(hdiscradius,"Inpu area, a positive real number.\n Returns the radius of the hyperbolic disc with that area.");
 	install("hdist","GGp","hdist","./libfdom.so");
 	addhelp(hdist,"Inputs z1, z2 complex numbers in the upper half plane.\n Returns the hyperbolic distance between z1 and z2.");
 	install("hdist_ud","GGp","hdist_ud","./libfdom.so");
@@ -53,7 +57,7 @@ default(help, "gphelp -detex");
 	install("algnormalizedboundary","GGGp","algnormalizedboundary","./libfdom.so");
 	addhelp(algnormalizedboundary, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized boundary associated to G. The format of the output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).");
 	install("algshimura","GGD1,L,","algshimura","./libfdom.so");
-	addhelp(algshimura,"Inputs F, D, {place=1}: totally real number field F, positive integer D, integer place between 1 and deg(F).\n Returns a quaternion algebra over F that is split at the infinite place place only, and has discriminant disc, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods.");
+	addhelp(algshimura,"Inputs F, D, {place=1}: totally real number field F, positive integer D, integer place between 1 and deg(F).\n Returns a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods.");
 	install("algsmallnorm1elts","GGGD0,G,D0,G,p","algsmallnorm1elts","./libfdom.so");
 	addhelp(algsmallnorm1elts,"Inputs A, C, p, {z1=0}, {z2=0}: quaternion algebra A split at one real place, positive real number C, upper half plane point p, unit disc point z.\n Computes small norm 1 elements in the order of A, i.e. such that Q_{z_1,z_2}(g)<=C, where Q is defined on page 478 of Voight ``Computing fundamental domains''. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints (the inverse radius is computed for h_2^(-1)*g*h_1, where h_i(0)=z_i; hence elements g with g(z_1) close to z_2 are found).");
 	install("algswapab","G","algswapab","./libfdom.so");
@@ -64,9 +68,10 @@ install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
 install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
 install("balltester","GGGp","balltester","./libfdom.so");
-install("bestAval","GGp","bestAval","./libfdom.so");
+install("bestAval","Gp","bestAval","./libfdom.so");
 
+install("algfdom_test2","GGD1,L,D1,L,D0,G,D0,G,p","algfdom2","./libfdom.so");
 install("algsmallnorm1elts_condition","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");
-
+install("algsmallnorm1elts_condition2","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts2","./libfdom.so");
 
 default(parisize, "4096M");

@@ -45,7 +45,9 @@ GEN mat_nfcholesky(GEN nf, GEN A);
 //BASIC LINE, CIRCLE, AND POINT OPERATIONS
 GEN mat_eval(GEN M, GEN x);
 
-//DISTANCES
+//DISTANCES/AREAS
+GEN hdiscarea(GEN R, long prec);
+GEN hdiscradius(GEN area, long prec);
 GEN hdist(GEN z1, GEN z2, long prec);
 GEN hdist_ud(GEN z1, GEN z2, long prec);
 
@@ -107,12 +109,14 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_normform(GEN Q);
 
 //TEMPORARY
-GEN bestAval(GEN Q, GEN p, long prec);
+GEN bestAval(GEN Q, long prec);
 GEN algnormform(GEN A, long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);
-
+GEN algfdom_test2(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
+GEN qalg_smallnorm1elts_condition2(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
+GEN algsmallnorm1elts_condition2(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
 
 //TEMPORARILY NON-STATIC
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
