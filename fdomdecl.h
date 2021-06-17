@@ -97,6 +97,7 @@ GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
+GEN algnormdisc(GEN A);
 GEN algramifiedplacesf(GEN A);
 GEN algshimura(GEN F, GEN D, long place);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);

@@ -2893,6 +2893,16 @@ GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec){
   return gerepileupto(top, normalizedboundary(G, mats, id, &Q, &qalg_fdomm2rembed, tol, prec));
 }
 
+//Returns the norm to Q of the discriminant of A
+GEN algnormdisc(GEN A){
+  pari_sp top=avma;
+  GEN nf=alg_get_center(A);//Field
+  GEN rams=algramifiedplacesf(A);
+  GEN algdisc=gen_1;
+  for(long i=1;i<lg(rams);i++) algdisc=mulii(algdisc, idealnorm(nf, gel(rams, i)));//Norm to Q of the ramification
+  return gerepileupto(top, algdisc);
+}
+
 //Returns the vector of finite ramified places of the algebra A.
 GEN algramifiedplacesf(GEN A){
   pari_sp top=avma;
