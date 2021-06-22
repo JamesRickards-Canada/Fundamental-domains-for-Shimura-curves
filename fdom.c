@@ -83,6 +83,9 @@ static long tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
+//3: QUATERNION ALGEBRA METHODS
+static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
+
 //3: FUNDAMENTAL DOMAIN COMPUTATION
 static GEN normalizedboundary_oosides(GEN U);
 static GEN optAval(GEN Q, long prec);
@@ -2829,8 +2832,8 @@ GEN algfdomsignature(GEN A, GEN U, long prec){
   return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0.
-GEN algfromnormdisc(GEN F, GEN D, GEN infram){
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0. This is not gerepile suitable, it leaves a dirty stack.
+static GEN algfromnormdisc(GEN F, GEN D, GEN infram){
   pari_sp top=avma;
   if(typ(D)!=t_INT || signe(D)!=1) pari_err_TYPE("D should be a positive integer", D);//The absolute norm to Q should be a positive integer
   GEN pfac=Z_factor(D);
@@ -2852,7 +2855,7 @@ GEN algfromnormdisc(GEN F, GEN D, GEN infram){
 	if(gequal0(gel(pfacideals, i))){avma=top;return gen_0;}//Nope, return 0
 	gel(hass, i)=gen_1;//The vector of 1's
   }
-  return gerepileupto(top, alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1));//Make the algebra
+  return alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1);
 }
 
 //Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
@@ -2917,7 +2920,7 @@ GEN algramifiedplacesf(GEN A){
 }
 
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field.
-GEN algshimura(GEN F, GEN D, long place){
+GEN algshimura(GEN F, GEN D, long place, long maxcomptime){
   pari_sp top=avma;
   if(nf_get_r2(F)>0) return gen_0;//Not totally real!
   long n=nf_get_degree(F);
@@ -2930,14 +2933,48 @@ GEN algshimura(GEN F, GEN D, long place){
   GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
   long varn=rnf_get_varn(L);
   GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
-	GEN b=lift(alg_get_b(A));
-	GEN aden=Q_denom(a), bden=Q_denom(b);
-    if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-	if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-	return gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
+  
+  if(maxcomptime) pari_alarm(maxcomptime);
+  pari_CATCH(CATCH_ALL){
+	pari_warn(warner, "Time limit or memory exceeded, skipping.");
+	avma=top;
+	pari_CATCH_reset();
+	return gen_0;
   }
-  return gerepilecopy(top, A);//No swap required.
+  pari_TRY{
+    if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
+	  GEN b=lift(alg_get_b(A));
+	  GEN aden=Q_denom(a), bden=Q_denom(b);
+      if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+	  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+	  A=gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
+    }
+	else A=gerepilecopy(top, A);//No swap required.
+  }pari_ENDCATCH
+  pari_alarm(0);//Stop the alarm!
+  return A;
+}
+
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field. This returns the pair [a, b] that make the algebra.
+GEN algshimura_ab(GEN F, GEN D, long place){
+  pari_sp top=avma;
+  if(nf_get_r2(F)>0) return gen_0;//Not totally real!
+  long n=nf_get_degree(F);
+  if(place<=0 || place>n) return gen_0;//Invalid place!
+  GEN infram=cgetg(n+1, t_VEC);
+  for(long i=1;i<=n;i++) gel(infram, i)=gen_1;
+  gel(infram, place)=gen_0;
+  GEN A=algfromnormdisc(F, D, infram);
+  if(gequal0(A)){avma=top;return gen_0;}//Nope
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+  long varn=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN b=lift(alg_get_b(A));
+  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
+  if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1) return gerepilecopy(top, mkvec2(b, a));//Must swap a, b
+  return gerepilecopy(top, mkvec2(a, b));//No swap required.
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
@@ -2986,13 +3023,11 @@ static GEN normalizedboundary_oosides(GEN U){
 //Generate the optimal A value
 static GEN optAval(GEN Q, long prec){
   pari_sp top=avma;
-  GEN alg=qalg_get_alg(Q);//Algebra
-  GEN F=alg_get_center(alg);//Field
-  long n=nf_get_degree(F);//Degree of field
-  GEN rpl=qalg_get_rams(Q);//Finite ramification
-  GEN algdisc=gen_1;
-  for(long i=1;i<lg(rpl);i++) algdisc=gmul(algdisc, idealnorm(F, gel(rpl, i)));//Norm to Q of the ramification
-  GEN discpart=gmul(nf_get_disc(F), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
+  GEN A=qalg_get_alg(Q);//Algebra
+  GEN nf=alg_get_center(A);//Field
+  long n=nf_get_degree(nf);//Degree of field
+  GEN algdisc=algnormdisc(A);//Norm of disc
+  GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
   GEN nint=dbltor(0.435547);
   GEN nslo=dbltor(0.113346);
