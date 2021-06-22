@@ -66,6 +66,8 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algshimura_ab,"Inputs F, D, {place=1}, {allowswap=1}: totally real number field F, positive integer D, integer place between 1 and deg(F), place=0, 1.\n Returns [a, b] such that B=(a, b/F) is a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods.If allowswap=0, then we do NOT allow the swapping of a, b in output of alginit (we require a>0 at the split real place, and may need to swap), and instead return 0. This is recommended if deg(F)>=6, as the swapped algebra is typically far to massive (e.g. sometimes run out of memory, even with 4GB).");
 	install("algswapab","G","algswapab","./libfdom.so");
 	addhelp(algswapab,"Input A, a quaternion algebra=(a, b/F).\n Returns (b, a/F), i.e. swapping a and b.");
+	install("smallalgebras","GLD2,G,D1,L,","smallalgebras","./libfdom.so");
+	addhelp(smallalgebras,"Inputs F, nwant, {Dmin=2}, {allowswap=1}: totally real number field F, positive integer nwant, Dmin>=2 integer, allowswap=0 or 1.\n Finds and returns nwant pairs [a, b] corresponding to quaternion algebras over F split at exactly one real place. We search for algebras starting at Nm_F/Q(disc(A))=Dmin. If allowswap=0, we do NOT allow the swapping of a, b, in the found algebra (the method will find fewer algebras, but the coefficients will be better). This is recommended if deg(F)>=6.");
 	
 \\TEMPORARY
 install("algnormform","Gp","algnormform","./libfdom.so");

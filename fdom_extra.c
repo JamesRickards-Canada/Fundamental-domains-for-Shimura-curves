@@ -224,9 +224,35 @@ GEN algswapab(GEN A){
   return gerepileupto(top, alginit(alg_get_center(A), mkvec2(b, a), -1, 1));
 }
 
+//Returns nwant pairs [a, b] for quaternion algebras over the field F that are suitable for fundamental domains. We start at N_F/Q(disc)=Dmin if supplied, and 2 otherwise.
+GEN smallalgebras(GEN F, long nwant, GEN Dmin, int allowswap){
+  pari_sp top=avma;
+  GEN v=cgetg(nwant+1, t_VEC);
+  long ind=1;
+  GEN D=gceil(gmax(Dmin, gen_2));//Starting D
+  while(ind<=nwant){
+	GEN A=algshimura_ab(F, D, 1, allowswap);
+	if(!gequal0(A)){
+	  gel(v, ind)=A;
+	  ind++;
+	}
+	D=gaddgs(D, 1);
+  }
+  return gerepilecopy(top, v);
+}
 
 
-
-
-
+/*gensmallalgebras(F, nwant)={
+  my(Dset, found, A);
+  Dset=vector(nwant);
+  found=0;
+  for(D=2,oo,
+    A=algshimura(F, D);
+	if(A!=0,
+	  found++;
+	  Dset[found]=D;
+	  if(found==nwant, return(Dset));
+	);
+  );
+}*/
 
