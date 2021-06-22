@@ -151,11 +151,7 @@ GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap){
   GEN infram=cgetg(n+1, t_VEC);
   for(long i=1;i<=n;i++) gel(infram, i)=gen_1;
   gel(infram, place)=gen_0;
-  GEN A=algfromnormdisc(F, D, infram);
-  if(gequal0(A)){avma=top;return gen_0;}//Nope
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN A;
   
   if(maxcomptime) pari_alarm(maxcomptime);
   pari_CATCH(CATCH_ALL){
@@ -165,13 +161,24 @@ GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap){
 	return gen_0;
   }
   pari_TRY{
+    A=algfromnormdisc(F, D, infram);
+    if(gequal0(A)){//Nope
+	  avma=top;
+	  pari_CATCH_reset();
+	  return gen_0;
+	}
+    GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+    long varn=rnf_get_varn(L);
+    GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
     if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
-	  GEN b=lift(alg_get_b(A));
-	  GEN aden=Q_denom(a), bden=Q_denom(b);
-      if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-	  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-	  if(allowswap) A=gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
-	  else{avma=top;A=gen_0;}//We do not allow the swap.
+	  if(!allowswap){avma=top;A=gen_0;}//We do not allow the swap.
+	  else{//Allowing the swap
+	    GEN b=lift(alg_get_b(A));
+	    GEN aden=Q_denom(a), bden=Q_denom(b);
+        if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+	    if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+	    A=gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
+	  }
     }
 	else A=gerepilecopy(top, A);//No swap required.
   }pari_ENDCATCH
@@ -180,7 +187,7 @@ GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap){
 }
 
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field. This returns the pair [a, b] that make the algebra. If allowswap=0, we do NOT allow the swapping of the a, b output by alginit, and either return the algebra (if it is valid) or 0 otherwise. Naively swapping a, b when deg(F) is large can be far too slow.
-GEN algshimura_ab(GEN F, GEN D, long place, int allowswap){
+GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap){
   pari_sp top=avma;
   if(nf_get_r2(F)>0) return gen_0;//Not totally real!
   long n=nf_get_degree(F);
@@ -188,21 +195,40 @@ GEN algshimura_ab(GEN F, GEN D, long place, int allowswap){
   GEN infram=cgetg(n+1, t_VEC);
   for(long i=1;i<=n;i++) gel(infram, i)=gen_1;
   gel(infram, place)=gen_0;
-  GEN A=algfromnormdisc(F, D, infram);
-  if(gequal0(A)){avma=top;return gen_0;}//Nope
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  GEN b=lift(alg_get_b(A));
-  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
-  if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){
-    if(allowswap) return gerepilecopy(top, mkvec2(b, a));//Must swap a, b
-	avma=top;//If we do not allow the swapping of a, b (recommended if deg(F)>=6), we do not return anything.
+  GEN A;
+  
+  if(maxcomptime) pari_alarm(maxcomptime);
+  pari_CATCH(CATCH_ALL){
+	pari_warn(warner, "Time limit or memory exceeded, skipping.");
+	avma=top;
+	pari_CATCH_reset();
 	return gen_0;
   }
-  return gerepilecopy(top, mkvec2(a, b));//No swap required.
+  pari_TRY{
+    A=algfromnormdisc(F, D, infram);
+    if(gequal0(A)){//Nope
+	  avma=top;
+	  pari_CATCH_reset();
+	  return gen_0;
+	}
+    GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+    long varn=rnf_get_varn(L);
+    GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+    GEN b=lift(alg_get_b(A));
+    GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
+    if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+    if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+    if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){
+      if(allowswap) A=gerepilecopy(top, mkvec2(b, a));//Must swap a, b
+	  else{
+		avma=top;//If we do not allow the swapping of a, b (recommended if deg(F)>=6), we do not return anything.
+	    A=gen_0;
+	  }
+    }
+	else A=gerepilecopy(top, mkvec2(a, b));//No swap required.
+  }pari_ENDCATCH
+  pari_alarm(0);//Stop the alarm!
+  return A;
 }
 
 //Returns the algebra where a, b are swapped
@@ -225,13 +251,13 @@ GEN algswapab(GEN A){
 }
 
 //Returns nwant pairs [a, b] for quaternion algebras over the field F that are suitable for fundamental domains. We start at N_F/Q(disc)=Dmin if supplied, and 2 otherwise.
-GEN smallalgebras(GEN F, long nwant, GEN Dmin, int allowswap){
+GEN smallalgebras(GEN F, long nwant, GEN Dmin, long maxcomptime, int allowswap){
   pari_sp top=avma;
   GEN v=cgetg(nwant+1, t_VEC);
   long ind=1;
   GEN D=gceil(gmax(Dmin, gen_2));//Starting D
   while(ind<=nwant){
-	GEN A=algshimura_ab(F, D, 1, allowswap);
+	GEN A=algshimura_ab(F, D, 1, maxcomptime, allowswap);
 	if(!gequal0(A)){
 	  gel(v, ind)=A;
 	  ind++;
@@ -240,19 +266,4 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, int allowswap){
   }
   return gerepilecopy(top, v);
 }
-
-
-/*gensmallalgebras(F, nwant)={
-  my(Dset, found, A);
-  Dset=vector(nwant);
-  found=0;
-  for(D=2,oo,
-    A=algshimura(F, D);
-	if(A!=0,
-	  found++;
-	  Dset[found]=D;
-	  if(found==nwant, return(Dset));
-	);
-  );
-}*/
 

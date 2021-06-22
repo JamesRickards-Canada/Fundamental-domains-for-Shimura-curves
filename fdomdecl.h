@@ -134,6 +134,6 @@ void python_printfdom(GEN U, char *filename, long prec);
 //SECTION 2: QUATERNIONIC METHODS
 GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap);
-GEN algshimura_ab(GEN F, GEN D, long place, int allowswap);
+GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algswapab(GEN A);
-GEN smallalgebras(GEN F, long nwant, GEN Dmin, int allowswap);
+GEN smallalgebras(GEN F, long nwant, GEN Dmin, long maxcomptime, int allowswap);
