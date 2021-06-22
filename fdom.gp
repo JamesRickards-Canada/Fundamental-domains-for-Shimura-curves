@@ -1,9 +1,8 @@
 print("\n\nType '?fdom' for help.\n\n");
 addhelp(fdom, "This package can be used to compute fundamental domains for Shimura curves (the PARI code can be easily adapted to compute fundamental domains for any discrete subgroup of PSL(2, R)).\n For each subtopic ``P (p)'', call ?p to access a basic description and list of methods. Subtopics:\n Geometry (geo)\n Visualizing fundamental domains with Python (vfd)\n Quaternion methods (quat)");
-default(help, "gphelp -detex");
 
 \\GEOMETRY
-	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscarea, hdiscradius, hdist, hdist_ud, randompoint_ud");
+	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscarea, hdiscradius, hdist, hdist_ud, mat_eval, randompoint_ud");
 
 	install("hdiscarea","Gp","hdiscarea","./libfdom.so");
 	addhelp(hdiscarea,"Input R, a positive real number.\n Returns the hyperbolic area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2.");
@@ -30,12 +29,13 @@ default(help, "gphelp -detex");
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdomarea, algfdom, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algfromnormdisc, algmulvec, algramifiedplacesf, algnormalizedbasis, algnormalizedboundary, algshimura, algsmallnorm1elts, algswapab.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algramifiedplacesf, algshimura, algshimura_ab, algsmallnorm1elts, algswapab.");
 
-	install("algfdomarea","GD0,L,p","algfdomarea","./libfdom.so");
-	addhelp(algfdomarea,"Input A, {lp=0}: a quaternion algebra A split at one real place, and lp=0 or 1.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''. To compute the answer to less precision, input lp as 1 (this can be significantly faster for large K).");
+	\\fdom
 	install("algfdom","GGD1,L,D1,L,D0,G,D0,G,p","algfdom","./libfdom.so");
 	addhelp(algfdom,"Inputs A, p, {dispprogress=1}, {dumppartial=1}, {partialset=0}, {ANRdata=0}: quaternion algebra A split at one real place, upper half plane point p, dispprogress=0,1, dumppartial=0,1, partialset=0 or a set of norm 1 elements of A, ANRdata=0 or a length 5 vector.\n Computes and returns the fundamental domain for the group of units of norm 1 in A. We use the unit disc model, which the upper half plane is mapped to via p->0. p need to NOT be a fixed point of this group under the standard embedding into PSL(2, R) (p=I/2 is safe for quaternion algebras over Q). If dispprogress=1, displays partial progress. If dumppartial=1, this dumps generating sets of partial results to 'algfdom_partialdata_log.txt', where i is a number. This is useful in case of error, for example running out of memory, lack of precision, segmentation fault, etc. partialset is either 0 or a vector of norm 1 elements of A that can be used as a starting base for the fundamental domain. ANRdata is a technical entry, and can be passed in to specify some/all constants used in the enumeration of Page (they greatly affect the running time, but the optimal choices are not totally clear).");
+	install("algfdomarea","GD0,L,p","algfdomarea","./libfdom.so");
+	addhelp(algfdomarea,"Input A, {lp=0}: a quaternion algebra A split at one real place, and lp=0 or 1.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''. To compute the answer to less precision, input lp as 1 (this can be significantly faster for large K).");
 	install("algfdomminimalcycles","GGp","algfdomminimalcycles","./libfdom.so");
 	addhelp(algfdomminimalcycles,"Inputs A, U: quaternion algebra A split at one real place with fundamental domain U.\n Returns the set of minimal cycles of the side pairing. The format is [cycles, types], where an element of cycle is a vecsmall [i1,i2,...,in] so that the cycle is v_i1, v_i2, ..., v_in. cycle[i] has type types[i], where type 0=parabolic, 1=accidental, m>=2=elliptic of order m. The vecsmall types is sorted from small to large.");
 	install("algfdompresentation","GGp","algfdompresentation","./libfdom.so");
@@ -46,9 +46,6 @@ default(help, "gphelp -detex");
 	addhelp(algfdomrootgeodesic,"Inputs A, U, g: quaternion algebra A split at one real place, the fundamental domain U of the group of units of norm 1 of the order in A, an element g of this group.\n Returns the root geodesic of g in the fundamental domain. The format is [g's, circle arcs, vecsmall(sides hit), vecsmall(sides emenating from)].");
 	install("algfdomsignature","GGp","algfdomsignature","./libfdom.so");
 	addhelp(algfdomsignature,"Inputs A, U: quaternion algebra A split at one real place with fundamental domain U.\n Returns the signature of the algebra A. The format is [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s), and the group is generated by elements a_1, ..., a_g, b_1, ..., b_g, g_1, ..., g_{t+s} satisfying the relations g_i^m_i=1 for 1<=i<=t and [a_1,b_1]*...*[a_g,b_g]*g_1*...*g_{t+s}=1, where [x, y]=x*y*y^(-1)*x^(-1) is the commutator.");
-	install("algmulvec","GGG","algmulvec","./libfdom.so");
-	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
-	install("algnormalizedbasis","GGGp","algnormalizedbasis","./libfdom.so");
 	addhelp(algnormalizedbasis, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized basis associated to G.");
 	install("algnormalizedboundary","GGGp","algnormalizedboundary","./libfdom.so");
 	addhelp(algnormalizedboundary, "Inputs A, G, p: quaternion algebra A split at one real place, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized boundary associated to G. The format of the output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).");
@@ -56,12 +53,17 @@ default(help, "gphelp -detex");
 	addhelp(algnormdisc,"Input A, an algebra.\n Returns the norm to Q of the discriminant of A.");
 	install("algramifiedplacesf","G","algramifiedplacesf","./libfdom.so");
 	addhelp(algramifiedplacesf,"Input A, an algebra.\n Returns the vector of finite places that ramify.");
-	install("algshimura","GGD1,L,D20,L,","algshimura","./libfdom.so");
-	addhelp(algshimura,"Inputs F, D, {place=1}, {maxcomptime=20}: totally real number field F, positive integer D, integer place between 1 and deg(F), nonnegative integer.\n Returns a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods. If maxcomptime!=0, we stop after that many seconds. Note that if deg(F) is large, the algebra representation is probably incredibly massive, making the most expensive part the gerepile at the end. Working with such algebras is not recommended.");
-	install("algshimura_ab","GGD1,L,","algshimura_ab","./libfdom.so");
-	addhelp(algshimura_ab,"Inputs F, D, {place=1}: totally real number field F, positive integer D, integer place between 1 and deg(F).\n Returns [a, b] such that B=(a, b/F) is a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods. If maxcomptime!=0, we stop after that many seconds. Note that if deg(F) is large, the algebra representation is probably incredibly massive. Working with such algebras is not recommended.");
 	install("algsmallnorm1elts","GGGD0,G,D0,G,p","algsmallnorm1elts","./libfdom.so");
 	addhelp(algsmallnorm1elts,"Inputs A, C, p, {z1=0}, {z2=0}: quaternion algebra A split at one real place, positive real number C, upper half plane point p, unit disc point z.\n Computes small norm 1 elements in the order of A, i.e. such that Q_{z_1,z_2}(g)<=C, where Q is defined on page 478 of Voight ``Computing fundamental domains''. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints (the inverse radius is computed for h_2^(-1)*g*h_1, where h_i(0)=z_i; hence elements g with g(z_1) close to z_2 are found).");
+	
+	\\fdom_extra
+	install("algmulvec","GGG","algmulvec","./libfdom.so");
+	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
+	install("algnormalizedbasis","GGGp","algnormalizedbasis","./libfdom.so");
+	install("algshimura","GGD1,L,D20,L,","algshimura","./libfdom.so");
+	addhelp(algshimura,"Inputs F, D, {place=1}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer D, integer place between 1 and deg(F),maxcomptime= nonnegative integer, place=0 or 1.\n Returns a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods. If maxcomptime!=0, we stop after that many seconds. If allowswap=0, then we do NOT allow the swapping of a, b in output of alginit (we require a>0 at the split real place, and may need to swap), and instead return 0. This is recommended if deg(F)>=6, as the swapped algebra is typically far to massive (e.g. sometimes run out of memory, even with 4GB).");
+	install("algshimura_ab","GGD1,L,D1,L,","algshimura_ab","./libfdom.so");
+	addhelp(algshimura_ab,"Inputs F, D, {place=1}, {allowswap=1}: totally real number field F, positive integer D, integer place between 1 and deg(F), place=0, 1.\n Returns [a, b] such that B=(a, b/F) is a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods.If allowswap=0, then we do NOT allow the swapping of a, b in output of alginit (we require a>0 at the split real place, and may need to swap), and instead return 0. This is recommended if deg(F)>=6, as the swapped algebra is typically far to massive (e.g. sometimes run out of memory, even with 4GB).");
 	install("algswapab","G","algswapab","./libfdom.so");
 	addhelp(algswapab,"Input A, a quaternion algebra=(a, b/F).\n Returns (b, a/F), i.e. swapping a and b.");
 	
@@ -76,4 +78,4 @@ install("algfdom_test2","GGD1,L,D1,L,D0,G,D0,G,p","algfdom2","./libfdom.so");
 install("algsmallnorm1elts_condition","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");
 install("algsmallnorm1elts_condition2","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts2","./libfdom.so");
 
-default(parisize, "4096M");
+default(parisize, "4096M");\\Must come at the end

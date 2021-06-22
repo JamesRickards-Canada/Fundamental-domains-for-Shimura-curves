@@ -143,7 +143,7 @@ GEN algmulvec(GEN A, GEN G, GEN L){
 }
 
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field.
-GEN algshimura(GEN F, GEN D, long place, long maxcomptime){
+GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap){
   pari_sp top=avma;
   if(nf_get_r2(F)>0) return gen_0;//Not totally real!
   long n=nf_get_degree(F);
@@ -170,7 +170,8 @@ GEN algshimura(GEN F, GEN D, long place, long maxcomptime){
 	  GEN aden=Q_denom(a), bden=Q_denom(b);
       if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
 	  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-	  A=gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
+	  if(allowswap) A=gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
+	  else{avma=top;A=gen_0;}//We do not allow the swap.
     }
 	else A=gerepilecopy(top, A);//No swap required.
   }pari_ENDCATCH
@@ -178,8 +179,8 @@ GEN algshimura(GEN F, GEN D, long place, long maxcomptime){
   return A;
 }
 
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field. This returns the pair [a, b] that make the algebra.
-GEN algshimura_ab(GEN F, GEN D, long place){
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field. This returns the pair [a, b] that make the algebra. If allowswap=0, we do NOT allow the swapping of the a, b output by alginit, and either return the algebra (if it is valid) or 0 otherwise. Naively swapping a, b when deg(F) is large can be far too slow.
+GEN algshimura_ab(GEN F, GEN D, long place, int allowswap){
   pari_sp top=avma;
   if(nf_get_r2(F)>0) return gen_0;//Not totally real!
   long n=nf_get_degree(F);
@@ -196,7 +197,11 @@ GEN algshimura_ab(GEN F, GEN D, long place){
   GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
   if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
   if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1) return gerepilecopy(top, mkvec2(b, a));//Must swap a, b
+  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){
+    if(allowswap) return gerepilecopy(top, mkvec2(b, a));//Must swap a, b
+	avma=top;//If we do not allow the swapping of a, b (recommended if deg(F)>=6), we do not return anything.
+	return gen_0;
+  }
   return gerepilecopy(top, mkvec2(a, b));//No swap required.
 }
 
