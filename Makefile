@@ -2,7 +2,7 @@
 PARI_LIB = /usr/local/lib
 PARI_INCLUDE = /usr/local/include
 
-SRCS = fdom.o
+SRCS = fdom.o fdom_extra.o
 OBJS = $(SRCS)
 
 TARGET = fdom

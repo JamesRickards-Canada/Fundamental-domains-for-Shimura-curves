@@ -12,18 +12,14 @@
 #include "fdomdecl.h"
 #endif
 
-
 //DEFINITIONS
-
 
 //The length (lg, so technically length+1) of a circle/line and arc/segment, and a normalized boundary
 #define CIRCLEN 4
 #define ARCLEN 9
 #define NORMBOUND 9
 
-
 //STATIC DECLARATIONS
-
 
 //1: SHORT VECTORS IN LATTICES
 static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
@@ -72,6 +68,7 @@ static GEN psl_roots(GEN M, GEN tol, long prec);
 
 //2: FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
 static GEN minimalcycles(GEN pair);
+static GEN normalizedboundary_oosides(GEN U);
 
 //2: GEOMETRIC HELPER METHODS
 static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
@@ -83,35 +80,21 @@ static long tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
-//3: QUATERNION ALGEBRA METHODS
-static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
-
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN normalizedboundary_oosides(GEN U);
 static GEN optAval(GEN Q, long prec);
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
 
-//3: (MOSTLY STATIC) HELPER METHODS
-static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
+//3: HELPER METHODS
 static long algsplitoo(GEN A);
+static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static GEN qalg_basis_conj(GEN Q, GEN x);
-static GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
-//static GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
-//static GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
 //3: BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
 static GEN qalg_fdominv(GEN *data, GEN x);
 static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec);
 static GEN qalg_fdommul(GEN *data, GEN x, GEN y);
-static int qalg_istriv(GEN *data, GEN x);
 static GEN qalg_fdomtrace(GEN *data, GEN x);
-
-//3: SHALLOW RETRIEVAL METHODS
-static GEN qalg_get_alg(GEN Q);
-static GEN qalg_get_rams(GEN Q);
-static GEN qalg_get_varnos(GEN Q);
-static GEN qalg_get_roots(GEN Q);
-
+static int qalg_istriv(GEN *data, GEN x);
 
 //TEMPORARY TESTING METHODS
 static GEN ballradRpt(GEN x, GEN y, GEN R, long prec);
@@ -119,6 +102,8 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
 static GEN smallvectors_cholesky2(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
 static GEN smallvectors_nfcondition2(GEN A, GEN C, long maxN, long maxelts, GEN condition, long prec);
+
+
 
 //SECTION 1: BASE METHODS
 
@@ -329,8 +314,8 @@ GEN llist_tovecsmall(llist *l, long length, int dir){//No garbage collection nec
 }
 
 
-
 //SHORT VECTORS IN LATTICES
+
 
 //Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2.
 GEN mat_nfcholesky(GEN nf, GEN A){
@@ -835,7 +820,6 @@ static GEN slope(GEN p1, GEN p2){
 }
 
 
-
 //INTERSECTION OF LINES/CIRCLES
 
 
@@ -1128,8 +1112,8 @@ static int onseg(GEN l, GEN p, GEN tol, long prec){
 }
 
 
-
 //DISTANCES/AREAS
+
 
 //Given a radius R>0, this returns the area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2
 GEN hdiscarea(GEN R, long prec){
@@ -1200,7 +1184,6 @@ static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec){
   area=gsub(area, ang);
   return gerepileupto(top, area);
 }
-
 
 
 //FUNDAMENTAL DOMAIN COMPUTATION
@@ -2320,7 +2303,6 @@ GEN rootgeodesic_uhp(GEN M, GEN tol, long prec){
 }
 
 
-
 //FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
 
 
@@ -2387,6 +2369,14 @@ GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, 
   }
   GEN ordering=vecsmall_indexsort(types);
   return gerepilecopy(top, mkvec2(vecpermute(cycles, ordering), vecsmallpermute(types, ordering)));//The return, [cycles, types]
+}
+
+//Returns the vecsmall of indices of the infinite sides of U.
+static GEN normalizedboundary_oosides(GEN U){
+  long n=lg(gel(U, 1));
+  GEN sides=vecsmalltrunc_init(n);
+  for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
+  return sides;
 }
 
 //Returns the group presentation of the fundamental domain U. The return is a vector, where the 1st element is the list of indices of the generators, 2nd element is the vector of relations, whose ith element is a relation of the form [indices, powers], where indices and powers are vecsmall's. If indices=[i1,i2,...,ik] and powers=[p1,p2,...,pk], then this corresponds to g_{i1}^p1*...*g_{ik}^{pk}=1.
@@ -2592,84 +2582,6 @@ GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (
 }
 
 
-
-//PRINTING TO PLOTVIEWER
-
-
-//Writes the set of arcs in the given colour to filename, so that it is ready to be executed by python.
-void python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec){
-  pari_sp top=avma;
-  if(!pari_is_dir("fdoms")){//Checking the directory
-    int s=system("mkdir -p fdoms");
-    if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY fdoms");
-  }
-  char *fullfile=pari_sprintf("fdoms/%s.dat", filename);
-  FILE *f=fopen(fullfile, "w");
-  pari_free(fullfile);//Now we have created the output file f.
-  GEN arc, fact=gdiv(stoi(180), mppi(prec));//fact=180/Pi
-  for(long i=1;i<lg(arcs);i++){
-    arc=gel(arcs, i);
-    if(gequal0(arc)) continue;//Not a circle
-    if(gequal0(gel(arc, 8))){//Arc
-      pari_fprintf(f, "0 %lf %lf %lf %lf %lf %d\n", rtodbl(gtofp(real_i(gel(arc, 1)), prec)), rtodbl(gtofp(imag_i(gel(arc, 1)), prec)), rtodbl(gtofp(gel(arc, 2), prec)), rtodbl(gtofp(gmul(gel(arc, 5), fact), prec)), rtodbl(gtofp(gmul(gel(arc, 6), fact), prec)), itos(gel(arc, 7)));
-    }
-    else{//Segment
-      pari_fprintf(f, "1 %lf %lf %lf %lf\n", rtodbl(gtofp(real_i(gel(arc, 3)), prec)), rtodbl(gtofp(imag_i(gel(arc, 3)), prec)), rtodbl(gtofp(real_i(gel(arc, 4)), prec)), rtodbl(gtofp(imag_i(gel(arc, 4)), prec)));
-    }
-  }
-  fclose(f);
-  if(view==1){
-    char *line;
-    if(extrainput==NULL) line=pari_sprintf("%s", filename);
-    else line=pari_sprintf("%s %s", extrainput, filename);
-    python_plotviewer(line);
-    pari_free(line);
-  }
-  avma=top;
-}
-
-//Launches the plotviewer with the given inputs.
-void python_plotviewer(char *input){
-  char *command;
-  command=pari_sprintf("cmd.exe /C start py fdviewer.py %s", input);
-  int s=system(command);
-  if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-  pari_free(command);
-}
-
-//Writes the fundamental domain corresponding to U
-void python_printfdom(GEN U, char *filename, long prec){
-  pari_sp top=avma;
-  if(!pari_is_dir("fdoms")){//Checking the directory
-    int s=system("mkdir -p fdoms");
-    if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY fdoms");
-  }
-  char *fullfile=pari_sprintf("fdoms/%s.dat", filename);
-  FILE *f=fopen(fullfile, "w");
-  pari_free(fullfile);//Now we have created the output file f.
-  GEN pair=gel(U, 7);
-  pari_fprintf(f, "%d", pair[1]);
-  for(long i=2;i<lg(pair);i++) pari_fprintf(f, " %d", pair[i]);//Print side pairing.
-  //GEN vangs=gel(U, 4);
-  //pari_fprintf(f, "\n%lf", rtodbl(gtofp(gel(vangs, 1), prec)));//First angle
-  //for(long i=2;i<lg(pair);i++) pari_fprintf(f, " %lf", rtodbl(gtofp(gel(vangs, i), prec)));//Print angles.
-  pari_fprintf(f, "\n");
-  GEN arcs=gel(U, 2);
-  GEN arc, fact=gdiv(stoi(180), mppi(prec)), v1, v2;//fact=180/Pi
-  for(long i=1;i<lg(arcs);i++){
-    arc=gel(arcs, i);
-    if(gequal0(arc)) continue;//Not a circle
-	if(i==1) v1=gel(gel(U, 3), lg(arcs)-1);
-	else v1=gel(gel(U, 3), i-1);
-	v2=gel(gel(U, 3), i);//The two vertices
-    pari_fprintf(f, "%lf %lf %lf %lf %lf\n", rtodbl(gtofp(real_i(gel(arc, 1)), prec)), rtodbl(gtofp(imag_i(gel(arc, 1)), prec)), rtodbl(gtofp(gel(arc, 2), prec)), rtodbl(gmul(garg(gsub(v1, gel(gel(gel(U, 2), i), 1)), prec), fact)), rtodbl(gmul(garg(gsub(v2, gel(gel(gel(U, 2), i), 1)), prec), fact)));
-  }
-  fclose(f);
-  avma=top;
-}
-
-
-
 //GEOMETRIC HELPER METHODS
 
 
@@ -2769,7 +2681,6 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 */
 
 
-
 //QUATERNION ALGEBRA METHODS
 
 
@@ -2832,50 +2743,6 @@ GEN algfdomsignature(GEN A, GEN U, long prec){
   return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0. This is not gerepile suitable, it leaves a dirty stack.
-static GEN algfromnormdisc(GEN F, GEN D, GEN infram){
-  pari_sp top=avma;
-  if(typ(D)!=t_INT || signe(D)!=1) pari_err_TYPE("D should be a positive integer", D);//The absolute norm to Q should be a positive integer
-  GEN pfac=Z_factor(D);
-  long nfacsp1=lg(gel(pfac, 1));//# prime factors+1
-  long nramplaces=nfacsp1-1;
-  for(long i=1;i<lg(infram);i++) if(!gequal0(gel(infram, i))) nramplaces++;//Adding the number of oo ramified places
-  if(nramplaces%2==1){avma=top;return gen_0;}//Odd number of ramification places, BAD
-  GEN pfacideals=zerovec(nfacsp1-1), hass=cgetg(nfacsp1, t_VEC), possideals;
-  long expon;
-  for(long i=1;i<nfacsp1;i++){
-	expon=itos(gcoeff(pfac, i, 2));//Coefficient of p we desire.
-	possideals=idealprimedec(F, gcoeff(pfac, i, 1));
-	for(long j=1;j<lg(possideals);j++){
-	  if(pr_get_f(gel(possideals, j))==expon){
-		gel(pfacideals, i)=gel(possideals, j);//We win!
-		break;
-	  }
-	}
-	if(gequal0(gel(pfacideals, i))){avma=top;return gen_0;}//Nope, return 0
-	gel(hass, i)=gen_1;//The vector of 1's
-  }
-  return alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1);
-}
-
-//Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
-GEN algmulvec(GEN A, GEN G, GEN L){
-  pari_sp top=avma;
-  GEN Lsmall=gtovecsmall(L);//L in vecsmall
-  GEN elt=gel(alg_get_basis(A), 1);//The identity
-  pari_CATCH(CATCH_ALL){
-	avma=top;
-    pari_CATCH_reset();
-	pari_err_TYPE("Invalid inputs; perhaps G is not formatted correctly or L has indices that are too large?", mkvec2(G, L));
-	return gen_0;
-  }
-  pari_TRY{
-    for(long i=1;i<lg(Lsmall);i++) elt=algmul(A, elt, gel(G, Lsmall[i]));
-  }
-  pari_ENDCATCH
-  return gerepileupto(top, elt);
-}
-
 //Returns the normalized basis of the set of elements G
 GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec){
   pari_sp top=avma;
@@ -2919,64 +2786,6 @@ GEN algramifiedplacesf(GEN A){
   return gerepilecopy(top, rp);
 }
 
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field.
-GEN algshimura(GEN F, GEN D, long place, long maxcomptime){
-  pari_sp top=avma;
-  if(nf_get_r2(F)>0) return gen_0;//Not totally real!
-  long n=nf_get_degree(F);
-  if(place<=0 || place>n) return gen_0;//Invalid place!
-  GEN infram=cgetg(n+1, t_VEC);
-  for(long i=1;i<=n;i++) gel(infram, i)=gen_1;
-  gel(infram, place)=gen_0;
-  GEN A=algfromnormdisc(F, D, infram);
-  if(gequal0(A)){avma=top;return gen_0;}//Nope
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  
-  if(maxcomptime) pari_alarm(maxcomptime);
-  pari_CATCH(CATCH_ALL){
-	pari_warn(warner, "Time limit or memory exceeded, skipping.");
-	avma=top;
-	pari_CATCH_reset();
-	return gen_0;
-  }
-  pari_TRY{
-    if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
-	  GEN b=lift(alg_get_b(A));
-	  GEN aden=Q_denom(a), bden=Q_denom(b);
-      if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-	  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-	  A=gerepileupto(top, alginit(F, mkvec2(b, a), -1, 1));//Swapping a, b
-    }
-	else A=gerepilecopy(top, A);//No swap required.
-  }pari_ENDCATCH
-  pari_alarm(0);//Stop the alarm!
-  return A;
-}
-
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field. This returns the pair [a, b] that make the algebra.
-GEN algshimura_ab(GEN F, GEN D, long place){
-  pari_sp top=avma;
-  if(nf_get_r2(F)>0) return gen_0;//Not totally real!
-  long n=nf_get_degree(F);
-  if(place<=0 || place>n) return gen_0;//Invalid place!
-  GEN infram=cgetg(n+1, t_VEC);
-  for(long i=1;i<=n;i++) gel(infram, i)=gen_1;
-  gel(infram, place)=gen_0;
-  GEN A=algfromnormdisc(F, D, infram);
-  if(gequal0(A)){avma=top;return gen_0;}//Nope
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  GEN b=lift(alg_get_b(A));
-  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
-  if(!isint1(aden)) a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-  if(!isint1(bden)) b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-  if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1) return gerepilecopy(top, mkvec2(b, a));//Must swap a, b
-  return gerepilecopy(top, mkvec2(a, b));//No swap required.
-}
-
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec){
   pari_sp top=avma;
@@ -2988,37 +2797,9 @@ GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec){
   
 }
 
-//Returns the algebra where a, b are swapped
-GEN algswapab(GEN A){
-  pari_sp top=avma;
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  GEN b=lift(alg_get_b(A));
-  GEN aden=Q_denom(a), bden=Q_denom(b);
-  if(!isint1(aden)){
-	a=gmul(a, gsqr(aden));
-	pari_warn(warner, "b has to have no denominator, so we scaled it by its denominator squared.");
-  }
-  if(!isint1(bden)){
-	b=gmul(b, gsqr(bden));
-	pari_warn(warner, "a has to have no denominator, so we scaled it by its denominator squared.");
-  }
-  return gerepileupto(top, alginit(alg_get_center(A), mkvec2(b, a), -1, 1));
-}
-
-
 
 //FUNDAMENTAL DOMAIN COMPUTATION
 
-
-//Returns the vecsmall of indices of the infinite sides of U.
-static GEN normalizedboundary_oosides(GEN U){
-  long n=lg(gel(U, 1));
-  GEN sides=vecsmalltrunc_init(n);
-  for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
-  return sides;
-}
 
 //Generate the optimal A value
 static GEN optAval(GEN Q, long prec){
@@ -3165,11 +2946,11 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 }
 
 
+//HELPER METHODS
 
-//(MOSTLY STATIC) HELPER METHODS
 
 //If A is an algebra over nf, let decomp be the Cholesky decomposition of the norm form. This returns the norm of x given the decomposition (this is ~10x faster than algnorm).
-GEN algnorm_givencholesky(GEN nf, GEN decomp, GEN x){
+GEN algnorm_chol(GEN nf, GEN decomp, GEN x){
   pari_sp top=avma;
   GEN part=gen_0, U;
   long n=lg(x);
@@ -3183,19 +2964,17 @@ GEN algnorm_givencholesky(GEN nf, GEN decomp, GEN x){
   return gerepileupto(top, part);
 }
 
-//Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
-GEN qalg_fdominitialize(GEN A, long prec){
-  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
-  GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
-  GEN ramdat=algramifiedplacesf(A);//Finite ramified places
-  GEN varnos=mkvecsmall2(nf_get_varn(K), rnf_get_varn(L));//Stores the variable numbers for K and L, in that order
-  long split=algsplitoo(A);//The split real place
-  if(split==0) pari_err_TYPE("Quaternion algebra has 0 or >=2 split real infinite places, not valid for fundamental domains.", A);  
-  GEN Kroot=gel(nf_get_roots(K), split);//The split root
-  GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
-  if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
-  GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
-  return mkvec4(A, ramdat, varnos, roots);
+//If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.
+static long algsplitoo(GEN A){
+  GEN infram=alg_get_hasse_i(A);//shallow
+  long split=0;
+  for(long i=1;i<lg(infram);i++){//Finding the split place
+	if(infram[i]==0){//Split place
+	  if(split>0) return 0;
+	  split=i;
+	}
+  }
+  return split;//No garbage!!
 }
 
 //Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm(e1*v1+...+en*vn), with absrednorm defined as on page 478 of Voight, to be |f_g(p)|^2+2y^2*Tr_{F/Q}(nrd(g)). The shift by z1 and z2 concerns computing f_{h_2^{-1}gh_1}(p) instead, where z_i=h_i(0). Essentially, this allows us to see if z_1 and z_2 are "close".
@@ -3278,6 +3057,54 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
   return gerepilecopy(top, qf);
 }
 
+//Given the (assumed) basis representation of an element, this returns the conjugate in the basis representation.
+static GEN qalg_basis_conj(GEN Q, GEN x){
+  pari_sp top=avma;
+  GEN A=qalg_get_alg(Q);
+  GEN varnos=qalg_get_varnos(Q);
+  GEN Lx=pol_x(varnos[2]);//The variable for L
+  GEN algx=liftall(algbasistoalg(A, x));
+  gel(algx, 1)=gsubst(gel(algx, 1), varnos[2], gneg(Lx));//Conjugating
+  gel(algx, 2)=gneg(gel(algx, 2));//The conjugate of l1+jl2 is sigma(l1)-jl2
+  return gerepileupto(top, algalgtobasis(A, algx));//Converting back
+}
+
+//Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.18 to update for general; very easy). We also submit the old precision since the loss of precision causes errors later.
+GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
+  pari_sp top=avma;
+  long bits=bit_accuracy(computeprec);
+  GEN A=qalg_get_alg(Q);
+  GEN F=alg_get_center(A);
+  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
+  GEN rams=qalg_get_rams(Q);
+  GEN norm=gen_1;
+  for(long i=1;i<lg(rams);i++){
+	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
+	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
+  }
+  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), computeprec), norm);//d_F^(3/2)*phi(D)
+  long n=nf_get_degree(F), twon=2*n;
+  ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
+  ar=gmul(ar, gpowgs(gen_2, 3-twon));
+  ar=gmul(ar, gpowgs(mppi(computeprec), 1-twon));//2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2)*phi(D)
+  return gerepileupto(top, gtofp(ar, prec));
+}
+
+//Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
+GEN qalg_fdominitialize(GEN A, long prec){
+  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
+  GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
+  GEN ramdat=algramifiedplacesf(A);//Finite ramified places
+  GEN varnos=mkvecsmall2(nf_get_varn(K), rnf_get_varn(L));//Stores the variable numbers for K and L, in that order
+  long split=algsplitoo(A);//The split real place
+  if(split==0) pari_err_TYPE("Quaternion algebra has 0 or >=2 split real infinite places, not valid for fundamental domains.", A);  
+  GEN Kroot=gel(nf_get_roots(K), split);//The split root
+  GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
+  if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
+  GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
+  return mkvec4(A, ramdat, varnos, roots);
+}
+
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of A. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
 GEN qalg_normform(GEN Q){
   pari_sp top=avma;
@@ -3308,52 +3135,6 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
   return gerepilecopy(top, M);
 }
 
-//If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.
-static long algsplitoo(GEN A){
-  GEN infram=alg_get_hasse_i(A);//shallow
-  long split=0;
-  for(long i=1;i<lg(infram);i++){//Finding the split place
-	if(infram[i]==0){//Split place
-	  if(split>0) return 0;
-	  split=i;
-	}
-  }
-  return split;//No garbage!!
-}
-
-//Given the (assumed) basis representation of an element, this returns the conjugate in the basis representation.
-static GEN qalg_basis_conj(GEN Q, GEN x){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(Q);
-  GEN varnos=qalg_get_varnos(Q);
-  GEN Lx=pol_x(varnos[2]);//The variable for L
-  GEN algx=liftall(algbasistoalg(A, x));
-  gel(algx, 1)=gsubst(gel(algx, 1), varnos[2], gneg(Lx));//Conjugating
-  gel(algx, 2)=gneg(gel(algx, 2));//The conjugate of l1+jl2 is sigma(l1)-jl2
-  return gerepileupto(top, algalgtobasis(A, algx));//Converting back
-}
-
-//Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.18 to update for general; very easy). We also submit the old precision since the loss of precision causes errors later.
-static GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
-  pari_sp top=avma;
-  long bits=bit_accuracy(computeprec);
-  GEN A=qalg_get_alg(Q);
-  GEN F=alg_get_center(A);
-  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
-  GEN rams=qalg_get_rams(Q);
-  GEN norm=gen_1;
-  for(long i=1;i<lg(rams);i++){
-	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
-	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
-  }
-  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), computeprec), norm);//d_F^(3/2)*phi(D)
-  long n=nf_get_degree(F), twon=2*n;
-  ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
-  ar=gmul(ar, gpowgs(gen_2, 3-twon));
-  ar=gmul(ar, gpowgs(mppi(computeprec), 1-twon));//2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2)*phi(D)
-  return gerepileupto(top, gtofp(ar, prec));
-}
-
 //Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point. maxret is the maximum number of return elements (or 0 for all norm 1 elts)
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec){
   pari_sp top=avma, mid;
@@ -3377,7 +3158,7 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret
   GEN ret=vectrunc_init(mret);
   for(long i=1;i<nvposs;i++){
 	mid=avma;
-	norm=algnorm_givencholesky(nf, normdecomp, gel(vposs, i));
+	norm=algnorm_chol(nf, normdecomp, gel(vposs, i));
 	if(gequal(norm, gen_1)){
 	  avma=mid;
 	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
@@ -3397,7 +3178,6 @@ GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN
   GEN A=qalg_get_alg(Q);
   return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxN, maxelts, mkvec3(alg_get_center(A), normform, gen_1), prec));
 }
-
 
 
 //BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
@@ -3434,6 +3214,11 @@ static GEN qalg_fdommul(GEN *data, GEN x, GEN y){
   return algmul(qalg_get_alg(*data), x, y);
 }
 
+//Must pass *data as a quaternion algebra. Returns the trace of x.
+static GEN qalg_fdomtrace(GEN *data, GEN x){
+  return algtrace(qalg_get_alg(*data), x, 0);
+}
+
 //Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
 static int qalg_istriv(GEN *data, GEN x){
   if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
@@ -3441,27 +3226,21 @@ static int qalg_istriv(GEN *data, GEN x){
   return 1;
 }
 
-//Must pass *data as a quaternion algebra. Returns the trace of x.
-static GEN qalg_fdomtrace(GEN *data, GEN x){
-  return algtrace(qalg_get_alg(*data), x, 0);
-}
-
-
 
 //SHALLOW RETRIEVAL METHODS
 
 
 //Shallow method to return the algebra
-static GEN qalg_get_alg(GEN Q){return gel(Q, 1);}
+GEN qalg_get_alg(GEN Q){return gel(Q, 1);}
 
 //Shallow method to get the ramification
-static GEN qalg_get_rams(GEN Q){return gel(Q, 2);}
+GEN qalg_get_rams(GEN Q){return gel(Q, 2);}
 
 //Shallow method to return the variable numbers of K and L
-static GEN qalg_get_varnos(GEN Q){return gel(Q, 3);}
+GEN qalg_get_varnos(GEN Q){return gel(Q, 3);}
 
 //Shallow method to return the roots of K and L.
-static GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
+GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 
 //TEMPORARY TESTING

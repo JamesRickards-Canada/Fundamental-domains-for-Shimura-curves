@@ -17,7 +17,7 @@ typedef struct listtype3{//A generic linked list of longs, stores data and next 
 }llist;
 
 
-//METHODS
+//FDOM METHODS
 
 
 //SECTION 1: BASE METHODS
@@ -73,11 +73,6 @@ GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, G
 GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
 GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
 
-//PRINTING TO PLOTVIEWER
-void python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec);
-void python_plotviewer(char *input);
-void python_printfdom(GEN U, char *filename, long prec);
-
 //HELPER METHODS
 GEN deftol(long prec);
 
@@ -93,21 +88,24 @@ GEN algfdompresentation(GEN A, GEN U, long prec);
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
 GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec);
 GEN algfdomsignature(GEN A, GEN U, long prec);
-GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algnormdisc(GEN A);
 GEN algramifiedplacesf(GEN A);
-GEN algshimura(GEN F, GEN D, long place, long maxcomptime);
-GEN algshimura_ab(GEN F, GEN D, long place);
 GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);
-GEN algswapab(GEN A);
 
-//(MOSTLY STATIC) HELPER METHODS
-GEN algnorm_givencholesky(GEN nf, GEN decomp, GEN x);
-GEN qalg_fdominitialize(GEN A, long prec);
+//HELPER METHODS
+GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
 GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec);
+GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
+GEN qalg_fdominitialize(GEN A, long prec);
 GEN qalg_normform(GEN Q);
+
+//3: SHALLOW RETRIEVAL METHODS
+GEN qalg_get_alg(GEN Q);
+GEN qalg_get_rams(GEN Q);
+GEN qalg_get_varnos(GEN Q);
+GEN qalg_get_roots(GEN Q);
 
 //TEMPORARY
 GEN bestAval(GEN Q, long prec);
@@ -122,3 +120,19 @@ GEN algsmallnorm1elts_condition2(GEN A, GEN C, GEN p, GEN z1, GEN z2, long tries
 //TEMPORARILY NON-STATIC
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
 GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
+
+
+
+//FDOM_EXTRA METHODS
+
+
+//SECTION 1: GEOMETRY METHODS
+void python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec);
+void python_plotviewer(char *input);
+void python_printfdom(GEN U, char *filename, long prec);
+
+//SECTION 2: QUATERNIONIC METHODS
+GEN algmulvec(GEN A, GEN G, GEN L);
+GEN algshimura(GEN F, GEN D, long place, long maxcomptime);
+GEN algshimura_ab(GEN F, GEN D, long place);
+GEN algswapab(GEN A);
