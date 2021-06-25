@@ -93,7 +93,7 @@ GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algnormdisc(GEN A);
 GEN algramifiedplacesf(GEN A);
-GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec);
+GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, long prec);
 
 //HELPER METHODS
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
@@ -114,12 +114,12 @@ GEN algnormform(GEN A, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);
 GEN algfdom_test2(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
-GEN qalg_smallnorm1elts_condition2(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
-GEN algsmallnorm1elts_condition2(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
+GEN qalg_smallnorm1elts_condition2(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
+GEN algsmallnorm1elts_condition2(GEN A, GEN p, GEN C, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
 
 //TEMPORARILY NON-STATIC
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
-GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
+GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
+GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 
 
 
@@ -140,6 +140,9 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 
-//3: REGRESSIONS
+//OPTIMIZING THE VALUE OF C FOR ENUMERATION
+GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec);
+
+//REGRESSIONS
 GEN OLS(GEN X, GEN y, int retrsqr);
 GEN rsquared(GEN X, GEN y, GEN fit);

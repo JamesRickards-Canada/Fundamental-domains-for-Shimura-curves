@@ -2795,13 +2795,13 @@ GEN algramifiedplacesf(GEN A){
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
-GEN algsmallnorm1elts(GEN A, GEN C, GEN p, GEN z1, GEN z2, long prec){
+GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   GEN nf=alg_get_center(A);
   GEN nform=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nform);
-  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, C, p, z1, z2, 0, normdecomp, gen_0, prec));
+  return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, normdecomp, gen_0, prec));
   
 }
 
@@ -2908,8 +2908,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxelts, normformpart, prec);
-		GEN smallelts=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_condition(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -2924,8 +2924,8 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxelts, normformpart, prec);
-	    GEN smallelts=qalg_smallnorm1elts_condition(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
+	    GEN smallelts=qalg_smallnorm1elts_condition(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3141,7 +3141,7 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
 }
 
 //Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point. maxret is the maximum number of return elements (or 0 for all norm 1 elts)
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec){
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);
@@ -3176,7 +3176,7 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxret
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-GEN qalg_smallnorm1elts_condition(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
@@ -3278,7 +3278,7 @@ GEN algnormform(GEN A, long prec){
 }
 
 //Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
-GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec){
+GEN algsmallnorm1elts_condition(GEN A, GEN p, GEN C, GEN z1, GEN z2, long triesperelt, long maxelts, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   GEN nformpart=qalg_normform(Q);
@@ -3290,7 +3290,7 @@ GEN algsmallnorm1elts_condition(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesp
 	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
   }//Tr_{K/Q}(nrd(elt));
-  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, C, p, z1, z2, triesperelt, maxelts, nform, nformpart, prec));
+  return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, triesperelt, maxelts, nform, nformpart, prec));
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain
@@ -3380,7 +3380,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, nfdecomp, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxret, nfdecomp, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3395,7 +3395,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxret, nfdecomp, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxret, nfdecomp, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3511,8 +3511,8 @@ static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GE
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxelts, normformpart, prec);
-		GEN smallelts=qalg_smallnorm1elts_condition2(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
+		GEN smallelts=qalg_smallnorm1elts_condition2(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3527,8 +3527,8 @@ static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GE
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, A, p, gen_0, w, maxelts, normformpart, prec);
-	    GEN smallelts=qalg_smallnorm1elts_condition2(Q, A, p, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
+	    GEN smallelts=qalg_smallnorm1elts_condition2(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3554,7 +3554,7 @@ static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GE
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-GEN qalg_smallnorm1elts_condition2(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_condition2(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
@@ -3564,7 +3564,7 @@ GEN qalg_smallnorm1elts_condition2(GEN Q, GEN C, GEN p, GEN z1, GEN z2, long max
 
 
 //Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
-GEN algsmallnorm1elts_condition2(GEN A, GEN C, GEN p, GEN z1, GEN z2, long triesperelt, long maxelts, long prec){
+GEN algsmallnorm1elts_condition2(GEN A, GEN p, GEN C, GEN z1, GEN z2, long triesperelt, long maxelts, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   GEN nformpart=qalg_normform(Q);
@@ -3576,7 +3576,7 @@ GEN algsmallnorm1elts_condition2(GEN A, GEN C, GEN p, GEN z1, GEN z2, long tries
 	  gcoeff(nformpart, i, j)=nftrace(K, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
   }//Tr_{K/Q}(nrd(elt));
-  return gerepileupto(top, qalg_smallnorm1elts_condition2(Q, C, p, z1, z2, triesperelt, maxelts, nform, nformpart, prec));
+  return gerepileupto(top, qalg_smallnorm1elts_condition2(Q, p, C, z1, z2, triesperelt, maxelts, nform, nformpart, prec));
 }
 
 

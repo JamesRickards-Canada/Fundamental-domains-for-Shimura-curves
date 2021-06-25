@@ -274,6 +274,44 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 
+//3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
+
+//Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.
+GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
+  pari_sp top=avma, mid;
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN nf=alg_get_center(A);
+  GEN normformpart=qalg_normform(Q);
+  GEN nfdecomp=mat_nfcholesky(nf, normformpart);
+  long n=lg(gel(alg_get_basis(A), 1));
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(normformpart, i, j)=nftrace(nf, gcoeff(normformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{K/Q}(nrd(elt));
+  GEN area=algfdomarea(A, 1, prec);
+  GEN R=hdiscradius(gpow(area, dbltor(2.1), prec), prec);
+  
+  long lgCset=lg(Cset);
+  GEN avgtimes=cgetg(lgCset, t_COL);
+  pari_timer T;
+  timer_start(&T);
+  for(long i=1;i<lgCset;i++){
+	long t=0, tries=0;
+	timer_delay(&T);
+	while(t<mintesttime){//Make sure we do at least mintesttime per test
+	  mid=avma;
+      tries++;
+	  GEN z=randompoint_ud(R, prec);
+      qalg_smallnorm1elts_qfminim(Q, gel(Cset, i), p, gen_0, z, 0, nfdecomp, normformpart, prec);
+	  t=timer_get(&T);
+	  avma=mid;
+	}
+	gel(avgtimes, i)=rdivss(t, 1000*tries, prec);
+	if(i%10==0) pari_printf("%d test cases done.\n", i);
+  }
+  return gerepilecopy(top, avgtimes);
+}
 
 //3: REGRESSIONS
 
