@@ -2684,6 +2684,14 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 //QUATERNION ALGEBRA METHODS
 
 
+//Returns the absolute reduced norm with respect to z1 and z2, i.e. the quadratic from Q_{z_1, z_2}(g) for g in the algebra. If the output is q, then g (written in basis form) has value g~*q*g.
+GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN mats=psltopsu_transmats(p);
+  return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
+}
+
 //Initializes and checks the inputs, and computes the fundamental domain
 GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec){
   pari_sp top=avma;
@@ -2974,7 +2982,7 @@ static long algsplitoo(GEN A){
   return split;//No garbage!!
 }
 
-//Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm(e1*v1+...+en*vn), with absrednorm defined as on page 478 of Voight, to be |f_g(p)|^2+2y^2*Tr_{F/Q}(nrd(g)). The shift by z1 and z2 concerns computing f_{h_2^{-1}gh_1}(p) instead, where z_i=h_i(0). Essentially, this allows us to see if z_1 and z_2 are "close".
+//Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm_{z1, z2}(e1*v1+...+en*vn), defined in the Enumeration section of my paper. This is the combination of the Definition on page 478 of Voight, as well as Page's definition for Kleinian groups. It satisfies Q_{z1, z2}(g)=cosh(d(gz1, z2))+n-1 if g has norm 1 in the order. Thus, this allows us to see if z_1 and z_2 are "close". on the quotient.
 GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec){
   pari_sp top=avma;
 
@@ -3267,13 +3275,6 @@ GEN algnormform(GEN A, long prec){
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, qalg_normform(Q));
-}
-
-GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
-  pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
-  GEN mats=psltopsu_transmats(p);
-  return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
 
 //Returns small norm 1 elements (absrednorm(g)<=C with respect to p and z) of the order in A
