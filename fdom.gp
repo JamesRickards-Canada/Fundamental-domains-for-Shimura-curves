@@ -29,13 +29,15 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algramifiedplacesf, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdom_bestC, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algramifiedplacesf, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras.");
 
 	\\fdom
 	install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
 	addhelp(algabsrednorm,"Inputs A, p, {z1=0}, {z2=0}: quaternion algebra A split at one real place, upper half plane point p, unit disc points z1, z2.\n Returns the quadratic form q that satisfies Q_{z1, z2}(g)=cosh(d(g(z_1), z_2))+n-1 for g of norm 1 in the order of A. If g is written in the basis representation, g~*q*g gives the value of Q_{z1, z2}(g). Finding small vectors with respect to q allows one to determine if z1 and z2 are close on the quotient, and to find which element makes them close.");
 	install("algfdom","GGD1,L,D1,L,D0,G,D0,G,p","algfdom","./libfdom.so");
 	addhelp(algfdom,"Inputs A, p, {dispprogress=1}, {dumppartial=1}, {partialset=0}, {ANRdata=0}: quaternion algebra A split at one real place, upper half plane point p, dispprogress=0,1, dumppartial=0,1, partialset=0 or a set of norm 1 elements of A, ANRdata=0 or a length 5 vector.\n Computes and returns the fundamental domain for the group of units of norm 1 in A. We use the unit disc model, which the upper half plane is mapped to via p->0. p need to NOT be a fixed point of this group under the standard embedding into PSL(2, R) (p=I/2 is safe for quaternion algebras over Q). If dispprogress=1, displays partial progress. If dumppartial=1, this dumps generating sets of partial results to 'algfdom_partialdata_log.txt', where i is a number. This is useful in case of error, for example running out of memory, lack of precision, segmentation fault, etc. partialset is either 0 or a vector of norm 1 elements of A that can be used as a starting base for the fundamental domain. ANRdata is a technical entry, and can be passed in to specify some/all constants used in the enumeration of Page (they greatly affect the running time, but the optimal choices are not totally clear).");
+	install("algfdom_bestC","Gp","algfdom_bestC","./libfdom.so");
+	addhelp(algfdom_bestC,"Input A, a quaternion algebra corresponding to a Shimura curve.\n Returns the (theoretically) optimal value of C to input into algsmallnorm1elts to minimize expected time to find a new element.");
 	install("algfdomarea","GD0,L,p","algfdomarea","./libfdom.so");
 	addhelp(algfdomarea,"Input A, {lp=0}: a quaternion algebra A split at one real place, and lp=0 or 1.\n Returns the area of the fundamental domain associated to the group of units of norm 1 in the order stored in A. Requires the computation of the zeta_K(2) (Dedekind zeta function for the centre), which may require some calls to allocatemem() if K is ``large''. To compute the answer to less precision, input lp as 1 (this can be significantly faster for large K).");
 	install("algfdomminimalcycles","GGp","algfdomminimalcycles","./libfdom.so");
@@ -76,6 +78,8 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	\\OPTIMIZING THE VALUE OF C FOR ENUMERATION
 	install("enum_time","GGGD300,L,p","enum_time","./libfdom.so");
 	addhelp(enum_time,"Inputs A, p, Cset, {mintesttime=300}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, vector of positive real numbers, mintesttime positive integer.\n This computes how long the call to algsmallnorm1elts(A, p, C, z1, z2) takes for all C in Cset, and returns a column vector of the timings. This does NOT take into account time spent initializing things related to the algebra (e.g. cholesky of the norm form), since this can be computed once and reused many times. If the time taken is <mintesttime (in milliseconds), we repeat the test K times until we have taken at least mintesttime, and divide the final result by K. A larger value of mintesttime will produce more accurate results, but will take longer.");
+	install("enum_time_range","GGGGLD300,L,Dsp","enum_time_range","./libfdom.so");
+	addhelp(enum_time_range,"Inputs: A, p, Cmin, Cmax, ntrials, {mintesttime=300}, {fdata=NULL}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, positive real numbers Cmin and Cmax, positive integer ntrials>=2, positive integer mintesttime, file name fdata.\n This takes the interval [Cmin, Cmax], chops it up into ntrials pieces, and runs enum_time on this. We run the linear regression on this, and return [[A,B]~, R^2], where we fit to the curve t=A+B*C^(2n), n=degree of the number field F. If fdata!=NULL, we also write the pairs (C, t) to the file plots/fdata.dat (the first line is 'x y', so that it can be used to create a LaTeX plot if desired).");
 
 	\\REGRESSIONS
 	install("OLS","GGD1,L,","OLS","./libfdom.so");
@@ -89,7 +93,6 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
 install("balltester","GGGp","balltester","./libfdom.so");
-install("bestAval","Gp","bestAval","./libfdom.so");
 
 install("algfdom_test2","GGD1,L,D1,L,D0,G,D0,G,p","algfdom2","./libfdom.so");
 install("algsmallnorm1elts_condition","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");

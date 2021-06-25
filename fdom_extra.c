@@ -274,6 +274,7 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 
+
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 
 //Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.
@@ -312,6 +313,39 @@ GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
   }
   return gerepilecopy(top, avgtimes);
 }
+
+//enum_time, but we use ntrials>=2 from Cmin to Cmax. This also performs the regression on the data, and returns the result. We store the data in plots/fdata.dat if this is not NULL,
+GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, long prec){
+  pari_sp top=avma;
+  if(ntrials<=1) ntrials=2;
+  GEN Clist=cgetg(ntrials+1, t_VEC);
+  GEN C=Cmin;
+  GEN blen=gdivgs(gsub(Cmax, Cmin), ntrials-1);
+  for(long i=1;i<=ntrials;i++){
+	gel(Clist, i)=C;
+	C=gadd(C, blen);
+  }
+  GEN times=enum_time(A, p, Clist, mintesttime, prec);//Executing the computation
+  if(fdata){
+	if(!pari_is_dir("plots")){//Checking the directory
+      int s=system("mkdir -p plots");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+    }
+    char *fdata_full=pari_sprintf("plots/%s.dat", fdata);
+    FILE *f=fopen(fdata_full, "w");
+	pari_free(fdata_full);
+	pari_fprintf(f, "x y\n");
+    for(long i=1;i<=ntrials;i++) pari_fprintf(f, "%Pf %Pf\n", gel(Clist, i), gel(times, i));
+    fclose(f);
+  }
+  GEN nf=alg_get_center(A);
+  long n=nf_get_degree(nf), twon=2*n;
+  GEN Xdata=cgetg(ntrials+1, t_MAT);//Prep the regression
+  for(long i=1;i<=ntrials;i++) gel(Xdata, i)=mkcol2(gen_1, gpowgs(gel(Clist, i), twon));//The X data
+  GEN reg=gerepileupto(top, OLS(Xdata, times, 1));
+  return reg;
+}
+
 
 //3: REGRESSIONS
 

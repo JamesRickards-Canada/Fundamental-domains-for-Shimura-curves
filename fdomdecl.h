@@ -83,6 +83,7 @@ GEN deftol(long prec);
 //QUATERNION METHODS
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
+GEN algfdom_bestC(GEN A, long prec);
 GEN algfdomarea(GEN A, int lessprec, long prec);
 GEN algfdomminimalcycles(GEN A, GEN U, long prec);
 GEN algfdompresentation(GEN A, GEN U, long prec);
@@ -109,7 +110,6 @@ GEN qalg_get_varnos(GEN Q);
 GEN qalg_get_roots(GEN Q);
 
 //TEMPORARY
-GEN bestAval(GEN Q, long prec);
 GEN algnormform(GEN A, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);
@@ -142,6 +142,7 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 
 //OPTIMIZING THE VALUE OF C FOR ENUMERATION
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec);
+GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, long prec);
 
 //REGRESSIONS
 GEN OLS(GEN X, GEN y, int retrsqr);

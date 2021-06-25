@@ -81,7 +81,6 @@ static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN optAval(GEN Q, long prec);
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
 
 //3: HELPER METHODS
@@ -2700,6 +2699,25 @@ GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN
   return gerepileupto(top, qalg_fdom(Q, p, dispprogress, dumppartial, partialset, ANRdata, tol, prec));
 }
 
+//Generate the optimal C value
+GEN algfdom_bestC(GEN A, long prec){
+  pari_sp top=avma;
+  GEN nf=alg_get_center(A);//Field
+  long n=nf_get_degree(nf);//Degree of field
+  GEN algdisc=algnormdisc(A);//Norm of disc
+  GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
+  GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
+  GEN npart;
+  if(n==1) npart=dbltor(2.841075459);
+  else if(n==2) npart=dbltor(1.002848213);
+  else{
+	GEN intercept=dbltor(0.690934049);
+	GEN slope=dbltor(0.085442988);
+	npart=gadd(intercept, gmulgs(slope, n));
+  }
+  return gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
+}
+
 //Returns the area of the fundamental domain of the order stored in A.
 GEN algfdomarea(GEN A, int lessprec, long prec){
   pari_sp top=avma;
@@ -2809,26 +2827,6 @@ GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, long prec){
 //FUNDAMENTAL DOMAIN COMPUTATION
 
 
-//Generate the optimal A value
-static GEN optAval(GEN Q, long prec){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(Q);//Algebra
-  GEN nf=alg_get_center(A);//Field
-  long n=nf_get_degree(nf);//Degree of field
-  GEN algdisc=algnormdisc(A);//Norm of disc
-  GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
-  GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
-  GEN npart;
-  if(n==1) npart=dbltor(2.841075459);
-  else if(n==2) npart=dbltor(1.002848213);
-  else{
-	GEN intercept=dbltor(0.690934049);
-	GEN slope=dbltor(0.085442988);
-	npart=gadd(intercept, gmulgs(slope, n));
-  }
-  return gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
-}
-
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
@@ -2839,7 +2837,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=optAval(Q, prec);
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=algfdom_bestC(Alg, prec);
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);
@@ -3250,12 +3248,6 @@ GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 //TEMPORARY TESTING
 
-GEN bestAval(GEN A, long prec){
-  pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, optAval(Q, prec));
-}
-
 //We have a map [0,1]^2->ball of radius R in hyperbolic space, such that the uniform distribution on [0,1]^2 is sent to the hyperbolic distribution on B(R).
 static GEN ballradRpt(GEN x, GEN y, GEN R, long prec){
   pari_sp top=avma;
@@ -3311,7 +3303,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=optAval(Q, prec);
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=algfdom_bestC(Alg, prec);
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);
@@ -3440,9 +3432,7 @@ static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GE
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-	A=optAval(Q, prec);
-  }
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=algfdom_bestC(Alg, prec);
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);
