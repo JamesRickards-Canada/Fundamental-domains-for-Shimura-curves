@@ -303,7 +303,7 @@ GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
 	  mid=avma;
       tries++;
 	  GEN z=randompoint_ud(R, prec);
-      qalg_smallnorm1elts_qfminim(Q, gel(Cset, i), p, gen_0, z, 0, nfdecomp, normformpart, prec);
+      qalg_smallnorm1elts_qfminim(Q, p, gel(Cset, i), gen_0, z, 0, nfdecomp, normformpart, prec);
 	  t=timer_get(&T);
 	  avma=mid;
 	}
@@ -320,6 +320,8 @@ The formula is B=Bhat=(X*X^T)^(-1)Xy, for the ordinary least squares regression 
 Returns [best fit, R^2]*/
 GEN OLS(GEN X, GEN y, int retrsqr){
   pari_sp top=avma;
+  if(typ(y)!=t_COL) y=gtocol(y);
+  if(lg(y)!=lg(X)) pari_err_TYPE("The inputs must have the same length.", mkvec2(X, y));
   GEN Xy=RgM_RgC_mul(X, y);
   GEN XTX=RgM_multosym(X, shallowtrans(X));//X*X^T, which is symmetric
   GEN fit=RgM_solve(XTX, Xy);//Best fit.
@@ -327,6 +329,15 @@ GEN OLS(GEN X, GEN y, int retrsqr){
   if(!retrsqr) return gerepileupto(top, fit);
   GEN rsqr=rsquared(X, y, fit);
   return gerepilecopy(top, mkvec2(fit, rsqr));
+}
+
+//OLS, where there is only one input variable. This just puts it into a matrix form and calls OLS, and is included for convenience.
+GEN OLS_single(GEN x, GEN y, int retrsqr){
+  pari_sp top=avma;
+  long lgx=lg(x);
+  GEN xmat=cgetg(lgx, t_MAT);
+  for(long i=1;i<lgx;i++) gel(xmat, i)=mkcol2(gen_1, gel(x, i));
+  return gerepileupto(top, OLS(xmat, y, retrsqr));
 }
 
 //Given inputs for OLS and the proposed linear fit, this returns the R^2 value of the regression.

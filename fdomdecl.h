@@ -145,4 +145,5 @@ GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec);
 
 //REGRESSIONS
 GEN OLS(GEN X, GEN y, int retrsqr);
+GEN OLS_single(GEN x, GEN y, int retrsqr);
 GEN rsquared(GEN X, GEN y, GEN fit);
