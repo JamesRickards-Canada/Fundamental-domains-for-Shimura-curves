@@ -136,4 +136,10 @@ GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algswapab(GEN A);
-GEN smallalgebras(GEN F, long nwant, GEN Dmin, long maxcomptime, int allowswap);
+GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int allowswap);
+
+//SECTION 3: PRODUCING DATA FOR MY PAPER
+
+//3: REGRESSIONS
+GEN OLS(GEN X, GEN y, int retrsqr);
+GEN rsquared(GEN X, GEN y, GEN fit);

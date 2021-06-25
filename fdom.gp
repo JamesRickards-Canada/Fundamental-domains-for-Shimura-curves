@@ -66,9 +66,17 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algshimura_ab,"Inputs F, D, {place=1}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer D, integer place between 1 and deg(F), maxcomptime= nonnegative integer, allowswap=0, 1.\n Returns [a, b] such that B=(a, b/F) is a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods. If maxcomptime!=0, we stop after that many seconds. If allowswap=0, then we do NOT allow the swapping of a, b in output of alginit (we require a>0 at the split real place, and may need to swap), and instead return 0. This is recommended if deg(F)>=6, as the swapped algebra is typically far to massive (e.g. sometimes run out of memory, even with 4GB).");
 	install("algswapab","G","algswapab","./libfdom.so");
 	addhelp(algswapab,"Input A, a quaternion algebra=(a, b/F).\n Returns (b, a/F), i.e. swapping a and b.");
-	install("smallalgebras","GLD2,G,D20,L,D1,L,","smallalgebras","./libfdom.so");
-	addhelp(smallalgebras,"Inputs F, nwant, {Dmin=2}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer nwant, Dmin>=2 integer, maxcomptime= nonnegative integer, allowswap=0 or 1.\n Finds and returns nwant pairs [a, b] corresponding to quaternion algebras over F split at exactly one real place. We search for algebras starting at Nm_F/Q(disc(A))=Dmin. If maxcomptime!=0, we allow that many seconds for each search (recommended if deg(F)>=6). If allowswap=0, we do NOT allow the swapping of a, b, in the found algebra (the method will find fewer algebras, but the coefficients will be better). This is recommended if deg(F)>=6.");
-	
+	install("smallalgebras","GLD2,G,D0,G,D20,L,D1,L,","smallalgebras","./libfdom.so");
+	addhelp(smallalgebras,"Inputs F, nwant, {Dmin=2}, {Dmax=oo}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer nwant, Dmin>=2 integer, maxcomptime= nonnegative integer, allowswap=0 or 1.\n Finds and returns nwant pairs [a, b] corresponding to quaternion algebras over F split at exactly one real place. The return format is [{Nm_F/Q(disc(A)}, {[a,b]}]. We search for algebras starting at Nm_F/Q(disc(A))=Dmin. If Dmax is non-zero, we stop searching at Dmax (and possibly return less than nwant algebras). If maxcomptime!=0, we allow that many seconds for each search (recommended if deg(F)>=6). If allowswap=0, we do NOT allow the swapping of a, b, in the found algebra (the method will find fewer algebras, but the coefficients will be better). This is recommended if deg(F)>=6.");
+
+\\PAPER METHODS
+
+	\\REGRESSIONS
+	install("OLS","GGD1,L,","OLS","./libfdom.so");
+	addhelp(OLS,"Inputs X, y, {retrsqr=1}:  m*n matrix X with top row being all 1's, length n column vector y.\n Performs ordinary least squares regression on the data, where the n inputs are the columns of X, and the outputs are the entries of y. We must include a constant term, hence why the first row of X must be all 1's. If retrsqr=1, returns [pararms, R^2], and otherwise returns params, where params is the length m column vector of best fit parameters.");
+	install("rsquared","GGG","rsquared","./libfdom.so");
+	addhelp(rsquared,"Inputs X, y, fit: X and y data supplied to OLS, and fit the proposed fit (a column vector of parameters). This returns the R^2 value for this proposal.");
+
 \\TEMPORARY
 install("algnormform","Gp","algnormform","./libfdom.so");
 install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");

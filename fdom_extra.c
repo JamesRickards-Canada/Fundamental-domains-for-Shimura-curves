@@ -250,20 +250,62 @@ GEN algswapab(GEN A){
   return gerepileupto(top, alginit(alg_get_center(A), mkvec2(b, a), -1, 1));
 }
 
-//Returns nwant pairs [a, b] for quaternion algebras over the field F that are suitable for fundamental domains. We start at N_F/Q(disc)=Dmin if supplied, and 2 otherwise.
-GEN smallalgebras(GEN F, long nwant, GEN Dmin, long maxcomptime, int allowswap){
+//Returns at most nwant pairs [a, b] for quaternion algebras over the field F that are suitable for fundamental domains. We start at N_F/Q(disc)=Dmin if supplied, and 2 otherwise. We stop at Dmax if supplied as non-zero, and otherwise continue until we fill up all nwant. Returns [discs, pairs]
+GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int allowswap){
   pari_sp top=avma;
-  GEN v=cgetg(nwant+1, t_VEC);
+  long nwp1=nwant+1;
+  GEN Ds=vectrunc_init(nwp1);
+  GEN v=vectrunc_init(nwp1);
+  if(gequal0(Dmax)) Dmax=mkoo();
   long ind=1;
   GEN D=gceil(gmax(Dmin, gen_2));//Starting D
-  while(ind<=nwant){
+  while(ind<=nwant && gcmp(D, Dmax)<=0){
 	GEN A=algshimura_ab(F, D, 1, maxcomptime, allowswap);
 	if(!gequal0(A)){
-	  gel(v, ind)=A;
+	  vectrunc_append(Ds, D);
+	  vectrunc_append(v, A);
 	  ind++;
 	}
 	D=gaddgs(D, 1);
   }
-  return gerepilecopy(top, v);
+  return gerepilecopy(top, mkvec2(Ds, v));
 }
+
+
+//SECTION 3: PRODUCING DATA FOR MY PAPER
+
+
+//3: REGRESSIONS
+
+/*Perform ordinary least squares regression. X is a matrix whose columns are the parameters, and y is a column vector of results. Must include linear term as first variable of X.
+The formula is B=Bhat=(X*X^T)^(-1)Xy, for the ordinary least squares regression for y=X^T*B+error (formula differs to Wikipedia due to X here being the transpose of what they define there.
+Returns [best fit, R^2]*/
+GEN OLS(GEN X, GEN y, int retrsqr){
+  pari_sp top=avma;
+  GEN Xy=RgM_RgC_mul(X, y);
+  GEN XTX=RgM_multosym(X, shallowtrans(X));//X*X^T, which is symmetric
+  GEN fit=RgM_solve(XTX, Xy);//Best fit.
+  if(!fit) pari_err(e_MISC, "Could not compute matrix inverse. Error with given data or with precision?");
+  if(!retrsqr) return gerepileupto(top, fit);
+  GEN rsqr=rsquared(X, y, fit);
+  return gerepilecopy(top, mkvec2(fit, rsqr));
+}
+
+//Given inputs for OLS and the proposed linear fit, this returns the R^2 value of the regression.
+GEN rsquared(GEN X, GEN y, GEN fit){
+  pari_sp top=avma;
+  long n=lg(y)-1;//Number of observations
+  GEN predicted=RgV_RgM_mul(shallowtrans(fit), X);//1xn matrix of the fitted values.
+  GEN yavg=gen_0;
+  for(long i=1;i<=n;i++) yavg=gadd(yavg, gel(y, i));
+  yavg=gdivgs(yavg, n);//Average value of y
+  GEN sstot=gen_0;
+  GEN ssres=gen_0;
+  for(long i=1;i<=n;i++){
+	sstot=gadd(sstot, gsqr(gsub(gel(y, i), yavg)));
+	ssres=gadd(ssres, gsqr(gsub(gel(y, i), gel(predicted, i))));
+  }
+  return gerepileupto(top, gsubsg(1, gdiv(ssres, sstot)));
+}
+
 
