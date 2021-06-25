@@ -2810,11 +2810,15 @@ static GEN optAval(GEN Q, long prec){
   GEN algdisc=algnormdisc(A);//Norm of disc
   GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
-  GEN nint=dbltor(0.435547);
-  GEN nslo=dbltor(0.113346);
-  GEN scale=dbltor(1);
-  GEN npart=gadd(gmulgs(nslo, n), nint);
-  return gerepileupto(top, gmul(scale, gmul(npart, discpartroot)));//scale*(C_1+C_2n)*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
+  GEN npart;
+  if(n==1) npart=dbltor(2.841075459);
+  else if(n==2) npart=dbltor(1.002848213);
+  else{
+	GEN intercept=dbltor(0.690934049);
+	GEN slope=dbltor(0.085442988);
+	npart=gadd(intercept, gmulgs(slope, n));
+  }
+  return gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
 }
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
@@ -2827,14 +2831,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-	//GEN alpha=stoi(3);
-	//GEN orderpart=gen_1;
-	//GEN rams=qalg_get_rams(Q);
-	//for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
-	//A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
-	A=optAval(Q, prec);
-  }
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=optAval(Q, prec);
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);
@@ -3303,7 +3300,7 @@ GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset
   return gerepileupto(top, qalg_fdom_tester(Q, p, dispprogress, dumppartial, partialset, ANRdata, tol, prec));
 }
 
-//Generate the fundamental domain for a quaternion algebra initialized with alginit
+//Generate the fundamental domain for a quaternion algebra initialized with alginit. QFMINIM
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
@@ -3313,14 +3310,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))){//A
-	//GEN alpha=stoi(3);
-	//GEN orderpart=gen_1;
-	//GEN rams=qalg_get_rams(Q);
-	//for(long i=1;i<lg(rams);i++) orderpart=gmul(orderpart, idealnorm(K, gel(rams, i)));
-	//A=gceil(gmul(alpha, gpow(gabs(gmul(nfdisc(nf_get_pol(K)), orderpart), prec), gdivgs(gen_1, 4*nf_get_degree(K)), prec)));
-	A=optAval(Q, prec);
-  }
+  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=optAval(Q, prec);
   else A=gel(ANRdata, 1);
   if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);
