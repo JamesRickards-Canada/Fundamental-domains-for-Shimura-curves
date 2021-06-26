@@ -78,16 +78,18 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	\\OPTIMIZING THE VALUE OF C FOR ENUMERATION
 	install("enum_time","GGGD300,L,p","enum_time","./libfdom.so");
 	addhelp(enum_time,"Inputs A, p, Cset, {mintesttime=300}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, vector of positive real numbers, mintesttime positive integer.\n This computes how long the call to algsmallnorm1elts(A, p, C, z1, z2) takes for all C in Cset, and returns a column vector of the timings. This does NOT take into account time spent initializing things related to the algebra (e.g. cholesky of the norm form), since this can be computed once and reused many times. If the time taken is <mintesttime (in milliseconds), we repeat the test K times until we have taken at least mintesttime, and divide the final result by K. A larger value of mintesttime will produce more accurate results, but will take longer.");
-	install("enum_time_range","GGGGLD300,L,Dsp","enum_time_range","./libfdom.so");
-	addhelp(enum_time_range,"Inputs: A, p, Cmin, Cmax, ntrials, {mintesttime=300}, {fdata=NULL}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, positive real numbers Cmin and Cmax, positive integer ntrials>=2, positive integer mintesttime, file name fdata.\n This takes the interval [Cmin, Cmax], chops it up into ntrials pieces, and runs enum_time on this. We run the linear regression on this, and return [[A,B]~, R^2], where we fit to the curve t=A+B*C^(2n), n=degree of the number field F. If fdata!=NULL, we also write the pairs (C, t) to the file plots/fdata.dat (the first line is 'x y', so that it can be used to create a LaTeX plot if desired).");
+	install("enum_time_range","GGGGLD300,L,DsD1,L,D1,L,p","enum_time_range","./libfdom.so");
+	addhelp(enum_time_range,"Inputs: A, p, Cmin, Cmax, ntrials, {mintesttime=300}, {fdata=NULL}, {compile=1}, {WSL=1}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, positive real numbers Cmin and Cmax, positive integer ntrials>=2, positive integer mintesttime, file name fdata, compile and WSL=0, 1.\n This takes the interval [Cmin, Cmax], chops it up into ntrials pieces, and runs enum_time on this. We run the linear regression on this, and return [[A,B]~, R^2], where we fit to the curve t=A+B*C^(2n), n=degree of the number field F. If fdata!=NULL, we also write the pairs (C, t) to the file plots/build/fdata.dat (the first line is 'x y', so that it can be used to create a LaTeX plot if desired). If compile=1, we compile the plot. If WSL=1 we assume we are on Windows Subsystem for Linux and also view the plot, and otherwise we just compile it assuming we are in Linux.");
 
-	\\REGRESSIONS
+	\\REGRESSIONS & PLOTS
 	install("OLS","GGD1,L,","OLS","./libfdom.so");
 	addhelp(OLS,"Inputs X, y, {retrsqr=1}:  m*n matrix X with top row being all 1's, length n column vector y.\n Performs ordinary least squares regression on the data, where the n inputs are the columns of X, and the outputs are the entries of y. We must include a constant term, hence why the first row of X must be all 1's. If retrsqr=1, returns [pararms, R^2], and otherwise returns params, where params is the length m column vector of best fit parameters.");
 	install("OLS_single","GGD1,L,","OLS_single","./libfdom.so");
 	addhelp(OLS_single,"Inputs x, y, {retrsqr=1}: vector x, column vector y, retrsqr=0, 1. Performs linear regression for a single variable (essentially a macro for OLS with y=mx+b.");
 	install("rsquared","GGG","rsquared","./libfdom.so");
 	addhelp(rsquared,"Inputs X, y, fit: X and y data supplied to OLS, and fit the proposed fit (a column vector of parameters). This returns the R^2 value for this proposal.");
+	install("plot_compile","vsD1,L,","plot_compile","./libfdom.so");
+	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.txt and moves the output to plots/fname_plot.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
 
 \\TEMPORARY
 install("algnormform","Gp","algnormform","./libfdom.so");

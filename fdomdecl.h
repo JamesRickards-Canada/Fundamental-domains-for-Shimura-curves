@@ -142,9 +142,10 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 
 //OPTIMIZING THE VALUE OF C FOR ENUMERATION
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec);
-GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, long prec);
+GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, int compile, int WSL, long prec);
 
-//REGRESSIONS
+//REGRESSIONS & PLOTS
 GEN OLS(GEN X, GEN y, int retrsqr);
 GEN OLS_single(GEN x, GEN y, int retrsqr);
 GEN rsquared(GEN X, GEN y, GEN fit);
+void plot_compile(char *fname, int WSL);

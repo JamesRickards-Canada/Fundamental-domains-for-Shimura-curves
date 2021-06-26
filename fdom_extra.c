@@ -17,6 +17,8 @@
 //2: QUATERNION ALGEBRA METHODS
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 
+//3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
+static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
 
 //SECTION 1: GEOMETRY METHODS
 
@@ -277,6 +279,7 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 
+
 //Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
   pari_sp top=avma, mid;
@@ -314,8 +317,8 @@ GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
   return gerepilecopy(top, avgtimes);
 }
 
-//enum_time, but we use ntrials>=2 from Cmin to Cmax. This also performs the regression on the data, and returns the result. We store the data in plots/fdata.dat if this is not NULL,
-GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, long prec){
+//enum_time, but we use ntrials>=2 from Cmin to Cmax. This also performs the regression on the data, and returns the result. We store the data in plots/build/fdata.dat, and compile the latex document to view it if this is not NULL.
+GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, int compile, int WSL, long prec){
   pari_sp top=avma;
   if(ntrials<=1) ntrials=2;
   GEN Clist=cgetg(ntrials+1, t_VEC);
@@ -327,11 +330,11 @@ GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintest
   }
   GEN times=enum_time(A, p, Clist, mintesttime, prec);//Executing the computation
   if(fdata){
-	if(!pari_is_dir("plots")){//Checking the directory
-      int s=system("mkdir -p plots");
+	if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
     }
-    char *fdata_full=pari_sprintf("plots/%s.dat", fdata);
+    char *fdata_full=pari_sprintf("plots/build/%s.dat", fdata);
     FILE *f=fopen(fdata_full, "w");
 	pari_free(fdata_full);
 	pari_fprintf(f, "x y\n");
@@ -343,11 +346,41 @@ GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintest
   GEN Xdata=cgetg(ntrials+1, t_MAT);//Prep the regression
   for(long i=1;i<=ntrials;i++) gel(Xdata, i)=mkcol2(gen_1, gpowgs(gel(Clist, i), twon));//The X data
   GEN reg=gerepileupto(top, OLS(Xdata, times, 1));
+  if(compile && fdata){
+	enum_time_plot(A, reg, Cmin, Cmax, fdata, WSL);
+	plot_compile(fdata, WSL);
+  }
   return reg;
 }
 
+//Prepares a basic latex plot of the data.
+static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL){
+  pari_sp top=avma;
+  if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  GEN nf=alg_get_center(A);
+  long n=nf_get_degree(nf);
+  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fdata);
+  FILE *f=fopen(plotmake, "w");
+  pari_free(plotmake);
+  pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n%%Call pdflatex -shell-escape <filename> to recompile\n\\tikzsetnextfilename{%s_plot}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  pari_fprintf(f, "[xlabel=$C$, ylabel=Time,\n");
+  pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
+  pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
+  pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
+  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gmael(reg, 1, 1), gmael(reg, 1, 2));
+  for(long i=2;i<=2*n;i++) pari_fprintf(f, "*x");
+  pari_fprintf(f, ");\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  fclose(f);
+  avma=top;
+}
 
-//3: REGRESSIONS
+
+//3: REGRESSIONS & PLOTS
+
 
 /*Perform ordinary least squares regression. X is a matrix whose columns are the parameters, and y is a column vector of results. Must include linear term as first variable of X.
 The formula is B=Bhat=(X*X^T)^(-1)Xy, for the ordinary least squares regression for y=X^T*B+error (formula differs to Wikipedia due to X here being the transpose of what they define there.
@@ -389,6 +422,26 @@ GEN rsquared(GEN X, GEN y, GEN fit){
 	ssres=gadd(ssres, gsqr(gsub(gel(y, i), gel(predicted, i))));
   }
   return gerepileupto(top, gsubsg(1, gdiv(ssres, sstot)));
+}
+
+//Assumes plots/build/fname_plotter.tex points to a file making a plot. This compiles the plot, and views it if WSL=1.
+void plot_compile(char *fname, int WSL){
+  pari_sp top=avma;
+  char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter)", fname);//Build
+  int s=system(line);
+  if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  pari_free(line);
+  line=pari_sprintf("mv -f ./plots/build/%s_plot.pdf ./plots/", fname);//Move the file
+  s=system(line);
+  if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  pari_free(line);
+  if(WSL){
+    line=pari_sprintf("cmd.exe /C start plots/%s_plot.pdf", fname);//Open the file
+    s=system(line);
+	if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+	pari_free(line);
+  }
+  avma=top;
 }
 
 
