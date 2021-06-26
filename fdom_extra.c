@@ -18,6 +18,8 @@
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
+static GEN enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GEN normdecomp, GEN normformpart, long prec);
+static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
 static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
 
 //SECTION 1: GEOMETRY METHODS
@@ -280,6 +282,119 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 
 
+//Does smallnorm1elts Ntests times, and sees how many successes we get. Returns [obs, exp], with obs the number of successes, and exp the expected number (2*Pi(C-n)/area)
+GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec){
+  pari_sp top=avma;
+  GEN area=algfdomarea(A, 1, prec);
+  if(gequal0(R)){
+	GEN gamma=dbltor(2.1);
+	R=hdiscradius(gpow(area, gamma, prec), prec);
+  }
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN nf=alg_get_center(A);
+  GEN nformpart=qalg_normform(Q);
+  GEN normdecomp=mat_nfcholesky(nf, nformpart);
+  long n=4*nf_get_degree(nf);//The lg of a normal entry
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{K/Q}(nrd(elt));
+  return gerepileupto(top, enum_successrate_givendata(Q, p, C, Ntests, R, area, normdecomp, nformpart, prec));
+}
+
+//enum_successrate, but over a range of C. Prints the observed data to file plots/build/fname.dat (if not NULL), and returns [A, B, R^2]: the predicted heuristic of A+BC and the R^2 value of this heuristic (B=2Pi/area, A=-2*pi*n/area)
+GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntests, GEN R, char *fname, int compile, int WSL, long prec){
+  pari_sp top=avma;
+  GEN area=algfdomarea(A, 1, prec);//Initialize things
+  if(gequal0(R)){
+	GEN gamma=dbltor(2.1);
+	R=hdiscradius(gpow(area, gamma, prec), prec);
+  }
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN nf=alg_get_center(A);
+  GEN nformpart=qalg_normform(Q);
+  GEN normdecomp=mat_nfcholesky(nf, nformpart);
+  long n=4*nf_get_degree(nf);//The lg of a normal entry
+  for(long i=1;i<n;i++){
+	for(long j=1;j<n;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{K/Q}(nrd(elt));
+  //On to data collection
+  if(ntrials<=1) ntrials=2;
+  long ntp1=ntrials+1;
+  GEN found=cgetg(ntp1, t_COL);
+  GEN Cmat=cgetg(ntp1, t_MAT);
+  GEN C=Cmin;
+  GEN blen=gdivgs(gsub(Cmax, Cmin), ntrials-1);
+  for(long i=1;i<=ntrials;i++){//Each trial
+    gel(found, i)=gel(enum_successrate_givendata(Q, p, C, Ntests, R, area, normdecomp, nformpart, prec), 1);
+	gel(Cmat, i)=mkcol2(gen_1, C);
+	C=gadd(C, blen);
+	if(i%10==0) pari_printf("Trial %d done.\n", i);
+  }
+  if(fname){
+	if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+	}
+	char *fname_full=pari_sprintf("plots/build/%s.dat", fname);
+    FILE *f=fopen(fname_full, "w");
+	pari_free(fname_full);
+	pari_fprintf(f, "x y\n");
+    for(long i=1;i<=ntrials;i++) pari_fprintf(f, "%Pf %Pd\n", gcoeff(Cmat, 2, i), gel(found, i));
+    fclose(f);
+  }
+  //R^2 time!
+  GEN slope=gmulgs(gdiv(Pi2n(1, prec), area), Ntests);
+  GEN constant=gmulgs(slope, -nf_get_degree(nf));
+  GEN fitdat=mkcol2(constant, slope);
+  if(compile && fname){
+	enum_successrate_plot(A, fitdat, Cmin, Cmax, fname, WSL);
+	plot_compile(fname, WSL);
+  }
+  return gerepilecopy(top, mkvec3(constant, slope, rsquared(Cmat, found, fitdat)));
+}
+
+//enum_successrate with the data initialized.
+static GEN enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GEN normdecomp, GEN nformpart, long prec){
+  pari_sp top=avma, mid;
+  GEN nf=alg_get_center(qalg_get_alg(Q));
+  long found=0;
+  for(long test=1;test<=Ntests;test++){
+	mid=avma;
+	GEN z=randompoint_ud(R, prec);
+	GEN elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, normdecomp, nformpart, prec);
+	if(lg(elts)>1) found=found+lg(elts)-1;
+	avma=mid;
+  }
+  GEN expect=gdiv(gmul(gmulgs(Pi2n(1, prec), Ntests), gsubgs(C, nf_get_degree(nf))), area);
+  return gerepilecopy(top, mkvec2(stoi(found), expect));
+}
+
+//Prepares a basic latex plot of the data.
+static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL){
+  pari_sp top=avma;
+  if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fdata);
+  FILE *f=fopen(plotmake, "w");
+  pari_free(plotmake);
+  pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s_plot}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  pari_fprintf(f, "[xlabel=$C$, ylabel=Elements found,\n");
+  pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
+  pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
+  pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
+  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gel(reg, 1), gel(reg, 2));
+  pari_fprintf(f, ");\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  fclose(f);
+  avma=top;
+}
+
 //Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
   pari_sp top=avma, mid;
@@ -366,7 +481,7 @@ static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int 
   FILE *f=fopen(plotmake, "w");
   pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
-  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n%%Call pdflatex -shell-escape <filename> to recompile\n\\tikzsetnextfilename{%s_plot}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s_plot}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
   pari_fprintf(f, "[xlabel=$C$, ylabel=Time,\n");
   pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
