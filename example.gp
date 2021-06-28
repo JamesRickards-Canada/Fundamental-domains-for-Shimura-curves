@@ -1,7 +1,7 @@
 F=nfinit(y^2-11);\\The field Q(sqrt(11))
 A=alginit(F, [y-3, -3]);\\Quaternion algebra (y-3,-3/F), which is split at one real place and has a>0 at that split place
-area=algfdomarea(A);\\Computation of the area of the fundamental domain (not necessary to pass to the fdom method, but useful for testing out different initial constants)
-dom=algfdom(A, I/2, 1, area);\\Computation of the fundamental domain
+area=algfdomarea(A);\\Computation of the area of the fundamental domain
+dom=algfdom(A, I/2);\\Computation of the fundamental domain
 elt=algmulvec(A, dom[1], [1,2,7,1,2,2,1,5,7]);\\Generating an element of the group (happens to be hyperbolic)
 geod=algfdomrootgeodesic(A, dom, elt);\\Finding the geodesic in the fundamental domain
 python_printfdom(dom, "fdom1");\\When printing fundamental domains, you must start the file name with "fd"
