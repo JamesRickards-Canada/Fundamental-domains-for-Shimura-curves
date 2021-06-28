@@ -295,8 +295,8 @@ GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec){
   GEN nformpart=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nformpart);
   long n=4*nf_get_degree(nf);//The lg of a normal entry
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
+  for(long i=1;i<=n;i++){
+	for(long j=1;j<=n;j++){
 	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
   }//Tr_{K/Q}(nrd(elt));
@@ -316,8 +316,8 @@ GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long 
   GEN nformpart=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nformpart);
   long n=4*nf_get_degree(nf);//The lg of a normal entry
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
+  for(long i=1;i<=n;i++){
+	for(long j=1;j<=n;j++){
 	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
   }//Tr_{K/Q}(nrd(elt));
@@ -481,7 +481,7 @@ static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int 
   FILE *f=fopen(plotmake, "w");
   pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
-  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s_plot}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
   pari_fprintf(f, "[xlabel=$C$, ylabel=Time,\n");
   pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
@@ -546,12 +546,12 @@ void plot_compile(char *fname, int WSL){
   int s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   pari_free(line);
-  line=pari_sprintf("mv -f ./plots/build/%s_plot.pdf ./plots/", fname);//Move the file
+  line=pari_sprintf("mv -f ./plots/build/%s.pdf ./plots/", fname);//Move the file
   s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   pari_free(line);
   if(WSL){
-    line=pari_sprintf("cmd.exe /C start plots/%s_plot.pdf", fname);//Open the file
+    line=pari_sprintf("cmd.exe /C start plots/%s.pdf", fname);//Open the file
     s=system(line);
 	if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
 	pari_free(line);

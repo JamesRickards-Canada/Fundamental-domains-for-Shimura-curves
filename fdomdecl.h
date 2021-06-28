@@ -82,7 +82,7 @@ GEN deftol(long prec);
 
 //QUATERNION METHODS
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
-GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
+GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, long prec);
 GEN algfdom_bestC(GEN A, long prec);
 GEN algfdomarea(GEN A, int lessprec, long prec);
 GEN algfdomminimalcycles(GEN A, GEN U, long prec);
@@ -102,6 +102,8 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
 GEN qalg_fdominitialize(GEN A, long prec);
 GEN qalg_normform(GEN Q);
+GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret, GEN nfdecomp, GEN nformpart, long prec);
+GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN nform, GEN nformpart, long prec);
 
 //3: SHALLOW RETRIEVAL METHODS
 GEN qalg_get_alg(GEN Q);
@@ -113,14 +115,8 @@ GEN qalg_get_roots(GEN Q);
 GEN algnormform(GEN A, long prec);
 GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN balltester(GEN x, GEN y, GEN R, long prec);
-GEN algfdom_test2(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec);
 GEN qalg_smallnorm1elts_condition2(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
 GEN algsmallnorm1elts_condition2(GEN A, GEN p, GEN C, GEN z1, GEN z2, long triesperelt, long maxelts, long prec);
-
-//TEMPORARILY NON-STATIC
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec);
-GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec);
-
 
 
 //FDOM_EXTRA METHODS

@@ -81,7 +81,7 @@ static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, int type, GEN tol, long prec);
 
 //3: HELPER METHODS
 static long algsplitoo(GEN A);
@@ -98,7 +98,6 @@ static int qalg_istriv(GEN *data, GEN x);
 //TEMPORARY TESTING METHODS
 static GEN ballradRpt(GEN x, GEN y, GEN R, long prec);
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
-static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec);
 static GEN smallvectors_cholesky2(GEN Q, GEN C, long maxN, long maxelts, GEN condition, long prec);
 static GEN smallvectors_nfcondition2(GEN A, GEN C, long maxN, long maxelts, GEN condition, long prec);
 
@@ -2692,11 +2691,11 @@ GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain
-GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec){
+GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom(Q, p, dispprogress, dumppartial, partialset, ANRdata, tol, prec));
+  return gerepileupto(top, qalg_fdom(Q, p, dispprogress, dumppartial, partialset, CNRdata, type, tol, prec));
 }
 
 //Generate the optimal C value
@@ -2828,60 +2827,74 @@ GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, long prec){
 
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec){
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, GEN tol, long prec){
   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
-  GEN Alg=qalg_get_alg(Q);
-  GEN K=alg_get_center(Alg);
+  GEN A=qalg_get_alg(Q);
+  GEN nf=alg_get_center(A);
+  long nfdeg=nf_get_degree(nf);
   GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
-  GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=algfdom_bestC(Alg, prec);
-  else A=gel(ANRdata, 1);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
+  GEN C, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=algfdom_bestC(A, prec);
+  else C=gel(CNRdata, 1);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);
     N=gfloor(gadd(gmul(beta, area), gen_2));//We add 2 to make sure N>=2; errors can happen later otherwise
   }
-  else N=gel(ANRdata, 2);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 3))){//R
+  else N=gel(CNRdata, 2);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 3))){//R
 	GEN gamma=dbltor(2.1);//2.1
 	R=hdiscradius(gpow(area, gamma, prec), prec);
   }
-  else R=gel(ANRdata, 3);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 4))) opnu=gen_2;
-  else opnu=gel(ANRdata, 4);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 5))) epsilon=gdivgs(gen_1, 6);
-  else epsilon=gel(ANRdata, 5);
+  else R=gel(CNRdata, 3);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) opnu=gen_2;
+  else opnu=gel(CNRdata, 4);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 5))) epsilon=gdivgs(gen_1, 6);
+  else epsilon=gel(CNRdata, 5);
   
-  if(dispprogress) pari_printf("Initial constants:\n   A=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", A, N, R, opnu, epsilon, area);
+  if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, opnu, epsilon, area);
   
-  GEN id=gel(alg_get_basis(Alg), 1);//The identity  
+  GEN id=gel(alg_get_basis(A), 1);//The identity  
   long iN;
   GEN points, w;
   GEN U=cgetg(2, t_VEC);
   gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
   if(!gequal0(partialset)) U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   
-  long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
-  GEN normformpart=qalg_normform(Q);
-  GEN normform=gcopy(normformpart);//Only with condition
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
-	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
+  long fourn=4*nfdeg;//The lg of a normal entry
+  GEN nformpart=qalg_normform(Q);
+  GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
+  long maxN, maxelts;
+  if(type==1 || (type==0 && nfdeg>=2)){//qfminim
+    type=1;//Setting in case type=0
+	nfdecomp=mat_nfcholesky(nf, nformpart);
+	if(nfdeg==1) maxelts=4;
+	else maxelts=1;
+  }
+  else{//type=2 or type=0 and nfdeg=1, i.e. nf=Q. condition
+    type=2;//Setting in case type=0
+	nform=gcopy(nformpart);
+	maxN=itos(gceil(area));
+    if(maxN<=10) maxN=10;
+    if(nfdeg==1) maxelts=4;
+	else maxelts=1;
+  }
+  for(long i=1;i<=fourn;i++){
+	for(long j=1;j<=fourn;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
-  }//Tr_{K/Q}(nrd(elt));
-  long maxN=itos(gceil(area));
-  if(maxN<=10) maxN=10;
-  long maxelts=3;
+  }//Tr_{nf/Q}(nrd(elt));
+  
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
-  
+
   mid=avma;
   long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
-  
+
   for(;;){
 	pass++;
 	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
@@ -2906,8 +2919,9 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
-		GEN smallelts=qalg_smallnorm1elts_condition(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		GEN smallelts;
+		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+		else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxN, maxelts, nform, nformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -2922,8 +2936,9 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 		gel(points, i)=cgetg(1, t_VEC);
 	  }
 	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
-	    GEN smallelts=qalg_smallnorm1elts_condition(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
+		GEN smallelts;
+		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+	    else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxN, maxelts, nform, nformpart, prec);
 		if(smallelts) gel(points, i)=smallelts;
 		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
 	  }
@@ -3139,12 +3154,12 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
 }
 
 //Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point. maxret is the maximum number of return elements (or 0 for all norm 1 elts)
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret, GEN normdecomp, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret, GEN nfdecomp, GEN nformpart, long prec){
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);
   GEN mats=psltopsu_transmats(p);
-  GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
+  GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   GEN vposs, norm;
   pari_CATCH(e_PREC){
 	pari_warn(warner, "Too low precision for qfminim. Consider increasing the precision.");
@@ -3161,7 +3176,7 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret
   GEN ret=vectrunc_init(mret);
   for(long i=1;i<nvposs;i++){
 	mid=avma;
-	norm=algnorm_chol(nf, normdecomp, gel(vposs, i));
+	norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
 	if(gequal(norm, gen_1)){
 	  avma=mid;
 	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
@@ -3174,12 +3189,12 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxret
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
+GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN nform, GEN nformpart, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);
-  GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, normformpart, prec);
+  GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   GEN A=qalg_get_alg(Q);
-  return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxN, maxelts, mkvec3(alg_get_center(A), normform, gen_1), prec));
+  return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxN, maxelts, mkvec3(alg_get_center(A), nform, gen_1), prec));
 }
 
 
@@ -3412,136 +3427,6 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   }
 }
 
-
-//Initializes and checks the inputs, and computes the fundamental domain
-GEN algfdom_test2(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, long prec){
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom_tester2(Q, p, dispprogress, dumppartial, partialset, ANRdata, tol, prec));
-}
-
-
-//Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fdom_tester2(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN ANRdata, GEN tol, long prec){
-  pari_sp top=avma, mid;
-  GEN mats=psltopsu_transmats(p);
-  GEN Alg=qalg_get_alg(Q);
-  GEN K=alg_get_center(Alg);
-  GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
-  GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
-  
-  GEN A, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 1))) A=algfdom_bestC(Alg, prec);
-  else A=gel(ANRdata, 1);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 2))){//N
-    GEN beta=gdivgs(gen_1, 10);
-    N=gfloor(gadd(gmul(beta, area), gen_2));//We add 2 to make sure N>=2; errors can happen later otherwise
-  }
-  else N=gel(ANRdata, 2);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 3))){//R
-	GEN gamma=dbltor(2.1);//2.1
-	R=hdiscradius(gpow(area, gamma, prec), prec);
-  }
-  else R=gel(ANRdata, 3);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 4))) opnu=gen_2;
-  else opnu=gel(ANRdata, 4);
-  if(gequal0(ANRdata) || gequal0(gel(ANRdata, 5))) epsilon=gdivgs(gen_1, 6);
-  else epsilon=gel(ANRdata, 5);
-  
-  if(dispprogress) pari_printf("Initial constants:\n   A=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", A, N, R, opnu, epsilon, area);
-  
-  GEN id=gel(alg_get_basis(Alg), 1);//The identity  
-  long iN;
-  GEN points, w;
-  GEN U=cgetg(2, t_VEC);
-  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
-  if(!gequal0(partialset)) U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-  
-  long n=lg(gel(alg_get_basis(Alg), 1));//The lg of a normal entry
-  GEN normformpart=qalg_normform(Q);
-  GEN normform=gcopy(normformpart);//Only with condition
-  for(long i=1;i<n;i++){
-	for(long j=1;j<n;j++){
-	  gcoeff(normformpart, i, j)=nftrace(K, gcoeff(normformpart, i, j));//Taking the trace to Q
-	}
-  }//Tr_{K/Q}(nrd(elt));
-  long maxN=itos(gceil(area));
-  if(maxN<=10) maxN=10;
-  long maxelts=3;
-  FILE *f;
-  if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
-  
-  mid=avma;
-  long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
-  GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
-  int anyskipped=0;
-  
-  for(;;){
-	pass++;
-	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
-	if(nsidesp1>1){//We have a partial domain.
-	  oosides=normalizedboundary_oosides(U);
-	  istart=lg(oosides);
-	  iN=itos(gfloor(N))+istart;
-	  if(dispprogress) pari_printf("%d infinite sides\n", istart-1);
-	}
-	else iN=itos(gfloor(N))+1;
-	nskip=0;//How many points are skipped due to poor precision
-	points=cgetg(iN, t_VEC);
-	for(long i=1;i<istart;i++){//Points near the oo sides
-	  ang2=gel(gel(U, 4), oosides[i]);
-	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-	  else ang1=gel(gel(U, 4), oosides[i]-1);
-	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
-	  }
-	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
-		GEN smallelts=qalg_smallnorm1elts_condition2(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
-		if(smallelts) gel(points, i)=smallelts;
-		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-	  }
-	  pari_ENDCATCH
-	}
-	for(long i=istart;i<iN;i++){//Random points in ball of radius R
-	  w=randompoint_ud(R, prec);//Random point
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
-	  }
-	  pari_TRY{
-		//GEN smallelts=qalg_smallnorm1elts_qfminim(Q, p, A, gen_0, w, maxelts, normformpart, prec);
-	    GEN smallelts=qalg_smallnorm1elts_condition2(Q, p, A, gen_0, w, maxN, maxelts, normform, normformpart, prec);
-		if(smallelts) gel(points, i)=smallelts;
-		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-	  }
-	  pari_ENDCATCH
-	}
-	points=shallowconcat1(points);
-	if(dispprogress){
-	  if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
-	  pari_printf("%d elements found\n", lg(points)-1);
-	}
-	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
-	if(gcmp(gel(U, 6), areabound)==-1){
-	  if(dumppartial) fclose(f);
-	  return gerepileupto(top, U);
-	}
-	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
-	R=gadd(R, epsilon);//Updating R_n
-	nsidesp1=lg(gel(U, 1));//How many sides+1
-	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
-	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
-  }
-}
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
 GEN qalg_smallnorm1elts_condition2(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxN, long maxelts, GEN normform, GEN normformpart, long prec){
