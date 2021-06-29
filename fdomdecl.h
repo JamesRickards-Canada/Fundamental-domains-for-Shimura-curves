@@ -137,6 +137,8 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 
 //OPTIMIZING THE VALUE OF C FOR ENUMERATION
+GEN enum_bestC(GEN A, GEN p, GEN scale, long ntrials, long mintesttime, long prec);
+GEN enum_bestC_range(GEN Aset, GEN p, GEN scale, long ntrials, long mintesttime, char *fname, int isArange, int compile, int WSL, long prec);
 GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec);
 GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntests, GEN R, char *fname, int compile, int WSL, long prec);
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec);
@@ -144,6 +146,7 @@ GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintest
 
 //REGRESSIONS & PLOTS
 GEN OLS(GEN X, GEN y, int retrsqr);
+GEN OLS_nointercept(GEN X, GEN y, int retrsqr);
 GEN OLS_single(GEN x, GEN y, int retrsqr);
 GEN rsquared(GEN X, GEN y, GEN fit);
 void plot_compile(char *fname, int WSL);

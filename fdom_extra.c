@@ -18,9 +18,13 @@
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
+static GEN enum_bestC_givenAB(long n, GEN A, GEN B, long prec);
+static void enum_bestC_plot(GEN trend, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL);
+static long enum_nontrivial(GEN L);
 static GEN enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GEN normdecomp, GEN normformpart, long prec);
 static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
 static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
+
 
 //SECTION 1: GEOMETRY METHODS
 
@@ -282,6 +286,150 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 
 
+//Finds and returns the optimal C for a given algebra. Actually, returns [A, B, C, R^2]. We do ntrials trials in a range [Cmin, scale^(1/2n)*Cmin], where this is centred at the conjectural best C value.
+GEN enum_bestC(GEN A, GEN p, GEN scale, long ntrials, long mintesttime, long prec){
+  pari_sp top=avma;
+  GEN Cbest=algfdom_bestC(A, prec);
+  GEN nf=alg_get_center(A);
+  long n=nf_get_degree(nf), twon=2*n, fourn=2*twon;
+  GEN scalefact=gpow(scale, gdivgs(gen_1, fourn), prec);
+  GEN Cmin=gdiv(Cbest, scalefact);
+  GEN Cmax=gmul(Cbest, scalefact);
+  if(ntrials<=1) ntrials=2;//Make sure it's at least 2.
+  GEN blen=gdivgs(gsub(Cmax, Cmin), ntrials-1);//length.
+  GEN Clist=cgetg(ntrials+1, t_VEC);
+  GEN C=Cmin;
+  gel(Clist, 1)=C;
+  for(long i=2;i<=ntrials;i++){
+	C=gadd(C, blen);
+	gel(Clist, i)=C;
+  }
+  GEN times=enum_time(A, p, Clist, mintesttime, prec);//Executing the computation
+  GEN Xdata=cgetg(ntrials+1, t_MAT);
+  for(long i=1;i<=ntrials;i++) gel(Xdata, i)=mkcol2(gen_1, gpowgs(gel(Clist, i), twon));//The X data
+  GEN reg=OLS(Xdata, times, 1);
+  GEN Aco=gmael(reg, 1, 1), Bco=gmael(reg, 1, 2);
+  if(gsigne(Aco)==-1 || gsigne(Bco)==-1) pari_err(e_MISC, "One of A, B are negative! This is not correct.");
+  C=enum_bestC_givenAB(n, Aco, Bco, prec);
+  return gerepilecopy(top, mkvec4(Aco, Bco, C, gel(reg, 2)));//[A, B, C, R^2].
+}
+
+//Returns the unique real solution >n to (2n-1)C^2n-2n^2c^(2n-1)=A/B.
+static GEN enum_bestC_givenAB(long n, GEN A, GEN B, long prec){
+  pari_sp top=avma;
+  long twon=2*n;
+  long var=fetch_var();//The temporary variable number
+  GEN P=cgetg(twon+3, t_POL);
+  P[1]=evalvarn(var);
+  gel(P, 2)=gdiv(gneg(A), B);//Constant coefficient.
+  for(long i=3;i<=twon;i++) gel(P, i)=gen_0;//0's in the middle. P[i] corresp to x^(i-2)
+  gel(P, twon+1)=stoi(-twon*n);
+  gel(P, twon+2)=stoi(twon-1);
+  P=normalizepol(P);//Normalize it in place.
+  GEN rts=realroots(P, mkvec2(stoi(n), mkoo()), prec);//Real roots in [n, oo)
+  delete_var();//Delete the variable.
+  if(lg(rts)!=2) pari_err(e_MISC, "Could not find exactly one real root in [n, oo)!");
+  return gerepilecopy(top, gel(rts, 1));
+}
+
+//Does enum_bestC for all algebras in Aset. If isArange, we assume that the base fields are all the same, and are regressing along Nm(disc)^(1/n). Otherwise, we assume n is fixed, and are regressing along disc(F).
+GEN enum_bestC_range(GEN Aset, GEN p, GEN scale, long ntrials, long mintesttime, char *fname, int isArange, int compile, int WSL, long prec){
+  pari_sp top=avma;
+  if(!pari_is_dir("plots/build")){//Checking the directory
+    int s=system("mkdir -p plots/build");
+    if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *fname_full=pari_sprintf("plots/build/%s.dat", fname);
+  FILE *f=fopen(fname_full, "w");
+  pari_free(fname_full);
+  pari_fprintf(f, "x y rsqr\n");
+
+  GEN nf=alg_get_center(gel(Aset, 1));
+  long n=nf_get_degree(nf);
+  GEN oneovertwon=gdivgs(gen_1, 2*n), oneovern=gmulgs(oneovertwon, 2);
+  GEN nfdisc;
+  if(isArange) nfdisc=nf_get_disc(nf);//This is constant across all algebras when isArange=1.
+  long lgAset=lg(Aset);
+  GEN Xdat=vectrunc_init(lgAset), Cdat=coltrunc_init(lgAset), lastX=gen_0, firstX=NULL;
+  long triespertrial=3;
+  for(long i=1;i<lgAset;i++){
+	GEN A=gel(Aset, i);
+	GEN C=NULL;
+	for(long trial=1;trial<=triespertrial;trial++){
+	  pari_CATCH(CATCH_ALL){
+		C=NULL;
+		pari_printf("Error in algebra %d trial %d, retrying\n", i, trial);
+	  }
+	  pari_TRY{C=enum_bestC(A, p, scale, ntrials, mintesttime, prec);}pari_ENDCATCH
+	  if(C) break;
+	}
+	if(!C){
+	  pari_printf("Algebra %d skipped due to error.\n", i);
+	  continue;
+	}
+	if(isArange){//Varying Adisc
+	  GEN Adisc=algnormdisc(A);
+	  pari_fprintf(f, "%Pd %Pf %Pf\n", Adisc, gel(C, 3), gel(C, 4));
+	  if(!firstX) firstX=Adisc;
+	  lastX=Adisc;
+	  vectrunc_append(Xdat, gpow(Adisc, oneovertwon, prec));
+	}
+	else{//Varying F
+	  nf=alg_get_center(A);
+	  nfdisc=nf_get_disc(nf);
+	  GEN Adisc=algnormdisc(A);
+	  gel(C, 3)=gdiv(gel(C, 3), gpow(Adisc, oneovertwon, prec));
+	  pari_fprintf(f, "%Pd %Pf %Pf\n", nfdisc, gel(C, 3), gel(C, 4));
+	  if(!firstX) firstX=nfdisc;
+	  lastX=nfdisc;
+	  vectrunc_append(Xdat, gpow(nfdisc, oneovern, prec));
+	}
+	vectrunc_append(Cdat, gel(C, 3));
+	pari_printf("Algebra %d done.\n", i);
+  }
+  fclose(f);
+  GEN reg=OLS_nointercept(Xdat, Cdat, 1);
+  enum_bestC_plot(gel(reg, 1), firstX, lastX, n, fname, isArange, WSL);
+  if(compile) plot_compile(fname, WSL);
+  return gerepilecopy(top, reg);
+}
+
+//Prepares a basic latex plot of the data.
+static void enum_bestC_plot(GEN trend, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL){
+  pari_sp top=avma;
+  if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fdata);
+  FILE *f=fopen(plotmake, "w");
+  pari_free(plotmake);
+  long invpower;
+  if(isArange) invpower=2*n;
+  else invpower=n;
+  pari_fprintf(f, "\\documentclass{article}\n\\usepackage{amsmath, amssymb, pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  if(isArange) pari_fprintf(f, "[xlabel=$\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})$, ylabel=$C$,\n");
+  else pari_fprintf(f, "[xlabel=$\\text{disc}(F)$, ylabel=$C/\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})^{1/%d}$,\n", invpower);
+  pari_fprintf(f, "    xmin=0, ymin=0,\n");
+  pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
+  pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
+  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, trend, invpower);
+  pari_fprintf(f, ";\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  fclose(f);
+  avma=top;
+}
+
+//Returns the number of non-trivial elements. Must be in the basis representation
+static long enum_nontrivial(GEN L){
+  long nt=0;
+  for(long i=1;i<lg(L);i++){
+    if(!gequal(gmael(L, i, 1), gen_1) && !gequal(gmael(L, i, 1), gen_m1)){nt++;continue;}
+    for(long j=2;j<lg(gel(L, i));j++) if(!gequal0(gmael(L, i, j))){nt++;break;}
+  }
+  return nt;
+}
+
 //Does smallnorm1elts Ntests times, and sees how many successes we get. Returns [obs, exp], with obs the number of successes, and exp the expected number (2*Pi(C-n)/area)
 GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec){
   pari_sp top=avma;
@@ -366,7 +514,7 @@ static GEN enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, G
 	mid=avma;
 	GEN z=randompoint_ud(R, prec);
 	GEN elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, normdecomp, nformpart, prec);
-	if(lg(elts)>1) found=found+lg(elts)-1;
+	if(lg(elts)>1) found=found+enum_nontrivial(elts);
 	avma=mid;
   }
   GEN expect=gdiv(gmul(gmulgs(Pi2n(1, prec), Ntests), gsubgs(C, nf_get_degree(nf))), area);
@@ -384,7 +532,7 @@ static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdat
   FILE *f=fopen(plotmake, "w");
   pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
-  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s_plot}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
   pari_fprintf(f, "[xlabel=$C$, ylabel=Elements found,\n");
   pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
@@ -513,6 +661,24 @@ GEN OLS(GEN X, GEN y, int retrsqr){
   return gerepilecopy(top, mkvec2(fit, rsqr));
 }
 
+//Performs OLS where we have one independant variable and assume the intercept is 0 (so y=ax). The formua is now sum(x*y)/sum(x^2).
+GEN OLS_nointercept(GEN X, GEN y, int retrsqr){
+  pari_sp top=avma;
+  GEN xysum=gen_0, xsqrsum=gen_0;
+  if(lg(X)!=lg(y)) pari_err_TYPE("The inputs must have the same length.", mkvec2(X, y));
+  for(long i=1;i<lg(X);i++){
+	xysum=gadd(xysum, gmul(gel(X, i), gel(y, i)));
+	xsqrsum=gadd(xsqrsum, gsqr(gel(X, i)));
+  }
+  GEN fit=gdiv(xysum, xsqrsum);
+  if(!retrsqr) return gerepileupto(top, fit);
+  long lX=lg(X);
+  GEN M=cgetg(lX, t_MAT);
+  for(long i=1;i<lX;i++) gel(M, i)=mkcol2(gen_1, gel(X, i));
+  GEN rsqr=rsquared(M, y, mkcol2(gen_0, fit));
+  return gerepilecopy(top, mkvec2(fit, rsqr));
+}
+
 //OLS, where there is only one input variable. This just puts it into a matrix form and calls OLS, and is included for convenience.
 GEN OLS_single(GEN x, GEN y, int retrsqr){
   pari_sp top=avma;
@@ -542,7 +708,7 @@ GEN rsquared(GEN X, GEN y, GEN fit){
 //Assumes plots/build/fname_plotter.tex points to a file making a plot. This compiles the plot, and views it if WSL=1.
 void plot_compile(char *fname, int WSL){
   pari_sp top=avma;
-  char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter)", fname);//Build
+  char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter.tex)", fname);//Build
   int s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   pari_free(line);
