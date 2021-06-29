@@ -19,7 +19,7 @@ static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 static GEN enum_bestC_givenAB(long n, GEN A, GEN B, long prec);
-static void enum_bestC_plot(GEN trend, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL);
+static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL);
 static long enum_nontrivial(GEN L);
 static GEN enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GEN normdecomp, GEN normformpart, long prec);
 static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
@@ -389,13 +389,13 @@ GEN enum_bestC_range(GEN Aset, GEN p, GEN scale, long ntrials, long mintesttime,
   }
   fclose(f);
   GEN reg=OLS_nointercept(Xdat, Cdat, 1);
-  enum_bestC_plot(gel(reg, 1), firstX, lastX, n, fname, isArange, WSL);
+  enum_bestC_plot(reg, firstX, lastX, n, fname, isArange, WSL);
   if(compile) plot_compile(fname, WSL);
   return gerepilecopy(top, reg);
 }
 
 //Prepares a basic latex plot of the data.
-static void enum_bestC_plot(GEN trend, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL){
+static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL){
   pari_sp top=avma;
   if(!pari_is_dir("plots/build")){//Checking the directory
       int s=system("mkdir -p plots/build");
@@ -414,8 +414,8 @@ static void enum_bestC_plot(GEN trend, GEN Cmin, GEN Cmax, long n, char *fdata, 
   pari_fprintf(f, "    xmin=0, ymin=0,\n");
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
-  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, trend, invpower);
-  pari_fprintf(f, ";\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, gel(reg, 1), invpower);
+  pari_fprintf(f, ";%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
   fclose(f);
   avma=top;
 }
@@ -498,11 +498,13 @@ GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long 
   GEN slope=gmulgs(gdiv(Pi2n(1, prec), area), Ntests);
   GEN constant=gmulgs(slope, -nf_get_degree(nf));
   GEN fitdat=mkcol2(constant, slope);
+  GEN rsqr=rsquared(Cmat, found, fitdat);
+  GEN dat=mkvec3(constant, slope, rsqr);
   if(compile && fname){
-	enum_successrate_plot(A, fitdat, Cmin, Cmax, fname, WSL);
+	enum_successrate_plot(A, dat, Cmin, Cmax, fname, WSL);
 	plot_compile(fname, WSL);
   }
-  return gerepilecopy(top, mkvec3(constant, slope, rsquared(Cmat, found, fitdat)));
+  return gerepilecopy(top, dat);
 }
 
 //enum_successrate with the data initialized.
@@ -538,7 +540,7 @@ static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdat
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
   pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gel(reg, 1), gel(reg, 2));
-  pari_fprintf(f, ");\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  pari_fprintf(f, ");%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 3));
   fclose(f);
   avma=top;
 }
@@ -636,7 +638,7 @@ static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int 
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
   pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gmael(reg, 1, 1), gmael(reg, 1, 2));
   for(long i=2;i<=2*n;i++) pari_fprintf(f, "*x");
-  pari_fprintf(f, ");\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  pari_fprintf(f, ");%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
   fclose(f);
   avma=top;
 }
