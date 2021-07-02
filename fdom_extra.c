@@ -102,7 +102,6 @@ void python_printfdom(GEN U, char *filename, long prec){
 }
 
 
-
 //SECTION 2: QUATERNIONIC METHODS
 
 
@@ -409,12 +408,12 @@ static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, in
   else invpower=n;
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{amsmath, amssymb, pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
   pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
-  if(isArange) pari_fprintf(f, "[xlabel=$\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})$, ylabel=$C$,\n");
-  else pari_fprintf(f, "[xlabel=$\\text{disc}(F)$, ylabel=$C/\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})^{1/%d}$,\n", invpower);
+  if(isArange) pari_fprintf(f, "[xlabel=$\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})$, ylabel=C,\n");
+  else pari_fprintf(f, "[xlabel=$\\text{disc}(F)$, ylabel=$\\text{C}/\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})^{1/%d}$,\n", invpower);
   pari_fprintf(f, "    xmin=0, ymin=0,\n");
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
-  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, gel(reg, 1), invpower);
+  pari_fprintf(f, "    \\addplot[red, ultra thick, samples=1000, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, gel(reg, 1), invpower);
   pari_fprintf(f, ";%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
   fclose(f);
   avma=top;
@@ -535,11 +534,11 @@ static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdat
   pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
   pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
-  pari_fprintf(f, "[xlabel=$C$, ylabel=Elements found,\n");
+  pari_fprintf(f, "[xlabel=C, ylabel=Elements found,\n");
   pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
-  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gel(reg, 1), gel(reg, 2));
+  pari_fprintf(f, "    \\addplot[red, ultra thick, samples=1000, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gel(reg, 1), gel(reg, 2));
   pari_fprintf(f, ");%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 3));
   fclose(f);
   avma=top;
@@ -632,11 +631,11 @@ static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int 
   pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
   pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
-  pari_fprintf(f, "[xlabel=$C$, ylabel=Time,\n");
+  pari_fprintf(f, "[xlabel=C, ylabel=Time,\n");
   pari_fprintf(f, "    xmin=%Pf, xmax=%Pf, ymin=0,\n", gsubgs(Cmin, 1), gaddgs(Cmax, 1));
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
-  pari_fprintf(f, "    \\addplot[red, ultra thick, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gmael(reg, 1, 1), gmael(reg, 1, 2));
+  pari_fprintf(f, "    \\addplot[red, ultra thick, samples=1000, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gmael(reg, 1, 1), gmael(reg, 1, 2));
   for(long i=2;i<=2*n;i++) pari_fprintf(f, "*x");
   pari_fprintf(f, ");%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
   fclose(f);

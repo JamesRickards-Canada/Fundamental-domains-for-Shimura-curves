@@ -58,8 +58,8 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algnormdisc,"Input A, an algebra.\n Returns the norm to Q of the discriminant of A.");
 	install("algramifiedplacesf","G","algramifiedplacesf","./libfdom.so");
 	addhelp(algramifiedplacesf,"Input A, an algebra.\n Returns the vector of finite places that ramify.");
-	install("algsmallnorm1elts","GGGD0,G,D0,G,p","algsmallnorm1elts","./libfdom.so");
-	addhelp(algsmallnorm1elts,"Inputs A, p, C, {z1=0}, {z2=0}: quaternion algebra A split at one real place, upper half plane point p, positive real number C, unit disc point z.\n Computes small norm 1 elements in the order of A, i.e. such that Q_{z_1,z_2}(g)<=C, where Q is defined on page 478 of Voight ``Computing fundamental domains''. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints (the inverse radius is computed for h_2^(-1)*g*h_1, where h_i(0)=z_i; hence elements g with g(z_1) close to z_2 are found).");
+	install("algsmallnorm1elts","GGGD0,G,D0,G,D0,L,p","algsmallnorm1elts","./libfdom.so");
+	addhelp(algsmallnorm1elts,"Inputs A, p, C, {z1=0}, {z2=0}, {type=0}: quaternion algebra A split at one real place, upper half plane point p, positive real number C, unit disc points z1 and z2, type=0, 1, 2.\n Computes small norm 1 elements in the order of A, i.e. such that Q_{z_1,z_2}(g)<=C. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints: if g has norm 1, then Q_{z_1, z_2)(g)=cosh(d(gz_1, z_2))+n-1 is satisfied (n=degree of the centre of A). If type=1 we use qfminim, and type=2 we use the ``improved Fincke-Pohst''. If type=0, we take qfminim if n>=2 and improved F-P if n=1. Note that the improved F-P method may return some elements with Q(g)>C, and is generally faster if n=1, or possibly if C is really large.");
 	
 	\\fdom_extra
 	install("algmulvec","GGG","algmulvec","./libfdom.so");
@@ -70,8 +70,8 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algshimura_ab,"Inputs F, D, {place=1}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer D, integer place between 1 and deg(F), maxcomptime= nonnegative integer, allowswap=0, 1.\n Returns [a, b] such that B=(a, b/F) is a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods. If maxcomptime!=0, we stop after that many seconds. If allowswap=0, then we do NOT allow the swapping of a, b in output of alginit (we require a>0 at the split real place, and may need to swap), and instead return 0. This is recommended if deg(F)>=6, as the swapped algebra is typically far to massive (e.g. sometimes run out of memory, even with 4GB).");
 	install("algswapab","G","algswapab","./libfdom.so");
 	addhelp(algswapab,"Input A, a quaternion algebra=(a, b/F).\n Returns (b, a/F), i.e. swapping a and b.");
-	install("smallalgebras","GLD2,G,D0,G,D20,L,D1,L,","smallalgebras","./libfdom.so");
-	addhelp(smallalgebras,"Inputs F, nwant, {Dmin=2}, {Dmax=oo}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer nwant, Dmin>=2 integer, maxcomptime= nonnegative integer, allowswap=0 or 1.\n Finds and returns nwant pairs [a, b] corresponding to quaternion algebras over F split at exactly one real place. The return format is [{Nm_F/Q(disc(A)}, {[a,b]}]. We search for algebras starting at Nm_F/Q(disc(A))=Dmin. If Dmax is non-zero, we stop searching at Dmax (and possibly return less than nwant algebras). If maxcomptime!=0, we allow that many seconds for each search (recommended if deg(F)>=6). If allowswap=0, we do NOT allow the swapping of a, b, in the found algebra (the method will find fewer algebras, but the coefficients will be better). This is recommended if deg(F)>=6.");
+	install("smallalgebras","GLD2,G,D0,G,D20,L,D0,L,","smallalgebras","./libfdom.so");
+	addhelp(smallalgebras,"Inputs F, nwant, {Dmin=2}, {Dmax=oo}, {maxcomptime=20}, {allowswap=0}: totally real number field F, positive integer nwant, Dmin>=2 integer, maxcomptime= nonnegative integer, allowswap=0 or 1.\n Finds and returns nwant pairs [a, b] corresponding to quaternion algebras over F split at exactly one real place. The return format is [{Nm_F/Q(disc(A)}, {[a,b]}]. We search for algebras starting at Nm_F/Q(disc(A))=Dmin. If Dmax is non-zero, we stop searching at Dmax (and possibly return less than nwant algebras). If maxcomptime!=0, we allow that many seconds for each search (recommended if deg(F)>=6). If allowswap=0, we do NOT allow the swapping of a, b, in the found algebra (the method will find fewer algebras, but the coefficients will be better). This is recommended if deg(F)>=6.");
 
 \\PAPER METHODS
 
@@ -102,11 +102,6 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.txt and moves the output to plots/fname_plot.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
 
 \\TEMPORARY
-install("algnormform","Gp","algnormform","./libfdom.so");
-install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,p","algfdom1","./libfdom.so");
-install("balltester","GGGp","balltester","./libfdom.so");
-
-install("algsmallnorm1elts_condition","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts1","./libfdom.so");
-install("algsmallnorm1elts_condition2","GGGD0,G,D0,G,D0,L,D0,L,p","algsmallnorm1elts2","./libfdom.so");
+install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,D0,L,p","algfdom1","./libfdom.so");
 
 default(parisize, "4096M");\\Must come at the end
