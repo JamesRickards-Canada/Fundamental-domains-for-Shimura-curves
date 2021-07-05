@@ -68,7 +68,6 @@ static GEN psl_roots(GEN M, GEN tol, long prec);
 
 //2: FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
 static GEN minimalcycles(GEN pair);
-static GEN normalizedboundary_oosides(GEN U);
 
 //2: GEOMETRIC HELPER METHODS
 static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
@@ -87,13 +86,6 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 static long algsplitoo(GEN A);
 static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static GEN qalg_basis_conj(GEN Q, GEN x);
-
-//3: BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
-static GEN qalg_fdominv(GEN *data, GEN x);
-static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec);
-static GEN qalg_fdommul(GEN *data, GEN x, GEN y);
-static GEN qalg_fdomtrace(GEN *data, GEN x);
-static int qalg_istriv(GEN *data, GEN x);
 
 //TEMPORARY TESTING METHODS
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, GEN tol, long prec);
@@ -2359,7 +2351,7 @@ GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, 
 }
 
 //Returns the vecsmall of indices of the infinite sides of U.
-static GEN normalizedboundary_oosides(GEN U){
+GEN normalizedboundary_oosides(GEN U){
   long n=lg(gel(U, 1));
   GEN sides=vecsmalltrunc_init(n);
   for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
@@ -2840,7 +2832,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
-  GEN C, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
+  GEN C, N, R, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=algfdom_bestC(A, prec);
   else C=gel(CNRdata, 1);
   if(gequal0(CNRdata) || gequal0(gel(CNRdata, 2))){//N
@@ -2853,12 +2845,10 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	R=hdiscradius(gpow(area, gamma, prec), prec);
   }
   else R=gel(CNRdata, 3);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) opnu=gen_2;
-  else opnu=gel(CNRdata, 4);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 5))) epsilon=gdivgs(gen_1, 6);
-  else epsilon=gel(CNRdata, 5);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) epsilon=gdivgs(gen_1, 6);
+  else epsilon=gel(CNRdata, 4);
   
-  if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, opnu, epsilon, area);
+  if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, epsilon, area);
   
   GEN id=gel(alg_get_basis(A), 1);//The identity  
   long iN;
@@ -2870,18 +2860,14 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   long fourn=4*nfdeg;//The lg of a normal entry
   GEN nformpart=qalg_normform(Q);
   GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
-  long maxelts;
+  long maxelts=1;
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
     type=1;//Setting in case type=0
 	nfdecomp=mat_nfcholesky(nf, nformpart);
-	if(nfdeg==1) maxelts=4;
-	else maxelts=1;
   }
   else{//type=2 or type=0 and nfdeg=1, i.e. nf=Q. condition
     type=2;//Setting in case type=0
 	nform=gcopy(nformpart);
-    if(nfdeg==1) maxelts=4;
-	else maxelts=1;
   }
   for(long i=1;i<=fourn;i++){
 	for(long j=1;j<=fourn;j++){
@@ -2957,8 +2943,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	  if(dumppartial) fclose(f);
 	  return gerepileupto(top, U);
 	}
-	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
-	R=gadd(R, epsilon);//Updating R_n
+	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
 	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
@@ -3204,12 +3189,12 @@ GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxe
 
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-static GEN qalg_fdominv(GEN *data, GEN x){
+GEN qalg_fdominv(GEN *data, GEN x){
   return alginv(qalg_get_alg(*data), x);
 }
 
 //Must pass *data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
-static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec){
+GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec){
   pari_sp top=avma;
   GEN A=qalg_get_alg(*data);
   GEN rts=qalg_get_roots(*data);
@@ -3230,17 +3215,17 @@ static GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec){
 }
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-static GEN qalg_fdommul(GEN *data, GEN x, GEN y){
+GEN qalg_fdommul(GEN *data, GEN x, GEN y){
   return algmul(qalg_get_alg(*data), x, y);
 }
 
 //Must pass *data as a quaternion algebra. Returns the trace of x.
-static GEN qalg_fdomtrace(GEN *data, GEN x){
+GEN qalg_fdomtrace(GEN *data, GEN x){
   return algtrace(qalg_get_alg(*data), x, 0);
 }
 
 //Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
-static int qalg_istriv(GEN *data, GEN x){
+int qalg_istriv(GEN *data, GEN x){
   if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
   for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;
   return 1;
@@ -3283,7 +3268,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
-  GEN C, N, R, opnu, epsilon;//Constants used for bounds, can be auto-set or passed in.
+  GEN C, N, R, epsilon;//Constants used for bounds, can be auto-set or passed in.
   if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=algfdom_bestC(A, prec);
   else C=gel(CNRdata, 1);
   if(gequal0(CNRdata) || gequal0(gel(CNRdata, 2))){//N
@@ -3296,12 +3281,10 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	R=hdiscradius(gpow(area, gamma, prec), prec);
   }
   else R=gel(CNRdata, 3);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) opnu=gen_2;
-  else opnu=gel(CNRdata, 4);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 5))) epsilon=gdivgs(gen_1, 6);
-  else epsilon=gel(CNRdata, 5);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) epsilon=gdivgs(gen_1, 6);
+  else epsilon=gel(CNRdata, 4);
   
-  if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   1+nu=%Ps\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, opnu, epsilon, area);
+  if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, epsilon, area);
   
   GEN id=gel(alg_get_basis(A), 1);//The identity  
   long iN;
@@ -3313,18 +3296,14 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   long fourn=4*nfdeg;//The lg of a normal entry
   GEN nformpart=qalg_normform(Q);
   GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
-  long maxelts;
+  long maxelts=1;
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
     type=1;//Setting in case type=0
 	nfdecomp=mat_nfcholesky(nf, nformpart);
-	if(nfdeg==1) maxelts=4;
-	else maxelts=1;
   }
   else{//type=2 or type=0 and nfdeg=1, i.e. nf=Q. condition
     type=2;//Setting in case type=0
 	nform=gcopy(nformpart);
-    if(nfdeg==1) maxelts=4;
-	else maxelts=1;
   }
   for(long i=1;i<=fourn;i++){
 	for(long j=1;j<=fourn;j++){
@@ -3400,8 +3379,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	  if(dumppartial) fclose(f);
 	  return gerepileupto(top, U);
 	}
-	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) N=gmul(N, opnu);//Updating N_n
-	R=gadd(R, epsilon);//Updating R_n
+	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
 	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));

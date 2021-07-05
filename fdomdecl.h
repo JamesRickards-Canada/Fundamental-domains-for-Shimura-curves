@@ -69,6 +69,7 @@ GEN rootgeodesic_uhp(GEN M, GEN tol, long prec);
 
 //FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
 GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
+GEN normalizedboundary_oosides(GEN U);
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec);
 GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
 GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
@@ -105,6 +106,13 @@ GEN qalg_normform(GEN Q);
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec);
 GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nform, GEN nformpart, long prec);
 
+//BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
+GEN qalg_fdominv(GEN *data, GEN x);
+GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec);
+GEN qalg_fdommul(GEN *data, GEN x, GEN y);
+GEN qalg_fdomtrace(GEN *data, GEN x);
+int qalg_istriv(GEN *data, GEN x);
+
 //3: SHALLOW RETRIEVAL METHODS
 GEN qalg_get_alg(GEN Q);
 GEN qalg_get_rams(GEN Q);
@@ -139,6 +147,11 @@ GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec);
 GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntests, GEN R, char *fname, int compile, int WSL, long prec);
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec);
 GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime, char *fdata, int compile, int WSL, long prec);
+long enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long prec);
+void enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long nelts, char *fname, int type, int compile, int WSL, long prec);
+
+//3: NUMBER OF ELEMENTS REQUIRED TO GENERATE ALGEBRA
+GEN algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec);
 
 //REGRESSIONS & PLOTS
 GEN OLS(GEN X, GEN y, int retrsqr);

@@ -19,11 +19,16 @@ static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 static GEN enum_bestC_givenAB(long n, GEN A, GEN B, long prec);
-static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL);
+static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange);
 static long enum_nontrivial(GEN L);
 static GEN enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GEN normdecomp, GEN normformpart, long prec);
 static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
-static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL);
+static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata);
+static long enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GEN nform, GEN nfdecomp, GEN nformpart, long prec);
+static void enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fname);
+
+//3: NUMBER OF ELEMENTS REQUIRED TO GENERATE ALGEBRA
+static GEN qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec);
 
 
 //SECTION 1: GEOMETRY METHODS
@@ -388,13 +393,13 @@ GEN enum_bestC_range(GEN Aset, GEN p, GEN scale, long ntrials, long mintesttime,
   }
   fclose(f);
   GEN reg=OLS_nointercept(Xdat, Cdat, 1);
-  enum_bestC_plot(reg, firstX, lastX, n, fname, isArange, WSL);
+  enum_bestC_plot(reg, firstX, lastX, n, fname, isArange);
   if(compile) plot_compile(fname, WSL);
   return gerepilecopy(top, reg);
 }
 
 //Prepares a basic latex plot of the data.
-static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange, int WSL){
+static void enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange){
   pari_sp top=avma;
   if(!pari_is_dir("plots/build")){//Checking the directory
       int s=system("mkdir -p plots/build");
@@ -611,14 +616,14 @@ GEN enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintest
   for(long i=1;i<=ntrials;i++) gel(Xdata, i)=mkcol2(gen_1, gpowgs(gel(Clist, i), twon));//The X data
   GEN reg=gerepileupto(top, OLS(Xdata, times, 1));
   if(compile && fdata){
-	enum_time_plot(A, reg, Cmin, Cmax, fdata, WSL);
+	enum_time_plot(A, reg, Cmin, Cmax, fdata);
 	plot_compile(fdata, WSL);
   }
   return reg;
 }
 
 //Prepares a basic latex plot of the data.
-static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL){
+static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata){
   pari_sp top=avma;
   if(!pari_is_dir("plots/build")){//Checking the directory
       int s=system("mkdir -p plots/build");
@@ -641,6 +646,282 @@ static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int 
   fclose(f);
   avma=top;
 }
+
+//Returns the time taken to find nelts non-trivial elements
+long enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, prec);
+  if(gequal0(R)){
+	GEN area=algfdomarea(A, 1, prec);
+	GEN gamma=dbltor(2.1);
+	R=hdiscradius(gpow(area, gamma, prec), prec);
+  }
+  GEN nf=alg_get_center(A);
+  long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
+  GEN nfdecomp=gen_0, nform=gen_0;//nfdecomp used if type=1, nform if type=2
+  GEN nformpart=qalg_normform(Q);
+  if(type==1) nfdecomp=mat_nfcholesky(nf, nformpart);//qfminim
+  else nform=gcopy(nformpart);//condition
+  for(long i=1;i<=fourn;i++){
+	for(long j=1;j<=fourn;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{nf/Q}(nrd(elt));
+  long tottime=enum_timeforNelts_givendata(Q, p, C, nelts, R, type, nform, nfdecomp, nformpart, prec);
+  avma=top;
+  return tottime;
+}
+
+//enum_timeforNelts given the setup data.
+static long enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GEN nform, GEN nfdecomp, GEN nformpart, long prec){
+  pari_sp top=avma, mid;
+  GEN z, elts;
+  long found=0, time;
+  pari_timer T;
+  timer_start(&T);
+  if(type==1){//qfminim
+    mid=avma;
+    while(found<nelts){
+      z=randompoint_ud(R, prec);//Random point
+      elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, nfdecomp, nformpart, prec);
+	  if(lg(elts)!=1) found=found+enum_nontrivial(elts);
+	  avma=mid;
+    }
+    time=timer_delay(&T);
+  }
+  else{//condition
+	mid=avma;
+    while(found<nelts){
+      z=randompoint_ud(R, prec);//Random point
+      elts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, z, 0, nform, nformpart, prec);
+	  if(lg(elts)!=1) found=found+enum_nontrivial(elts);
+	  avma=mid;
+    }
+    time=timer_delay(&T);
+  }
+  avma=top;
+  return time;
+}
+
+//Computes enum_TimeforNelts for ntrials values of C between Cmin and Cmax, and outputs the results to data/fname.txt.
+void enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long nelts, char *fname, int type, int compile, int WSL, long prec){
+  pari_sp top=avma;
+  if(!pari_is_dir("plots/build")){//Checking the directory
+    int s=system("mkdir -p plots/build");
+    if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *fname_full=pari_sprintf("plots/build/%s.dat", fname);
+  FILE *f=fopen(fname_full, "w");
+  pari_free(fname_full);
+  if(ntrials<=1) ntrials=2;
+  GEN Clist=cgetg(ntrials+1, t_VEC);
+  GEN C=Cmin;
+  GEN blen=gdivgs(gsub(Cmax, Cmin), ntrials-1);
+  for(long i=1;i<=ntrials;i++){
+	gel(Clist, i)=C;
+	C=gadd(C, blen);
+  }
+  GEN Q=qalg_fdominitialize(A, prec);
+  GEN area=algfdomarea(A, 1, prec);
+  GEN gamma=dbltor(2.1);
+  GEN R=hdiscradius(gpow(area, gamma, prec), prec);
+  GEN nf=alg_get_center(A);
+  long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
+  GEN nfdecomp=gen_0, nform=gen_0;//nfdecomp used if type=1, nform if type=2
+  GEN nformpart=qalg_normform(Q);
+  if(type==1) nfdecomp=mat_nfcholesky(nf, nformpart);//qfminim
+  else nform=gcopy(nformpart);//condition
+  for(long i=1;i<=fourn;i++){
+	for(long j=1;j<=fourn;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{nf/Q}(nrd(elt));
+  GEN bestC=algfdom_bestC(A, prec);
+  int past_bestC=0;
+  double bestC_val=(double)0;
+  pari_fprintf(f, "C t\n");
+  for(long i=1;i<=ntrials;i++){
+	C=gel(Clist, i);
+	long t=enum_timeforNelts_givendata(Q, p, C, nelts, R, type, nform, nfdecomp, nformpart, prec);
+	double tins=t/((double)1000);
+	pari_fprintf(f, "%Pf %.3f\n", C, tins);
+	pari_printf("%Pf %.3f\n", C, tins);
+	if(!past_bestC && gcmp(C, bestC)>=0){//We are past the optimal value of C.
+	  past_bestC=1;
+	  bestC_val=tins;
+	}
+  }
+  fclose(f);
+  if(compile){
+	enum_timeforNelts_plot(A, bestC, bestC_val, fname);
+	plot_compile(fname, WSL);
+  }
+  avma=top;
+}
+
+//Prepares a basic latex plot of the data.
+static void enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fname){
+  pari_sp top=avma;
+  if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fname);
+  FILE *f=fopen(plotmake, "w");
+  pari_free(plotmake);
+  pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fname);
+  pari_fprintf(f, "[xlabel=C, ylabel=t (s),\n");
+  pari_fprintf(f, "    xmin=0, ymin=0,\n");
+  pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
+  pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=C,y=t,col sep=space]{%s.dat};\n", fname);
+  pari_fprintf(f, "    \\draw[dashed, red] (%Pf, 0) -- (%Pf, %.3f);\n", bestC, bestC, bestC_val);
+  pari_fprintf(f, "  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
+  fclose(f);
+  avma=top;
+}
+
+
+//3: NUMBER OF ELEMENTS REQUIRED TO GENERATE ALGEBRA
+
+
+//Initializes and checks the inputs, and computes the fundamental domain
+GEN algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  GEN Q=qalg_fdominitialize(A, prec);
+  return gerepileupto(top, qalg_fdom_nelts(Q, p, CNRdata, type, tol, prec));
+}
+
+//Computes the number of elements needed to generate the fundamental domain, and returns [nelts, #sides, area].
+static GEN qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec){
+  pari_sp top=avma, mid, bot;
+  GEN mats=psltopsu_transmats(p);
+  GEN A=qalg_get_alg(Q);
+  GEN nf=alg_get_center(A);
+  long nfdeg=nf_get_degree(nf);
+  GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
+  GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
+  
+  GEN C, N, R, epsilon;//Constants used for bounds, can be auto-set or passed in.
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=algfdom_bestC(A, prec);
+  else C=gel(CNRdata, 1);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 2))){//N
+    GEN beta=gdivgs(gen_1, 10);
+    N=gfloor(gadd(gmul(beta, area), gen_2));//We add 2 to make sure N>=2; errors can happen later otherwise
+  }
+  else N=gel(CNRdata, 2);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 3))){//R
+	GEN gamma=dbltor(2.1);//2.1
+	R=hdiscradius(gpow(area, gamma, prec), prec);
+  }
+  else R=gel(CNRdata, 3);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) epsilon=gdivgs(gen_1, 6);
+  else epsilon=gel(CNRdata, 4);
+  
+  GEN id=gel(alg_get_basis(A), 1);//The identity  
+  long iN;
+  GEN points, w;
+  GEN U=cgetg(2, t_VEC);
+  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
+
+  long fourn=4*nfdeg;//The lg of a normal entry
+  GEN nformpart=qalg_normform(Q);
+  GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
+  long maxelts=1;
+  if(type==1 || (type==0 && nfdeg>=2)){//qfminim
+    type=1;//Setting in case type=0
+	nfdecomp=mat_nfcholesky(nf, nformpart);
+  }
+  else{//type=2 or type=0 and nfdeg=1, i.e. nf=Q. condition
+    type=2;//Setting in case type=0
+	nform=gcopy(nformpart);
+  }
+  for(long i=1;i<=fourn;i++){
+	for(long j=1;j<=fourn;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{nf/Q}(nrd(elt));
+
+  mid=avma;
+  long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
+  GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
+  int anyskipped=0;
+  long neltsgen=0;
+
+  for(;;){
+	pass++;
+	if(nsidesp1>1){//We have a partial domain.
+	  oosides=normalizedboundary_oosides(U);
+	  istart=lg(oosides);
+	  iN=itos(gfloor(N))+istart;
+	}
+	else iN=itos(gfloor(N))+1;
+	nskip=0;//How many points are skipped due to poor precision
+	points=cgetg(iN, t_VEC);
+	for(long i=1;i<istart;i++){//Points near the oo sides
+	  ang2=gel(gel(U, 4), oosides[i]);
+	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+	  else ang1=gel(gel(U, 4), oosides[i]-1);
+	  w=randompoint_udarc(R, ang1, ang2, prec);
+	  pari_CATCH(e_TYPE){//If R is large
+	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		anyskipped=1;
+		nskip++;
+		gel(points, i)=cgetg(1, t_VEC);
+	  }
+	  pari_TRY{
+		GEN smallelts;
+		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+		else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
+		if(smallelts) gel(points, i)=smallelts;
+		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
+	  }
+	  pari_ENDCATCH
+	}
+	for(long i=istart;i<iN;i++){//Random points in ball of radius R
+	  w=randompoint_ud(R, prec);//Random point
+	  pari_CATCH(e_TYPE){//If R is large
+	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		anyskipped=1;
+		nskip++;
+		gel(points, i)=cgetg(1, t_VEC);
+	  }
+	  pari_TRY{
+		GEN smallelts;
+		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+	    else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
+		if(smallelts) gel(points, i)=smallelts;
+		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
+	  }
+	  pari_ENDCATCH
+	}
+	points=shallowconcat1(points);
+	GEN Unew=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+	if(gcmp(gel(Unew, 6), areabound)==-1){
+	  long minnew=1, maxnew=lg(points)-1;
+	  bot=avma;
+	  while(minnew+1<maxnew){
+		avma=bot;
+		long cind=(maxnew+minnew)/2;
+		GEN newpoints=cgetg(cind+1,t_VEC);
+		for(long i=1;i<=cind;i++) gel(newpoints, i)=gel(points, i);
+	    Unew=normalizedbasis(newpoints, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+		if(gcmp(gel(Unew, 6), areabound)==-1) maxnew=cind;
+		else minnew=cind;
+	  }
+	  GEN ret=mkvec3(stoi(neltsgen+maxnew), stoi(lg(gel(Unew, 1))-1), area);
+	  return gerepilecopy(top, ret);
+	}
+	U=Unew;
+	neltsgen=neltsgen+lg(points)-1;
+	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
+	nsidesp1=lg(gel(U, 1));//How many sides+1
+	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
+  }
+}
+
+
 
 
 //3: REGRESSIONS & PLOTS
