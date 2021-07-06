@@ -2688,8 +2688,13 @@ GEN algfdom_bestC(GEN A, long prec){
   GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
   GEN npart;
-  if(n==1) npart=dbltor(2.841075459);
-  else if(n==2) npart=dbltor(1.002848213);
+  if(n==1) npart=dbltor(2.8304840896);
+  else if(n==2) npart=dbltor(0.9519687879);
+  else if(n==3) npart=dbltor(0.8939379663);
+  else if(n==4) npart=dbltor(0.9678121920);
+  else if(n==5) npart=dbltor(1.0393912773);
+  else if(n==6) npart=dbltor(1.0877563103);
+  else if(n==7) npart=dbltor(1.1199913096);
   else{
 	GEN intercept=dbltor(0.690934049);
 	GEN slope=dbltor(0.085442988);

@@ -683,8 +683,10 @@ static long enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, 
     mid=avma;
     while(found<nelts){
       z=randompoint_ud(R, prec);//Random point
-      elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, nfdecomp, nformpart, prec);
-	  if(lg(elts)!=1) found=found+enum_nontrivial(elts);
+      elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 1, nfdecomp, nformpart, prec);
+	  if(lg(elts)!=1){
+		if(enum_nontrivial(elts)>0) found++;
+	  }
 	  avma=mid;
     }
     time=timer_delay(&T);
@@ -693,8 +695,10 @@ static long enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, 
 	mid=avma;
     while(found<nelts){
       z=randompoint_ud(R, prec);//Random point
-      elts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, z, 0, nform, nformpart, prec);
-	  if(lg(elts)!=1) found=found+enum_nontrivial(elts);
+      elts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, z, 1, nform, nformpart, prec);
+	  if(lg(elts)!=1){
+		if(enum_nontrivial(elts)>0) found++;
+	  }
 	  avma=mid;
     }
     time=timer_delay(&T);
@@ -775,7 +779,7 @@ static void enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fna
   pari_fprintf(f, "    xmin=0, ymin=0,\n");
   pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
   pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=C,y=t,col sep=space]{%s.dat};\n", fname);
-  pari_fprintf(f, "    \\draw[dashed, red] (%Pf, 0) -- (%Pf, %.3f);\n", bestC, bestC, bestC_val);
+  pari_fprintf(f, "    \\draw[dashed, red, ultra thick] (%Pf, 0) -- (%Pf, %.3f);\n", bestC, bestC, bestC_val);
   pari_fprintf(f, "  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
   fclose(f);
   avma=top;
