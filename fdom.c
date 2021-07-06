@@ -2675,8 +2675,21 @@ GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
 GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom(Q, p, dispprogress, dumppartial, partialset, CNRdata, type, tol, prec));
+  GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
+  long precinc=0, newprec=prec;
+  pari_CATCH(e_PREC){
+	pari_warn(warner, "Increasing precision");
+	precinc++;
+	newA=algmoreprec(newA, 1, newprec);
+	newprec++;
+	tol=deftol(newprec);
+	Q=qalg_fdominitialize(newA, newprec);
+  }
+  pari_RETRY{
+    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, CNRdata, type, tol, newprec);
+  }pari_ENDCATCH
+  if(precinc) pari_warn(warner, "Precision increased %d times to %d. Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
+  return gerepileupto(top, U);
 }
 
 //Generate the optimal C value
@@ -2752,6 +2765,29 @@ GEN algfdomsignature(GEN A, GEN U, long prec){
   GEN id=gel(alg_get_basis(A), 1);//The identity
   GEN Q=qalg_fdominitialize(A, prec);
   return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+}
+
+//Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
+GEN algmoreprec(GEN A, long increment, long prec){
+  pari_sp top=avma;
+  if(increment<=0) increment=1;
+  GEN nf=alg_get_center(A);
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=nf(sqrt(a))
+  long varn=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN b=lift(alg_get_b(A));
+  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
+  if(!isint1(aden)){
+	a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+	pari_warn(warner,"Changed the value of a, since it had a denominator.");
+  }
+  if(!isint1(bden)){
+	b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+    pari_warn(warner,"Changed the value of a, since it had a denominator.");
+  }
+  long newprec=prec+increment;
+  GEN newnf=nfinit(nf_get_pol(nf), newprec);
+  return gerepileupto(top, alginit(newnf, mkvec2(a, b), -1, 1));
 }
 
 //Returns the normalized basis of the set of elements G
@@ -2905,11 +2941,17 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
 	  else ang1=gel(gel(U, 4), oosides[i]-1);
 	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	  pari_CATCH(CATCH_ALL){
+	    GEN err=pari_err_last();//Get the error
+		long errcode=err_get_num(err);
+		pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
+		if(errcode==e_TYPE){//If R is large
+	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		  anyskipped=1;
+		  nskip++;
+		  gel(points, i)=cgetg(1, t_VEC);
+		}
+		else pari_err(errcode);
 	  }
 	  pari_TRY{
 		GEN smallelts;
@@ -2922,11 +2964,17 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	}
 	for(long i=istart;i<iN;i++){//Random points in ball of radius R
 	  w=randompoint_ud(R, prec);//Random point
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	  pari_CATCH(CATCH_ALL){
+	    GEN err=pari_err_last();//Get the error
+		long errcode=err_get_num(err);
+		pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
+		if(errcode==e_TYPE){//If R is large
+	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		  anyskipped=1;
+		  nskip++;
+		  gel(points, i)=cgetg(1, t_VEC);
+		}
+		else pari_err(errcode);
 	  }
 	  pari_TRY{
 		GEN smallelts;
@@ -3152,20 +3200,11 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelt
   GEN nf=alg_get_center(A);
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
-  GEN vposs, norm;
-  pari_CATCH(e_PREC){
-	pari_warn(warner, "Too low precision for qfminim. Consider increasing the precision.");
-	pari_CATCH_reset();
-	avma=top;
-	return cgetg(1, t_VEC);
-  }
-  pari_TRY{
-    vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
-  }pari_ENDCATCH
+  GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
   long nvposs=lg(vposs), mret;
   if(maxelts) mret=maxelts+1;
   else mret=nvposs;
-  GEN ret=vectrunc_init(mret);
+  GEN ret=vectrunc_init(mret), norm;
   for(long i=1;i<nvposs;i++){
 	mid=avma;
 	norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
@@ -3265,7 +3304,7 @@ GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
 static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, GEN tol, long prec){
-  pari_sp top=avma, mid;
+   pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);
@@ -3320,7 +3359,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
 
   mid=avma;
-  long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
+  long pass=0, ooend=0, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
 
@@ -3329,40 +3368,31 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
-	  istart=lg(oosides);
-	  iN=itos(gfloor(N))+istart;
-	  if(dispprogress) pari_printf("%d infinite sides\n", istart-1);
+	  ooend=lg(oosides)-1;
+	  if(dispprogress) pari_printf("%d infinite sides\n", ooend-1);
 	}
-	else iN=itos(gfloor(N))+1;
+	iN=itos(gfloor(N))+1;
 	nskip=0;//How many points are skipped due to poor precision
 	points=cgetg(iN, t_VEC);
-	for(long i=1;i<istart;i++){//Points near the oo sides
-	  ang2=gel(gel(U, 4), oosides[i]);
-	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-	  else ang1=gel(gel(U, 4), oosides[i]-1);
-	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	for(long i=1;i<iN;i++){//Random points in ball of radius R
+	  if(i<=ooend){//Going near infinite side
+	    ang2=gel(gel(U, 4), oosides[i]);
+	    if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+	    else ang1=gel(gel(U, 4), oosides[i]-1);
+	    w=randompoint_udarc(R, ang1, ang2, prec);
 	  }
-	  pari_TRY{
-		GEN smallelts;
-		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
-		else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
-		if(smallelts) gel(points, i)=smallelts;
-		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-	  }
-	  pari_ENDCATCH
-	}
-	for(long i=istart;i<iN;i++){//Random points in ball of radius R
-	  w=randompoint_ud(R, prec);//Random point
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	  else w=randompoint_ud(R, prec);//Random point
+	  pari_CATCH(CATCH_ALL){
+	    GEN err=pari_err_last();//Get the error
+		long errcode=err_get_num(err);
+		pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
+		if(errcode==e_TYPE){//If R is large
+	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		  anyskipped=1;
+		  nskip++;
+		  gel(points, i)=cgetg(1, t_VEC);
+		}
+		else pari_err(errcode);
 	  }
 	  pari_TRY{
 		GEN smallelts;
@@ -3384,7 +3414,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	  if(dumppartial) fclose(f);
 	  return gerepileupto(top, U);
 	}
-	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
+	if(pass>1 && (ooend==0 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
 	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));

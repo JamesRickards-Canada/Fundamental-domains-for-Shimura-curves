@@ -91,6 +91,7 @@ GEN algfdompresentation(GEN A, GEN U, long prec);
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
 GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec);
 GEN algfdomsignature(GEN A, GEN U, long prec);
+GEN algmoreprec(GEN A, long increment, long prec);
 GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec);
 GEN algnormdisc(GEN A);
