@@ -793,8 +793,21 @@ static void enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fna
 GEN algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom_nelts(Q, p, CNRdata, type, tol, prec));
+  GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
+  long precinc=0, newprec=prec;
+  pari_CATCH(e_PREC){
+	pari_warn(warner, "Increasing precision");
+	precinc++;
+	newA=algmoreprec(newA, 1, newprec);
+	newprec++;
+	tol=deftol(newprec);
+	Q=qalg_fdominitialize(newA, newprec);
+  }
+  pari_RETRY{
+    U=qalg_fdom_nelts(Q, p, CNRdata, type, tol, newprec);
+  }pari_ENDCATCH
+  if(precinc) pari_warn(warner, "Precision increased %d times to %d.", precinc, newprec);
+  return gerepileupto(top, U);
 }
 
 //Computes the number of elements needed to generate the fundamental domain, and returns [nelts, #sides, area].
@@ -848,7 +861,7 @@ static GEN qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long pr
   }//Tr_{nf/Q}(nrd(elt));
 
   mid=avma;
-  long pass=0, istart=1, nsidesp1=1, nskip;//pass tracks which pass we are on
+  long pass=0, ooend=0, nsidesp1=1, nskip;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
   long neltsgen=0;
@@ -857,39 +870,30 @@ static GEN qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long pr
 	pass++;
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
-	  istart=lg(oosides);
-	  iN=itos(gfloor(N))+istart;
+	  ooend=lg(oosides)-1;
 	}
-	else iN=itos(gfloor(N))+1;
+	iN=itos(gfloor(N))+1;
 	nskip=0;//How many points are skipped due to poor precision
 	points=cgetg(iN, t_VEC);
-	for(long i=1;i<istart;i++){//Points near the oo sides
-	  ang2=gel(gel(U, 4), oosides[i]);
-	  if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-	  else ang1=gel(gel(U, 4), oosides[i]-1);
-	  w=randompoint_udarc(R, ang1, ang2, prec);
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	for(long i=1;i<iN;i++){//Random points in ball of radius R
+	  if(i<=ooend){//Going near infinite side
+	    ang2=gel(gel(U, 4), oosides[i]);
+	    if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+	    else ang1=gel(gel(U, 4), oosides[i]-1);
+	    w=randompoint_udarc(R, ang1, ang2, prec);
 	  }
-	  pari_TRY{
-		GEN smallelts;
-		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
-		else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
-		if(smallelts) gel(points, i)=smallelts;
-		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-	  }
-	  pari_ENDCATCH
-	}
-	for(long i=istart;i<iN;i++){//Random points in ball of radius R
-	  w=randompoint_ud(R, prec);//Random point
-	  pari_CATCH(e_TYPE){//If R is large
-	    if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		anyskipped=1;
-		nskip++;
-		gel(points, i)=cgetg(1, t_VEC);
+	  else w=randompoint_ud(R, prec);//Random point
+	  pari_CATCH(CATCH_ALL){
+	    GEN err=pari_err_last();//Get the error
+		long errcode=err_get_num(err);
+		pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
+		if(errcode==e_TYPE){//If R is large
+	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+		  anyskipped=1;
+		  nskip++;
+		  gel(points, i)=cgetg(1, t_VEC);
+		}
+		else pari_err(errcode);
 	  }
 	  pari_TRY{
 		GEN smallelts;
@@ -919,7 +923,7 @@ static GEN qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long pr
 	}
 	U=Unew;
 	neltsgen=neltsgen+lg(points)-1;
-	if(pass>1 && (istart==1 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
+	if(pass>1 && (ooend==0 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
 	nsidesp1=lg(gel(U, 1));//How many sides+1
 	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
   }

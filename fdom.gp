@@ -110,6 +110,6 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.txt and moves the output to plots/fname_plot.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
 
 \\TEMPORARY
-install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,D0,L,p","algfdom1","./libfdom.so");
+install("algfdom_test","GGD1,L,D1,L,D0,G,D7,G,D0,L,p","algfdom1","./libfdom.so");
 
 default(parisize, "4096M");\\Must come at the end

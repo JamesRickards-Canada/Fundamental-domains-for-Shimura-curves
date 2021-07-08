@@ -88,7 +88,7 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 
 //TEMPORARY TESTING METHODS
-static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, GEN tol, long prec);
+static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, GEN tol, long prec);
 
 
 
@@ -1393,6 +1393,7 @@ static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol
   GEN U=cgetg(maxsides, t_VECSMALL);//Stores the indices in U in order. The initial ordering may not have v_1 correct (may need to do a cyclic shift at the end).
   GEN vertices=cgetg(maxsides, t_VEC);//Stores the vertices in order; an entry is [vertex, radial angle]
   GEN pi=mppi(prec);//Pi
+  GEN moo=mkmoo();
   GEN inter, ang, ang1, ang2, sidecirc, sidecirctermang, Ltermang, ten=stoi(10);
   GEN L=gel(gel(Ubase, 2), 1);//The current segment we are looking for intersections with.
   GEN baseang=garg(gel(L, 4), prec);//Angle to the terminal point of the first element of Ubase
@@ -1404,13 +1405,13 @@ static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol
   }
   GEN Gtermangles=cgetg(nGp1, t_VEC);
   for(long i=1;i<nGp1;i++){
-    if(gequal0(gel(gel(G, i), 3))) gel(Gtermangles, i)=gen_m2;//Does not give rise to a circle, want to ignore. -2 will ALWAYS be less than the start angle.
+    if(gequal0(gel(gel(G, i), 3))) gel(Gtermangles, i)=moo;//Does not give rise to a circle, want to ignore. -oo will ALWAYS be less than the start angle.
     else gel(Gtermangles, i)=shiftangle(garg(gel(gel(gel(G, i), 3), 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
   }
   GEN Gord=indexsort(Gtermangles);//The order in which we want to look at the elements of G.
   long Gordind=0;
   for(long i=1;i<nGp1;i++){
-    if(!gequal(gel(Gtermangles, Gord[i]), gen_m2)){Gordind=i;break;}
+    if(!gequal(gel(Gtermangles, Gord[i]), moo)){Gordind=i;break;}
   }//Moving past the -2's, i.e. elements of G giving no circle. These occur first as the other angles are >-2.
   if(Gordind==0) return gerepilecopy(top, Ubase);//No new circles.
   U[1]=1;
@@ -1506,7 +1507,6 @@ static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol
         newsidefromG=1;
       }
     }
-    
     //At this point, we are either trying to insert a new on an old, or an old on a new side, or a new on a new
     inter=arc_int(L, sidecirc, tol, prec);//Intersection of L and the next side.
     if(lg(inter)==1){//It did NOT intersect.
@@ -1783,7 +1783,7 @@ static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, lon
   long np1=lg(G), n=np1-1, twonp3=2*n+3;
   GEN U=cgetg(twonp3, t_VECSMALL);//Stores the indices in U in order. The initial ordering may not have v_1 correct (may need to do a cyclic shift at the end). We double since there are at most n sides coming from G and n sides coming from the unit circle.
   GEN vertices=cgetg(twonp3, t_VEC);//Stores the vertices in order; an entry is [vertex, radial angle]
-  GEN pi=mppi(prec);//Pi
+  GEN pi=mppi(prec), moo=mkmoo();//Pi, -oo
   GEN inter, ang, sidecirc, ang1;
   //Finding the first element.
   mid=avma;
@@ -1810,14 +1810,14 @@ static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, lon
   else baseang=gen_0;//We start from the 0 angle instead.
   GEN termangles=cgetg(np1, t_VEC);
   for(long i=1;i<np1;i++){
-    if(gequal0(gel(gel(G, i), 3))) gel(termangles, i)=gen_m2;//Does not give rise to a circle, want to ignore. -2 will ALWAYS be less than the start angle.
+    if(gequal0(gel(gel(G, i), 3))) gel(termangles, i)=moo;//Does not give rise to a circle, want to ignore. -oo will ALWAYS be less than the start angle.
     else gel(termangles, i)=shiftangle(garg(gel(gel(gel(G, i), 3), 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
   }
   //We now order G by the angle to the terminal points.
   GEN ordering=indexsort(termangles);//The order in which we want to look at the elements of G.
   long startind=0;
   for(long i=1;i<np1;i++){
-    if(!gequal(gel(termangles, ordering[i]), gen_m2)){startind=i;break;}
+    if(!gequal(gel(termangles, ordering[i]), moo)){startind=i;break;}
   }//Moving past the -2's, i.e. elements of G giving no circle. These occur first as the other angles are >=0. If hind!=0, then ordering[startind]=hind.
   //Now we start at G[ordering[ind]]. For the first element, we ONLY need to store the index.
   if(startind==0){//NO valid isometric circles inputted.
@@ -2713,7 +2713,9 @@ GEN algfdom_bestC(GEN A, long prec){
 	GEN slope=dbltor(0.085442988);
 	npart=gadd(intercept, gmulgs(slope, n));
   }
-  return gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
+  GEN best=gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
+  if(gcmpgs(best, n)<=0) best=gerepileupto(top, gaddsg(n, gen_2));//Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).
+  return best;
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
@@ -3295,47 +3297,50 @@ GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 //TEMPORARY TESTING
 
 //Initializes and checks the inputs, and computes the fundamental domain
-GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, long prec){
+GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, prec);
-  return gerepileupto(top, qalg_fdom_tester(Q, p, dispprogress, dumppartial, partialset, CNRdata, type, tol, prec));
+  GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
+  long precinc=0, newprec=prec;
+  pari_CATCH(e_PREC){
+	pari_warn(warner, "Increasing precision");
+	precinc++;
+	newA=algmoreprec(newA, 1, newprec);
+	newprec++;
+	tol=deftol(newprec);
+	Q=qalg_fdominitialize(newA, newprec);
+  }
+  pari_RETRY{
+    U=qalg_fdom_tester(Q, p, dispprogress, dumppartial, partialset, passes, type, tol, newprec);
+  }pari_ENDCATCH
+  if(precinc) pari_warn(warner, "Precision increased %d times to %d. Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
+  return gerepileupto(top, U);
+  
 }
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN CNRdata, int type, GEN tol, long prec){
-   pari_sp top=avma, mid;
+static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, GEN tol, long prec){
+  pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);
   long nfdeg=nf_get_degree(nf);
   GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
-  
-  GEN C, N, R, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=algfdom_bestC(A, prec);
-  else C=gel(CNRdata, 1);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 2))){//N
-    GEN beta=gdivgs(gen_1, 10);
-    N=gfloor(gadd(gmul(beta, area), gen_2));//We add 2 to make sure N>=2; errors can happen later otherwise
-  }
-  else N=gel(CNRdata, 2);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 3))){//R
-	GEN gamma=dbltor(2.1);//2.1
-	R=hdiscradius(gpow(area, gamma, prec), prec);
-  }
-  else R=gel(CNRdata, 3);
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 4))) epsilon=gdivgs(gen_1, 6);
-  else epsilon=gel(CNRdata, 4);
+
+  GEN C=algfdom_bestC(A, prec);
+  GEN N=gceil(gdiv(gsqr(area), gmul(gmul(Pi2n(3, prec), gsubgs(C, nfdeg)), passes)));//Area^2/(8*Pi*(C-n)*#Passes)
+  if(gcmpgs(N, 1)==-1) N=gen_2;//Make sure N>=2
+  long N34=itos(gfloor(gdivgs(gmulgs(N, 3), 4)));
+  GEN gamma=dbltor(2.1);//2.1
+  GEN R=hdiscradius(gpow(area, gamma, prec), prec);
+  GEN epsilon=gdivgs(gen_1, 6);
   
   if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, epsilon, area);
   
   GEN id=gel(alg_get_basis(A), 1);//The identity  
   long iN;
   GEN points, w;
-  GEN U=cgetg(2, t_VEC);
-  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
-  if(!gequal0(partialset)) U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   
   long fourn=4*nfdeg;//The lg of a normal entry
   GEN nformpart=qalg_normform(Q);
@@ -3355,11 +3360,19 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	}
   }//Tr_{nf/Q}(nrd(elt));
   
+  GEN U=cgetg(2, t_VEC);
+  gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
+  if(gequal0(partialset)){
+	if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
+	else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
+  }
+  U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+  
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
 
   mid=avma;
-  long pass=0, ooend=0, nsidesp1=1, nskip;//pass tracks which pass we are on
+  long pass=0, ooend=0, nskip, nsidesp1=lg(gel(U, 1));//How many sides+1; pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
   int anyskipped=0;
 
@@ -3375,10 +3388,11 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	nskip=0;//How many points are skipped due to poor precision
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<iN;i++){//Random points in ball of radius R
-	  if(i<=ooend){//Going near infinite side
-	    ang2=gel(gel(U, 4), oosides[i]);
-	    if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-	    else ang1=gel(gel(U, 4), oosides[i]-1);
+	  if(i<=N34 && 0<ooend){//Going near infinite side
+	    long iside=((i-1)%ooend)+1;
+	    ang2=gel(gel(U, 4), oosides[iside]);
+	    if(oosides[iside]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+	    else ang1=gel(gel(U, 4), oosides[iside]-1);
 	    w=randompoint_udarc(R, ang1, ang2, prec);
 	  }
 	  else w=randompoint_ud(R, prec);//Random point
@@ -3420,5 +3434,3 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
-
-
