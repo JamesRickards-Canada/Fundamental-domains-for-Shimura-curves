@@ -1513,16 +1513,24 @@ static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol
       ang2=garg(gel(L, 3), prec);
       ang1=anglediff(ang2, Ltermang, tol, prec);//The angle between the terminal and initial points of L
       ang=anglediff(garg(gel(sidecirc, 3), prec), Ltermang, tol, prec);//Angle to the initial point of sidecirc from the terminal angle of L.
-      if(tolcmp(ang, ang1, tol, prec)<=0){//sidecirc is contained within L.
-        avma=mid;
-		if(finalstretch && !leftoverGs) startpt++;//We add 1 to startpt to signal that we must start at a different point.
+      if(tolcmp(ang, ang1, tol, prec)<=0){//sidecirc is contained within L
+		if(finalstretch && !leftoverGs){
+		  if(!gequal(L, sidecirc)){
+		    avma=mid;
+			startpt++;//We add 1 to startpt to signal that we must start at a different point.
+			continue;
+		  }
+		  //L=sidecirc, and so we are actually done. This should only happen when Ubase has 1 non-trivial side, and we don't end up adding in any sides that can do better (i.e. the output is the same as the input). So we just continue on and let the rest do its thing.
+		}
         else if(newsidefromG){//Failed to insert since it did not help.
+		  avma=mid;
           Gordind++;
           if(Gordind==nGp1){gang=ten;}//We are done with G, so we just want to start appending old sides.
           else gang=gel(Gtermangles, Gord[Gordind]);
           sid--;//We need to try again with the current side since we "jumped the line" with the element of G.
+		  continue;
         }//We also want to leave lastsidenew unchanged, as we did not insert
-        continue;
+        else{avma=mid;continue;}
       }
       //We have two new sides: a side at infinity, and this side.
       ulen++;
@@ -3330,7 +3338,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 
   GEN C=algfdom_bestC(A, prec);
   GEN N=gceil(gdiv(gsqr(area), gmul(gmul(Pi2n(3, prec), gsubgs(C, nfdeg)), passes)));//Area^2/(8*Pi*(C-n)*#Passes)
-  if(gcmpgs(N, 1)==-1) N=gen_2;//Make sure N>=2
+  if(gcmpgs(N, 1)<=0) N=gen_2;//Make sure N>=2
   long N34=itos(gfloor(gdivgs(gmulgs(N, 3), 4)));
   GEN gamma=dbltor(2.1);//2.1
   GEN R=hdiscradius(gpow(area, gamma, prec), prec);
@@ -3434,3 +3442,4 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
+
