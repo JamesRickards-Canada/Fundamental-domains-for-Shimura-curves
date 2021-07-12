@@ -138,6 +138,7 @@ GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algswapab(GEN A);
 GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int allowswap);
+GEN smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int allowswap);
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 

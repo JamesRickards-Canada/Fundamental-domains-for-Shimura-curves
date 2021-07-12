@@ -2890,7 +2890,6 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   GEN C=algfdom_bestC(A, prec);
   GEN N=gceil(gdiv(gsqr(area), gmul(gmul(Pi2n(3, prec), gsubgs(C, nfdeg)), passes)));//Area^2/(8*Pi*(C-n)*#Passes)
   if(gcmpgs(N, 1)<=0) N=gen_2;//Make sure N>=2
-  long N34=itos(gfloor(gdivgs(gmulgs(N, 3), 4)));
   GEN gamma=dbltor(2.1);//2.1
   GEN R=hdiscradius(gpow(area, gamma, prec), prec);
   GEN epsilon=gdivgs(gen_1, 6);
@@ -2947,7 +2946,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	nskip=0;//How many points are skipped due to poor precision
 	points=cgetg(iN, t_VEC);
 	for(long i=1;i<iN;i++){//Random points in ball of radius R
-	  if(i<=N34 && 0<ooend){//Going near infinite side
+	  if(0<ooend){//Going near infinite side
 	    long iside=((i-1)%ooend)+1;
 	    ang2=gel(gel(U, 4), oosides[iside]);
 	    if(oosides[iside]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
@@ -3123,15 +3122,15 @@ GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
   pari_sp top=avma;
   long bits=bit_accuracy(computeprec);
   GEN A=qalg_get_alg(Q);
-  GEN F=alg_get_center(A);
-  GEN zetaval=lfun(nf_get_pol(F), gen_2, bits);//Zeta_F(2)
+  GEN F=alg_get_center(A), pol=nf_get_pol(F);
+  GEN zetaval=lfun(pol, gen_2, bits);//Zeta_F(2)
   GEN rams=qalg_get_rams(Q);
   GEN norm=gen_1;
   for(long i=1;i<lg(rams);i++){
 	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
 	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
   }
-  GEN ar=gmul(gpow(nfdisc(nf_get_pol(F)), gdivsg(3, gen_2), computeprec), norm);//d_F^(3/2)*phi(D)
+  GEN ar=gmul(gpow(nfdisc(pol), gdivsg(3, gen_2), computeprec), norm);//d_F^(3/2)*phi(D)
   long n=nf_get_degree(F), twon=2*n;
   ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
   ar=gmul(ar, gpowgs(gen_2, 3-twon));

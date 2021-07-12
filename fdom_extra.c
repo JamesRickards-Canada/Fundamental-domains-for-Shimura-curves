@@ -283,6 +283,91 @@ GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int a
   return gerepilecopy(top, mkvec2(Ds, v));
 }
 
+//smallalgebras, but we provide a min and max area we want to find examples with.
+GEN smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int allowswap){
+  pari_sp top=avma, mid;
+  long bits=bit_accuracy(3);
+  GEN pol=nf_get_pol(nf);
+  GEN zetaval=lfun(pol, gen_2, bits);//zeta_F(2)
+  long n=nf_get_degree(nf), twon=2*n;
+  GEN ar=gmul(gpow(nfdisc(pol), gdivsg(3, gen_2), 3), zetaval);//zeta_F(2)*d_F^(3/2)
+  ar=gmul(ar, gpowgs(gen_2, 3-twon));
+  ar=gmul(ar, gpowgs(mppi(3), 1-twon));//2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2). The area is ar*phi(D), where phi(p^e)=p^e-1 and phi is multiplicative
+  GEN pDmin=gdiv(Amin, ar), pDmax=gdiv(Amax, ar);
+  mid=avma;
+  pDmin=gceil(pDmin);
+  pDmax=gceil(pDmax);//The lower and upper bounds for phi(D). pDmax is actually the 1+the max
+  gerepileallsp(top, mid, 2, &pDmin, &pDmax);
+  GEN plist=primes0(mkvec2(gen_2, pDmax));//The possible prime divisors of D.
+  long lp=lg(plist);
+  GEN pposs=vectrunc_init(n*lp);
+  for(long i=1;i<lp;i++){
+	GEN pdec=idealprimedec(nf, gel(plist, i));
+	for(long j=1;j<lg(pdec);j++){
+	  GEN nm=pr_norm(gel(pdec, j));
+	  if(gcmp(nm, pDmax)<=0) vectrunc_append(pposs, nm);//Adding the norms.
+	}
+  }
+  pposs=gen_sort_uniq(pposs, (void*)cmpii, cmp_nodata);//Remove duplicates of the possible norms.
+  GEN pposs_nm=cgetg_copy(pposs, &lp);
+  for(long i=1;i<lp;i++) gel(pposs_nm, i)=subis(gel(pposs, i), 1);//The norms
+  long par=(n-1)%2, ind=0;//The parity of the number of prime divisors we need.
+  GEN pro=gen_1;
+  while(cmpii(pro, pDmax)==-1 && ind<lp){//ind keeps track of the maximal number of prime divisors we can take
+	ind++;
+	pro=mulii(pro, gel(pposs_nm, ind));
+  }
+  if(ind%2!=par) ind--;//Make it line up with parity.
+  glist *Ds=NULL;
+  long count=0;
+  if(par==0){
+    if(cmpis(pDmin, 1)<=0) glist_putstart(&Ds, gen_1);//Disc 1
+	par=2;
+  }
+  for(long ndiv=par;ndiv<=ind;ndiv=ndiv+2){//ndiv divisors
+    forsubset_t SS;//Loop through subsets
+	forksubset_init(&SS, lp-1, ndiv);//initialize
+	GEN sub=forsubset_next(&SS);//The subset
+	while(sub){
+	  mid=avma;
+      GEN prod=gen_1;
+	  for(long i=1;i<lg(sub);i++) prod=mulii(prod, gel(pposs_nm, sub[i]));//Computing the norm
+	  if(cmpii(prod, pDmin)==-1) avma=mid;//Too small
+	  else{
+		if(cmpii(prod, pDmax)==1){//Too large
+		  avma=mid;
+		  long nind=0;
+		  for(long i=ndiv;i>=2;i--){if(sub[i]>sub[i-1]+1){nind=i-1;break;}}
+		  if(nind==0) break;//Done, we will always be too large for now on out.
+		  long tochange=sub[nind];//The index we want to see changed.
+		  while(sub && tochange==sub[nind]) sub=forsubset_next(&SS);//Moving along until index nind grows.
+		  continue;
+		}
+		else{
+		  prod=gen_1;
+	      for(long i=1;i<lg(sub);i++) prod=mulii(prod, gel(pposs, sub[i]));//Computing the D
+		  glist_putstart(&Ds, prod);
+		  count++;
+		}
+	  }
+	  sub=forsubset_next(&SS);
+	}
+  }
+  GEN Discs=gerepileupto(top, glist_togvec(Ds, count, -1));//The discriminants.
+  if(retD) return Discs;
+  long lD=lg(Discs), sind=1;
+  GEN Alist=vectrunc_init(lD), Dlist=vectrunc_init(lD);
+  if(equali1(gel(Discs, 1))) sind=2;//We don't allow D=1, since this does not work with algshimura_ab.
+  for(long i=sind;i<lD;i++){
+	GEN A=algshimura_ab(nf, gel(Discs, i), 1, maxcomptime, allowswap);
+	if(!gequal0(A)){
+	  vectrunc_append(Dlist, gel(Discs, i));
+	  vectrunc_append(Alist, A);
+	}
+  }
+  return gerepilecopy(top, mkvec2(Dlist, Alist));
+}
+
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 
