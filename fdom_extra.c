@@ -16,6 +16,7 @@
 
 //2: QUATERNION ALGEBRA METHODS
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
+static int subset_lexincrem(GEN S, long n);
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 static GEN enum_bestC_givenAB(long n, GEN A, GEN B, long prec);
@@ -110,7 +111,7 @@ void python_printfdom(GEN U, char *filename, long prec){
 //SECTION 2: QUATERNIONIC METHODS
 
 
-//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0. This is not gerepile suitable, it leaves a dirty stack.
+//Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0. This is not gerepile suitable, it leaves a dirty stack. Actually, this MISSES the q-algebras with multiple ramifying primes that have the SAME norm. But that's okay.
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram){
   pari_sp top=avma;
   if(typ(D)!=t_INT || signe(D)!=1) pari_err_TYPE("D should be a positive integer", D);//The absolute norm to Q should be a positive integer
@@ -324,23 +325,24 @@ GEN smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, in
     if(cmpis(pDmin, 1)<=0) glist_putstart(&Ds, gen_1);//Disc 1
 	par=2;
   }
+  long lpm1=lp-1;//Number of prime powers we are looping over
   for(long ndiv=par;ndiv<=ind;ndiv=ndiv+2){//ndiv divisors
-    forsubset_t SS;//Loop through subsets
-	forksubset_init(&SS, lp-1, ndiv);//initialize
-	GEN sub=forsubset_next(&SS);//The subset
-	while(sub){
+    GEN sub=cgetg(ndiv+1 ,t_VECSMALL);
+	for(long i=1;i<=ndiv;i++) sub[i]=i;
+	int cont=1;
+	while(cont){
 	  mid=avma;
       GEN prod=gen_1;
-	  for(long i=1;i<lg(sub);i++) prod=mulii(prod, gel(pposs_nm, sub[i]));//Computing the norm
-	  if(cmpii(prod, pDmin)==-1) avma=mid;//Too small
+	  for(long i=1;i<=ndiv;i++) prod=mulii(prod, gel(pposs_nm, sub[i]));//Computing the norm.
+	  if(cmpii(prod, pDmin)==-1) avma=mid;//Too small, just go on.
 	  else{
 		if(cmpii(prod, pDmax)==1){//Too large
 		  avma=mid;
 		  long nind=0;
 		  for(long i=ndiv;i>=2;i--){if(sub[i]>sub[i-1]+1){nind=i-1;break;}}
 		  if(nind==0) break;//Done, we will always be too large for now on out.
-		  long tochange=sub[nind];//The index we want to see changed.
-		  while(sub && tochange==sub[nind]) sub=forsubset_next(&SS);//Moving along until index nind grows.
+		  long tochange=sub[nind]+1;//What we want to start with
+		  for(long i=nind;i<=ndiv;i++){sub[i]=tochange;tochange++;}
 		  continue;
 		}
 		else{
@@ -350,10 +352,10 @@ GEN smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, in
 		  count++;
 		}
 	  }
-	  sub=forsubset_next(&SS);
+	  cont=subset_lexincrem(sub, lpm1);//Increment the subset
 	}
   }
-  GEN Discs=gerepileupto(top, glist_togvec(Ds, count, -1));//The discriminants.
+  GEN Discs=gerepileupto(top, sort(glist_togvec(Ds, count, -1)));//The discriminants.
   if(retD) return Discs;
   long lD=lg(Discs), sind=1;
   GEN Alist=vectrunc_init(lD), Dlist=vectrunc_init(lD);
@@ -367,6 +369,22 @@ GEN smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, in
   }
   return gerepilecopy(top, mkvec2(Dlist, Alist));
 }
+
+//S is a k-element subset of [1,...,n], given as a vecsmall. This updates S to the next lexicographical element. Returns 1 if successful, 0 if at the end.
+static int subset_lexincrem(GEN S, long n){
+  long k=lg(S)-1, bound=n, ind=0;
+  for(long i=k;i>0;i--){
+	if(S[i]<bound){ind=i;S[i]=S[i]+1;break;}//Success
+	bound--;
+  }
+  if(ind){//Success, fill in rest
+	bound=S[ind]+1;
+	for(long i=ind+1;i<=k;i++){S[i]=bound;bound++;}
+	return 1;
+  }
+  else return 0;//No success
+}
+
 
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
