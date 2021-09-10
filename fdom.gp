@@ -29,7 +29,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdom_bestC, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algramifiedplacesf, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdom_bestC, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algramifiedplacesf, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras ,smallalgebras_area.");
 
 	\\fdom
 	install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
