@@ -304,7 +304,7 @@ GEN llist_tovecsmall(llist *l, long length, int dir){//No garbage collection nec
 //SHORT VECTORS IN LATTICES
 
 
-//Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2.
+//Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2. Note that A does not need to be positive definite, but it CANNOT represent 0 (as then we cannot write the quadratic form as a sum/difference of squares). The result in this case will be meaningless.
 GEN mat_nfcholesky(GEN nf, GEN A){
   pari_sp top=avma;
   long n=lg(A)-1;//A is nxn
@@ -374,7 +374,6 @@ static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
   return gerepilecopy(top, rts);
 }
 
-
 //We follow the article "Improved Methods for Calculating Vectors of Short Length in a Lattice, Including Complexity Analysis" by Fincke and Pohst (Mathematics of Computation, Vol. 44, No. 170 (Apr., 1985), pp 463-471
 
 //Follows Algorithm 2.12 in Fincke-Pohst, where we pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied, with M and n being elements of the number field nf. Note that a good portion of the code in this method is copied from fincke_pohst in bibli1.c.
@@ -434,7 +433,7 @@ static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, l
   return gerepilecopy(top, ret);
 }
 
-//Q is the Cholesky decomposition of a matrix A, this computes all vectors x such that x^T*A*x<=C (i.e. Q(x)<=C_2 where Q(x)=sum(i=1..n)q_ii(x_i+sum(j=i+1..n)q_ijxj)^2. Algorithm 2.8 of Fincke Pohst. We also pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied (M and n live in the number field nf). (the point: M gives an indefinite norm condition on the vector, and A combines this norm with other info to make a positive definite form. We use the condition when finding small norm 1 elements of a quaternion algebra.)
+//Q is the Cholesky decomposition of a matrix A, this computes all vectors x such that x^T*A*x<=C (i.e. Q(x)<=C_2 where Q(x)=sum(i=1..n)q_ii(x_i+sum(j=i+1..n)q_ijxj)^2. Algorithm 2.8 of Fincke Pohst. We also pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied (M and n live in the number field nf). (the point: M gives an indefinite norm condition on the vector, and A combines this norm with other info to make a positive definite form. We use the condition when finding small norm 1 elements of a quaternion algebra.) This does NOT work if the condition can represent 0, as we rely on writing conditon as the sum/difference of squares.
 static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec){
   pari_sp tiptop=avma, top, mid;
   GEN nf=gel(condition, 1);
@@ -2903,6 +2902,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   long fourn=4*nfdeg;//The lg of a normal entry
   GEN nformpart=qalg_normform(Q);
   GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
+  if(lg(qalg_get_rams(Q))==1) type=1;//We must use qfminim, since our implementation of condition won't work in a non-division algebra.
   long maxelts=1;
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
     type=1;//Setting in case type=0
@@ -2925,7 +2925,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
   }
   U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-  
+
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
 
@@ -2940,7 +2940,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
 	  ooend=lg(oosides)-1;
-	  if(dispprogress) pari_printf("%d infinite sides\n", ooend-1);
+	  if(dispprogress) pari_printf("%d infinite sides\n", ooend);
 	}
 	iN=itos(gfloor(N))+1;
 	nskip=0;//How many points are skipped due to poor precision
@@ -3337,6 +3337,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
   long fourn=4*nfdeg;//The lg of a normal entry
   GEN nformpart=qalg_normform(Q);
   GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
+  if(lg(qalg_get_rams(Q))==1) type=1;//We must use qfminim, since our implementation of condition won't work in a non-division algebra.
   long maxelts=1;
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
     type=1;//Setting in case type=0
@@ -3374,7 +3375,7 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
 	  ooend=lg(oosides)-1;
-	  if(dispprogress) pari_printf("%d infinite sides\n", ooend-1);
+	  if(dispprogress) pari_printf("%d infinite sides\n", ooend);
 	}
 	iN=itos(gfloor(N))+1;
 	nskip=0;//How many points are skipped due to poor precision
@@ -3427,4 +3428,5 @@ static GEN qalg_fdom_tester(GEN Q, GEN p, int dispprogress, int dumppartial, GEN
 	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
+
 

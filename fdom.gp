@@ -109,7 +109,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	install("rsquared","GGG","rsquared","./libfdom.so");
 	addhelp(rsquared,"Inputs X, y, fit: X and y data supplied to OLS, and fit the proposed fit (a column vector of parameters). This returns the R^2 value for this proposal.");
 	install("plot_compile","vsD1,L,","plot_compile","./libfdom.so");
-	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.txt and moves the output to plots/fname_plot.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
+	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.txt and moves the output to plots/fname.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
 
 \\TEMPORARY
 install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,D0,L,p","algfdom1","./libfdom.so");
