@@ -44,6 +44,7 @@ GEN mat_nfcholesky(GEN nf, GEN A);
 
 //BASIC LINE, CIRCLE, AND POINT OPERATIONS
 GEN mat_eval(GEN M, GEN x);
+GEN mobius_gp(GEN M, GEN c, long prec);
 
 //DISTANCES/AREAS
 GEN hdiscarea(GEN R, long prec);

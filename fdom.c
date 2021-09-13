@@ -34,15 +34,15 @@ static GEN circle_fromcp(GEN cent, GEN p, long prec);
 static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec);
 static GEN circle_tangentslope(GEN c, GEN p, long prec);
 static GEN line_fromsp(GEN s, GEN p);
-static GEN line_frompp(GEN p1, GEN p2);
+static GEN line_frompp(GEN p1, GEN p2, GEN tol, long prec);
 static GEN midpoint(GEN p1, GEN p2);
 static GEN mobius(GEN M, GEN c, GEN tol, long prec);
 static GEN mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec);
 static GEN mobius_circle(GEN M, GEN c, GEN tol, long prec);
 static GEN mobius_line(GEN M, GEN l, GEN tol, long prec);
-static GEN perpbis(GEN p1, GEN p2);
+static GEN perpbis(GEN p1, GEN p2, GEN tol, long prec);
 static GEN radialangle(GEN c, GEN p, GEN tol, long prec);
-static GEN slope(GEN p1, GEN p2);
+static GEN slope(GEN p1, GEN p2, GEN tol, long prec);
 
 //2: INTERSECTION OF LINES/CIRCLES
 static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec);
@@ -578,7 +578,7 @@ static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec){
 //Returns the midpoint of the arc between p1 and p2 (counterclockwise) on c.
 static GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec){
   pari_sp top=avma;
-  GEN pts=circleline_int(c, perpbis(p1, p2), tol, prec);
+  GEN pts=circleline_int(c, perpbis(p1, p2, tol, prec), tol, prec);
   GEN a1=radialangle(c, p1, gen_0, prec);
   GEN a2=shiftangle(radialangle(c, p2, gen_0, prec), a1, gen_0, prec);//No tolerance concerns
   GEN angint1=shiftangle(radialangle(c, gel(pts, 1), gen_0, prec), a1, gen_0, prec);//the angle formed by pts[1] to c with base a1. Again, no tolerance need.
@@ -611,13 +611,13 @@ static GEN circle_fromcp(GEN cent, GEN p, long prec){
 
 //Circle through 3 points (with one allowed to be oo, making a line instead)
 static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec){
-  if(typ(p1)==t_INFINITY) return line_frompp(p2, p3);
-  if(typ(p2)==t_INFINITY) return line_frompp(p1, p3);
-  if(typ(p3)==t_INFINITY) return line_frompp(p1, p2);//Lines
+  if(typ(p1)==t_INFINITY) return line_frompp(p2, p3, tol, prec);
+  if(typ(p2)==t_INFINITY) return line_frompp(p1, p3, tol, prec);
+  if(typ(p3)==t_INFINITY) return line_frompp(p1, p2, tol, prec);//Lines
   pari_sp top=avma;
-  GEN l1=perpbis(p1, p2), l2=perpbis(p1, p3);
+  GEN l1=perpbis(p1, p2, tol, prec), l2=perpbis(p1, p3, tol, prec);
   GEN centre=line_int(l1, l2, tol, prec);//centre is intersection of perp bisectors.
-  if(typ(centre)==t_INFINITY) return gerepileupto(top, line_frompp(p1, p2));//p1, p2, p3 collinear
+  if(typ(centre)==t_INFINITY) return gerepileupto(top, line_frompp(p1, p2, tol, prec));//p1, p2, p3 collinear
   return gerepileupto(top, circle_fromcp(centre, p1, prec));//The circle!
 }
 
@@ -649,9 +649,9 @@ static GEN line_fromsp(GEN s, GEN p){
 }
 
 //Line through two points
-static GEN line_frompp(GEN p1, GEN p2){
+static GEN line_frompp(GEN p1, GEN p2, GEN tol, long prec){
   pari_sp top=avma;
-  return gerepileupto(top, line_fromsp(slope(p1, p2), p1));
+  return gerepileupto(top, line_fromsp(slope(p1, p2, tol, prec), p1));
 }
 
 //Mx, where M is a 2x2 matrix and x is complex or infinite.
@@ -665,6 +665,13 @@ GEN mat_eval(GEN M, GEN x){
 static GEN midpoint(GEN p1, GEN p2){
   pari_sp top=avma;
   return gerepileupto(top, gdivgs(gadd(p1, p2), 2));
+}
+
+//Mobius transform accessible in GP
+GEN mobius_gp(GEN M, GEN c, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  return gerepileupto(top, mobius(M, c, tol, prec));
 }
 
 //Returns M(c), for c a circle/line/arc/segment
@@ -780,9 +787,9 @@ static GEN mobius_line(GEN M, GEN l, GEN tol, long prec){
 }
 
 //Perpendicular bisector of distinct points
-static GEN perpbis(GEN p1, GEN p2){
+static GEN perpbis(GEN p1, GEN p2, GEN tol, long prec){
   pari_sp top=avma;
-  return gerepileupto(top, line_fromsp(divoo(gen_m1, slope(p1, p2)), midpoint(p1, p2)));
+  return gerepileupto(top, line_fromsp(divoo(gen_m1, slope(p1, p2, tol, prec)), midpoint(p1, p2)));
 }
 
 //Angle between p and the centre of c, in the range [0, 2*Pi)
@@ -792,9 +799,14 @@ static GEN radialangle(GEN c, GEN p, GEN tol, long prec){
 }
 
 //The slope of the line through p1, p2
-static GEN slope(GEN p1, GEN p2){
+static GEN slope(GEN p1, GEN p2, GEN tol, long prec){
   pari_sp top=avma;
-  return gerepileupto(top, divoo(imag_i(gsub(p2, p1)), real_i(gsub(p2, p1))));
+  GEN p2mp1=gsub(p2, p1);
+  GEN ftop=imag_i(p2mp1);
+  GEN fbot=real_i(p2mp1);
+  if(toleq(fbot, gen_0, tol, prec)) fbot=gen_0;
+  if(toleq(ftop, gen_0, tol, prec)) ftop=gen_0;
+  return gerepileupto(top, divoo(ftop, fbot));
 }
 
 
