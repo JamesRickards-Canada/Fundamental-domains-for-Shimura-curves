@@ -2695,19 +2695,20 @@ GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
-  long precinc=0, newprec=prec;
+  long newprec=prec;
+  unsigned int precinc=0;
   pari_CATCH(e_PREC){
 	pari_warn(warner, "Increasing precision");
-	precinc++;
 	newA=algmoreprec(newA, 1, newprec);
 	newprec++;
+	precinc++;
 	tol=deftol(newprec);
 	Q=qalg_fdominitialize(newA, newprec);
   }
   pari_RETRY{
     U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, passes, type, tol, newprec);
   }pari_ENDCATCH
-  if(precinc) pari_warn(warner, "Precision increased %d times to %d. Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
+  if(precinc) pari_warn(warner, "Precision increased %d times to %d (the number of times it increased may be wrong, but the final precision should be correct). Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
   return gerepileupto(top, U);
 }
 
@@ -2721,9 +2722,9 @@ GEN algfdom_bestC(GEN A, long prec){
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
   GEN npart;
   if(n==1) npart=dbltor(2.8304840896);
-  else if(n==2) npart=dbltor(0.9519687879);
-  else if(n==3) npart=dbltor(0.8939379663);
-  else if(n==4) npart=dbltor(0.9678121920);
+  else if(n==2) npart=dbltor(0.9387876813);
+  else if(n==3) npart=dbltor(0.9033981758);
+  else if(n==4) npart=dbltor(0.9672267923);
   else if(n==5) npart=dbltor(1.0393912773);
   else if(n==6) npart=dbltor(1.0877563103);
   else if(n==7) npart=dbltor(1.1199913096);
@@ -2905,7 +2906,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   GEN R=hdiscradius(gpow(area, gamma, prec), prec);
   GEN epsilon=gdivgs(gen_1, 6);
   
-  if(dispprogress) pari_printf("Initial constants:\n   C=%Ps\n   N=%Ps\n   R=%Ps\nGrowth constants:\n   epsilon=%Ps\nTarget Area: %Ps\n\n", C, N, R, epsilon, area);
+  if(dispprogress) pari_printf("Initial constants:\n   C=%P.8f\n   N=%Ps\n   R=%P.8f\nGrowth constants:\n   epsilon=%Ps\nTarget Area: %P.8f\n\n", C, N, R, epsilon, area);
   
   GEN id=gel(alg_get_basis(A), 1);//The identity  
   long iN;
@@ -2948,7 +2949,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 
   for(;;){
 	pass++;
-	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %Ps\n", pass, N, R);}
+	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %P.8f\n", pass, N, R);}
 	if(nsidesp1>1){//We have a partial domain.
 	  oosides=normalizedboundary_oosides(U);
 	  ooend=lg(oosides)-1;

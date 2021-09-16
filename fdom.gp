@@ -83,7 +83,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	install("enum_bestC","GGGLD300,L,p","enum_bestC","./libfdom.so");
 	addhelp(enum_bestC,"Inputs A, p, scale, ntrials, {mintesttime=300}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, scale>1 real, mintesttime positive integer.\n Computes the optimal C value for A based on heuristics. We use ntrials values of C in a range [Cmin, Cmin*scale^(1/2n)] to compute a, b, where the total time taken is a+b*C^{2n}. We solve for the optimal C based on this. We return [a, b, C, R^2], with the R^2 value for the a, b regression.");
 	install("enum_bestC_range","GGGLLsD0,L,D1,L,D1,L,p","enum_bestC_range","./libfdom.so");
-	addhelp(enum_bestC_range,"Inputs Aset, p, scale, ntrials, mintesttime, fname, {isArange=0}, {compile=1}, {WSL=1}: set of quaternion algebras corresponding to Shimura curves Aset, upper half plane point p, scale>1, ntrials>=2, mintesttime positive integer, fname a string, and isArange/compile/WSL 0 or 1.\n Computes the optimal C for all algebras A in Aset using the data p, scale, ntrials, mintesttime. If isArange=1, we assume they all have the same base number field, and we are changing the algebra discriminant. Otherwise, we assume that n=[F:Q] is constant, and we are varying disc(F). We save the data to plots/build/fname.dat, and perform regression on the data. If compile=1 we compile a plot, and display it if WSL=1.");
+	addhelp(enum_bestC_range,"Inputs Aset, p, scale, ntrials, mintesttime, fname, {isArange=0}, {compile=1}, {WSL=1}: set of quaternion algebras corresponding to Shimura curves Aset, upper half plane point p, scale>1, ntrials>=2, mintesttime positive integer, fname a string, and isArange/compile/WSL 0 or 1.\n Computes the optimal C for all algebras A in Aset using the data p, scale, ntrials, mintesttime. If isArange=1, we assume they all have the same base number field, and we are changing the algebra discriminant. Otherwise, we assume that n=[F:Q] is constant, and we are varying disc(F). We save the data to plots/build/fname.dat, and perform regression on the data. If compile=1 we compile a plot, and display it if WSL=1. The return value is [trend, R^2].");
 	install("enum_successrate","GGGLD0,G,p","enum_successrate","./libfdom.so");
 	addhelp(enum_successrate,"Inputs A, p, C, Ntests, {R=0}: quaternion algebra A corresponding to a Shimura curve, upper half plane point p, positive real number C, positive integer Ntests, positive real R.\n Computes the small norm 1 elements of A (<=C) Ntests times, where we pick z_1=0 and z_2 a random point in the hyperbolic disc of radius R. If R=0, we auto-set R to be the same R as the algfdom method. We output the pair [obs, exp], of the number of found norm 1 elements, and the expected number.");
 	install("enum_successrate_range","GGGGLLD0,G,DsD1,L,D1,L,p","enum_successrate_range","./libfdom.so");
@@ -99,7 +99,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 	\\NUMBER OF ELEMENTS REQUIRED TO GENERATE ALGEBRA
 	install("algfdom_nelts","GGD0,G,D0,L,p","algfdom_nelts","./libfdom.so");
-	addhelp(algfdom_nelts,"Inputs: A, p, {CNRdata=0}, {type=0}: same as algfdom.\n This computes the fundamental domain with algfdom, but instead returns the number of elements found before generating the domain.");
+	addhelp(algfdom_nelts,"Inputs: A, p, {CNRdata=0}, {type=0}: same as algfdom.\n This computes the fundamental domain with algfdom, but instead returns [nelts, sides, area], where nelts is the number of elements found before generating the domain.");
 
 	\\REGRESSIONS & PLOTS
 	install("OLS","GGD1,L,","OLS","./libfdom.so");
@@ -111,7 +111,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	install("rsquared","GGG","rsquared","./libfdom.so");
 	addhelp(rsquared,"Inputs X, y, fit: X and y data supplied to OLS, and fit the proposed fit (a column vector of parameters). This returns the R^2 value for this proposal.");
 	install("plot_compile","vsD1,L,","plot_compile","./libfdom.so");
-	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.txt and moves the output to plots/fname.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
+	addhelp(plot_compile,"Inputs: string fname, {WSL=1 or 0}.\n Compiles the plot plots/build/fname_plotter.tex and moves the output to plots/fname.pdf. If WSL=1, also opens the output plot, assuming Windows Subsystem for Linux is being run.");
 
 \\TEMPORARY
 install("algfdom_test","GGD1,L,D1,L,D0,G,D0,G,D0,L,p","algfdom1","./libfdom.so");

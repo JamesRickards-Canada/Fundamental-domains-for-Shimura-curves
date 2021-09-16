@@ -414,8 +414,8 @@ class operations_manager(object):
 				text='# Sides: \n     Side: '
 		self.tbox.set_text(text)
 
-#The main body
-if __name__=='__main__':
+#Initialize the plot
+def initialize(args):
 	#Initializing the figure
 	fig = plt.figure(figsize=(10, 5))
 	ax = fig.add_subplot(1, 1, 1)
@@ -445,7 +445,7 @@ if __name__=='__main__':
 	arccolours=['red', 'blue', 'aqua', 'fuchsia', 'chartreuse', 'maroon', 'darkblue', 'teal', 'y']
 	counter=-1
 	isfdom=False
-	for c in sys.argv[1:]:
+	for c in args:
 		if c[0]=="f": #Fundamental domain
 			fdom=funddom(ax,'fdoms/'+c+'.dat', unitcirc)
 			isfdom=True
@@ -466,5 +466,8 @@ if __name__=='__main__':
 	fig.canvas.mpl_connect('pick_event', op_man.onclick)
 	fig.canvas.mpl_connect('key_press_event', op_man.keypress)
 
-	fig.canvas.set_window_title(' '.join(sys.argv[1:]))
+	fig.canvas.set_window_title(' '.join(args))
 	plt.show()
+
+if __name__=='__main__':
+	initialize(sys.argv[1:])
