@@ -2728,6 +2728,7 @@ GEN algfdom_bestC(GEN A, long prec){
   else if(n==5) npart=dbltor(1.0227423723);
   else if(n==6) npart=dbltor(1.0491999288);
   else if(n==7) npart=dbltor(1.0339766728);
+  else if(n==8) npart=dbltor(1.1921852237);
   else{
 	GEN intercept=dbltor(0.690934049);
 	GEN slope=dbltor(0.085442988);
