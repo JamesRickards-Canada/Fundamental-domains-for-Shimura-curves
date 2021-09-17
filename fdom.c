@@ -2722,17 +2722,16 @@ GEN algfdom_bestC(GEN A, long prec){
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
   GEN npart;
   if(n==1) npart=dbltor(2.8304840896);
+  else{
+	npart=gen_1;
+  /*These were the old computations
   else if(n==2) npart=dbltor(0.9387876813);
   else if(n==3) npart=dbltor(0.9033981758);
   else if(n==4) npart=dbltor(0.9672267923);
   else if(n==5) npart=dbltor(1.0227423723);
   else if(n==6) npart=dbltor(1.0491999288);
   else if(n==7) npart=dbltor(1.0339766728);
-  else if(n==8) npart=dbltor(1.1921852237);
-  else{
-	GEN intercept=dbltor(0.690934049);
-	GEN slope=dbltor(0.085442988);
-	npart=gadd(intercept, gmulgs(slope, n));
+  else if(n==8) npart=dbltor(1.1921852237);*/
   }
   GEN best=gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
   if(gcmpgs(best, n)<=0) best=gerepileupto(top, gaddsg(n, gen_2));//Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).
