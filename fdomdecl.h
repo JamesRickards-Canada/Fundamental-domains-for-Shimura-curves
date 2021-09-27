@@ -1,19 +1,13 @@
 //STRUCTURES
 
-typedef struct listtype1{//A circular list of GENs, stores data, next, and previous terms
+typedef struct listtype1{//A generic linked list of GENs, stores data and next term
   GEN data; 
   struct listtype1 *next;
-  struct listtype1 *prev;
-}clist;
-
-typedef struct listtype2{//A generic linked list of GENs, stores data and next term
-  GEN data; 
-  struct listtype2 *next;
 }glist;
 
-typedef struct listtype3{//A generic linked list of longs, stores data and next term
+typedef struct listtype2{//A generic linked list of longs, stores data and next term
   long data; 
-  struct listtype3 *next;
+  struct listtype2 *next;
 }llist;
 
 
