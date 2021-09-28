@@ -7,3 +7,5 @@ To use this package with GP, download fdom.gp, fdom.so, and fdviewer.py, and cal
 Type ?fdom to access the help
 
 Run the file "example.gp" to see an example of these methods in action.
+
+The files paper_computations.gp, papertimetest.gp, and the folder data_in can be used to reproduce figures from my paper, "Improved computation of fundamental domains for arithmetic Fuchsian groups".
