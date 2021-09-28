@@ -80,7 +80,7 @@ static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, GEN tol, long prec);
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, GEN tol, long prec);
 
 //3: HELPER METHODS
 static long algsplitoo(GEN A);
@@ -2687,11 +2687,13 @@ GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
 
-//Initializes and checks the inputs, and computes the fundamental domain
-GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, long prec){
+//Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set.
+GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
+  if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
+  if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
   long newprec=prec;
   unsigned int precinc=0;
   pari_CATCH(e_PREC){
@@ -2703,7 +2705,7 @@ GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN
 	Q=qalg_fdominitialize(newA, newprec);
   }
   pari_RETRY{
-    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, passes, type, tol, newprec);
+    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
   }pari_ENDCATCH
   if(precinc) pari_warn(warner, "Precision increased %d times to %d (the number of times it increased may be wrong, but the final precision should be correct). Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
   return gerepileupto(top, U);
@@ -2879,8 +2881,8 @@ GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, int type, long prec){
 //FUNDAMENTAL DOMAIN COMPUTATION
 
 
-//Generate the fundamental domain for a quaternion algebra initialized with alginit
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, GEN tol, long prec){
+//Generate the fundamental domain for a quaternion algebra initialized with alginit. We can pass C, R, type, and they will be auto-set if passed as 0.
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, GEN tol, long prec){
  pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN A=qalg_get_alg(Q);
@@ -2889,18 +2891,18 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
   GEN area=qalg_fdomarea(Q, 3, prec);//Smallest precision possible.
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
 
-  if(gequal0(passes)){
+  if(gequal0(passes)){//Setting passes
     if(nfdeg==1) passes=gen_2;
 	else passes=stoi(12);
   }
-  GEN C=algfdom_bestC(A, prec);
+  if(gequal0(C)) C=algfdom_bestC(A, prec);//Setting C
   GEN N=gceil(gdiv(gsqr(area), gmul(gmul(Pi2n(3, prec), gsubgs(C, nfdeg)), passes)));//Area^2/(8*Pi*(C-n)*#Passes)
   if(gcmpgs(N, 1)<=0) N=gen_2;//Make sure N>=2
   GEN gamma=dbltor(2.1);//2.1
-  GEN R=hdiscradius(gpow(area, gamma, prec), prec);
+  if(gequal0(R)) R=hdiscradius(gpow(area, gamma, prec), prec);//Setting R
   GEN epsilon=gdivgs(gen_1, 6);
   
-  if(dispprogress) pari_printf("Initial constants:\n   C=%P.8f\n   N=%Ps\n   R=%P.8f\nGrowth constants:\n   epsilon=%Ps\nTarget Area: %P.8f\n\n", C, N, R, epsilon, area);
+  if(dispprogress) pari_printf("Initial constants:\n   C=%P.8f\n   N=%Ps\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N, R, area);
   
   GEN id=gel(alg_get_basis(A), 1);//The identity  
   long iN;
