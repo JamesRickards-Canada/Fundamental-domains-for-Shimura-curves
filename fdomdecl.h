@@ -115,8 +115,6 @@ GEN qalg_get_rams(GEN Q);
 GEN qalg_get_varnos(GEN Q);
 GEN qalg_get_roots(GEN Q);
 
-//TEMPORARY
-GEN algfdom_test(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN passes, int type, long prec);
 
 //FDOM_EXTRA METHODS
 
