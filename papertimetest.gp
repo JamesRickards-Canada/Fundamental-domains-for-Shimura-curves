@@ -3,7 +3,7 @@
 avgtime(fil, alg, case, N)={
   my(dom, T, st, extra);
   gettime();
-  for(i=1,N,dom=algfdom(alg, I/2, 0, 0, 0, 0, 0));
+  for(i=1,N,dom=algfdom(alg, I/2, 0, 0, 0, 0));
   T=gettime()/(1000*N);
   st=strprintf("Test case %d: %.3f s", case, T);
   filewrite(fil, st);
@@ -60,7 +60,7 @@ A[8]=alginit(F[8], [y^6-5*y^5+3*y^4+13*y^3-10*y^2-8*y-8, -264*y^6+136*y^5+1632*y
 
 
 \\Starting the file
-fil=fileopen("papertimetest.txt", "a");
+fil=fileopen("papertimetest_results.txt", "a");
 st2=strprintf("Testing the running time of algfdom. There are %d cases, and each case is tested %d times.\n The algorithm details are: %s", Ntests, testspercase, st1);
 filewrite(fil, st2);
 print(st2);
