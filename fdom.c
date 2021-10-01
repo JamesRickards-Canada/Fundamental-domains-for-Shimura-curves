@@ -2990,7 +2990,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 	  pari_printf("%d elements found\n", lg(points)-1);
 	}
 	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-	if(dispprogress) pari_printf("Current normalized basis has %d sides and an area of %Ps\n\n", lg(gel(U, 1))-1, gel(U, 6));
+	if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
 	if(gcmp(gel(U, 6), areabound)==-1){
 	  if(dumppartial) fclose(f);
 	  return gerepileupto(top, U);
