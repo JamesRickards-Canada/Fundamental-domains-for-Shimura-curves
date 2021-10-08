@@ -2748,18 +2748,20 @@ GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
 }
 
 //Returns the minimal cycles in the fundamental domain U of the algebra A.
-GEN algfdomminimalcycles(GEN A, GEN U, long prec){
+GEN algfdomminimalcycles(GEN U, GEN A, GEN O, long prec){
   pari_sp top=avma;
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, minimalcycles_bytype(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Returns the presentation of the algebra A, obtained from the fundamental domain U.
-GEN algfdompresentation(GEN A, GEN U, long prec){
+GEN algfdompresentation(GEN U, GEN A, GEN O, long prec){
   pari_sp top=avma;
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, presentation(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
