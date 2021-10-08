@@ -3151,7 +3151,24 @@ GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
 	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
 	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
   }
+  GEN elevpart=gen_1, ell=qalg_get_level(Q);
+  if(!gequal(ell, gen_1)){//We have an Eichler part
+	GEN ifact=idealfactor(F, ell);
+	if(!gequal0(ifact)){//If this does not trigger we are done; the level got passed in as an ideal of norm 1 by accident.
+	  for(long i=1;i<lg(gel(ifact, 1));i++){
+	    GEN Np=idealnorm(F, gcoeff(ifact, i, 1));//Norm of the prime
+	    GEN Npexp=gcoeff(ifact, i, 2);//Exponent
+	    if(equali1(Npexp)) elevpart=mulii(elevpart, addis(Np, 1));//Times N(p)+1
+	    else{
+	      GEN Npem1=powii(Np, gsubgs(Npexp, 1));//Np^{e-1}
+		  GEN Npe=mulii(Npem1, Np);//Np^e
+	      elevpart=mulii(elevpart, addii(Npe, Npem1));
+	    }
+	  }
+	}
+  }//Product of N(p)^e*(1+1/N(p)) over p^e||level.
   GEN ar=gmul(gpow(nfdisc(pol), gdivsg(3, gen_2), computeprec), norm);//d_F^(3/2)*phi(D)
+  ar=gmul(ar, elevpart);//d_F^(3/2)*phi(D)*psi(M)
   long n=nf_get_degree(F), twon=2*n;
   ar=gmul(ar, zetaval);//zeta_F(2)*d_F^(3/2)*phi(D)
   ar=gmul(ar, gpowgs(gen_2, 3-twon));
@@ -3175,12 +3192,12 @@ GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec){
   return mkvecn(6, A, ramdat, varnos, roots, O, level);
 }
 
-//Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of A. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
+//Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of an order. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
 GEN qalg_normform(GEN Q){
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
   long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
-  GEN basis=matid(n-1);
+  GEN basis=matid(n-1);//It doesn't matter about the order, since things are expressed in terms of the natural basis of the algebra.
   return gerepileupto(top, qalg_normform_givenbasis(Q, basis));
 }
 
