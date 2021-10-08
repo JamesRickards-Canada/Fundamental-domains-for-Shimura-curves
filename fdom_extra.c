@@ -540,7 +540,7 @@ static long enum_nontrivial(GEN L){
 //Does smallnorm1elts Ntests times, and sees how many successes we get. Returns [obs, exp], with obs the number of successes, and exp the expected number (2*Pi(C-n)/area)
 GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec){
   pari_sp top=avma;
-  GEN area=algfdomarea(A, 1, prec);
+  GEN area=algfdomarea(A, NULL, 1, prec);
   if(gequal0(R)){
 	GEN gamma=dbltor(2.1);
 	R=hdiscradius(gpow(area, gamma, prec), prec);
@@ -561,7 +561,7 @@ GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec){
 //enum_successrate, but over a range of C. Prints the observed data to file plots/build/fname.dat (if not NULL), and returns [A, B, R^2]: the predicted heuristic of A+BC and the R^2 value of this heuristic (B=2Pi/area, A=-2*pi*n/area)
 GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntests, GEN R, char *fname, int compile, int WSL, long prec){
   pari_sp top=avma;
-  GEN area=algfdomarea(A, 1, prec);//Initialize things
+  GEN area=algfdomarea(A, NULL, 1, prec);//Initialize things
   if(gequal0(R)){
 	GEN gamma=dbltor(2.1);
 	R=hdiscradius(gpow(area, gamma, prec), prec);
@@ -665,7 +665,7 @@ GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
 	  gcoeff(normformpart, i, j)=nftrace(nf, gcoeff(normformpart, i, j));//Taking the trace to Q
 	}
   }//Tr_{K/Q}(nrd(elt));
-  GEN area=algfdomarea(A, 1, prec);
+  GEN area=algfdomarea(A, NULL, 1, prec);
   GEN R=hdiscradius(gpow(area, dbltor(2.1), prec), prec);
   
   long lgCset=lg(Cset);
@@ -755,7 +755,7 @@ long enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long pr
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   if(gequal0(R)){
-	GEN area=algfdomarea(A, 1, prec);
+	GEN area=algfdomarea(A, NULL, 1, prec);
 	GEN gamma=dbltor(2.1);
 	R=hdiscradius(gpow(area, gamma, prec), prec);
   }
@@ -829,7 +829,7 @@ void enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, lon
 	C=gadd(C, blen);
   }
   GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
-  GEN area=algfdomarea(A, 1, prec);
+  GEN area=algfdomarea(A, NULL, 1, prec);
   GEN gamma=dbltor(2.1);
   GEN R=hdiscradius(gpow(area, gamma, prec), prec);
   GEN nf=alg_get_center(A);

@@ -2738,9 +2738,11 @@ GEN algfdom_bestC(GEN A, long prec){
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
-GEN algfdomarea(GEN A, int lessprec, long prec){
+GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q;
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   long lp = lessprec? 3:prec;
   return gerepileupto(top, qalg_fdomarea(Q, lp, prec));
 }

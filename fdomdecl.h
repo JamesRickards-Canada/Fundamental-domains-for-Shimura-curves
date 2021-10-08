@@ -80,7 +80,7 @@ GEN deftol(long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);
 GEN algfdom_bestC(GEN A, long prec);
-GEN algfdomarea(GEN A, int lessprec, long prec);
+GEN algfdomarea(GEN A, GEN O, int lessprec, long prec);
 GEN algfdomminimalcycles(GEN A, GEN U, long prec);
 GEN algfdompresentation(GEN A, GEN U, long prec);
 GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec);
