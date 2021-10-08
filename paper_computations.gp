@@ -206,7 +206,7 @@ gtimedata(fin, fout)={
 	  A=alginit(F, v[i][j]);
 	  Adisc=algnormdisc(A);
 	  gettime();
-	  W=algfdom(A, I/2, 0, 0, 0);
+	  W=algfdom(A, , I/2, 0, 0, 0);
 	  T=gettime()/1000.;
 	  st=strprintf("%d %d %d %d %.3f %.3f\n", n, Fdisc, Adisc, length(W[1]), W[6], T);
 	  filewrite1(f, st);

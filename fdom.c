@@ -2687,11 +2687,13 @@ GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
 
-//Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set.
-GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
+//Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as [Ord, level].
+GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec), newA=A, U;
+  GEN Q, newA=A, U;
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
   if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
   long newprec=prec;
@@ -2702,7 +2704,8 @@ GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN
 	newprec++;
 	precinc++;
 	tol=deftol(newprec);
-	Q=qalg_fdominitialize(newA, NULL, NULL, newprec);
+	if(!O) Q=qalg_fdominitialize(newA, NULL, NULL, newprec);//Maximal order in A
+    else Q=qalg_fdominitialize(newA, gel(O, 1), gel(O, 2), newprec);//Supplied Eichler order
   }
   pari_RETRY{
     U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
@@ -2732,30 +2735,6 @@ GEN algfdom_bestC(GEN A, long prec){
   GEN best=gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
   if(gcmpgs(best, n)<=0) best=gerepileupto(top, gaddsg(n, gen_2));//Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).
   return best;
-}
-
-//algfdom, but we supply an Eichler order and level
-GEN algfdom_eichler(GEN A, GEN O, GEN level, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
-  pari_sp top=avma;
-  GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, O, level, prec), newA=A, U;
-  if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
-  if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
-  long newprec=prec;
-  unsigned int precinc=0;
-  pari_CATCH(e_PREC){
-	pari_warn(warner, "Increasing precision");
-	newA=algmoreprec(newA, 1, newprec);
-	newprec++;
-	precinc++;
-	tol=deftol(newprec);
-	Q=qalg_fdominitialize(newA, O, level, newprec);
-  }
-  pari_RETRY{
-    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
-  }pari_ENDCATCH
-  if(precinc) pari_warn(warner, "Precision increased %d times to %d (the number of times it increased may be wrong, but the final precision should be correct). Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
-  return gerepileupto(top, U);
 }
 
 //Returns the area of the fundamental domain of the order stored in A.

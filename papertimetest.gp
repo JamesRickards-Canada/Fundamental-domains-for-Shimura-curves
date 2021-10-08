@@ -3,7 +3,7 @@
 avgtime(fil, alg, case, N)={
   my(dom, T, st, extra);
   gettime();
-  for(i=1,N,dom=algfdom(alg, I/2, 0, 0, 0, 0));
+  for(i=1,N,dom=algfdom(alg, , I/2, 0, 0, 0, 0));
   T=gettime()/(1000*N);
   st=strprintf("Test case %d: %.3f s", case, T);
   filewrite(fil, st);
