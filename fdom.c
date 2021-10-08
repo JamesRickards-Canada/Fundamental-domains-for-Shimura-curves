@@ -2787,10 +2787,11 @@ GEN algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec){
 }
 
 //Returns the signature of the quaternion algebra A with fundamental domain U.
-GEN algfdomsignature(GEN A, GEN U, long prec){
+GEN algfdomsignature(GEN U, GEN A, GEN O, long prec){
   pari_sp top=avma;
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -2818,21 +2819,23 @@ GEN algmoreprec(GEN A, long increment, long prec){
 }
 
 //Returns the normalized basis of the set of elements G
-GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec){
+GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedbasis(G, gen_0, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
 
 //Returns the normalized boundary of the set of elements G
-GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec){
+GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedboundary(G, mats, id, &Q, &qalg_fdomm2rembed, tol, prec));
 }
