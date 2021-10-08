@@ -91,7 +91,7 @@ GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algnormdisc(GEN A);
 GEN algramifiedplacesf(GEN A);
-GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
+GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
 
 //HELPER METHODS
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);

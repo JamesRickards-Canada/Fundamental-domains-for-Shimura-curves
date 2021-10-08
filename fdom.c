@@ -2863,10 +2863,12 @@ GEN algramifiedplacesf(GEN A){
   return gerepilecopy(top, rp);
 }
 
-//Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
-GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, int type, long prec){
+//Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order O
+GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q;
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   GEN nf=alg_get_center(A);
   long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
   GEN nformpart=qalg_normform(Q);
