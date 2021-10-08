@@ -115,6 +115,7 @@ GEN qalg_get_rams(GEN Q);
 GEN qalg_get_varnos(GEN Q);
 GEN qalg_get_roots(GEN Q);
 GEN qalg_get_order(GEN Q);
+GEN qalg_get_orderinv(GEN Q);
 GEN qalg_get_level(GEN Q);
 
 

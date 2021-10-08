@@ -3189,17 +3189,20 @@ GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec){
   GEN Kroot=gel(nf_get_roots(K), split);//The split root
   GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
   if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
-  GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
-  if(!O){O=alg_get_basis(A);level=gen_1;}//Setting the order and level if not given
-  return mkvecn(6, A, ramdat, varnos, roots, O, level);
+  GEN roots=mkvec2(Kroot, gsqrt(aval, prec)), Oinv;//The approximate values for the variables defining K and L.
+  if(!O){O=matid(lg(alg_get_basis(A))-1);level=gen_1;Oinv=O;}//Setting the order and level if not given
+  else{
+	Oinv=QM_inv(O);
+  }
+  return mkvecn(7, A, ramdat, varnos, roots, O, Oinv, level);
 }
 
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of an order. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
 GEN qalg_normform(GEN Q){
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
-  long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
-  GEN basis=matid(n-1);//It doesn't matter about the order, since things are expressed in terms of the natural basis of the algebra.
+  long n=lg(alg_get_basis(A));//The lg of a normal entry
+  GEN basis=matid(n-1);
   return gerepileupto(top, qalg_normform_givenbasis(Q, basis));
 }
 
@@ -3325,5 +3328,8 @@ GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 //Shallow method to return the order
 GEN qalg_get_order(GEN Q){return gel(Q, 5);}
 
+//Shallow method to return inverse of the order
+GEN qalg_get_orderinv(GEN Q){return gel(Q, 6);}
+
 //Shallow method to return the level of the order
-GEN qalg_get_level(GEN Q){return gel(Q, 6);}
+GEN qalg_get_level(GEN Q){return gel(Q, 7);}
