@@ -545,7 +545,7 @@ GEN enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec){
 	GEN gamma=dbltor(2.1);
 	R=hdiscradius(gpow(area, gamma, prec), prec);
   }
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN nf=alg_get_center(A);
   GEN nformpart=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nformpart);
@@ -566,7 +566,7 @@ GEN enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long 
 	GEN gamma=dbltor(2.1);
 	R=hdiscradius(gpow(area, gamma, prec), prec);
   }
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN nf=alg_get_center(A);
   GEN nformpart=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nformpart);
@@ -655,7 +655,7 @@ static void enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdat
 //Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.
 GEN enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec){
   pari_sp top=avma, mid;
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN nf=alg_get_center(A);
   GEN normformpart=qalg_normform(Q);
   GEN nfdecomp=mat_nfcholesky(nf, normformpart);
@@ -753,7 +753,7 @@ static void enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata){
 //Returns the time taken to find nelts non-trivial elements
 long enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   if(gequal0(R)){
 	GEN area=algfdomarea(A, 1, prec);
 	GEN gamma=dbltor(2.1);
@@ -828,7 +828,7 @@ void enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, lon
 	gel(Clist, i)=C;
 	C=gadd(C, blen);
   }
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN area=algfdomarea(A, 1, prec);
   GEN gamma=dbltor(2.1);
   GEN R=hdiscradius(gpow(area, gamma, prec), prec);
@@ -896,7 +896,7 @@ static void enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fna
 GEN algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec), newA=A, U;
   long precinc=0, newprec=prec;
   pari_CATCH(e_PREC){
 	pari_warn(warner, "Increasing precision");
@@ -904,7 +904,7 @@ GEN algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec){
 	newA=algmoreprec(newA, 1, newprec);
 	newprec++;
 	tol=deftol(newprec);
-	Q=qalg_fdominitialize(newA, newprec);
+	Q=qalg_fdominitialize(newA, NULL, NULL, newprec);
   }
   pari_RETRY{
     U=qalg_fdom_nelts(Q, p, CNRdata, type, tol, newprec);

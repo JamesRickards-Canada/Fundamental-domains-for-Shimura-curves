@@ -80,6 +80,7 @@ GEN deftol(long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);
 GEN algfdom_bestC(GEN A, long prec);
+GEN algfdom_eichler(GEN A, GEN O, GEN level, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);
 GEN algfdomarea(GEN A, int lessprec, long prec);
 GEN algfdomminimalcycles(GEN A, GEN U, long prec);
 GEN algfdompresentation(GEN A, GEN U, long prec);
@@ -97,7 +98,7 @@ GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
 GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec);
 GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
-GEN qalg_fdominitialize(GEN A, long prec);
+GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec);
 GEN qalg_normform(GEN Q);
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec);
 GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nform, GEN nformpart, long prec);
@@ -114,6 +115,8 @@ GEN qalg_get_alg(GEN Q);
 GEN qalg_get_rams(GEN Q);
 GEN qalg_get_varnos(GEN Q);
 GEN qalg_get_roots(GEN Q);
+GEN qalg_get_order(GEN Q);
+GEN qalg_get_level(GEN Q);
 
 
 //FDOM_EXTRA METHODS

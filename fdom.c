@@ -2682,7 +2682,7 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 //Returns the absolute reduced norm with respect to z1 and z2, i.e. the quadratic from Q_{z_1, z_2}(g) for g in the algebra. If the output is q, then g (written in basis form) has value g~*q*g.
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN mats=psltopsu_transmats(p);
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
@@ -2691,7 +2691,7 @@ GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
 GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, prec), newA=A, U;
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec), newA=A, U;
   if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
   if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
   long newprec=prec;
@@ -2702,7 +2702,7 @@ GEN algfdom(GEN A, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN
 	newprec++;
 	precinc++;
 	tol=deftol(newprec);
-	Q=qalg_fdominitialize(newA, newprec);
+	Q=qalg_fdominitialize(newA, NULL, NULL, newprec);
   }
   pari_RETRY{
     U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
@@ -2734,10 +2734,34 @@ GEN algfdom_bestC(GEN A, long prec){
   return best;
 }
 
+//algfdom, but we supply an Eichler order and level
+GEN algfdom_eichler(GEN A, GEN O, GEN level, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  GEN Q=qalg_fdominitialize(A, O, level, prec), newA=A, U;
+  if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
+  if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
+  long newprec=prec;
+  unsigned int precinc=0;
+  pari_CATCH(e_PREC){
+	pari_warn(warner, "Increasing precision");
+	newA=algmoreprec(newA, 1, newprec);
+	newprec++;
+	precinc++;
+	tol=deftol(newprec);
+	Q=qalg_fdominitialize(newA, O, level, newprec);
+  }
+  pari_RETRY{
+    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
+  }pari_ENDCATCH
+  if(precinc) pari_warn(warner, "Precision increased %d times to %d (the number of times it increased may be wrong, but the final precision should be correct). Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
+  return gerepileupto(top, U);
+}
+
 //Returns the area of the fundamental domain of the order stored in A.
 GEN algfdomarea(GEN A, int lessprec, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   long lp = lessprec? 3:prec;
   return gerepileupto(top, qalg_fdomarea(Q, lp, prec));
 }
@@ -2746,7 +2770,7 @@ GEN algfdomarea(GEN A, int lessprec, long prec){
 GEN algfdomminimalcycles(GEN A, GEN U, long prec){
   pari_sp top=avma;
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   return gerepileupto(top, minimalcycles_bytype(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -2754,7 +2778,7 @@ GEN algfdomminimalcycles(GEN A, GEN U, long prec){
 GEN algfdompresentation(GEN A, GEN U, long prec){
   pari_sp top=avma;
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   return gerepileupto(top, presentation(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -2763,7 +2787,7 @@ GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   return gerepileupto(top, reduceelt_givennormbound(U, g, z, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, tol, prec));
 }
 
@@ -2772,7 +2796,7 @@ GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   return gerepileupto(top, rootgeodesic_fd(U, g, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 	
 }
@@ -2781,7 +2805,7 @@ GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec){
 GEN algfdomsignature(GEN A, GEN U, long prec){
   pari_sp top=avma;
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -2813,7 +2837,7 @@ GEN algnormalizedbasis(GEN A, GEN G, GEN p, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedbasis(G, gen_0, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
@@ -2823,7 +2847,7 @@ GEN algnormalizedboundary(GEN A, GEN G, GEN p, long prec){
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedboundary(G, mats, id, &Q, &qalg_fdomm2rembed, tol, prec));
 }
@@ -2854,7 +2878,7 @@ GEN algramifiedplacesf(GEN A){
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order in A
 GEN algsmallnorm1elts(GEN A, GEN p, GEN C, GEN z1, GEN z2, int type, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN nf=alg_get_center(A);
   long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
   GEN nformpart=qalg_normform(Q);
@@ -3126,7 +3150,7 @@ static GEN qalg_basis_conj(GEN Q, GEN x){
   return gerepileupto(top, algalgtobasis(A, algx));//Converting back
 }
 
-//Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is MAXIMAL FOR NOW (see Voight Theorem 39.1.18 to update for general; very easy). We also submit the old precision since the loss of precision causes errors later.
+//Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.
 GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
   pari_sp top=avma;
   long bits=bit_accuracy(computeprec);
@@ -3147,8 +3171,8 @@ GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
   return gerepileupto(top, gtofp(ar, prec));
 }
 
-//Initializes the quaternion algebra Q split at one real place using the algebras framework. Assume that A is input as a quaternion algebra with pre-computed maximal order. This is not suitable for gerepile.
-GEN qalg_fdominitialize(GEN A, long prec){
+//Initializes the quaternion algebra Q split at one real place using the algebras framework, as well as the contained Eichler order O of level level. If O is not passed, we assume that A is input as a quaternion algebra with pre-computed maximal order, and we take this order. This is not suitable for gerepile.
+GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec){
   GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
   GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
   GEN ramdat=algramifiedplacesf(A);//Finite ramified places
@@ -3159,7 +3183,8 @@ GEN qalg_fdominitialize(GEN A, long prec){
   GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
   if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
   GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
-  return mkvec4(A, ramdat, varnos, roots);
+  if(!O){O=alg_get_basis(A);level=gen_1;}//Setting the order and level if not given
+  return mkvecn(6, A, ramdat, varnos, roots, O, level);
 }
 
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of A. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
@@ -3290,3 +3315,8 @@ GEN qalg_get_varnos(GEN Q){return gel(Q, 3);}
 //Shallow method to return the roots of K and L.
 GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 
+//Shallow method to return the order
+GEN qalg_get_order(GEN Q){return gel(Q, 5);}
+
+//Shallow method to return the level of the order
+GEN qalg_get_level(GEN Q){return gel(Q, 6);}
