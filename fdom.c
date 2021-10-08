@@ -2766,20 +2766,22 @@ GEN algfdompresentation(GEN U, GEN A, GEN O, long prec){
 }
 
 //Reduces the norm 1 element x with respect to the fundamental domain fdom and the point z (default z=0)
-GEN algfdomreduce(GEN A, GEN U, GEN g, GEN z, long prec){
+GEN algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, reduceelt_givennormbound(U, g, z, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, tol, prec));
 }
 
 //Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
-GEN algfdomrootgeodesic(GEN A, GEN U, GEN g, long prec){
+GEN algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN id=gel(alg_get_basis(A), 1);//The identity
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, rootgeodesic_fd(U, g, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 	
 }
