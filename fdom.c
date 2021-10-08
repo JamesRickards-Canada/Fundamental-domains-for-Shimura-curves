@@ -3054,17 +3054,10 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 
   //First we find the part coming from |f_g(p)|
   GEN A=qalg_get_alg(Q);
-  long n=lg(gel(alg_get_basis(A), 1));//The lg of a normal entry
+  GEN O=qalg_get_order(Q);
+  long n=lg(O);//The lg of a normal entry
   GEN basisimage=cgetg(n, t_VEC);//The image of the basis elements in M_2(R)
-  GEN belt=zerocol(n-1);
-  gel(belt, 1)=gen_1;
-  gel(basisimage, 1)=qalg_fdomm2rembed(&Q, belt, prec);
-
-  for(long i=2;i<n;i++){
-	gel(belt, i-1)=gen_0;
-	gel(belt, i)=gen_1;//Updating belt to have a 1 only in the ith place
-	gel(basisimage, i)=qalg_fdomm2rembed(&Q, belt, prec);
-  }
+  for(long i=1;i<n;i++) gel(basisimage, i)=qalg_fdomm2rembed(&Q, gel(O, i), prec);
 
   GEN tvars=cgetg(n, t_VECSMALL);
   GEN xvars=cgetg(n, t_VEC);
@@ -3189,22 +3182,13 @@ GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec){
   GEN Kroot=gel(nf_get_roots(K), split);//The split root
   GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
   if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
-  GEN roots=mkvec2(Kroot, gsqrt(aval, prec)), Oinv;//The approximate values for the variables defining K and L.
-  if(!O){O=matid(lg(alg_get_basis(A))-1);level=gen_1;Oinv=O;}//Setting the order and level if not given
-  else{
-	Oinv=QM_inv(O);
-  }
-  return mkvecn(7, A, ramdat, varnos, roots, O, Oinv, level);
+  GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
+  if(!O){O=matid(lg(alg_get_basis(A))-1);level=gen_1;}//Setting the order and level if not given
+  return mkvecn(6, A, ramdat, varnos, roots, O, level);
 }
 
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of an order. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
-GEN qalg_normform(GEN Q){
-  pari_sp top=avma;
-  GEN A=qalg_get_alg(Q);
-  long n=lg(alg_get_basis(A));//The lg of a normal entry
-  GEN basis=matid(n-1);
-  return gerepileupto(top, qalg_normform_givenbasis(Q, basis));
-}
+GEN qalg_normform(GEN Q){return qalg_normform_givenbasis(Q, qalg_get_order(Q));}
 
 //Basis is a matrix whose columns span a lattice, say v_1, ..., v_k. This returns M such that nrd(e_1*v_1+...+e_k*v_k)=(e1,...,e_k)*M*(e_1,...,e_k)~. The iith coefficient is nrd(v_i) and the ijth coefficient if i!=j is .5*trd(v_iv_j).
 static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
@@ -3235,6 +3219,9 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelt
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
+  GEN O=qalg_get_order(Q);
+  int nonmax=0;
+  if(!gequal(qalg_get_level(Q), gen_1)) nonmax=1;
   long nvposs=lg(vposs), mret;
   if(maxelts) mret=maxelts+1;
   else mret=nvposs;
@@ -3244,7 +3231,8 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelt
 	norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
 	if(gequal(norm, gen_1)){
 	  avma=mid;
-	  vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
+	  if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
+	  else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
 	  if(lg(ret)>=mret) break;//Done
 	  continue;
 	}
@@ -3259,7 +3247,14 @@ GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxe
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   GEN A=qalg_get_alg(Q);
-  return gerepileupto(top, smallvectors_nfcondition(absrednorm, C, maxelts, mkvec3(alg_get_center(A), nform, gen_1), prec));
+  GEN vs=smallvectors_nfcondition(absrednorm, C, maxelts, mkvec3(alg_get_center(A), nform, gen_1), prec);
+  if(gequal(qalg_get_level(Q), gen_1)) return gerepileupto(top, vs);
+  //Now, non-maximal, change of basis back
+  GEN O=qalg_get_order(Q);
+  long l;
+  GEN v=cgetg_copy(vs, &l);
+  for(long i=1;i<l;i++) gel(v, i)=QM_QC_mul(O, gel(vs, i));
+  return gerepilecopy(top, v);
 }
 
 
@@ -3328,8 +3323,5 @@ GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
 //Shallow method to return the order
 GEN qalg_get_order(GEN Q){return gel(Q, 5);}
 
-//Shallow method to return inverse of the order
-GEN qalg_get_orderinv(GEN Q){return gel(Q, 6);}
-
 //Shallow method to return the level of the order
-GEN qalg_get_level(GEN Q){return gel(Q, 7);}
+GEN qalg_get_level(GEN Q){return gel(Q, 6);}
