@@ -396,7 +396,7 @@ static int subset_lexincrem(GEN S, long n){
 //Finds and returns the optimal C for a given algebra. Actually, returns [A, B, C, R^2]. We do ntrials trials in a range [Cmin, scale^(1/2n)*Cmin], where this is centred at the conjectural best C value.
 GEN enum_bestC(GEN A, GEN p, GEN scale, long ntrials, long mintesttime, long prec){
   pari_sp top=avma;
-  GEN Cbest=algfdom_bestC(A, prec);
+  GEN Cbest=algfdombestC(A, NULL, prec);
   GEN nf=alg_get_center(A);
   long n=nf_get_degree(nf), twon=2*n, fourn=2*twon;
   GEN scalefact=gpow(scale, gdivgs(gen_1, fourn), prec);
@@ -843,7 +843,7 @@ void enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, lon
 	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
 	}
   }//Tr_{nf/Q}(nrd(elt));
-  GEN bestC=algfdom_bestC(A, prec);
+  GEN bestC=qalg_fdombestC(Q, prec);
   int past_bestC=0;
   double bestC_val=(double)0;
   pari_fprintf(f, "C t\n");
@@ -924,7 +924,7 @@ static GEN qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long pr
   GEN areabound=gdivgs(gmulgs(area, 3), 2);//Times 1.5.
   
   GEN C, N, R, epsilon;//Constants used for bounds, can be auto-set or passed in.
-  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=algfdom_bestC(A, prec);
+  if(gequal0(CNRdata) || gequal0(gel(CNRdata, 1))) C=qalg_fdombestC(Q, prec);
   else C=gel(CNRdata, 1);
   if(gequal0(CNRdata) || gequal0(gel(CNRdata, 2))){//N
     GEN beta=gdivgs(gen_1, 10);

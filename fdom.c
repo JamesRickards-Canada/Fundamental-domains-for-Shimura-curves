@@ -2714,29 +2714,6 @@ GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partials
   return gerepileupto(top, U);
 }
 
-//Generate the optimal C value
-GEN algfdom_bestC(GEN A, long prec){
-  pari_sp top=avma;
-  GEN nf=alg_get_center(A);//Field
-  long n=nf_get_degree(nf);//Degree of field
-  GEN algdisc=algnormdisc(A);//Norm of disc
-  GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
-  GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
-  GEN npart;
-  if(n==1) npart=dbltor(2.8304840896);
-  else if(n==2) npart=dbltor(0.9331764427);
-  else if(n==3) npart=dbltor(0.9097513831);
-  else if(n==4) npart=dbltor(0.9734563346);
-  else if(n==5) npart=dbltor(1.0195386113);
-  else if(n==6) npart=dbltor(1.0184814342);
-  else if(n==7) npart=dbltor(0.9942555240);
-  else if(n==8) npart=dbltor(0.9644002039);
-  else npart=gen_1;
-  GEN best=gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
-  if(gcmpgs(best, n)<=0) best=gerepileupto(top, gaddsg(n, gen_2));//Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).
-  return best;
-}
-
 //Returns the area of the fundamental domain of the order stored in A.
 GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
   pari_sp top=avma;
@@ -2745,6 +2722,13 @@ GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   long lp = lessprec? 3:prec;
   return gerepileupto(top, qalg_fdomarea(Q, lp, prec));
+}
+
+//Generate the optimal C value
+GEN algfdom_bestC(GEN A, GEN O, long prec){
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);
+  return gerepileupto(top, qalg_fdombestC(Q, prec));
 }
 
 //Returns the minimal cycles in the fundamental domain U of the algebra A.
@@ -2909,7 +2893,7 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
     if(nfdeg==1) passes=gen_2;
 	else passes=stoi(12);
   }
-  if(gequal0(C)) C=algfdom_bestC(A, prec);//Setting C
+  if(gequal0(C)) C=qalg_fdombestC(Q, prec);//Setting C
   GEN N=gceil(gdiv(gsqr(area), gmul(gmul(Pi2n(3, prec), gsubgs(C, nfdeg)), passes)));//Area^2/(8*Pi*(C-n)*#Passes)
   if(gcmpgs(N, 1)<=0) N=gen_2;//Make sure N>=2
   GEN gamma=dbltor(2.1);//2.1
@@ -3169,6 +3153,32 @@ GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
   ar=gmul(ar, gpowgs(gen_2, 3-twon));
   ar=gmul(ar, gpowgs(mppi(computeprec), 1-twon));//2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2)*phi(D)
   return gerepileupto(top, gtofp(ar, prec));
+}
+
+//Generate the optimal C value
+GEN qalg_fdombestC(GEN Q, long prec){
+  pari_sp top=avma;
+  GEN A=qalg_get_alg(Q);
+  GEN nf=alg_get_center(A);//Field
+  long n=nf_get_degree(nf);//Degree of field
+  GEN algdisc=algnormdisc(A);//Norm of disc
+  GEN l=qalg_get_level(Q);
+  if(!gequal(l, gen_1)) algdisc=mulii(algdisc, idealnorm(nf, l));//Incorporating the norm to Q of the level.  
+  GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
+  GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
+  GEN npart;
+  if(n==1) npart=dbltor(2.8304840896);
+  else if(n==2) npart=dbltor(0.9331764427);
+  else if(n==3) npart=dbltor(0.9097513831);
+  else if(n==4) npart=dbltor(0.9734563346);
+  else if(n==5) npart=dbltor(1.0195386113);
+  else if(n==6) npart=dbltor(1.0184814342);
+  else if(n==7) npart=dbltor(0.9942555240);
+  else if(n==8) npart=dbltor(0.9644002039);
+  else npart=gen_1;
+  GEN best=gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
+  if(gcmpgs(best, n)<=0) best=gerepileupto(top, gaddsg(n, gen_2));//Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).
+  return best;
 }
 
 //Initializes the quaternion algebra Q split at one real place using the algebras framework, as well as the contained Eichler order O of level level. If O is not passed, we assume that A is input as a quaternion algebra with pre-computed maximal order, and we take this order. This is not suitable for gerepile.

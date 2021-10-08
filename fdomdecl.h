@@ -79,8 +79,8 @@ GEN deftol(long prec);
 //QUATERNION METHODS
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);
-GEN algfdom_bestC(GEN A, long prec);
 GEN algfdomarea(GEN A, GEN O, int lessprec, long prec);
+GEN algfdombestC(GEN A, GEN O, long prec);
 GEN algfdomminimalcycles(GEN U, GEN A, GEN O, long prec);
 GEN algfdompresentation(GEN U, GEN A, GEN O, long prec);
 GEN algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec);
@@ -97,6 +97,7 @@ GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
 GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec);
 GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
+GEN qalg_fdombestC(GEN Q, long prec);
 GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec);
 GEN qalg_normform(GEN Q);
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec);
