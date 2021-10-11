@@ -64,6 +64,8 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algsmallnorm1elts,"Inputs A, {O=NULL}, p, C, {z1=0}, {z2=0}, {type=0}: quaternion algebra A split at one real place, Eichler order O, upper half plane point p, positive real number C, unit disc points z1 and z2, type=0, 1, 2.\n Computes small norm 1 elements O, i.e. such that Q_{z_1,z_2}(g)<=C. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints: if g has norm 1, then Q_{z_1, z_2)(g)=cosh(d(gz_1, z_2))+n-1 is satisfied (n=degree of the centre of A). If type=1 we use qfminim, and type=2 we use the ``improved Fincke-Pohst''. If type=0, we take qfminim if n>=2 and improved F-P if n=1. Note that the improved F-P method may return some elements with Q(g)>C, and is generally faster if n=1, or possibly if C is really large.");
 	
 	\\fdom_extra
+	install("algorderconj","GGDG","algorderconj","./libfdom.so");
+	addhelp(algorderconj,"Inputs: A, x, {O=NULL}: algebra A, invertible element x, order O (in terms of the stored order).\n Returns xOx^{-1}, where the columns generate this new order over Z (with respect to the stored order in O).");
 	install("algmulvec","GGG","algmulvec","./libfdom.so");
 	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
 	install("algshimura","GGD1,L,D20,L,D1,L,","algshimura","./libfdom.so");

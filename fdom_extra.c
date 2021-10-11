@@ -137,6 +137,17 @@ static GEN algfromnormdisc(GEN F, GEN D, GEN infram){
   return alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1);
 }
 
+//Returns the order formed by conjugating O by x. The columns are written in terms of the stored basis of A. If O=NULL, assumes we are conjugating the stored maximal order
+GEN algorderconj(GEN A, GEN x, GEN O){
+  pari_sp top=avma;
+  long n=lg(x)-1;
+  if(!O) O=matid(n);//Setting O if NULL
+  GEN xinv=alginv(A, x);
+  GEN Oconj=cgetg_copy(O, &n);
+  for(long i=1;i<n;i++) gel(Oconj, i)=algmul(A, x, algmul(A, gel(O, i), xinv));
+  return gerepilecopy(top, Oconj);
+}
+
 //Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
 GEN algmulvec(GEN A, GEN G, GEN L){
   pari_sp top=avma;
@@ -154,6 +165,14 @@ GEN algmulvec(GEN A, GEN G, GEN L){
   pari_ENDCATCH
   return gerepileupto(top, elt);
 }
+
+/*
+//Given an order O in A, returns the level of the order as an ideal in F.
+GEN algorderlevel(GEN A, GEN O){
+  pari_sp top=avma;
+  
+}*/
+
 
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field.
 GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap){
