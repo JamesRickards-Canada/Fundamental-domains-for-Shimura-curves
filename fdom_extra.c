@@ -125,6 +125,19 @@ static GEN algd(GEN A, GEN a){
   return gerepileupto(top, nfM_det(alg_get_center(A), M));
 }
 
+//Returns the Eichler order given by O intersect x O x^(-1); the output is [Z-basis of order, level].
+GEN algeichler_conj(GEN A, GEN x){
+  pari_sp top=avma;
+  long n=lg(x)-1;
+  GEN O=matid(n);//The original order.
+  GEN Oconj=algorderconj(A, x, O);
+  GEN combine=shallowconcat(O, Oconj);//Concatenate the orders
+  GEN ker=kerint(Q_primpart(combine));//The kernel
+  GEN H=hnf(ker);//hnf
+  GEN newO=hnf(matslice(H, 1, n, 1, n));//new order
+  return gerepilecopy(top, mkvec2(newO, algorderlevel(A, newO, 0)));
+}
+
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and infinite ramification prescribed by infram (a length n vector of 0's/1's), if it exists. If it does not, this returns 0. This is not gerepile suitable, it leaves a dirty stack. Actually, this MISSES the q-algebras with multiple ramifying primes that have the SAME norm. But that's okay.
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram){
   pari_sp top=avma;
