@@ -138,11 +138,10 @@ GEN glist_pop(glist **head_ref){
 
 //Put an element at the start of the glist
 void glist_putstart(glist **head_ref, GEN new_data){
-  glist *new_elt = (glist*)pari_malloc(sizeof(glist)); 
-  new_elt->data = new_data; 
-  new_elt->next = *head_ref; 
-  *head_ref = new_elt; 
-
+  glist *new_elt = (glist*)pari_malloc(sizeof(glist));
+  new_elt->data = new_data;
+  new_elt->next = *head_ref;
+  *head_ref = new_elt;
 }
 
 //dir=1 means forward, dir=-1 means backwards. Returns the list as a vector, makes a clean copy. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.

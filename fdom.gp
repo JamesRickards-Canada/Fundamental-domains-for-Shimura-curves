@@ -31,7 +31,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdom_bestC, algfdom_eichler, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algramifiedplacesf, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras ,smallalgebras_area.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdom_bestC, algfdom_eichler, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algorderconj, algorderdisc, algorderlevel, algramifiedplacesf, algreduceddisc, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras ,smallalgebras_area.");
 
 	\\fdom
 	install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
@@ -64,10 +64,16 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algsmallnorm1elts,"Inputs A, {O=NULL}, p, C, {z1=0}, {z2=0}, {type=0}: quaternion algebra A split at one real place, Eichler order O, upper half plane point p, positive real number C, unit disc points z1 and z2, type=0, 1, 2.\n Computes small norm 1 elements O, i.e. such that Q_{z_1,z_2}(g)<=C. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints: if g has norm 1, then Q_{z_1, z_2)(g)=cosh(d(gz_1, z_2))+n-1 is satisfied (n=degree of the centre of A). If type=1 we use qfminim, and type=2 we use the ``improved Fincke-Pohst''. If type=0, we take qfminim if n>=2 and improved F-P if n=1. Note that the improved F-P method may return some elements with Q(g)>C, and is generally faster if n=1, or possibly if C is really large.");
 	
 	\\fdom_extra
-	install("algorderconj","GGDG","algorderconj","./libfdom.so");
-	addhelp(algorderconj,"Inputs: A, x, {O=NULL}: algebra A, invertible element x, order O (in terms of the stored order).\n Returns xOx^{-1}, where the columns generate this new order over Z (with respect to the stored order in O).");
 	install("algmulvec","GGG","algmulvec","./libfdom.so");
 	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
+	install("algorderconj","GGDG","algorderconj","./libfdom.so");
+	addhelp(algorderconj,"Inputs: A, x, {O=NULL}: algebra A, invertible element x, order O (in terms of the stored order).\n Returns xOx^{-1}, where the columns generate this new order over Z (with respect to the stored order in O).");
+	install("algorderdisc","GGD1,L,D1,L,","algorderdisc","./libfdom.so");
+	addhelp(algorderdisc,"Inputs A, O, {reduced=1}, {factored=1}: quaternion algebra A, order O.\n Returns the discriminant of the order O as an ideal in the centre of A. If reduced=1 we use the reduced discriminant, and if factored=1 we return the factorization matrix.");
+	install("algorderlevel","GGD1,L,","algorderlevel","./libfdom.so");
+	addhelp(algorderlevel,"Inputs A, O, {factored=1}: quaternion algebra A, order O.\n Returns the level of the order O, in factored form if factored=1.");
+	install("algreduceddisc","G","algreduceddisc","./libfdom.so");
+	addhelp(algreduceddisc,"Input A, a quaternion algebra.\n Returns the reduced discriminant of the maximal order, as an ideal in the centre of the field.");
 	install("algshimura","GGD1,L,D20,L,D1,L,","algshimura","./libfdom.so");
 	addhelp(algshimura,"Inputs F, D, {place=1}, {maxcomptime=20}, {allowswap=1}: totally real number field F, positive integer D, integer place between 1 and deg(F),maxcomptime= nonnegative integer, allowswap=0 or 1.\n Returns a quaternion algebra over F that is split at the infinite place place only, and has discriminant D, where |N_{F/Q}(disc)|=D, if it exists. If it does not exist, returns 0. This also guarantees that a>0 at the split infinite place, hence the output is suitable for fundamental domain methods. If maxcomptime!=0, we stop after that many seconds. If allowswap=0, then we do NOT allow the swapping of a, b in output of alginit (we require a>0 at the split real place, and may need to swap), and instead return 0. This is recommended if deg(F)>=6, as the swapped algebra is typically far to massive (e.g. sometimes run out of memory, even with 4GB).");
 	install("algshimura_ab","GGD1,L,D1,L,","algshimura_ab","./libfdom.so");

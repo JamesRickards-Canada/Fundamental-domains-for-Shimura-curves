@@ -128,8 +128,11 @@ void python_plotviewer(char *input);
 void python_printfdom(GEN U, char *filename, long prec);
 
 //SECTION 2: QUATERNIONIC METHODS
-GEN algorderconj(GEN A, GEN x, GEN O);
 GEN algmulvec(GEN A, GEN G, GEN L);
+GEN algorderconj(GEN A, GEN x, GEN O);
+GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
+GEN algorderlevel(GEN A, GEN O, int factored);
+GEN algreduceddisc(GEN A);
 GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algswapab(GEN A);
