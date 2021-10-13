@@ -2726,7 +2726,9 @@ GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
 //Generate the optimal C value
 GEN algfdom_bestC(GEN A, GEN O, long prec){
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);
+  GEN Q;
+  if(O) Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);
+  else Q=qalg_fdominitialize(A, NULL, NULL, prec);
   return gerepileupto(top, qalg_fdombestC(Q, prec));
 }
 

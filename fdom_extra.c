@@ -478,6 +478,56 @@ static int subset_lexincrem(GEN S, long n){
 }
 
 
+//Returns small norm nm elements (Q_{z1,z2}(x)<=C) of the order O
+GEN algsmallelts(GEN A, GEN O, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long prec){
+  pari_sp top=avma;
+  GEN Q;
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  GEN nf=alg_get_center(A);
+  long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
+  GEN nformpart=qalg_normform(Q);
+  GEN nfdecomp=mat_nfcholesky(nf, nformpart);
+  for(long i=1;i<=fourn;i++){
+	for(long j=1;j<=fourn;j++){
+	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+	}
+  }//Tr_{nf/Q}(nrd(elt));
+  return gerepileupto(top, qalg_smallelts_qfminim(Q, nm, p, C, z1, z2, 0, nfdecomp, nformpart, prec));
+}
+
+//Computes all norm nm elements for which Q_{z_1,z_2}(x)<=C. maxelts is the maximum number of return elements (or 0 for all norm 1 elts)
+GEN qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec){
+  pari_sp top=avma, mid;
+  GEN A=qalg_get_alg(Q);
+  GEN nf=alg_get_center(A);
+  GEN mats=psltopsu_transmats(p);
+  GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
+  GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
+  GEN O=qalg_get_order(Q);
+  int nonmax=0;
+  if(!gequal(qalg_get_level(Q), gen_1)) nonmax=1;
+  long nvposs=lg(vposs), mret;
+  if(maxelts) mret=maxelts+1;
+  else mret=nvposs;
+  GEN ret=vectrunc_init(mret), norm;
+  for(long i=1;i<nvposs;i++){
+	mid=avma;
+	norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
+	if(gequal(norm, nm)){
+	  avma=mid;
+	  if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
+	  else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
+	  if(lg(ret)>=mret) break;//Done
+	  continue;
+	}
+	avma=mid;
+  }
+  return gerepilecopy(top, ret);
+}
+
+
+
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 

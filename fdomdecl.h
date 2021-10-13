@@ -80,7 +80,7 @@ GEN deftol(long prec);
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);
 GEN algfdomarea(GEN A, GEN O, int lessprec, long prec);
-GEN algfdombestC(GEN A, GEN O, long prec);
+GEN algfdom_bestC(GEN A, GEN O, long prec);
 GEN algfdomminimalcycles(GEN U, GEN A, GEN O, long prec);
 GEN algfdompresentation(GEN U, GEN A, GEN O, long prec);
 GEN algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec);
@@ -128,6 +128,7 @@ void python_plotviewer(char *input);
 void python_printfdom(GEN U, char *filename, long prec);
 
 //SECTION 2: QUATERNIONIC METHODS
+GEN algeichler_conj(GEN A, GEN x);
 GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algorderconj(GEN A, GEN x, GEN O);
 GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
@@ -138,6 +139,10 @@ GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algswapab(GEN A);
 GEN smallalgebras(GEN F, long nwant, GEN Dmin, GEN Dmax, long maxcomptime, int allowswap);
 GEN smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int allowswap);
+
+GEN algsmallelts(GEN A, GEN O, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long prec);
+GEN qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec);
+
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
 
