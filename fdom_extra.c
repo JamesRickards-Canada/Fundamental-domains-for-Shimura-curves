@@ -109,9 +109,47 @@ void python_printfdom(GEN U, char *filename, long prec){
 }
 
 
+
 //SECTION 2: QUATERNIONIC METHODS
 
 
+//Given x=[e, f, g, h], returns x in the algebra representation.
+GEN alg1ijktoalg(GEN A, GEN x){
+  pari_sp top=avma;
+  GEN L=alg_get_splittingfield(A);//L=F(i),
+  long Lvar=rnf_get_varn(L);
+  GEN Lx=pol_x(Lvar);//x
+  GEN e1=gadd(gel(x, 1), gmul(gel(x, 2), Lx));//e+fi
+  GEN e2=gsub(gel(x, 3), gmul(gel(x, 4), Lx));//g-hi
+  return gerepilecopy(top, mkcol2(e1, e2));
+}
+
+//Given x=[e, f, g, h], returns x in the basis representation.
+GEN alg1ijktobasis(GEN A, GEN x){
+  pari_sp top=avma;
+  GEN xalg=alg1ijktoalg(A, x);
+  return gerepileupto(top, algalgtobasis(A, xalg));
+}
+
+//Given an element in the algebra representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.
+GEN algalgto1ijk(GEN A, GEN x){
+  pari_sp top=avma;
+  x=liftall(x);//Make sure there are no mods.
+  GEN L=alg_get_splittingfield(A);//L=F(i),
+  long Lvar=rnf_get_varn(L);
+  GEN f=polcoef_i(gel(x, 1), 1, Lvar);//Extract f
+  GEN e=polcoef_i(gel(x, 1), 0, Lvar);//Extract e
+  GEN g=polcoef_i(gel(x, 2), 0, Lvar);//Extract g
+  GEN mh=polcoef_i(gel(x, 2), 1, Lvar);//Extract -h
+  return gerepilecopy(top, mkvec4(e, f, g, gneg(mh)));
+}
+
+//Given an element in the basis representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.
+GEN algbasisto1ijk(GEN A, GEN x){
+  pari_sp top=avma;
+  GEN xalg=liftall(algbasistoalg(A, x));
+  return gerepileupto(top, algalgto1ijk(A, xalg));
+}
 
 //Given a1, ..., a4 in A, this returns d(a1,...,a4), i.e. det(trd(a_i*a_j))
 static GEN algd(GEN A, GEN a){
@@ -538,7 +576,7 @@ GEN qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long max
 //Finds and returns the optimal C for a given algebra. Actually, returns [A, B, C, R^2]. We do ntrials trials in a range [Cmin, scale^(1/2n)*Cmin], where this is centred at the conjectural best C value.
 GEN enum_bestC(GEN A, GEN p, GEN scale, long ntrials, long mintesttime, long prec){
   pari_sp top=avma;
-  GEN Cbest=algfdombestC(A, NULL, prec);
+  GEN Cbest=algfdom_bestC(A, NULL, prec);
   GEN nf=alg_get_center(A);
   long n=nf_get_degree(nf), twon=2*n, fourn=2*twon;
   GEN scalefact=gpow(scale, gdivgs(gen_1, fourn), prec);
@@ -1241,6 +1279,7 @@ GEN rsquared(GEN X, GEN y, GEN fit){
 }
 
 //Assumes plots/build/fname_plotter.tex points to a file making a plot. This compiles the plot, and views it if WSL=1.
+//If there isn't enough memory, something like lualatex -shell-escape NAME_plotter.tex works.
 void plot_compile(char *fname, int WSL){
   pari_sp top=avma;
   char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter.tex)", fname);//Build

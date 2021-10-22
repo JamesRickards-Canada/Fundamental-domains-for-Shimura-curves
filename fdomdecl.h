@@ -128,6 +128,10 @@ void python_plotviewer(char *input);
 void python_printfdom(GEN U, char *filename, long prec);
 
 //SECTION 2: QUATERNIONIC METHODS
+GEN alg1ijktoalg(GEN A, GEN x);
+GEN alg1ijktobasis(GEN A, GEN x);
+GEN algalgto1ijk(GEN A, GEN x);
+GEN algbasisto1ijk(GEN A, GEN x);
 GEN algeichler_conj(GEN A, GEN x);
 GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algorderconj(GEN A, GEN x, GEN O);

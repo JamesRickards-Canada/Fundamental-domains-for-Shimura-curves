@@ -31,7 +31,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algfdom, algfdom_bestC, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algorderconj, algorderdisc, algorderlevel, algramifiedplacesf, algreduceddisc, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras ,smallalgebras_area.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algabsrednorm, algalgto1ijk, algbasisto1ijk, algeichler_conj, algfdom, algfdom_bestC, algfdomarea, algfdomminimalcycles, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algmulvec, algnormalizedbasis, algnormalizedboundary, algnormdisc, algorderconj, algorderdisc, algorderlevel, algramifiedplacesf, algreduceddisc, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras ,smallalgebras_area.");
 
 	\\fdom
 	install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
@@ -64,8 +64,16 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algsmallnorm1elts,"Inputs A, {O=NULL}, p, C, {z1=0}, {z2=0}, {type=0}: quaternion algebra A split at one real place, Eichler order O, upper half plane point p, positive real number C, unit disc points z1 and z2, type=0, 1, 2.\n Computes small norm 1 elements O, i.e. such that Q_{z_1,z_2}(g)<=C. The point p is the base for the mapping from the upper half plane model to the unit disc model, and z1, z2 are basepoints: if g has norm 1, then Q_{z_1, z_2)(g)=cosh(d(gz_1, z_2))+n-1 is satisfied (n=degree of the centre of A). If type=1 we use qfminim, and type=2 we use the ``improved Fincke-Pohst''. If type=0, we take qfminim if n>=2 and improved F-P if n=1. Note that the improved F-P method may return some elements with Q(g)>C, and is generally faster if n=1, or possibly if C is really large.");
 	
 	\\fdom_extra
-	install("algsmallelts","GDGGGGD0,G,D0,G,p","algsmallelts","./libfdom.so");
+	install("algsmallelts","GDGGGGD0,G,D0,G,p","algsmallelts","./libfdom.so");\\Still working on this.
 	
+	install("alg1ijktoalg","GG","alg1ijktoalg","./libfdom.so");
+	addhelp(alg1ijktoalg,"Inputs: quaternion algebra A, element x=[e, f, g, h].\n Returns what e+fi+gj+hk is in the algebraic representation.");
+	install("alg1ijktobasis","GG","alg1ijktobasis","./libfdom.so");
+	addhelp(alg1ijktoalg,"Inputs: quaternion algebra A, element x=[e, f, g, h].\n Returns what e+fi+gj+hk is in the basis representation.");
+	install("algalgto1ijk","GG","algalgto1ijk","./libfdom.so");
+	addhelp(algalgto1ijk,"Inputs: quaternion algebra A, element x in algebraic form.\n Returns [e, f, g, h], where x=e+fi+gj+hk.");
+	install("algbasisto1ijk","GG","algbasisto1ijk","./libfdom.so");
+	addhelp(algbasisto1ijk,"Inputs: quaternion algebra A, element x in basis form.\n Returns [e, f, g, h], where x=e+fi+gj+hk.");
 	install("algeichler_conj","GG","algeichler_conj","./libfdom.so");
 	addhelp(algeichler_conj,"Inputs A, x: quaternion algebra A, invertible element x.\n Returns the Eichler order O intersect xOx^(-1).");
 	install("algmulvec","GGG","algmulvec","./libfdom.so");
