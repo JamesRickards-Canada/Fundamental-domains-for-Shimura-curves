@@ -97,7 +97,9 @@ static GEN qalg_basis_conj(GEN Q, GEN x);
 
 
 //Divides a and b, and allows for oo and division by 0. Returns oo for 0/0.
-GEN divoo(GEN a, GEN b){//No garbage collection necessary
+GEN 
+divoo(GEN a, GEN b)
+{
   if(gequal0(b)){//b=0
     if(gcmpgs(a,0)>=0) return mkoo();
     return mkmoo();
@@ -118,7 +120,9 @@ GEN divoo(GEN a, GEN b){//No garbage collection necessary
 //List of GENs
 
 //Frees the memory pari_malloc'ed by glist
-void glist_free(glist *l){
+void
+glist_free(glist *l)
+{
   glist *temp=l;
   while(l!=NULL){
 	temp=l;
@@ -128,7 +132,9 @@ void glist_free(glist *l){
 }
 
 //Removes the last element of the glist and returns it without copying
-GEN glist_pop(glist **head_ref){
+GEN
+glist_pop(glist **head_ref)
+{
   glist *temp=*head_ref;
   GEN x=temp->data;
   *head_ref=temp->next;
@@ -137,7 +143,9 @@ GEN glist_pop(glist **head_ref){
 }
 
 //Put an element at the start of the glist
-void glist_putstart(glist **head_ref, GEN new_data){
+void
+glist_putstart(glist **head_ref, GEN new_data)
+{
   glist *new_elt = (glist*)pari_malloc(sizeof(glist));
   new_elt->data = new_data;
   new_elt->next = *head_ref;
@@ -145,7 +153,9 @@ void glist_putstart(glist **head_ref, GEN new_data){
 }
 
 //dir=1 means forward, dir=-1 means backwards. Returns the list as a vector, makes a clean copy. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN glist_togvec(glist *l, long length, int dir){
+GEN
+glist_togvec(glist *l, long length, int dir)
+{
 	glist *lcopy=l;
 	GEN rvec=cgetg(length+1, t_VEC);
 	if(dir==1){
@@ -175,7 +185,9 @@ GEN glist_togvec(glist *l, long length, int dir){
 }
 
 //Appends l to the end of v, returning a clean copy. dir=-1 means forward, dir=-1 backward. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN glist_togvec_append(glist *l, GEN v, long length, int dir){
+GEN
+glist_togvec_append(glist *l, GEN v, long length, int dir)
+{
 	glist *lcopy=l;
 	long vlen=lg(v), rveclen=length+vlen;
 	GEN rvec=cgetg(rveclen, t_VEC);
@@ -210,7 +222,9 @@ GEN glist_togvec_append(glist *l, GEN v, long length, int dir){
 //List of longs
 
 //Frees the memory pari_malloc'ed by llist
-void llist_free(llist *l){
+void
+llist_free(llist *l)
+{
   llist *temp=l;
   while(l!=NULL){
 	temp=l;
@@ -220,7 +234,9 @@ void llist_free(llist *l){
 }
 
 //Removes the last element of the llist and returns it
-long llist_pop(llist **head_ref){
+long
+llist_pop(llist **head_ref)
+{
   llist *temp=*head_ref;
   long x=temp->data;
   *head_ref=temp->next;
@@ -229,7 +245,9 @@ long llist_pop(llist **head_ref){
 }
 
 //Put an element at the start of the llist
-void llist_putstart(llist **head_ref, long new_data){
+void
+llist_putstart(llist **head_ref, long new_data)
+{
   llist *new_elt = (llist*)pari_malloc(sizeof(llist)); 
   new_elt->data = new_data; 
   new_elt->next = *head_ref; 
@@ -237,7 +255,9 @@ void llist_putstart(llist **head_ref, long new_data){
 }
 
 //dir=1 means forward, dir=-1 means backwards. Returns the list as a vector. This also frees the list. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN llist_togvec(llist *l, long length, int dir){//No garbage collection necessary with longs!
+GEN
+llist_togvec(llist *l, long length, int dir)
+{//No garbage collection necessary with longs!
   llist *lcopy=l;
   GEN rvec=cgetg(length+1, t_VEC);
   if(dir==1){
@@ -267,7 +287,9 @@ GEN llist_togvec(llist *l, long length, int dir){//No garbage collection necessa
 }
 
 //dir=1 means forward, dir=-1 means backwards. Returns the list as a VECSMALL. This also frees the list. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN llist_tovecsmall(llist *l, long length, int dir){//No garbage collection necessary with longs!
+GEN
+llist_tovecsmall(llist *l, long length, int dir)
+{//No garbage collection necessary with longs!
   llist *lcopy=l;
   GEN rvec=cgetg(length+1, t_VECSMALL);
   if(dir==1){
@@ -301,7 +323,9 @@ GEN llist_tovecsmall(llist *l, long length, int dir){//No garbage collection nec
 
 
 //Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2. Note that A does not need to be positive definite, but it CANNOT represent 0 (as then we cannot write the quadratic form as a sum/difference of squares). The result in this case will be meaningless.
-GEN mat_nfcholesky(GEN nf, GEN A){
+GEN
+mat_nfcholesky(GEN nf, GEN A)
+{
   pari_sp top=avma;
   long n=lg(A)-1;//A is nxn
   GEN M=gcopy(A);//Will be manipulating the entries, so need to copy A.
@@ -337,7 +361,9 @@ GEN mat_nfcholesky(GEN nf, GEN A){
 }
 
 //Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions.
-static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
+static GEN
+quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
+{
   pari_sp top=avma;
   if(gequal0(A)){//Actually a linear. This case occurs when dealing with small vectors in the quaternion algebra ramified nowhere.
 	if(gequal0(B)) return cgetg(1, t_VEC);//We say there are no soln's when A=B=0
@@ -373,7 +399,9 @@ static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec){
 //We follow the article "Improved Methods for Calculating Vectors of Short Length in a Lattice, Including Complexity Analysis" by Fincke and Pohst (Mathematics of Computation, Vol. 44, No. 170 (Apr., 1985), pp 463-471
 
 //Follows Algorithm 2.12 in Fincke-Pohst, where we pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied, with M and n being elements of the number field nf. Note that a good portion of the code in this method is copied from fincke_pohst in bibli1.c.
-static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec){  
+static GEN
+smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec)
+{  
   pari_sp top=avma;
   long l=lg(A), newprec=prec;//n+1
   GEN U=lllfp(A, 0.75, LLL_GRAM | LLL_IM);
@@ -430,7 +458,9 @@ static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, l
 }
 
 //Q is the Cholesky decomposition of a matrix A, this computes all vectors x such that x^T*A*x<=C (i.e. Q(x)<=C_2 where Q(x)=sum(i=1..n)q_ii(x_i+sum(j=i+1..n)q_ijxj)^2. Algorithm 2.8 of Fincke Pohst. We also pass in a condition, which is [nf, M, n] where x^T*M*x=n must also be satisfied (M and n live in the number field nf). (the point: M gives an indefinite norm condition on the vector, and A combines this norm with other info to make a positive definite form. We use the condition when finding small norm 1 elements of a quaternion algebra.) This does NOT work if the condition can represent 0, as we rely on writing conditon as the sum/difference of squares.
-static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec){
+static GEN
+smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
+{
   pari_sp tiptop=avma, top, mid;
   GEN nf=gel(condition, 1);
   GEN condchol=mat_nfcholesky(nf, gel(condition, 2));//Cholesky of the condition.
@@ -554,7 +584,9 @@ static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long
 
 
 //Creates the arc on circle c going from p1 to p2 counterclockwise. if dir=1, the arc is oriented counterclockwise, else it is clockwise (i.e. clockwise from p2 to p1). If dir=0, we take it to be unoriented
-static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec){
+static GEN
+arc_init(GEN c, GEN p1, GEN p2, int dir, long prec)
+{
   pari_sp top=avma;
   GEN ang2=radialangle(c, p2, gen_0, prec);//No tolerance need
   GEN arc=cgetg(ARCLEN, t_VEC);
@@ -572,7 +604,9 @@ static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec){
 }
 
 //Returns the midpoint of the arc between p1 and p2 (counterclockwise) on c.
-static GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec){
+static GEN
+arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN pts=circleline_int(c, perpbis(p1, p2, tol, prec), tol, prec);
   GEN a1=radialangle(c, p1, gen_0, prec);
@@ -583,7 +617,9 @@ static GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec){
 }
 
 //Returns the angle of intersection between circles c1 and c2 which intersect at p, with the angle formed by rotating the tangent to c1 at p counterclockwise to the tangent to c2 at p.
-static GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec){
+static GEN
+circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN s1=circle_tangentslope(c1, p, prec);
   GEN s2=circle_tangentslope(c2, p, prec);
@@ -595,7 +631,9 @@ static GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec){
 }
 
 //Circle with centre cent passing through p
-static GEN circle_fromcp(GEN cent, GEN p, long prec){
+static GEN
+circle_fromcp(GEN cent, GEN p, long prec)
+{
   pari_sp top=avma;
   GEN pmcent=gsub(p, cent);
   GEN ret=cgetg(4, t_VEC);
@@ -606,7 +644,9 @@ static GEN circle_fromcp(GEN cent, GEN p, long prec){
 }
 
 //Circle through 3 points (with one allowed to be oo, making a line instead)
-static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec){
+static GEN
+circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec)
+{
   if(typ(p1)==t_INFINITY) return line_frompp(p2, p3, tol, prec);
   if(typ(p2)==t_INFINITY) return line_frompp(p1, p3, tol, prec);
   if(typ(p3)==t_INFINITY) return line_frompp(p1, p2, tol, prec);//Lines
@@ -618,7 +658,9 @@ static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec){
 }
 
 //Returns the slope of the tangent to c at p
-static GEN circle_tangentslope(GEN c, GEN p, long prec){
+static GEN
+circle_tangentslope(GEN c, GEN p, long prec)
+{
   pari_sp top=avma;
   GEN c1mp=gsub(gel(c, 1), p);//c[1]-p
   GEN c1mpr=real_i(c1mp);
@@ -627,7 +669,9 @@ static GEN circle_tangentslope(GEN c, GEN p, long prec){
 }
 
 //The line through p with slope s
-static GEN line_fromsp(GEN s, GEN p){
+static GEN
+line_fromsp(GEN s, GEN p)
+{
   if(typ(s)==t_INFINITY){//oo slope
     GEN ret=cgetg(4, t_VEC);
     gel(ret, 1)=mkoo();
@@ -645,33 +689,43 @@ static GEN line_fromsp(GEN s, GEN p){
 }
 
 //Line through two points
-static GEN line_frompp(GEN p1, GEN p2, GEN tol, long prec){
+static GEN
+line_frompp(GEN p1, GEN p2, GEN tol, long prec)
+{
   pari_sp top=avma;
   return gerepileupto(top, line_fromsp(slope(p1, p2, tol, prec), p1));
 }
 
 //Mx, where M is a 2x2 matrix and x is complex or infinite.
-GEN mat_eval(GEN M, GEN x){
+GEN
+mat_eval(GEN M, GEN x)
+{
   pari_sp top = avma;
   if(typ(x)==t_INFINITY) return gerepileupto(top,divoo(gcoeff(M, 1, 1), gcoeff(M, 2, 1)));
   return gerepileupto(top,divoo(gadd(gmul(gcoeff(M, 1, 1), x), gcoeff(M, 1, 2)), gadd(gmul(gcoeff(M, 2, 1), x), gcoeff(M, 2, 2))));
 }
 
 //Midpoint of p1 and p2
-static GEN midpoint(GEN p1, GEN p2){
+static GEN
+midpoint(GEN p1, GEN p2)
+{
   pari_sp top=avma;
   return gerepileupto(top, gdivgs(gadd(p1, p2), 2));
 }
 
 //Mobius transform accessible in GP
-GEN mobius_gp(GEN M, GEN c, long prec){
+GEN
+mobius_gp(GEN M, GEN c, long prec)
+{
   pari_sp top=avma;
   GEN tol=deftol(prec);
   return gerepileupto(top, mobius(M, c, tol, prec));
 }
 
 //Returns M(c), for c a circle/line/arc/segment
-static GEN mobius(GEN M, GEN c, GEN tol, long prec){
+static GEN
+mobius(GEN M, GEN c, GEN tol, long prec)
+{
   int i=geom_check(c);
   switch(i){
     case 0: return mobius_circle(M, c, tol, prec);
@@ -684,7 +738,9 @@ static GEN mobius(GEN M, GEN c, GEN tol, long prec){
 }
 
 //Mobius map acting on an arc or segment
-static GEN mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec){
+static GEN
+mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec)
+{
   pari_sp top=avma;//We start by finding the new circle/line(ignoring the arc/segment bits)
   GEN endpt1, endpt2, extpt;//Endpoints and an extra point (used to have 3 points to translate)
   endpt1=mat_eval(M, gel(c, 3));
@@ -755,7 +811,9 @@ static GEN mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec){
 }
 
 //Mobius map acting on circle
-static GEN mobius_circle(GEN M, GEN c, GEN tol, long prec){
+static GEN
+mobius_circle(GEN M, GEN c, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN p1=mat_eval(M, gadd(gel(c, 1), gel(c, 2)));//M(c[1]+c[2])
   GEN p2=mat_eval(M, gadd(gel(c, 1), gmul(gel(c, 2), gen_I())));//M(c[1]+c[2]*I)
@@ -764,7 +822,9 @@ static GEN mobius_circle(GEN M, GEN c, GEN tol, long prec){
 }
 
 //Mobius map acting on line
-static GEN mobius_line(GEN M, GEN l, GEN tol, long prec){
+static GEN
+mobius_line(GEN M, GEN l, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN p1, p2, p3, I=gen_I();
   if(typ(gel(l, 1))==t_INFINITY){//Vertical line
@@ -783,19 +843,25 @@ static GEN mobius_line(GEN M, GEN l, GEN tol, long prec){
 }
 
 //Perpendicular bisector of distinct points
-static GEN perpbis(GEN p1, GEN p2, GEN tol, long prec){
+static GEN
+perpbis(GEN p1, GEN p2, GEN tol, long prec)
+{
   pari_sp top=avma;
   return gerepileupto(top, line_fromsp(divoo(gen_m1, slope(p1, p2, tol, prec)), midpoint(p1, p2)));
 }
 
 //Angle between p and the centre of c, in the range [0, 2*Pi)
-static GEN radialangle(GEN c, GEN p, GEN tol, long prec){
+static GEN
+radialangle(GEN c, GEN p, GEN tol, long prec)
+{
   pari_sp top=avma;
   return gerepileupto(top, shiftangle(garg(gsub(p, gel(c, 1)), prec), gen_0, tol, prec));
 }
 
 //The slope of the line through p1, p2
-static GEN slope(GEN p1, GEN p2, GEN tol, long prec){
+static GEN
+slope(GEN p1, GEN p2, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN p2mp1=gsub(p2, p1);
   GEN ftop=imag_i(p2mp1);
@@ -810,7 +876,9 @@ static GEN slope(GEN p1, GEN p2, GEN tol, long prec){
 
 
 //Returns the intersection points of two arcs
-static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec){
+static GEN
+arc_int(GEN c1, GEN c2, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN ipts=circle_int(c1, c2, tol, prec);
   if(lg(ipts)==1){avma=top;return cgetg(1, t_VEC);}//No intersection
@@ -838,7 +906,9 @@ static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec){
 }
 
 //Returns the intersection points of an arc and a segment
-static GEN arcseg_int(GEN c, GEN l, GEN tol, long prec){
+static GEN
+arcseg_int(GEN c, GEN l, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN ipts=circleline_int(c, l, tol, prec);
   if(lg(ipts)==1){avma=top;return cgetg(1, t_VEC);}//No intersection
@@ -866,7 +936,9 @@ static GEN arcseg_int(GEN c, GEN l, GEN tol, long prec){
 }
 
 //Returns the set of points in the intersection of circles c1, c2
-static GEN circle_int(GEN c1, GEN c2, GEN tol, long prec){
+static GEN
+circle_int(GEN c1, GEN c2, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN a1=real_i(gel(c1, 1)), b1=imag_i(gel(c1, 1)), r1=gel(c1, 2);//x, y coords and radius of c1
   GEN a2=real_i(gel(c2, 1)), b2=imag_i(gel(c2, 1)), r2=gel(c2, 2);//x, y coords and radius of c2
@@ -930,7 +1002,9 @@ static GEN circle_int(GEN c1, GEN c2, GEN tol, long prec){
 }
 
 //Returns the intersection points of c and l
-static GEN circleline_int(GEN c, GEN l, GEN tol, long prec){
+static GEN
+circleline_int(GEN c, GEN l, GEN tol, long prec)
+{
   pari_sp top=avma;
   if(typ(gel(l, 1))==t_INFINITY){
     GEN x1=gel(l, 2);
@@ -986,7 +1060,9 @@ static GEN circleline_int(GEN c, GEN l, GEN tol, long prec){
 }
 
 //The intersection of two lines
-static GEN line_int(GEN l1, GEN l2, GEN tol, long prec){
+static GEN
+line_int(GEN l1, GEN l2, GEN tol, long prec)
+{
   GEN s1=gel(l1, 1), s2=gel(l2, 1);//Slopes
   if(toleq(s1, s2, tol, prec)) return mkoo();//Parallel or equal
   pari_sp top=avma;
@@ -1013,7 +1089,9 @@ static GEN line_int(GEN l1, GEN l2, GEN tol, long prec){
 }
 
 //p is assumed to be on the circle defined by c; this checks if it is actually on the arc (running counterclockwise from c[3] to c[4]).
-static int onarc(GEN c, GEN p, GEN tol, long prec){
+static int
+onarc(GEN c, GEN p, GEN tol, long prec)
+{
   if(lg(c)==CIRCLEN) return 1;//Allow input of just a circle, so the return is trivially 1
   if(toleq(gel(c, 3), p, tol, prec)) return 1;//p=the start point. We have this done seperately in case rounding errors take the angle to <c[5], as this will cause issues with the shifting angle.
   pari_sp top=avma;
@@ -1024,7 +1102,9 @@ static int onarc(GEN c, GEN p, GEN tol, long prec){
 }
 
 //p is assumed to be on the line defined by l; this checks if it is actually on the segment l
-static int onseg(GEN l, GEN p, GEN tol, long prec){
+static int
+onseg(GEN l, GEN p, GEN tol, long prec)
+{
   if(lg(l)==CIRCLEN) return 1;//Allow input of a line, so return is trivially 1
   if(typ(p)==t_INFINITY){//p is the point at oo
     if(!gequal0(gel(l, 6)) || gequal(gel(l, 7), gen_m1)) return 1;//oo is an endpoint OR the seg passes through oo
@@ -1102,19 +1182,25 @@ static int onseg(GEN l, GEN p, GEN tol, long prec){
 
 
 //Given a radius R>0, this returns the area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2
-GEN hdiscarea(GEN R, long prec){
+GEN
+hdiscarea(GEN R, long prec)
+{
   pari_sp top=avma;
   return gerepileupto(top, gtofp(gmul(Pi2n(2, prec), gsqr(gsinh(gdivgs(R, 2), prec))), prec));
 }
 
 //Given the area of a hyperbolic disc, this returns the radius.
-GEN hdiscradius(GEN area, long prec){
+GEN
+hdiscradius(GEN area, long prec)
+{
   pari_sp top=avma;
   return gerepileupto(top, gtofp(gmulgs(gasinh(gsqrt(gdiv(area, Pi2n(2, prec)), prec), prec), 2), prec));
 }
 
 //z1 and z2 are complex numbers, this computes the hyperbolic distance between them.
-GEN hdist(GEN z1, GEN z2, long prec){
+GEN
+hdist(GEN z1, GEN z2, long prec)
+{
   pari_sp top=avma;
   GEN expd;
   pari_CATCH(CATCH_ALL){
@@ -1136,7 +1222,9 @@ GEN hdist(GEN z1, GEN z2, long prec){
 }
 
 //The hyperbolic distance between z1 and z2 in the unit disc model
-GEN hdist_ud(GEN z1, GEN z2, long prec){
+GEN
+hdist_ud(GEN z1, GEN z2, long prec)
+{
   pari_sp top=avma;
   GEN a = gabs(gsubsg(1, gmul(z1, conj_i(z2))), prec);//|1-z1*conj(z2)|
   GEN b = gabs(gsub(z1, z2), prec);//|z1-z2|
@@ -1156,7 +1244,9 @@ GEN hdist_ud(GEN z1, GEN z2, long prec){
 }
 
 //Given the isometric circles (in order) and the vertices (so that circles[i] intersect circles[i+1] is vertices[i]), returns the area of the convex hyperbolic polygon. If one of the sides is oo (an entry of circles is 0), the answer will be oo. If there are n vertices with angles a1,...,an, then the area is is (n-2)Pi-sum(ai)
-static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec){
+static GEN
+hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec)
+{
   pari_sp top=avma;
   long blen=lg(circles);
   if(blen==1 || gequal0(gel(circles, 1))) return mkoo();//No cicles or the first is 0, i.e. an infinite side
@@ -1187,7 +1277,9 @@ We do computations mostly in PSU, and shift from PSL to PSU via phi(z):=(z-p)/(z
 //Some of the methods may not be that useful (i.e. assuming we have p only and not the matrices).
 
 //Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j. If not all edges can be paired, instead returns [v1, v2, ...] where vi is a VECSMALL that is either [gind, v1ind] or [gind, v1ind, v2ind]. gind is the index of the unpaired side, and the viind are the corresponding unpaired vertices (1 or 2). If rboth=1, returns [paired, unpaired], where this time paired is a vector of vecsmalls [i, j] meaning i is paired to j (differing to the output format when rboth=0 and everything is paired)
-static GEN edgepairing(GEN U, GEN tol, int rboth, long prec){
+static GEN
+edgepairing(GEN U, GEN tol, int rboth, long prec)
+{
   pari_sp top=avma;
   GEN vangles=gel(U, 4);//Vertex angles
   GEN baseangle=gel(vangles, 1);//Base angle
@@ -1238,7 +1330,9 @@ static GEN edgepairing(GEN U, GEN tol, int rboth, long prec){
 }
 
 //Computes the isometric circle for g, returning [g, image in PSU(1, 1), circle]. Must pass in mats (psltopsu_transmats(p)), and a method that translates g to an element of PSL(2, R).
-GEN isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec){
+GEN
+isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN ginpsl=gamtopsl(data, g, prec);
   GEN ret=cgetg(4, t_VEC);
@@ -1278,7 +1372,9 @@ GEN isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN,
 }
 
 //Given an element g of PSU(1, 1), this returns the isometric circle associated to it.
-GEN isometriccircle_psu(GEN g, GEN tol, long prec){
+GEN
+isometriccircle_psu(GEN g, GEN tol, long prec)
+{
   pari_sp top=avma;
   if(toleq(gen_0, gcoeff(g, 2, 1), tol, prec)) return gen_0;//Isometric circle is everything, don't want to call it here.
   GEN geod=zerovec(8);
@@ -1311,7 +1407,9 @@ GEN isometriccircle_psu(GEN g, GEN tol, long prec){
 }
 
 //Returns the normalized basis of G. Follows Algorithm 4.7 of Voight. Can pass in Ubase as a normalized boundary to append to, or Ubase=0 means we just start with G.
-GEN normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), int (*istriv)(GEN *, GEN), GEN tol, long prec){
+GEN
+normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), int (*istriv)(GEN *, GEN), GEN tol, long prec)
+{
   pari_sp top=avma, mid;
   long w=lg(G);
   GEN Gwithinv=cgetg(2*w-1, t_VEC);
@@ -1382,7 +1480,9 @@ GEN normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN *data, GEN (*gamt
 }
 
 //Given a circle arc c and either the initial(=1) or terminal(=0) point, this returns a nearby point on the arc (the new angle is r of the way between them; want r to be close to 1).
-static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec){
+static GEN
+normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec)
+{
   pari_sp top=avma;
   GEN newang;
   if(initial==0) newang=gadd(gel(c, 5), gmul(gsub(gel(c, 6), gel(c, 5)), r));//a+(b-a)*r with a the initial and b the terminal angle
@@ -1391,7 +1491,9 @@ static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec){
 }
 
 //Given a normalized boundary U, this appends the elements of G to it (G is the set of [elt, image in PSU(1, 1), isometric circle].
-static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec){
+static GEN
+normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec)
+{
   pari_sp top=avma, mid;
   long nGp1=lg(G), nG=nGp1-1;//nG=number of elements in G
   long nUp1=lg(gel(Ubase, 1)), nU=nUp1-1;//nUp1=number of elts in Ubase+1
@@ -1769,7 +1871,9 @@ static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol
 }
 
 //Initializes the inputs for normalizedboundary_append. Works BEST if p is given as an EXACT number.
-static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec){
+static GEN
+normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec)
+{
   pari_sp top=avma;
   long lx;
   GEN Gnew=cgetg_copy(G, &lx);
@@ -1793,7 +1897,9 @@ static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *da
 }
 
 //G is the set of [elt, image in PSU(1, 1), isometric circle]. This returns the normalized boundary of the exterior domain. The output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).
-static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec){
+static GEN
+normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
+{
   pari_sp top=avma, mid;
   long np1=lg(G), n=np1-1, twonp3=2*n+3;
   GEN U=cgetg(twonp3, t_VECSMALL);//Stores the indices in U in order. The initial ordering may not have v_1 correct (may need to do a cyclic shift at the end). We double since there are at most n sides coming from G and n sides coming from the unit circle.
@@ -1946,7 +2052,9 @@ static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, lon
 }
 
 //Initializes the inputs for normalizedboundary_givencircles. Works BEST if p is given as an EXACT number.
-GEN normalizedboundary(GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec){
+GEN
+normalizedboundary(GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec)
+{
   pari_sp top=avma;
   long lx;
   GEN Gnew=cgetg_copy(G, &lx);
@@ -1970,7 +2078,9 @@ GEN normalizedboundary(GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *
 }
 
 //This returns [v, vecsmall(ind)], where the first side of U that c intersects has index ind, and the point of intersection is v. If start=1, we are searching near the start point of c, else we seach near the end point of c (c is either an arc or a segment with start/end points on the unit circle. If we intersect an oo side, returns [v, vecsmall(-1)] instead.
-static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec){
+static GEN
+normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN v, ret, inter, d1, d2;
   long ind;
@@ -2050,7 +2160,9 @@ static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long pre
 }
 
 //Returns -1 if z is in the interior of the normalized boundary or on the edge, and ind if in the exterior (i.e. between the boundary and the unit circle), where ind is the index of the side it is on (projecting from the origin to z). Does not behave well if z is a vertex of U that is on the unit disc.
-static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec){
+static long
+normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
+{
   pari_sp top=avma;
   int outside;
   pari_CATCH(CATCH_ALL){//Catching if U is trivial OR z=0
@@ -2074,20 +2186,26 @@ static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec){
 }
 
 //Given g in PSL(2, R) and p in the upper half plane, this returns the image of g in PSU(1, 1) via phi(z)=(z-p)/(z-conj(p)).
-GEN psltopsu(GEN g, GEN p){
+GEN
+psltopsu(GEN g, GEN p)
+{
   pari_sp top=avma;
   GEN M=psltopsu_transmats(p);
   return gerepileupto(top, psltopsu_mats(g, M));
 }
 
 //Given g in PSL(2, R), M=[m1, m2, p] with m1=1/(p-conj(p))[1,-p;1,-conj(p)], m2=[conj(p), -p;1, -1], this returns m1*g*m2.
-GEN psltopsu_mats(GEN g, GEN M){
+GEN
+psltopsu_mats(GEN g, GEN M)
+{
   pari_sp top=avma;
   return gerepileupto(top, gmul(gel(M, 1), gmul(g, gel(M, 2))));
 }
 
 //Returns [m1, m2, p]: matrices so that if g is in PSL(2, R), then the image of g in PSU(1, 1) corresponding to phi(z)=(z-p)/(z-conj(p)) is m1*g*m2.
-GEN psltopsu_transmats(GEN p){
+GEN
+psltopsu_transmats(GEN p)
+{
   pari_sp top=avma;
   GEN pneg=gneg(p), pconj=conj_i(p);
   GEN m1=gdiv(mkmat22(gen_1, pneg, gen_1, gneg(pconj)), gsub(p, pconj));//m1=1/(p-conj(p))[1,-p;1,-conj(p)]
@@ -2100,7 +2218,9 @@ GEN psltopsu_transmats(GEN p){
 }
 
 //Returns the roots of the hyperbolic matrix M in PSL(2, R) in order.
-static GEN psl_roots(GEN M, GEN tol, long prec){
+static GEN
+psl_roots(GEN M, GEN tol, long prec)
+{
   pari_sp top = avma;
   GEN trace=gadd(gcoeff(M, 1, 1), gcoeff(M, 2, 2));
   int sgn=tolcmp(trace, gen_0, tol, prec);
@@ -2144,7 +2264,9 @@ static GEN psl_roots(GEN M, GEN tol, long prec){
 }
 
 //Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).
-GEN randompoint_ud(GEN R, long prec){
+GEN
+randompoint_ud(GEN R, long prec)
+{
   pari_sp top=avma;
   GEN arg=gmul(randomr(prec), Pi2n(1, prec));//Random angle
   GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
@@ -2156,7 +2278,9 @@ GEN randompoint_ud(GEN R, long prec){
 }
 
 //Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).
-GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec){
+GEN
+randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec)
+{
   pari_sp top=avma;
   GEN arg=gadd(ang1, gmul(randomr(prec), gsub(ang2, ang1)));//Random angle in [ang1, ang2]
   GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
@@ -2168,7 +2292,9 @@ GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec){
 }
 
 //Reduces g with respect to z as in reduceelt_givenpsu, but does so much more efficiently using the normalized boundary provided.
-GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec){
+GEN
+reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN delta=gamid;
   llist *decomp=NULL;
@@ -2191,7 +2317,9 @@ GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*ga
 }
 
 //Algorithm 4.3 of Voight. Inputs G, a finite subset of Gamma, corresponding to Gmats in PSU(1, 1), g (->gmat) an element of Gamma, z in the unit disc. This G-reduces g, i.e. translating gz to the exterior domain of G. Returns [gbar, delta, decomp], where gbar=delta*g. gbar is (G, z)-reduced, delta is in <G>, and delta=G[i1]*G[i2]*...*G[in] with decomp=[i1, i2, ..., in] (vecsmall).
-GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec){
+GEN
+reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN delta=gamid;
   llist *decomp=NULL;
@@ -2229,7 +2357,9 @@ GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN 
 }
 
 //Reduces z to the interior of U (Almost identical to reduceelt_givennormbound). Returns [g, z'], where g is the transition element and z' is the new point.
-GEN reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec){
+GEN
+reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN g=gamid;
   long outside;
@@ -2246,14 +2376,18 @@ GEN reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GE
 }
 
 //Returns the root geodesic in the unit disc corresponding to M in PSL(2, R) and p the reference point to mapping the upper half plane to the unit disc (mats=[m1, m2, p], with m1 being the mapping).
-GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec){
+GEN
+rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN geod=rootgeodesic_uhp(M, tol, prec);
   return gerepileupto(top, mobius(gel(mats, 1), geod, tol, prec));
 }
 
 //Returns the upper half plane root geodesic of the hyperbolic element M in PSL(2, R)
-GEN rootgeodesic_uhp(GEN M, GEN tol, long prec){
+GEN
+rootgeodesic_uhp(GEN M, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN rts=psl_roots(M, tol, prec), arc;
   if(typ(gel(rts, 1))==t_INFINITY){//First root infinite; we have a vertical segment from rts[2] to oo
@@ -2301,7 +2435,9 @@ GEN rootgeodesic_uhp(GEN M, GEN tol, long prec){
 
 
 //Returns the set of minimal cycles of the side pairing pair. A cycle is a vecsmall [i1,i2,...,in] so that the cycle is v_i1, v_i2, ..., v_in. A cycle [-i] means that the "vertex" on side i is is a one element cycle (happens when a side is fixed).
-static GEN minimalcycles(GEN pair){
+static GEN
+minimalcycles(GEN pair)
+{
   pari_sp top=avma;
   long np1=lg(pair), n=np1-1, vleft=np1;//Number of sides/vertices (not counting vertices that occur on the middle of a side).
   GEN vind=cgetg(np1, t_VECSMALL);
@@ -2336,7 +2472,9 @@ static GEN minimalcycles(GEN pair){
 }
 
 //Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m.
-GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
+GEN
+minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN))
+{
   pari_sp top=avma;
   GEN G=gel(U, 1);
   GEN cycles=minimalcycles(gel(U, 7)), cyc, g, trd;//The minimal cycles.
@@ -2366,7 +2504,9 @@ GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, 
 }
 
 //Returns the vecsmall of indices of the infinite sides of U.
-GEN normalizedboundary_oosides(GEN U){
+GEN
+normalizedboundary_oosides(GEN U)
+{
   long n=lg(gel(U, 1));
   GEN sides=vecsmalltrunc_init(n);
   for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
@@ -2374,7 +2514,9 @@ GEN normalizedboundary_oosides(GEN U){
 }
 
 //Returns the group presentation of the fundamental domain U. The return is a vector, where the 1st element is the list of indices of the generators, 2nd element is the vector of relations, whose ith element is a relation of the form [indices, powers], where indices and powers are vecsmall's. If indices=[i1,i2,...,ik] and powers=[p1,p2,...,pk], then this corresponds to g_{i1}^p1*...*g_{ik}^{pk}=1.
-GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
+GEN
+presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN))
+{
   pari_sp top=avma;
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//Minimal cycles by type.
   GEN cyc=gel(mcyc, 1), cyctype=gel(mcyc, 2);
@@ -2495,7 +2637,9 @@ GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GE
 }
 
 //Finds the image of the root geodesic of g in the fundamental domain specified by U.
-GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec){
+GEN
+rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN gpsl=gamtopsl(data, g, prec), mats=gel(U, 8);//The image in PSL
   GEN geod=rootgeodesic_ud(gpsl, mats, tol, prec);
@@ -2548,7 +2692,9 @@ GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, G
 }
 
 //Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).
-GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN)){
+GEN
+signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN))
+{
   pari_sp top=avma;
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//The minimal cycles and their types.
   long nfixed=0, lgcyc=lg(gel(mcyc, 1));//The number of fixed sides, and number of cycles+1
@@ -2580,7 +2726,9 @@ GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (
 
 
 //Returns the angle ang-bot in the range [0, 2*Pi)
-static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec){
+static GEN
+anglediff(GEN ang, GEN bot, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN twopi=Pi2n(1, prec);
   GEN angdiff=gmod(gsub(ang, bot), twopi);
@@ -2589,21 +2737,27 @@ static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec){
 }
 
 //Arctan of x, where oo is allowed as input (returning Pi/2)
-static GEN atanoo(GEN x, long prec){
+static GEN
+atanoo(GEN x, long prec)
+{
   pari_sp top=avma;
   if(typ(x)==t_INFINITY) return gerepileupto(top, gdivgs(mppi(prec), 2));
   return gatan(x, prec);
 }
 
 //Returns gcmp(x, y), except if x==y, returns -1. Useful for gen_search when you ALWAYS want to return the index where it should be inserted/is
-static int gcmp_strict(void *data, GEN x, GEN y){
+static int
+gcmp_strict(void *data, GEN x, GEN y)
+{
   int c=gcmp(x, y);
   if(c==0) c=-1;
   return c;
 }
 
 //Returns 0 if c is a circle, 1 if c is a line, 2 if c is a circle arc, 3 if c is line segment, and -1 if none of the above
-static int geom_check(GEN c){
+static int
+geom_check(GEN c)
+{
   if(typ(c)!=t_VEC) return -1;
   int len=lg(c);
   if(len==CIRCLEN){//Circle or line
@@ -2620,13 +2774,17 @@ static int geom_check(GEN c){
 }
 
 //Returns the default tolerance given the precision.
-GEN deftol(long prec){
+GEN
+deftol(long prec)
+{
   pari_sp top=avma;
   return gerepileupto(top, gtofp(powis(gen_2, 32*(2-prec)), prec));
 }
 
 //Shifts the given angle ang by multiples of 2*Pi into the range [bot, bot+2*Pi).
-static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec){
+static GEN
+shiftangle(GEN ang, GEN bot, GEN tol, long prec)
+{
   pari_sp top=avma;
   GEN diff=anglediff(ang, bot, tol, prec);
   if(gequal0(diff)){avma=top;return gcopy(bot);}
@@ -2634,7 +2792,9 @@ static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec){
 }
 
 //Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact
-static long tolcmp(GEN x, GEN y, GEN tol, long prec){
+static long
+tolcmp(GEN x, GEN y, GEN tol, long prec)
+{
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY) return gcmp(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
@@ -2649,12 +2809,16 @@ static long tolcmp(GEN x, GEN y, GEN tol, long prec){
 }
 
 //Data points to [tol, vecsmall(prec)]. Used to sort/search a list with tolerance.
-static int tolcmp_sort(void *data, GEN x, GEN y){
+static int
+tolcmp_sort(void *data, GEN x, GEN y)
+{
   return tolcmp(x, y, gel(*(GEN*)data, 1), gel(*(GEN*)data, 2)[1]);
 }
 
 //Returns 1 if x==y, and 0 if x!=y. If x or y is not a precise objects (e.g. t_REAL), will return 1 if they are equal up to the tolerance tol.
-static int toleq(GEN x, GEN y, GEN tol, long prec){
+static int
+toleq(GEN x, GEN y, GEN tol, long prec)
+{
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY || gequal0(tol)) return gequal(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
@@ -2679,7 +2843,9 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 
 
 //Returns the absolute reduced norm with respect to z1 and z2, i.e. the quadratic from Q_{z_1, z_2}(g) for g in the algebra. If the output is q, then g (written in basis form) has value g~*q*g.
-GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
+GEN
+algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
+{
   pari_sp top=avma;
   GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN mats=psltopsu_transmats(p);
@@ -2687,7 +2853,9 @@ GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec){
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as [Ord, level].
-GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec){
+GEN
+algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec)
+{
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q, newA=A, U;
@@ -2714,7 +2882,9 @@ GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partials
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
-GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
+GEN
+algfdomarea(GEN A, GEN O, int lessprec, long prec)
+{
   pari_sp top=avma;
   GEN Q;
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -2724,7 +2894,9 @@ GEN algfdomarea(GEN A, GEN O, int lessprec, long prec){
 }
 
 //Generate the optimal C value
-GEN algfdom_bestC(GEN A, GEN O, long prec){
+GEN
+algfdom_bestC(GEN A, GEN O, long prec)
+{
   pari_sp top=avma;
   GEN Q;
   if(O) Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);
@@ -2733,7 +2905,9 @@ GEN algfdom_bestC(GEN A, GEN O, long prec){
 }
 
 //Returns the minimal cycles in the fundamental domain U of the algebra A.
-GEN algfdomminimalcycles(GEN U, GEN A, GEN O, long prec){
+GEN
+algfdomminimalcycles(GEN U, GEN A, GEN O, long prec)
+{
   pari_sp top=avma;
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -2742,7 +2916,9 @@ GEN algfdomminimalcycles(GEN U, GEN A, GEN O, long prec){
 }
 
 //Returns the presentation of the algebra A, obtained from the fundamental domain U.
-GEN algfdompresentation(GEN U, GEN A, GEN O, long prec){
+GEN
+algfdompresentation(GEN U, GEN A, GEN O, long prec)
+{
   pari_sp top=avma;
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -2751,7 +2927,9 @@ GEN algfdompresentation(GEN U, GEN A, GEN O, long prec){
 }
 
 //Reduces the norm 1 element x with respect to the fundamental domain fdom and the point z (default z=0)
-GEN algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec){
+GEN
+algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec)
+{
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
@@ -2761,7 +2939,9 @@ GEN algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec){
 }
 
 //Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
-GEN algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec){
+GEN
+algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec)
+{
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
@@ -2772,7 +2952,9 @@ GEN algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec){
 }
 
 //Returns the signature of the quaternion algebra A with fundamental domain U.
-GEN algfdomsignature(GEN U, GEN A, GEN O, long prec){
+GEN
+algfdomsignature(GEN U, GEN A, GEN O, long prec)
+{
   pari_sp top=avma;
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -2781,7 +2963,9 @@ GEN algfdomsignature(GEN U, GEN A, GEN O, long prec){
 }
 
 //Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
-GEN algmoreprec(GEN A, long increment, long prec){
+GEN
+algmoreprec(GEN A, long increment, long prec)
+{
   pari_sp top=avma;
   if(increment<=0) increment=1;
   GEN nf=alg_get_center(A);
@@ -2804,7 +2988,9 @@ GEN algmoreprec(GEN A, long increment, long prec){
 }
 
 //Returns the normalized basis of the set of elements G
-GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec){
+GEN
+algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec)
+{
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
@@ -2815,7 +3001,9 @@ GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec){
 }
 
 //Returns the normalized boundary of the set of elements G
-GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec){
+GEN
+algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec)
+{
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
@@ -2826,7 +3014,9 @@ GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec){
 }
 
 //Returns the norm to Q of the discriminant of A
-GEN algnormdisc(GEN A){
+GEN
+algnormdisc(GEN A)
+{
   pari_sp top=avma;
   GEN nf=alg_get_center(A);//Field
   GEN rams=algramifiedplacesf(A);
@@ -2836,7 +3026,9 @@ GEN algnormdisc(GEN A){
 }
 
 //Returns the vector of finite ramified places of the algebra A.
-GEN algramifiedplacesf(GEN A){
+GEN
+algramifiedplacesf(GEN A)
+{
   pari_sp top=avma;
   GEN hass=alg_get_hasse_f(A);//Shallow
   long nhass=lg(gel(hass, 2));
@@ -2849,7 +3041,9 @@ GEN algramifiedplacesf(GEN A){
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order O
-GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec){
+GEN
+algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec)
+{
   pari_sp top=avma;
   GEN Q;
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -2881,7 +3075,9 @@ GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long
 
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit. We can pass C, R, type, and they will be auto-set if passed as 0.
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, GEN tol, long prec){
+static GEN
+qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, GEN tol, long prec)
+{
  pari_sp top=avma, mid;
   GEN mats=psltopsu_transmats(p);
   GEN A=qalg_get_alg(Q);
@@ -3006,7 +3202,9 @@ static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partia
 
 
 //If A is an algebra over nf, let decomp be the Cholesky decomposition of the norm form. This returns the norm of x given the decomposition (this is ~10x faster than algnorm).
-GEN algnorm_chol(GEN nf, GEN decomp, GEN x){
+GEN
+algnorm_chol(GEN nf, GEN decomp, GEN x)
+{
   pari_sp top=avma;
   GEN part=gen_0, U;
   long n=lg(x);
@@ -3021,7 +3219,9 @@ GEN algnorm_chol(GEN nf, GEN decomp, GEN x){
 }
 
 //If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.
-static long algsplitoo(GEN A){
+static long
+algsplitoo(GEN A)
+{
   GEN infram=alg_get_hasse_i(A);//shallow
   long split=0;
   for(long i=1;i<lg(infram);i++){//Finding the split place
@@ -3034,7 +3234,9 @@ static long algsplitoo(GEN A){
 }
 
 //Returns the qf absrednorm as a matrix. If order has basis v1, ..., vn, then this is absrednorm_{z1, z2}(e1*v1+...+en*vn), defined in the Enumeration section of my paper. This is the combination of the Definition on page 478 of Voight, as well as Page's definition for Kleinian groups. It satisfies Q_{z1, z2}(g)=cosh(d(gz1, z2))+n-1 if g has norm 1 in the order. Thus, this allows us to see if z_1 and z_2 are "close". on the quotient.
-GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec){
+GEN
+qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec)
+{
   pari_sp top=avma;
 
   //First we find the part coming from |f_g(p)|
@@ -3107,7 +3309,9 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 }
 
 //Given the (assumed) basis representation of an element, this returns the conjugate in the basis representation.
-static GEN qalg_basis_conj(GEN Q, GEN x){
+static GEN
+qalg_basis_conj(GEN Q, GEN x)
+{
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
   GEN varnos=qalg_get_varnos(Q);
@@ -3119,7 +3323,9 @@ static GEN qalg_basis_conj(GEN Q, GEN x){
 }
 
 //Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.
-GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
+GEN
+qalg_fdomarea(GEN Q, long computeprec, long prec)
+{
   pari_sp top=avma;
   long bits=bit_accuracy(computeprec);
   GEN A=qalg_get_alg(Q);
@@ -3157,7 +3363,9 @@ GEN qalg_fdomarea(GEN Q, long computeprec, long prec){
 }
 
 //Generate the optimal C value
-GEN qalg_fdombestC(GEN Q, long prec){
+GEN
+qalg_fdombestC(GEN Q, long prec)
+{
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);//Field
@@ -3183,7 +3391,9 @@ GEN qalg_fdombestC(GEN Q, long prec){
 }
 
 //Initializes the quaternion algebra Q split at one real place using the algebras framework, as well as the contained Eichler order O of level level. If O is not passed, we assume that A is input as a quaternion algebra with pre-computed maximal order, and we take this order. This is not suitable for gerepile.
-GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec){
+GEN
+qalg_fdominitialize(GEN A, GEN O, GEN level, long prec)
+{
   GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
   GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
   GEN ramdat=algramifiedplacesf(A);//Finite ramified places
@@ -3199,10 +3409,13 @@ GEN qalg_fdominitialize(GEN A, GEN O, GEN level, long prec){
 }
 
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of an order. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
-GEN qalg_normform(GEN Q){return qalg_normform_givenbasis(Q, qalg_get_order(Q));}
+GEN
+qalg_normform(GEN Q){return qalg_normform_givenbasis(Q, qalg_get_order(Q));}
 
 //Basis is a matrix whose columns span a lattice, say v_1, ..., v_k. This returns M such that nrd(e_1*v_1+...+e_k*v_k)=(e1,...,e_k)*M*(e_1,...,e_k)~. The iith coefficient is nrd(v_i) and the ijth coefficient if i!=j is .5*trd(v_iv_j).
-static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
+static GEN
+qalg_normform_givenbasis(GEN Q, GEN basis)
+{
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
   long n;
@@ -3223,7 +3436,9 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis){
 }
 
 //Computes all norm 1 elements for which Q_{z_1,z_2}(x)<=C. If z1 and z2 are close on the Shimura curve, then this should return a point. maxelts is the maximum number of return elements (or 0 for all norm 1 elts)
-GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec){
+GEN
+qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec)
+{
   pari_sp top=avma, mid;
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);
@@ -3253,7 +3468,9 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelt
 }
 
 //Computes G(C) ala Voight, i.e. elements of O_{N=1} with a large radius near v.
-GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nform, GEN nformpart, long prec){
+GEN
+qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nform, GEN nformpart, long prec)
+{
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
@@ -3273,12 +3490,16 @@ GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxe
 
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-GEN qalg_fdominv(GEN *data, GEN x){
+GEN
+qalg_fdominv(GEN *data, GEN x)
+{
   return alginv(qalg_get_alg(*data), x);
 }
 
 //Must pass *data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
-GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec){
+GEN
+qalg_fdomm2rembed(GEN *data, GEN x, long prec)
+{
   pari_sp top=avma;
   GEN A=qalg_get_alg(*data);
   GEN rts=qalg_get_roots(*data);
@@ -3299,17 +3520,23 @@ GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec){
 }
 
 //Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
-GEN qalg_fdommul(GEN *data, GEN x, GEN y){
+GEN
+qalg_fdommul(GEN *data, GEN x, GEN y)
+{
   return algmul(qalg_get_alg(*data), x, y);
 }
 
 //Must pass *data as a quaternion algebra. Returns the trace of x.
-GEN qalg_fdomtrace(GEN *data, GEN x){
+GEN
+qalg_fdomtrace(GEN *data, GEN x)
+{
   return algtrace(qalg_get_alg(*data), x, 0);
 }
 
 //Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
-int qalg_istriv(GEN *data, GEN x){
+int
+qalg_istriv(GEN *data, GEN x)
+{
   if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
   for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;
   return 1;
@@ -3320,19 +3547,25 @@ int qalg_istriv(GEN *data, GEN x){
 
 
 //Shallow method to return the algebra
-GEN qalg_get_alg(GEN Q){return gel(Q, 1);}
+GEN
+qalg_get_alg(GEN Q){return gel(Q, 1);}
 
 //Shallow method to get the ramification
-GEN qalg_get_rams(GEN Q){return gel(Q, 2);}
+GEN
+qalg_get_rams(GEN Q){return gel(Q, 2);}
 
 //Shallow method to return the variable numbers of K and L
-GEN qalg_get_varnos(GEN Q){return gel(Q, 3);}
+GEN
+qalg_get_varnos(GEN Q){return gel(Q, 3);}
 
 //Shallow method to return the roots of K and L.
-GEN qalg_get_roots(GEN Q){return gel(Q, 4);}
+GEN
+qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 //Shallow method to return the order
-GEN qalg_get_order(GEN Q){return gel(Q, 5);}
+GEN
+qalg_get_order(GEN Q){return gel(Q, 5);}
 
 //Shallow method to return the level of the order
-GEN qalg_get_level(GEN Q){return gel(Q, 6);}
+GEN
+qalg_get_level(GEN Q){return gel(Q, 6);}
