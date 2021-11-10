@@ -105,8 +105,8 @@ divoo(GEN a, GEN b)
     return mkmoo();
   }
   if(typ(a)==t_INFINITY){//a=+/-oo
-	if(gsigne(a)==gsigne(b)) return mkoo();
-	return mkmoo();
+    if(gsigne(a)==gsigne(b)) return mkoo();
+    return mkmoo();
   }
   if(typ(b)==t_INFINITY) return gen_0;
   return gdiv(a,b);
@@ -125,9 +125,9 @@ glist_free(glist *l)
 {
   glist *temp=l;
   while(l!=NULL){
-	temp=l;
-	l=l->next;
-	pari_free(temp);
+    temp=l;
+    l=l->next;
+    pari_free(temp);
   }
 }
 
@@ -156,66 +156,66 @@ glist_putstart(glist **head_ref, GEN new_data)
 GEN
 glist_togvec(glist *l, long length, int dir)
 {
-	glist *lcopy=l;
-	GEN rvec=cgetg(length+1, t_VEC);
-	if(dir==1){
-	  long lind=1;
-	  while(l!=NULL && lind<=length){
-		  gel(rvec,lind)=gcopy(l->data);
-		  l=l->next;
-		  lind++;
-	  }
-	  if(lind<=length){//Couldn't finish.
-	    pari_err(e_MISC,"List length is too long");
-	  }
-	}
-	else{
+    glist *lcopy=l;
+    GEN rvec=cgetg(length+1, t_VEC);
+    if(dir==1){
+      long lind=1;
+      while(l!=NULL && lind<=length){
+          gel(rvec,lind)=gcopy(l->data);
+          l=l->next;
+          lind++;
+      }
+      if(lind<=length){//Couldn't finish.
+        pari_err(e_MISC,"List length is too long");
+      }
+    }
+    else{
       long lind=length;
-	  while(l!=NULL && lind>0){
-		gel(rvec,lind)=gcopy(l->data);
-		l=l->next;
-		lind--;
-	  }
-	  if(lind>0){//Couldn't finish.
-	    pari_err(e_MISC,"List length is too long");
-	  }
-	}
-	glist_free(lcopy);
-	return rvec;
+      while(l!=NULL && lind>0){
+        gel(rvec,lind)=gcopy(l->data);
+        l=l->next;
+        lind--;
+      }
+      if(lind>0){//Couldn't finish.
+        pari_err(e_MISC,"List length is too long");
+      }
+    }
+    glist_free(lcopy);
+    return rvec;
 }
 
 //Appends l to the end of v, returning a clean copy. dir=-1 means forward, dir=-1 backward. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.
 GEN
 glist_togvec_append(glist *l, GEN v, long length, int dir)
 {
-	glist *lcopy=l;
-	long vlen=lg(v), rveclen=length+vlen;
-	GEN rvec=cgetg(rveclen, t_VEC);
-	for(long i=1;i<vlen;i++) gel(rvec, i)=gcopy(gel(v, i));//Copying v
-	if(dir==1){
-	  long lind=vlen;
-	  while(l!=NULL && lind<rveclen){
-		  gel(rvec,lind)=gcopy(l->data);
-		  l=l->next;
-		  lind++;
-	  }
-	  if(lind<rveclen){//Couldn't finish.
-	    pari_err(e_MISC,"List length is too long");
-	  }
-	}
-	else{
+    glist *lcopy=l;
+    long vlen=lg(v), rveclen=length+vlen;
+    GEN rvec=cgetg(rveclen, t_VEC);
+    for(long i=1;i<vlen;i++) gel(rvec, i)=gcopy(gel(v, i));//Copying v
+    if(dir==1){
+      long lind=vlen;
+      while(l!=NULL && lind<rveclen){
+          gel(rvec,lind)=gcopy(l->data);
+          l=l->next;
+          lind++;
+      }
+      if(lind<rveclen){//Couldn't finish.
+        pari_err(e_MISC,"List length is too long");
+      }
+    }
+    else{
       long lind=rveclen-1;
-	  while(l!=NULL && lind>=vlen){
-		gel(rvec,lind)=gcopy(l->data);
-		l=l->next;
-		lind--;
-	  }
-	  if(lind>=vlen){//Couldn't finish.
-	    pari_err(e_MISC,"List length is too long");
-	  }
-	}
-	glist_free(lcopy);
-	return rvec;
+      while(l!=NULL && lind>=vlen){
+        gel(rvec,lind)=gcopy(l->data);
+        l=l->next;
+        lind--;
+      }
+      if(lind>=vlen){//Couldn't finish.
+        pari_err(e_MISC,"List length is too long");
+      }
+    }
+    glist_free(lcopy);
+    return rvec;
 }
 
 
@@ -227,9 +227,9 @@ llist_free(llist *l)
 {
   llist *temp=l;
   while(l!=NULL){
-	temp=l;
-	l=l->next;
-	pari_free(temp);
+    temp=l;
+    l=l->next;
+    pari_free(temp);
   }
 }
 
@@ -263,9 +263,9 @@ llist_togvec(llist *l, long length, int dir)
   if(dir==1){
     long lind=1;
     while(l!=NULL && lind<=length){
-	  gel(rvec,lind)=stoi(l->data);
-	  l=l->next;
-	  lind++;
+      gel(rvec,lind)=stoi(l->data);
+      l=l->next;
+      lind++;
     }
     if(lind<=length){//Couldn't finish.
       pari_err(e_MISC,"List length is too long");
@@ -275,8 +275,8 @@ llist_togvec(llist *l, long length, int dir)
     long lind=length;
     while(l!=NULL && lind>0){
       gel(rvec,lind)=stoi(l->data);
-	  l=l->next;
-	  lind--;
+      l=l->next;
+      lind--;
     }
     if(lind>0){//Couldn't finish.
       pari_err(e_MISC,"List length is too long");
@@ -295,9 +295,9 @@ llist_tovecsmall(llist *l, long length, int dir)
   if(dir==1){
     long lind=1;
     while(l!=NULL && lind<=length){
-	  rvec[lind]=l->data;
-	  l=l->next;
-	  lind++;
+      rvec[lind]=l->data;
+      l=l->next;
+      lind++;
     }
     if(lind<=length){//Couldn't finish.
       pari_err(e_MISC,"List length is too long");
@@ -307,8 +307,8 @@ llist_tovecsmall(llist *l, long length, int dir)
     long lind=length;
     while(l!=NULL && lind>0){
       rvec[lind]=l->data;
-	  l=l->next;
-	  lind--;
+      l=l->next;
+      lind--;
     }
     if(lind>0){//Couldn't finish.
       pari_err(e_MISC,"List length is too long");
@@ -330,32 +330,32 @@ mat_nfcholesky(GEN nf, GEN A)
   long n=lg(A)-1;//A is nxn
   GEN M=gcopy(A);//Will be manipulating the entries, so need to copy A.
   for(long i=1;i<n;i++){
-	if(gequal0(gcoeff(M, i, i))){
-	  for(long j=i+1;j<=n;j++){
-	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
-	  }
-	}
-	else{
-	  for(long j=i+1;j<=n;j++){
-	    gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
-		pari_CATCH(CATCH_ALL){
-		  gcoeff(M, i, j)=gen_0;
-		}
-		pari_TRY{//Only issue is a current bug with pari when M[i,j]=0
-	      gcoeff(M, i, j)=nfdiv(nf, gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
-		}
-		pari_ENDCATCH
-	  }
-	}
-	for(long j=i+1;j<=n;j++){
-	  for(long k=j;k<=n;k++) gcoeff(M, j, k)=nfsub(nf, gcoeff(M, j, k), nfmul(nf, gcoeff(M, j, i), gcoeff(M, i, k)));//M[j,k]=M[j,k]-M[j,i]*M[i,k];
-	}
+    if(gequal0(gcoeff(M, i, i))){
+      for(long j=i+1;j<=n;j++){
+        gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
+      }
+    }
+    else{
+      for(long j=i+1;j<=n;j++){
+        gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
+        pari_CATCH(CATCH_ALL){
+          gcoeff(M, i, j)=gen_0;
+        }
+        pari_TRY{//Only issue is a current bug with pari when M[i,j]=0
+          gcoeff(M, i, j)=nfdiv(nf, gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
+        }
+        pari_ENDCATCH
+      }
+    }
+    for(long j=i+1;j<=n;j++){
+      for(long k=j;k<=n;k++) gcoeff(M, j, k)=nfsub(nf, gcoeff(M, j, k), nfmul(nf, gcoeff(M, j, i), gcoeff(M, i, k)));//M[j,k]=M[j,k]-M[j,i]*M[i,k];
+    }
   }
   GEN ret=cgetg_copy(M, &n);//M stores the coeff, but we should delete the lower diagonal
   for(long i=1;i<n;i++){//Column i
     gel(ret, i)=cgetg(n, t_COL);
-	for(long j=1;j<=i;j++) gcoeff(ret, j, i)=gcopy(gcoeff(M, j, i));
-	for(long j=i+1;j<n;j++) gcoeff(ret, j, i)=gen_0;
+    for(long j=1;j<=i;j++) gcoeff(ret, j, i)=gcopy(gcoeff(M, j, i));
+    for(long j=i+1;j<n;j++) gcoeff(ret, j, i)=gen_0;
   }
   return gerepileupto(top, ret);
 }
@@ -366,12 +366,12 @@ quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
 {
   pari_sp top=avma;
   if(gequal0(A)){//Actually a linear. This case occurs when dealing with small vectors in the quaternion algebra ramified nowhere.
-	if(gequal0(B)) return cgetg(1, t_VEC);//We say there are no soln's when A=B=0
-	GEN x=gneg(nfdiv(nf, C, B));//Solution
-	x=lift(basistoalg(nf, x));
-	if(typ(x)==t_INT) return gerepilecopy(top, mkvec(x));//Solution!
-	avma=top;
-	return cgetg(1, t_VEC);
+    if(gequal0(B)) return cgetg(1, t_VEC);//We say there are no soln's when A=B=0
+    GEN x=gneg(nfdiv(nf, C, B));//Solution
+    x=lift(basistoalg(nf, x));
+    if(typ(x)==t_INT) return gerepilecopy(top, mkvec(x));//Solution!
+    avma=top;
+    return cgetg(1, t_VEC);
   }
   GEN Ap=nfeltembed(nf, A, gen_1, prec);//Doesn't matter which place, since if we have an integer solution iff it works for all places
   GEN Bp=nfeltembed(nf, B, gen_1, prec);
@@ -389,9 +389,9 @@ quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
   //Now we plug back in and check.
   GEN rts=vectrunc_init(3), res, r;//At most 2 roots
   for(long i=1;i<lg(rposs);i++){
-	r=gel(rposs, i);
-	res=nfadd(nf, nfmul(nf, nfadd(nf, nfmul(nf, A, r), B), r), C);//Plug it in
-	if(gequal0(res)) vectrunc_append(rts, r);//gequal0(res)=1 no matter what representation it is in.
+    r=gel(rposs, i);
+    res=nfadd(nf, nfmul(nf, nfadd(nf, nfmul(nf, A, r), B), r), C);//Plug it in
+    if(gequal0(res)) vectrunc_append(rts, r);//gequal0(res)=1 no matter what representation it is in.
   }
   return gerepilecopy(top, rts);
 }
@@ -488,80 +488,80 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
   glist *S=NULL;//Pointer to the list start
   GEN v=cgetg(1, t_VEC);//The list, is used for garbage collection partway through
   while(step>0){
-	if(gc_needed(top, 1)){
-	  mid=avma;
-	  v=glist_togvec_append(S, v, count, 1);
-	  count=0;
-	  S=NULL;
-	  T=gcopy(T);
-	  U=gcopy(U);
-	  UB=gcopy(UB);
-	  x=gcopy(x);
-	  Tcond=gcopy(Tcond);
-	  Ucond=gcopy(Ucond);
-	  gerepileallsp(top, mid, 7, &v, &T, &U, &UB, &x, &Tcond, &Ucond);
-	}
-	if(step==2){
-	  Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
-	  gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
-	  gel(x, i)=gsubgs(gceil(gneg(gadd(Z, gel(U, i)))), 1);//x[i]=ceil(-Z-U[i])-1;
-	  step=3;
-	}
+    if(gc_needed(top, 1)){
+      mid=avma;
+      v=glist_togvec_append(S, v, count, 1);
+      count=0;
+      S=NULL;
+      T=gcopy(T);
+      U=gcopy(U);
+      UB=gcopy(UB);
+      x=gcopy(x);
+      Tcond=gcopy(Tcond);
+      Ucond=gcopy(Ucond);
+      gerepileallsp(top, mid, 7, &v, &T, &U, &UB, &x, &Tcond, &Ucond);
+    }
+    if(step==2){
+      Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
+      gel(UB, i)=gfloor(gsub(Z, gel(U, i)));//UB[i]=floor(Z-U[i]);
+      gel(x, i)=gsubgs(gceil(gneg(gadd(Z, gel(U, i)))), 1);//x[i]=ceil(-Z-U[i])-1;
+      step=3;
+    }
     if(step==3){
-	  gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
-	  if(gcmp(gel(x, i), gel(UB, i))<=0) step=5;//If x[i]<=UB[i], goto step 5
-	  else step=4; //If x[i]>UB[i], goto step 4
-	}
-	if(step==4){
-	  i++;
-	  step=3;
-	  continue;//May as well go back to start
-	}
-	if(step==5){
-	  i--;
-	  gel(U, i)=gen_0;
-	  for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));//U[i]=sum(j=i+1,n,q[i,j]*x[j]);
-	  gel(Ucond, i)=gen_0;
-	  if(!gequal0(gcoeff(condchol, i, i))){//ith row of condchol is non-zero, so something to add to Ucond
-	    for(long j=i+1;j<np1;j++) gel(Ucond, i)=nfadd(nf, gel(Ucond, i), nfmul(nf, gcoeff(condchol, i, j), gel(x, j)));
-	  }
-	  if(!gequal0(gcoeff(condchol, i+1, i+1))){//i+1th row of condchol is non-zero, so something to add to Tcond
-	    gel(Tcond, i)=nfadd(nf, gel(Tcond, i+1), nfmul(nf, gcoeff(condchol, i+1, i+1), nfsqr(nf, nfadd(nf, gel(x, i+1), gel(Ucond, i+1)))));
-	  }
-	  else gel(Tcond, i)=gcopy(gel(Tcond, i+1));//Same
-	  gel(T, i)=gsub(gel(T, i+1), gmul(gcoeff(Q, i+1, i+1), gsqr(gadd(gel(x, i+1), gel(U, i+1)))));//T[i]=T[i+1]-q[i+1,i+1]*(x[i+1]+U[i+1])^2;
-	  if(i==1){step=6;}//We have a condition to deal with!
-	  else{//Go back now
-		step=2;
-		continue;
-	  }
-	}
-	if(step==6){//Dealing with extra condtions
-	  step=3;//The next step, if we make it out.
-	  i=2;//We go back to i=2, if we make it out
-	  
-	  GEN q11U1=nfmul(nf, gcoeff(condchol, 1, 1), gel(Ucond, 1));
-	  Aco=gcoeff(condchol, 1, 1);
-	  Bco=nfmul(nf, q11U1, gen_2);
-	  Cco=nfadd(nf, gel(Tcond, 1), nfmul(nf, q11U1, gel(Ucond, 1)));//Ax_1^2+Bx_1+C=0 is necessary
+      gel(x, i)=gaddgs(gel(x, i), 1);//x[i]=x[i]+1
+      if(gcmp(gel(x, i), gel(UB, i))<=0) step=5;//If x[i]<=UB[i], goto step 5
+      else step=4; //If x[i]>UB[i], goto step 4
+    }
+    if(step==4){
+      i++;
+      step=3;
+      continue;//May as well go back to start
+    }
+    if(step==5){
+      i--;
+      gel(U, i)=gen_0;
+      for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));//U[i]=sum(j=i+1,n,q[i,j]*x[j]);
+      gel(Ucond, i)=gen_0;
+      if(!gequal0(gcoeff(condchol, i, i))){//ith row of condchol is non-zero, so something to add to Ucond
+        for(long j=i+1;j<np1;j++) gel(Ucond, i)=nfadd(nf, gel(Ucond, i), nfmul(nf, gcoeff(condchol, i, j), gel(x, j)));
+      }
+      if(!gequal0(gcoeff(condchol, i+1, i+1))){//i+1th row of condchol is non-zero, so something to add to Tcond
+        gel(Tcond, i)=nfadd(nf, gel(Tcond, i+1), nfmul(nf, gcoeff(condchol, i+1, i+1), nfsqr(nf, nfadd(nf, gel(x, i+1), gel(Ucond, i+1)))));
+      }
+      else gel(Tcond, i)=gcopy(gel(Tcond, i+1));//Same
+      gel(T, i)=gsub(gel(T, i+1), gmul(gcoeff(Q, i+1, i+1), gsqr(gadd(gel(x, i+1), gel(U, i+1)))));//T[i]=T[i+1]-q[i+1,i+1]*(x[i+1]+U[i+1])^2;
+      if(i==1){step=6;}//We have a condition to deal with!
+      else{//Go back now
+        step=2;
+        continue;
+      }
+    }
+    if(step==6){//Dealing with extra condtions
+      step=3;//The next step, if we make it out.
+      i=2;//We go back to i=2, if we make it out
+      
+      GEN q11U1=nfmul(nf, gcoeff(condchol, 1, 1), gel(Ucond, 1));
+      Aco=gcoeff(condchol, 1, 1);
+      Bco=nfmul(nf, q11U1, gen_2);
+      Cco=nfadd(nf, gel(Tcond, 1), nfmul(nf, q11U1, gel(Ucond, 1)));//Ax_1^2+Bx_1+C=0 is necessary
 
-	  gel(x, 1)=gen_0;
-	  x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
-	  if(gequal0(x)) xpass0=1;//This is the last check
-	  for(long j=1;j<lg(x1sols);j++){//We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.
-		if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
-		gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
-		glist_putstart(&S, gcopy(x));
-	    count++;
-		if(maxelts!=0){
-		  totcount++;//We can't use count, since this resets if we garbage collect
-		  if(totcount<maxelts) continue;
-		  return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));//We hit the maximal number of return elements
-	    }
-	  }
-	  if(xpass0){step=0;continue;}//Game over, we are done!
-	  continue;
-	}
+      gel(x, 1)=gen_0;
+      x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
+      if(gequal0(x)) xpass0=1;//This is the last check
+      for(long j=1;j<lg(x1sols);j++){//We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.
+        if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
+        gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
+        glist_putstart(&S, gcopy(x));
+        count++;
+        if(maxelts!=0){
+          totcount++;//We can't use count, since this resets if we garbage collect
+          if(totcount<maxelts) continue;
+          return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));//We hit the maximal number of return elements
+        }
+      }
+      if(xpass0){step=0;continue;}//Game over, we are done!
+      continue;
+    }
   }
   return gerepileupto(tiptop, glist_togvec_append(S, v, count, -1));
 }
@@ -1204,10 +1204,10 @@ hdist(GEN z1, GEN z2, long prec)
   pari_sp top=avma;
   GEN expd;
   pari_CATCH(CATCH_ALL){
-	avma=top;
-	pari_CATCH_reset();
-	pari_err_TYPE("Please enter two complex numbers in the upper half plane", mkvec2(z1, z2));
-	return gen_0;
+    avma=top;
+    pari_CATCH_reset();
+    pari_err_TYPE("Please enter two complex numbers in the upper half plane", mkvec2(z1, z2));
+    return gen_0;
   }
   pari_TRY{
     GEN x1=gel(z1,1);
@@ -1233,7 +1233,7 @@ hdist_ud(GEN z1, GEN z2, long prec)
   GEN ret;
   pari_CATCH(e_INV){
     avma=top;
-	pari_CATCH_reset();
+    pari_CATCH_reset();
     return mkoo();
   }
   pari_TRY{
@@ -1544,49 +1544,49 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       sidem1=sid-1;
     }
     mid=avma;
-	if(finalstretch && !leftoverGs){//We go back and hit the start of U
-	  if(U[side]==0){startpt++;continue;}
-	  else if(U[side]>0){
-		sidecirc=gel(gel(Ubase, 2), U[side]);
-		sidecirctermang=gel(Utermangles, U[side]);
-		newsidefromG=0;
-	  }
-	  else{
-		sidecirc=gel(gel(G, -U[side]), 3);
-		sidecirctermang=gel(Gtermangles, -U[side]);
-		newsidefromG=1;
-	  }
-	  if(U[ulen]>0){
-		L=gel(gel(Ubase, 2), U[ulen]);
-		Ltermang=gel(Utermangles, U[ulen]);
-	  }
-	  else{
-		L=gel(gel(G, -U[ulen]), 3);
-		Ltermang=gel(Gtermangles, -U[ulen]);
-	  }
-	}
-	else if(gequal0(gel(gel(Ubase, 2), side))) continue;//We skip past infinite sides of Ubase.
+    if(finalstretch && !leftoverGs){//We go back and hit the start of U
+      if(U[side]==0){startpt++;continue;}
+      else if(U[side]>0){
+        sidecirc=gel(gel(Ubase, 2), U[side]);
+        sidecirctermang=gel(Utermangles, U[side]);
+        newsidefromG=0;
+      }
+      else{
+        sidecirc=gel(gel(G, -U[side]), 3);
+        sidecirctermang=gel(Gtermangles, -U[side]);
+        newsidefromG=1;
+      }
+      if(U[ulen]>0){
+        L=gel(gel(Ubase, 2), U[ulen]);
+        Ltermang=gel(Utermangles, U[ulen]);
+      }
+      else{
+        L=gel(gel(G, -U[ulen]), 3);
+        Ltermang=gel(Gtermangles, -U[ulen]);
+      }
+    }
+    else if(gequal0(gel(gel(Ubase, 2), side))) continue;//We skip past infinite sides of Ubase.
     else if(lastsidenew==0){//Working on a non-infinite side of Ubase, and the last side was also a side of Ubase
       if(tolcmp(gang, gel(Utermangles, side), tol, prec)==1 && !leftoverGs){//Consecutive old sides
-	    if(gequal0(gel(gel(Ubase, 2), sidem1))){//The last side was infinite and skipped over; must re-insert it.
+        if(gequal0(gel(gel(Ubase, 2), sidem1))){//The last side was infinite and skipped over; must re-insert it.
           ulen++;
           U[ulen]=0;
           gel(vertices, ulen)=mkvec2(gel(gel(Ubase, 3), sidem1-1), gel(gel(Ubase, 4), sidem1-1));//The infinite side
-		  ulen++;
+          ulen++;
           U[ulen]=side;
           gel(vertices, ulen)=mkvec2(gel(gel(Ubase, 3), sidem1), gel(gel(Ubase, 4), sidem1));
           continue;//Go on
         }
-		//Now we check if the new vertex is beyond the old one
-	    ang=gel(gel(Ubase, 4), sidem1);//Angle to the intersection point
-		ang1=anglediff(ang, gel(gel(vertices, ulen), 2), tol, prec);//ang-angle to the previous vertex.
+        //Now we check if the new vertex is beyond the old one
+        ang=gel(gel(Ubase, 4), sidem1);//Angle to the intersection point
+        ang1=anglediff(ang, gel(gel(vertices, ulen), 2), tol, prec);//ang-angle to the previous vertex.
         if(gequal0(ang1) || gcmp(ang1, pi)>=0){//Delete last side and go backwards. The previous side MUST be a new side.
-		  avma=mid;
-		  ulen--;
-		  lastsidenew=1;
-		  sid--;
-		  continue;
-		}
+          avma=mid;
+          ulen--;
+          lastsidenew=1;
+          sid--;
+          continue;
+        }
         ulen++;
         U[ulen]=side;
         gel(vertices, ulen)=mkvec2(gel(gel(Ubase, 3), sidem1), gel(gel(Ubase, 4), sidem1));
@@ -1623,21 +1623,21 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       ang1=anglediff(ang2, Ltermang, tol, prec);//The angle between the terminal and initial points of L
       ang=anglediff(garg(gel(sidecirc, 3), prec), Ltermang, tol, prec);//Angle to the initial point of sidecirc from the terminal angle of L.
       if(tolcmp(ang, ang1, tol, prec)<=0){//sidecirc is contained within L
-		if(finalstretch && !leftoverGs){
-		  if(!gequal(L, sidecirc)){
-		    avma=mid;
-			startpt++;//We add 1 to startpt to signal that we must start at a different point.
-			continue;
-		  }
-		  //L=sidecirc, and so we are actually done. This should only happen when Ubase has 1 non-trivial side, and we don't end up adding in any sides that can do better (i.e. the output is the same as the input). So we just continue on and let the rest do its thing.
-		}
+        if(finalstretch && !leftoverGs){
+          if(!gequal(L, sidecirc)){
+            avma=mid;
+            startpt++;//We add 1 to startpt to signal that we must start at a different point.
+            continue;
+          }
+          //L=sidecirc, and so we are actually done. This should only happen when Ubase has 1 non-trivial side, and we don't end up adding in any sides that can do better (i.e. the output is the same as the input). So we just continue on and let the rest do its thing.
+        }
         else if(newsidefromG){//Failed to insert since it did not help.
-		  avma=mid;
+          avma=mid;
           Gordind++;
           if(Gordind==nGp1){gang=ten;}//We are done with G, so we just want to start appending old sides.
           else gang=gel(Gtermangles, Gord[Gordind]);
           sid--;//We need to try again with the current side since we "jumped the line" with the element of G.
-		  continue;
+          continue;
         }//We also want to leave lastsidenew unchanged, as we did not insert
         else{avma=mid;continue;}
       }
@@ -1646,11 +1646,11 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       U[ulen]=0;
       gel(vertices, ulen)=mkvec2(gel(L, 3), ang2);
       ulen++;
-	  gel(vertices, ulen)=mkvec2(gel(sidecirc, 4), sidecirctermang);
-	  if(finalstretch && !leftoverGs){
-	    U[ulen]=U[side];
-		break;//Done!
-	  }
+      gel(vertices, ulen)=mkvec2(gel(sidecirc, 4), sidecirctermang);
+      if(finalstretch && !leftoverGs){
+        U[ulen]=U[side];
+        break;//Done!
+      }
       else if(newsidefromG){
         U[ulen]=-Gord[Gordind];
         Gordind++;
@@ -1670,7 +1670,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       if(gequal0(ang)){
         if(tolcmp(gel(sidecirc, 2), gel(L, 2), tol, prec)<=0){//This side lies inside the previous one, continue on (compared radii).
           avma=mid;
-		  if(finalstretch && !leftoverGs) startpt++;
+          if(finalstretch && !leftoverGs) startpt++;
           else if(newsidefromG){//Failed to insert since it did not help.
             Gordind++;
             if(Gordind==nGp1){gang=ten;}//We are done with G, so we just want to start appending old sides.
@@ -1679,21 +1679,21 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
           }//We also want to leave lastsidenew unchanged, as we did not insert
           continue;
         }
-		//Only need to update U[ulen]; the intersection point is the same.
-		if(newsidefromG){U[ulen]=-Gord[Gordind];lastsidenew=1;}
-		else{U[ulen]=side;lastsidenew=0;}
-		continue;
+        //Only need to update U[ulen]; the intersection point is the same.
+        if(newsidefromG){U[ulen]=-Gord[Gordind];lastsidenew=1;}
+        else{U[ulen]=side;lastsidenew=0;}
+        continue;
       }
       else if(gcmp(ang, pi)==1){//We DID come in from below
         ulen++;
         U[ulen]=0;//Side at oo
         gel(vertices, ulen)=mkvec2(gel(L, 3), garg(gel(L, 3), prec));//Side at oo
         ulen++;
-		gel(vertices, ulen)=mkvec2(gel(sidecirc, 4), sidecirctermang);
-		if(finalstretch && !leftoverGs){//Done!
-		  U[ulen]=U[side];
-		  break;
-		}
+        gel(vertices, ulen)=mkvec2(gel(sidecirc, 4), sidecirctermang);
+        if(finalstretch && !leftoverGs){//Done!
+          U[ulen]=U[side];
+          break;
+        }
         if(newsidefromG){
           U[ulen]=-Gord[Gordind];
           Gordind++;
@@ -1711,9 +1711,9 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       //Now we are sure did not come in from below.
       inter=gel(inter, 1);//The point
       if(toleq(inter, gel(L, 3), tol, prec)){//The side lies entirely in the previous side OR touches it at the end
-	    if(toleq(inter, gel(sidecirc, 3), tol, prec)){//Lies inside
+        if(toleq(inter, gel(sidecirc, 3), tol, prec)){//Lies inside
           avma=mid;
-		  if(finalstretch && !leftoverGs) startpt++;
+          if(finalstretch && !leftoverGs) startpt++;
           else if(newsidefromG){//Failed to insert since it did not help.
             Gordind++;
             if(Gordind==nGp1){gang=ten;}//We are done with G, so we just want to start appending old sides.
@@ -1721,7 +1721,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
             sid--;//We need to try again with the current side since we "jumped the line" with the element of G.
           }//We also want to leave lastsidenew unchanged, as we did not insert
           continue;
-		}
+        }
       }
       //Now we have a proper "normal" intersection
       ang1=garg(inter, prec);
@@ -1739,15 +1739,15 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
         }
       }
       //Now we are ready to insert it.
-	  if(finalstretch && !leftoverGs){//Done if we intersected before the original intersection, and must continue on if not.
-		if(gcmp(pi, anglediff(ang1, gel(gel(vertices, side+1), 2), tol, prec))==1){startpt++;continue;}//We have superseeded the previous side, increase start point.
-		ulen++;
-		U[ulen]=U[side];
-	    gel(vertices, ulen)=mkvec2(inter, ang1);
-		break;
-	  }
-	  ulen++;
-	  gel(vertices, ulen)=mkvec2(inter, ang1);
+      if(finalstretch && !leftoverGs){//Done if we intersected before the original intersection, and must continue on if not.
+        if(gcmp(pi, anglediff(ang1, gel(gel(vertices, side+1), 2), tol, prec))==1){startpt++;continue;}//We have superseeded the previous side, increase start point.
+        ulen++;
+        U[ulen]=U[side];
+        gel(vertices, ulen)=mkvec2(inter, ang1);
+        break;
+      }
+      ulen++;
+      gel(vertices, ulen)=mkvec2(inter, ang1);
       if(newsidefromG){
         U[ulen]=-Gord[Gordind];
         Gordind++;
@@ -1776,7 +1776,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
     if(lg(inter)!=1){//Intersection
       inter=real_i(gel(inter, 1));//Intersected [0, 1]
       if(tolcmp(inter, mininter, tol, prec)==-1){best=k;mininter=inter;}
-	  else break;//We cannot do better than this.
+      else break;//We cannot do better than this.
     }
     else{//No intersection
       if(gequal(mininter, gen_2)) best=k;//Might have to take the side with smallest angle
@@ -1792,19 +1792,19 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
   if(lg(inter)>1){//Intersect. Now we need to go forward, as it is possible that the best intersection with [0, 1] was added right after the first side.
     inter=real_i(gel(inter, 1));
     if(tolcmp(mininter, inter, tol, prec)!=-1){best=ulen;mininter=inter;}//The first arc was better
-	k=2;
-	while(U[k]<0){
-	  L=gel(gel(G, -U[k]), 3);
+    k=2;
+    while(U[k]<0){
+      L=gel(gel(G, -U[k]), 3);
       inter=arcseg_int(L, L0, tol, prec);
-	  if(lg(inter)==1) break;//No, intersection, done
+      if(lg(inter)==1) break;//No, intersection, done
       inter=real_i(gel(inter, 1));//Intersected [0, 1]
       if(tolcmp(inter, mininter, tol, prec)!=1){best=k;mininter=inter;}
-	  else break;//We cannot do better than this.
-	  k++;
-	}
+      else break;//We cannot do better than this.
+      k++;
+    }
   }
   else{
-	if(gequal(mininter, gen_2) && U[k]<0) best++;//There was NO intersection with [0, 1], so we are ending up on an infinite side! This is not right, so we must increment it by one. If best=ulen then we did not boop it backward, so don't need to increment if forward
+    if(gequal(mininter, gen_2) && U[k]<0) best++;//There was NO intersection with [0, 1], so we are ending up on an infinite side! This is not right, so we must increment it by one. If best=ulen then we did not boop it backward, so don't need to increment if forward
   }
   
   avma=mid;
@@ -1947,7 +1947,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
     for(long i=1;i<=5;i++) gel(retempty, i)=cgetg(1, t_VEC);//elements, icircs, vertices, matrices, area, sidepairing
     gel(retempty, 6)=mkoo();
     gel(retempty, 7)=gen_0;
-	gel(retempty, 8)=cgetg(1, t_VEC);
+    gel(retempty, 8)=cgetg(1, t_VEC);
     return retempty;
   }
   if(hminind>0 && ordering[startind]!=hminind){//The first side has multiple circles coming out of its terminal point. I'm pretty sure this happens if and only if (well, in the Shimura curve case) Q is unramified everywhere.
@@ -2446,26 +2446,26 @@ minimalcycles(GEN pair)
   long startind=1, ind;
   for(long i=1;i<np1;i++){//We sort the fixed sides first, as later on we would miss the ones that get removed before checking.
     if(pair[i]==i){//Side fixed!
-	  vectrunc_append(cycles, mkvecsmall(-i));//Middle of the side is fixed.
-	} 
+      vectrunc_append(cycles, mkvecsmall(-i));//Middle of the side is fixed.
+    } 
   }
   do{
-	cyc=vecsmalltrunc_init(vleft);
-	vecsmalltrunc_append(cyc, startind);//Starting the cycle.
-	vind[startind]=0;
-	vleft--;
-	ind=smodss(pair[startind]-2, n)+1;//Hit it with the side pairing and subtract 1 to reach the paired vertex.
-	while(ind!=startind){//Move along the cycle.
-	  vind[ind]=0;
-	  vleft--;//One less vertex
-	  vecsmalltrunc_append(cyc, ind);//Append it
-	  ind=smodss(pair[ind]-2, n)+1;//Update
-	}
-	vectrunc_append(cycles, cyc);//New cycle.
+    cyc=vecsmalltrunc_init(vleft);
+    vecsmalltrunc_append(cyc, startind);//Starting the cycle.
+    vind[startind]=0;
+    vleft--;
+    ind=smodss(pair[startind]-2, n)+1;//Hit it with the side pairing and subtract 1 to reach the paired vertex.
+    while(ind!=startind){//Move along the cycle.
+      vind[ind]=0;
+      vleft--;//One less vertex
+      vecsmalltrunc_append(cyc, ind);//Append it
+      ind=smodss(pair[ind]-2, n)+1;//Update
+    }
+    vectrunc_append(cycles, cyc);//New cycle.
     while(startind<np1){//Finding the next vertex we haven't eliminated.
-	  startind++;
-	  if(vind[startind]==1) break;
-	}
+      startind++;
+      if(vind[startind]==1) break;
+    }
   }
   while(startind<np1);
   return gerepilecopy(top, cycles);
@@ -2481,23 +2481,23 @@ minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN)
   long ncyc=lg(cycles);
   GEN types=cgetg(ncyc, t_VECSMALL);//The types
   for(long i=1;i<ncyc;i++){
-	cyc=gel(cycles, i);
-	if(lg(cyc)==2 && cyc[1]<0) g=gel(G, -cyc[1]);//Minimal cycle that was the middle of a side.
-	else{
-	  g=gamid;
-	  for(long j=1;j<lg(cyc);j++) g=eltmul(data, gel(G, cyc[j]), g);//Multiply on the left by G[cyc[j]]
-	}
-	if(istriv(data, g)){types[i]=1;continue;}//Accidental cycle, continue on.
-	trd=elttrace(data, g);//The trace
-	if(gequal(trd, gen_2) || gequal(trd, gen_m2)){types[i]=0;continue;}//Parabolic cycle.
+    cyc=gel(cycles, i);
+    if(lg(cyc)==2 && cyc[1]<0) g=gel(G, -cyc[1]);//Minimal cycle that was the middle of a side.
+    else{
+      g=gamid;
+      for(long j=1;j<lg(cyc);j++) g=eltmul(data, gel(G, cyc[j]), g);//Multiply on the left by G[cyc[j]]
+    }
+    if(istriv(data, g)){types[i]=1;continue;}//Accidental cycle, continue on.
+    trd=elttrace(data, g);//The trace
+    if(gequal(trd, gen_2) || gequal(trd, gen_m2)){types[i]=0;continue;}//Parabolic cycle.
     long ord=1;
-	GEN gpow=g;
-	do{//Finding the order of g
-	  ord++;
-	  gpow=eltmul(data, g, gpow);
-	}
-	while(!istriv(data, gpow));
-	types[i]=ord;
+    GEN gpow=g;
+    do{//Finding the order of g
+      ord++;
+      gpow=eltmul(data, g, gpow);
+    }
+    while(!istriv(data, gpow));
+    types[i]=ord;
   }
   GEN ordering=vecsmall_indexsort(types);
   return gerepilecopy(top, mkvec2(vecpermute(cycles, ordering), vecsmallpermute(types, ordering)));//The return, [cycles, types]
@@ -2523,8 +2523,8 @@ presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*
   long lgelts=lg(gel(U, 1)), lgcyc=lg(cyc), ngens=0;
   GEN H=cgetg(lgelts, t_VECSMALL);
   for(long i=1;i<lgelts;i++){//H[i]=1 if g=g^(-1), and for exactly one of [g,g^(-1)] for all other g.
-	if(gel(U, 7)[i]>=i){H[i]=1;ngens++;}
-	else H[i]=0;
+    if(gel(U, 7)[i]>=i){H[i]=1;ngens++;}
+    else H[i]=0;
   }
   long ind=1, k;
   while(ind<lgcyc && cyctype[ind]==0) ind++;//Find the first accidental cycle.
@@ -2533,79 +2533,79 @@ presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*
   long naccident=ellind-ind;//How many accidental cycles
   GEN r=gen_0;//The accidental relation, if it exists.
   if(naccident>0){//We have some accidental cycles!
-	r=gcopy(gel(cyc, ind));
-	r=vecsmall_reverse(r);//The relation is r backwards.
-	if(naccident>1){//More than one relation.
-	  ngens=ngens-naccident+1;//Updating the number of generators.
-	  long lastrel=ellind-1;//The last relation we consider in a cycle. We swap this with the relation we find every step and decrease it, so we only need to consider relations from ind+1 to lastrel at each step.
-	  long indrep=1, torep;//Stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement.
-	  GEN repind=gen_0, cycle, newr;//Stores [porm, j, l, m], where term j in relation r is replaced by using term m of relation l. If porm=-1, we need to replace the inverse, otherwise we do not.
-	  for(long i=1;i<naccident;i++){//Each step we solve the relation.
-	    for(long j=indrep;j<lg(r);j++){//Trying to replace index j
-		  torep=r[j];
-		  if(torep<0) torep=-torep;//In case power is -1.
-		  for(long l=ind+1;l<=lastrel;l++){//Looking at cycle l
-			for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
-			  if(gel(cyc, l)[m]==torep){//Replace it!
-			    H[torep]=0;
-				H[gel(U, 7)[torep]]=0;//Make sure it has been deleted from H.
-				repind=mkvecsmall4(1, j, l, m);
-				if(r[j]<0) repind[1]=-1;//Actually the inverse.
-				l=lastrel+1;//Break loop
-				j=lg(r);//Break loop
-				break;//Break loop
-			  }
-			}
-		  }
-		  if(gel(U, 7)[torep]==torep) continue;//g=g^(-1), so no need to search for the inverse.
-		  torep=gel(U, 7)[torep];//Now we try to replace the inverse
-		  for(long l=ind+1;l<=lastrel;l++){//Looking at cycle l
-			for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
-			  if(gel(cyc, l)[m]==torep){//Replace it!
-			    H[torep]=0;
-				H[gel(U, 7)[torep]]=0;//Make sure it has been deleted from H.
-				repind=mkvecsmall4(1, j, l, m);
-				if(r[j]>0) repind[1]=-1;//Actually the inverse.
-				l=lastrel+1;//Break loop
-				j=lg(r);//Break loop
-				break;//Break loop
-			  }
-			}
-		  }
-		}
-		//Now, repind gives us all the information we need to do the replacement.
-		cycle=gel(cyc, repind[3]);
-		newr=cgetg(lg(r)+lg(cycle)-3, t_VECSMALL);
-		for(long j=1;j<repind[2];j++) newr[j]=r[j];//First part is the same.
-		k=repind[2];//Keeps track of the index of newr that we are working on.
-		if(repind[1]==1){//Replace it normally. Cycle [a1,...,an] -> an*...*a1=1 -> a_j=a_{j+1}^(-1)*...*a_n^(-1)*a_1^(-1)*...*a_{j-1}^(-1).
-		  for(long j=repind[4]+1;j<lg(cycle);j++){newr[k]=-cycle[j];k++;}
-		  for(long j=1;j<repind[4];j++){newr[k]=-cycle[j];k++;}
-		}
-		else{//Replace its inverse. Cycle [a1,...,an] -> an*...*a1=1 -> a_j^(-1)=a_{j-1}*...*a_1*a_n*...*a_{j+1}.
-		  for(long j=repind[4]-1;j>0;j--){newr[k]=cycle[j];k++;}
-		  for(long j=lg(cycle)-1;j>repind[4];j--){newr[k]=cycle[j];k++;}
-		}
-		for(long j=repind[2]+1;j<lg(r);j++){newr[k]=r[j];k++;}//The final part is the same.
-		r=newr;
-		indrep=repind[2];//The index we replaced.
-		gel(cyc, repind[3])=gel(cyc, lastrel);//Replace the relation we replaced with the last one.
-		lastrel--;//One less relation.
-	  }
-	}
+    r=gcopy(gel(cyc, ind));
+    r=vecsmall_reverse(r);//The relation is r backwards.
+    if(naccident>1){//More than one relation.
+      ngens=ngens-naccident+1;//Updating the number of generators.
+      long lastrel=ellind-1;//The last relation we consider in a cycle. We swap this with the relation we find every step and decrease it, so we only need to consider relations from ind+1 to lastrel at each step.
+      long indrep=1, torep;//Stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement.
+      GEN repind=gen_0, cycle, newr;//Stores [porm, j, l, m], where term j in relation r is replaced by using term m of relation l. If porm=-1, we need to replace the inverse, otherwise we do not.
+      for(long i=1;i<naccident;i++){//Each step we solve the relation.
+        for(long j=indrep;j<lg(r);j++){//Trying to replace index j
+          torep=r[j];
+          if(torep<0) torep=-torep;//In case power is -1.
+          for(long l=ind+1;l<=lastrel;l++){//Looking at cycle l
+            for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
+              if(gel(cyc, l)[m]==torep){//Replace it!
+                H[torep]=0;
+                H[gel(U, 7)[torep]]=0;//Make sure it has been deleted from H.
+                repind=mkvecsmall4(1, j, l, m);
+                if(r[j]<0) repind[1]=-1;//Actually the inverse.
+                l=lastrel+1;//Break loop
+                j=lg(r);//Break loop
+                break;//Break loop
+              }
+            }
+          }
+          if(gel(U, 7)[torep]==torep) continue;//g=g^(-1), so no need to search for the inverse.
+          torep=gel(U, 7)[torep];//Now we try to replace the inverse
+          for(long l=ind+1;l<=lastrel;l++){//Looking at cycle l
+            for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
+              if(gel(cyc, l)[m]==torep){//Replace it!
+                H[torep]=0;
+                H[gel(U, 7)[torep]]=0;//Make sure it has been deleted from H.
+                repind=mkvecsmall4(1, j, l, m);
+                if(r[j]>0) repind[1]=-1;//Actually the inverse.
+                l=lastrel+1;//Break loop
+                j=lg(r);//Break loop
+                break;//Break loop
+              }
+            }
+          }
+        }
+        //Now, repind gives us all the information we need to do the replacement.
+        cycle=gel(cyc, repind[3]);
+        newr=cgetg(lg(r)+lg(cycle)-3, t_VECSMALL);
+        for(long j=1;j<repind[2];j++) newr[j]=r[j];//First part is the same.
+        k=repind[2];//Keeps track of the index of newr that we are working on.
+        if(repind[1]==1){//Replace it normally. Cycle [a1,...,an] -> an*...*a1=1 -> a_j=a_{j+1}^(-1)*...*a_n^(-1)*a_1^(-1)*...*a_{j-1}^(-1).
+          for(long j=repind[4]+1;j<lg(cycle);j++){newr[k]=-cycle[j];k++;}
+          for(long j=1;j<repind[4];j++){newr[k]=-cycle[j];k++;}
+        }
+        else{//Replace its inverse. Cycle [a1,...,an] -> an*...*a1=1 -> a_j^(-1)=a_{j-1}*...*a_1*a_n*...*a_{j+1}.
+          for(long j=repind[4]-1;j>0;j--){newr[k]=cycle[j];k++;}
+          for(long j=lg(cycle)-1;j>repind[4];j--){newr[k]=cycle[j];k++;}
+        }
+        for(long j=repind[2]+1;j<lg(r);j++){newr[k]=r[j];k++;}//The final part is the same.
+        r=newr;
+        indrep=repind[2];//The index we replaced.
+        gel(cyc, repind[3])=gel(cyc, lastrel);//Replace the relation we replaced with the last one.
+        lastrel--;//One less relation.
+      }
+    }
   }
   //Now we have to finalize things. First, we prepare for replacement of g and g^(-1)
   long oppind;
   GEN indused=cgetg(ngens+1, t_VECSMALL);//Which indices were used.
   k=0;
   for(long i=1;i<lgelts;i++){
-	if(H[i]<=0) continue;//Nothing to do
-	k++;
-	indused[k]=i;
+    if(H[i]<=0) continue;//Nothing to do
+    k++;
+    indused[k]=i;
     H[i]=i;
-	oppind=gel(U, 7)[i];
-	if(oppind==i) continue;//g=g^(-1), continue on
-	H[oppind]=-i;//The inverse of g.
+    oppind=gel(U, 7)[i];
+    if(oppind==i) continue;//g=g^(-1), continue on
+    H[oppind]=-i;//The inverse of g.
   }//Now when we see an element with index i, we should replace it with H[i] if H[i]>0, and (-H[i])^(-1) if H[i]<0. Elements with H[i]=0 are guarenteed to not appear now.
   GEN relations;
   if(naccident==0) relations=cgetg(lgcyc-ellind+1, t_VEC);//We get 1 relation for every elliptic cycle, and an additional relation if we have >=1 accidental cycles.
@@ -2614,13 +2614,13 @@ presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*
   long w;
   for(long i=ellind;i<lgcyc;i++){//Sorting the elliptic cycles first. We assume that they are all of length 1.
     w=gel(cyc, i)[1];
-	if(w<0) w=-w;//Swap the sign back.
-	w=H[w];//The real element.
-	gel(relations, k)=cgetg(3, t_VEC);
-	if(w>0) gmael(relations, k, 1)=mkvecsmall(w);
-	else gmael(relations, k, 1)=mkvecsmall(-w);
-	gmael(relations, k, 2)=mkvecsmall(cyctype[i]);
-	k++;
+    if(w<0) w=-w;//Swap the sign back.
+    w=H[w];//The real element.
+    gel(relations, k)=cgetg(3, t_VEC);
+    if(w>0) gmael(relations, k, 1)=mkvecsmall(w);
+    else gmael(relations, k, 1)=mkvecsmall(-w);
+    gmael(relations, k, 2)=mkvecsmall(cyctype[i]);
+    k++;
   }
   if(naccident>0){
     gel(relations, k)=cgetg(3, t_VEC);//Now we have the last relation, coming from r.
@@ -2628,10 +2628,10 @@ presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*
     gmael(relations, k, 1)=cgetg_copy(r, &lenr);
     gmael(relations, k, 2)=cgetg_copy(r, &lenr);
     for(long i=1;i<lenr;i++){
-	  w=H[r[i]];
-	  if(w>0){gmael(relations, k, 1)[i]=w;gmael(relations, k, 2)[i]=1;}
-	  else{gmael(relations, k, 1)[i]=-w;gmael(relations, k, 2)[i]=-1;}
-	}
+      w=H[r[i]];
+      if(w>0){gmael(relations, k, 1)[i]=w;gmael(relations, k, 2)[i]=1;}
+      else{gmael(relations, k, 1)[i]=-w;gmael(relations, k, 2)[i]=-1;}
+    }
   }
   return gerepilecopy(top, mkvec2(indused, relations));
 }
@@ -2703,14 +2703,14 @@ signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elt
   long s, firstell=lgcyc;//s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.
   int foundlastpar=0;
   for(long i=1;i<lgcyc;i++){
-	if(!foundlastpar){
-	  if(gel(mcyc, 2)[i]==0) continue;
-	  s=i-1;//Found the last parabolic.
-	  foundlastpar=1;
-	}
-	if(gel(mcyc, 2)[i]==1){continue;}
-	firstell=i;//Found the last accidental.
-	break;
+    if(!foundlastpar){
+      if(gel(mcyc, 2)[i]==0) continue;
+      s=i-1;//Found the last parabolic.
+      foundlastpar=1;
+    }
+    if(gel(mcyc, 2)[i]==1){continue;}
+    firstell=i;//Found the last accidental.
+    break;
   }
   long lgell=lgcyc-firstell+1;
   GEN rvec=cgetg(4, t_VEC);//[g, V, s]
@@ -2866,12 +2866,12 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   long newprec=prec;
   unsigned int precinc=0;
   pari_CATCH(e_PREC){
-	pari_warn(warner, "Increasing precision");
-	newA=algmoreprec(newA, 1, newprec);
-	newprec++;
-	precinc++;
-	tol=deftol(newprec);
-	if(!O) Q=qalg_fdominitialize(newA, NULL, NULL, newprec);//Maximal order in A
+    pari_warn(warner, "Increasing precision");
+    newA=algmoreprec(newA, 1, newprec);
+    newprec++;
+    precinc++;
+    tol=deftol(newprec);
+    if(!O) Q=qalg_fdominitialize(newA, NULL, NULL, newprec);//Maximal order in A
     else Q=qalg_fdominitialize(newA, gel(O, 1), gel(O, 2), newprec);//Supplied Eichler order
   }
   pari_RETRY{
@@ -2948,7 +2948,7 @@ algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec)
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, rootgeodesic_fd(U, g, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
-	
+    
 }
 
 //Returns the signature of the quaternion algebra A with fundamental domain U.
@@ -2975,11 +2975,11 @@ algmoreprec(GEN A, long increment, long prec)
   GEN b=lift(alg_get_b(A));
   GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
   if(!isint1(aden)){
-	a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-	pari_warn(warner,"Changed the value of a, since it had a denominator.");
+    a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+    pari_warn(warner,"Changed the value of a, since it had a denominator.");
   }
   if(!isint1(bden)){
-	b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+    b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
     pari_warn(warner,"Changed the value of a, since it had a denominator.");
   }
   long newprec=prec+increment;
@@ -3035,7 +3035,7 @@ algramifiedplacesf(GEN A)
   GEN rp=vectrunc_init(nhass);
   for(long i=1;i<nhass;i++){
     if(gel(hass, 2)[i]==0) continue;//Unramified
-	vectrunc_append(rp, gel(gel(hass, 1), i));//Ramified
+    vectrunc_append(rp, gel(gel(hass, 1), i));//Ramified
   }
   return gerepilecopy(top, rp);
 }
@@ -3054,16 +3054,16 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
   GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
     type=1;//Setting in case type=0
-	nfdecomp=mat_nfcholesky(nf, nformpart);
+    nfdecomp=mat_nfcholesky(nf, nformpart);
   }
   else{//type=2 or type=0 and nfdeg=1, i.e. nf=Q. condition
     type=2;//Setting in case type=0
-	nform=gcopy(nformpart);
+    nform=gcopy(nformpart);
   }
   for(long i=1;i<=fourn;i++){
-	for(long j=1;j<=fourn;j++){
-	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
-	}
+    for(long j=1;j<=fourn;j++){
+      gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+    }
   }//Tr_{nf/Q}(nrd(elt));
   if(type==1) return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, nfdecomp, nformpart, prec));
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, 0, nform, nformpart, prec)); 
@@ -3088,7 +3088,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
 
   if(gequal0(passes)){//Setting passes
     if(nfdeg==1) passes=gen_2;
-	else passes=stoi(12);
+    else passes=stoi(12);
   }
   if(gequal0(C)) C=qalg_fdombestC(Q, prec);//Setting C
   GEN N=gceil(gdiv(gsqr(area), gmul(gmul(Pi2n(3, prec), gsubgs(C, nfdeg)), passes)));//Area^2/(8*Pi*(C-n)*#Passes)
@@ -3110,23 +3110,23 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
   long maxelts=1;
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
     type=1;//Setting in case type=0
-	nfdecomp=mat_nfcholesky(nf, nformpart);
+    nfdecomp=mat_nfcholesky(nf, nformpart);
   }
   else{//type=2 or type=0 and nfdeg=1, i.e. nf=Q. condition
     type=2;//Setting in case type=0
-	nform=gcopy(nformpart);
+    nform=gcopy(nformpart);
   }
   for(long i=1;i<=fourn;i++){
-	for(long j=1;j<=fourn;j++){
-	  gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
-	}
+    for(long j=1;j<=fourn;j++){
+      gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
+    }
   }//Tr_{nf/Q}(nrd(elt));
   
   GEN U=cgetg(2, t_VEC);
   gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
   if(gequal0(partialset)){
-	if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
-	else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
+    if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
+    else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
   }
   U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 
@@ -3139,61 +3139,61 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
   int anyskipped=0;
 
   for(;;){
-	pass++;
-	if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %P.8f\n", pass, N, R);}
-	if(nsidesp1>1){//We have a partial domain.
-	  oosides=normalizedboundary_oosides(U);
-	  ooend=lg(oosides)-1;
-	  if(dispprogress) pari_printf("%d infinite sides\n", ooend);
-	}
-	iN=itos(gfloor(N))+1;
-	nskip=0;//How many points are skipped due to poor precision
-	points=cgetg(iN, t_VEC);
-	for(long i=1;i<iN;i++){//Random points in ball of radius R
-	  if(0<ooend){//Going near infinite side
-	    long iside=((i-1)%ooend)+1;
-	    ang2=gel(gel(U, 4), oosides[iside]);
-	    if(oosides[iside]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-	    else ang1=gel(gel(U, 4), oosides[iside]-1);
-	    w=randompoint_udarc(R, ang1, ang2, prec);
-	  }
-	  else w=randompoint_ud(R, prec);//Random point
-	  pari_CATCH(CATCH_ALL){
-	    GEN err=pari_err_last();//Get the error
-		long errcode=err_get_num(err);
-		pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
-		if(errcode==e_TYPE){//If R is large
-	      if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-		  anyskipped=1;
-		  nskip++;
-		  gel(points, i)=cgetg(1, t_VEC);
-		}
-		else pari_err(errcode);
-	  }
-	  pari_TRY{
-		GEN smallelts;
-		if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
-	    else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
-		if(smallelts) gel(points, i)=smallelts;
-		else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-	  }
-	  pari_ENDCATCH
-	}
-	points=shallowconcat1(points);
-	if(dispprogress){
-	  if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
-	  pari_printf("%d elements found\n", lg(points)-1);
-	}
-	U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-	if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
-	if(gcmp(gel(U, 6), areabound)==-1){
-	  if(dumppartial) fclose(f);
-	  return gerepileupto(top, U);
-	}
-	if(pass>1 && (ooend==0 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
-	nsidesp1=lg(gel(U, 1));//How many sides+1
-	if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
-	if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
+    pass++;
+    if(dispprogress){pari_printf("Pass %d with %Ps random points in the ball of radius %P.8f\n", pass, N, R);}
+    if(nsidesp1>1){//We have a partial domain.
+      oosides=normalizedboundary_oosides(U);
+      ooend=lg(oosides)-1;
+      if(dispprogress) pari_printf("%d infinite sides\n", ooend);
+    }
+    iN=itos(gfloor(N))+1;
+    nskip=0;//How many points are skipped due to poor precision
+    points=cgetg(iN, t_VEC);
+    for(long i=1;i<iN;i++){//Random points in ball of radius R
+      if(0<ooend){//Going near infinite side
+        long iside=((i-1)%ooend)+1;
+        ang2=gel(gel(U, 4), oosides[iside]);
+        if(oosides[iside]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
+        else ang1=gel(gel(U, 4), oosides[iside]-1);
+        w=randompoint_udarc(R, ang1, ang2, prec);
+      }
+      else w=randompoint_ud(R, prec);//Random point
+      pari_CATCH(CATCH_ALL){
+        GEN err=pari_err_last();//Get the error
+        long errcode=err_get_num(err);
+        pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
+        if(errcode==e_TYPE){//If R is large
+          if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
+          anyskipped=1;
+          nskip++;
+          gel(points, i)=cgetg(1, t_VEC);
+        }
+        else pari_err(errcode);
+      }
+      pari_TRY{
+        GEN smallelts;
+        if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+        else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
+        if(smallelts) gel(points, i)=smallelts;
+        else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
+      }
+      pari_ENDCATCH
+    }
+    points=shallowconcat1(points);
+    if(dispprogress){
+      if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
+      pari_printf("%d elements found\n", lg(points)-1);
+    }
+    U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+    if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
+    if(gcmp(gel(U, 6), areabound)==-1){
+      if(dumppartial) fclose(f);
+      return gerepileupto(top, U);
+    }
+    if(pass>1 && (ooend==0 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
+    nsidesp1=lg(gel(U, 1));//How many sides+1
+    if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
+    if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
 
@@ -3209,11 +3209,11 @@ algnorm_chol(GEN nf, GEN decomp, GEN x)
   GEN part=gen_0, U;
   long n=lg(x);
   for(long i=n-1;i>0;i--){
-	if(gequal0(gcoeff(decomp, i, i))) continue;//This will happen for all but 4 indices
-	U=gel(x, i);
-	for(long j=i+1;j<n;j++) U=nfadd(nf, U, nfmul(nf, gcoeff(decomp, i, j), gel(x, j)));
-	U=nfmul(nf, gcoeff(decomp, i, i), nfsqr(nf, U));
-	part=nfadd(nf, part, U);
+    if(gequal0(gcoeff(decomp, i, i))) continue;//This will happen for all but 4 indices
+    U=gel(x, i);
+    for(long j=i+1;j<n;j++) U=nfadd(nf, U, nfmul(nf, gcoeff(decomp, i, j), gel(x, j)));
+    U=nfmul(nf, gcoeff(decomp, i, i), nfsqr(nf, U));
+    part=nfadd(nf, part, U);
   }
   return gerepileupto(top, part);
 }
@@ -3225,10 +3225,10 @@ algsplitoo(GEN A)
   GEN infram=alg_get_hasse_i(A);//shallow
   long split=0;
   for(long i=1;i<lg(infram);i++){//Finding the split place
-	if(infram[i]==0){//Split place
-	  if(split>0) return 0;
-	  split=i;
-	}
+    if(infram[i]==0){//Split place
+      if(split>0) return 0;
+      split=i;
+    }
   }
   return split;//No garbage!!
 }
@@ -3249,25 +3249,25 @@ qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec)
   GEN tvars=cgetg(n, t_VECSMALL);
   GEN xvars=cgetg(n, t_VEC);
   for(long i=1;i<n;i++){
-	tvars[i]=fetch_var();//The temporary variable numbers
-	gel(xvars, i)=pol_x(tvars[i]);//The variables
+    tvars[i]=fetch_var();//The temporary variable numbers
+    gel(xvars, i)=pol_x(tvars[i]);//The variables
   }
 
   GEN elt=zeromatcopy(2, 2);//Will represent the general element
   for(long i=1;i<n;i++) elt=gadd(elt, gmul(gel(basisimage, i), gel(xvars, i)));//The general element
   if(!gequal0(z2)){//Shift by h2^(-1) on the left, where h2=phi^(-1)*W*phi, and W=[a, b; conj(b), a] with a=1/sqrt(1-|z|^2) and b=za
-	GEN a=gdivsg(1, gsqrt(gsubsg(1, gsqr(gabs(z2, prec))), prec));//1/sqrt(1-|z2|^2)
-	GEN mb=gneg(gmul(z2, a));//-z2*a=-b
-	GEN Winv=mkmat22(a, mb, conj_i(mb), a);//W^(-1)
-	GEN h2inv=gmul(gel(mats, 2), gmul(Winv, gel(mats, 1)));//h2^(-1); We have to translate back to PSL, hence why we do mats[2]*Winv*mats[1] (mats[1],[2] are inverses to each other.
-	elt=gmul(h2inv, elt);//Shifting it by the appropriate amount.
+    GEN a=gdivsg(1, gsqrt(gsubsg(1, gsqr(gabs(z2, prec))), prec));//1/sqrt(1-|z2|^2)
+    GEN mb=gneg(gmul(z2, a));//-z2*a=-b
+    GEN Winv=mkmat22(a, mb, conj_i(mb), a);//W^(-1)
+    GEN h2inv=gmul(gel(mats, 2), gmul(Winv, gel(mats, 1)));//h2^(-1); We have to translate back to PSL, hence why we do mats[2]*Winv*mats[1] (mats[1],[2] are inverses to each other.
+    elt=gmul(h2inv, elt);//Shifting it by the appropriate amount.
   }
   if(!gequal0(z1)){//Shift by h1 on the right, where h1=phi^(-1)*W*phi, and W=[a,b;conj(b), a] with a=1/sqrt(1-|z|^2) and b=za
-	GEN a=gdivsg(1, gsqrt(gsubsg(1, gsqr(gabs(z1, prec))), prec));//1/sqrt(1-|z1|^2)
-	GEN b=gmul(z1, a);//z1*a=b
-	GEN W=mkmat22(a, b, conj_i(b), a);//W
-	GEN h1=gmul(gel(mats, 2), gmul(W, gel(mats, 1)));//h1; We have to translate back to PSL, hence why we do mats[2]*Winv*mats[1] (mats[1],[2] are inverses to each other.
-	elt=gmul(elt, h1);//Shifting it by the appropriate amount.
+    GEN a=gdivsg(1, gsqrt(gsubsg(1, gsqr(gabs(z1, prec))), prec));//1/sqrt(1-|z1|^2)
+    GEN b=gmul(z1, a);//z1*a=b
+    GEN W=mkmat22(a, b, conj_i(b), a);//W
+    GEN h1=gmul(gel(mats, 2), gmul(W, gel(mats, 1)));//h1; We have to translate back to PSL, hence why we do mats[2]*Winv*mats[1] (mats[1],[2] are inverses to each other.
+    elt=gmul(elt, h1);//Shifting it by the appropriate amount.
   }
   GEN p=gel(mats, 3);//p
   GEN fg=gmul(gcoeff(elt, 2, 1), p);//elt[2, 1]*p
@@ -3280,9 +3280,9 @@ qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec)
   if(gequal0(normformpart)){//If not zero we pass it into the method.
     invrad2=qalg_normform(Q);
     for(long i=1;i<n;i++){
-	  for(long j=1;j<n;j++){
-	    gcoeff(invrad2, i, j)=nftrace(K, gcoeff(invrad2, i, j));//Taking the trace to Q
-	  }
+      for(long j=1;j<n;j++){
+        gcoeff(invrad2, i, j)=nftrace(K, gcoeff(invrad2, i, j));//Taking the trace to Q
+      }
     }//invrad2=Tr_{K/Q}(nrd(elt));
   }
   else invrad2=normformpart;
@@ -3295,13 +3295,13 @@ qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec)
   long var=qalg_get_varnos(Q)[1];//The variable number for K
   GEN Kx=gel(qalg_get_roots(Q), 1);//The approximation of K
   for(long i=1;i<n;i++){//Working with the ith variable
-	gcoeff(qf, i, i)=gadd(gmul(gsubst(lift(polcoef_i(part1, 2, tvars[i])), var, Kx), pscale), gcoeff(invrad2, i, i));//iith coefficient
-	GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
-	for(long j=i+1;j<n;j++){
-	  gcoeff(qf, i, j)=gadd(gmul(gdivgs(gsubst(lift(polcoef_i(linpart, 1, tvars[j])), var, Kx), 2), pscale), gcoeff(invrad2, i, j));//the ijth coefficient
-	  gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
-	}
-	part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
+    gcoeff(qf, i, i)=gadd(gmul(gsubst(lift(polcoef_i(part1, 2, tvars[i])), var, Kx), pscale), gcoeff(invrad2, i, i));//iith coefficient
+    GEN linpart=polcoef_i(part1, 1, tvars[i]);//The part that is linear in the ith coefficient.
+    for(long j=i+1;j<n;j++){
+      gcoeff(qf, i, j)=gadd(gmul(gdivgs(gsubst(lift(polcoef_i(linpart, 1, tvars[j])), var, Kx), 2), pscale), gcoeff(invrad2, i, j));//the ijth coefficient
+      gcoeff(qf, j, i)=gcoeff(qf, i, j);//Okay as we will copy it later
+    }
+    part1=polcoef_i(part1, 0, tvars[i]);//The part that has no v_i
   }
   long delv;
   do{delv=delete_var();} while(delv && delv<=tvars[1]);//Delete the temporary variables
@@ -3334,24 +3334,24 @@ qalg_fdomarea(GEN Q, long computeprec, long prec)
   GEN rams=qalg_get_rams(Q);
   GEN norm=gen_1;
   for(long i=1;i<lg(rams);i++){
-	if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
-	norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
+    if(typ(gel(rams, i))==t_INT) continue;//We don't want to count the infinite places
+    norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
   }
   GEN elevpart=gen_1, ell=qalg_get_level(Q);
   if(!gequal(ell, gen_1)){//We have an Eichler part
-	GEN ifact=idealfactor(F, ell);
-	if(!gequal0(ifact)){//If this does not trigger we are done; the level got passed in as an ideal of norm 1 by accident.
-	  for(long i=1;i<lg(gel(ifact, 1));i++){
-	    GEN Np=idealnorm(F, gcoeff(ifact, i, 1));//Norm of the prime
-	    GEN Npexp=gcoeff(ifact, i, 2);//Exponent
-	    if(equali1(Npexp)) elevpart=mulii(elevpart, addis(Np, 1));//Times N(p)+1
-	    else{
-	      GEN Npem1=powii(Np, gsubgs(Npexp, 1));//Np^{e-1}
-		  GEN Npe=mulii(Npem1, Np);//Np^e
-	      elevpart=mulii(elevpart, addii(Npe, Npem1));
-	    }
-	  }
-	}
+    GEN ifact=idealfactor(F, ell);
+    if(!gequal0(ifact)){//If this does not trigger we are done; the level got passed in as an ideal of norm 1 by accident.
+      for(long i=1;i<lg(gel(ifact, 1));i++){
+        GEN Np=idealnorm(F, gcoeff(ifact, i, 1));//Norm of the prime
+        GEN Npexp=gcoeff(ifact, i, 2);//Exponent
+        if(equali1(Npexp)) elevpart=mulii(elevpart, addis(Np, 1));//Times N(p)+1
+        else{
+          GEN Npem1=powii(Np, gsubgs(Npexp, 1));//Np^{e-1}
+          GEN Npe=mulii(Npem1, Np);//Np^e
+          elevpart=mulii(elevpart, addii(Npe, Npem1));
+        }
+      }
+    }
   }//Product of N(p)^e*(1+1/N(p)) over p^e||level.
   GEN ar=gmul(gpow(nfdisc(pol), gdivsg(3, gen_2), computeprec), norm);//d_F^(3/2)*phi(D)
   ar=gmul(ar, elevpart);//d_F^(3/2)*phi(D)*psi(M)
@@ -3425,12 +3425,12 @@ qalg_normform_givenbasis(GEN Q, GEN basis)
   for(long i=1;i<n;i++) gel(M, i)=cgetg(n, t_COL);
   for(long i=1;i<n;i++) gcoeff(M, i, i)=lift0(algnorm(A, gel(basis, i), 0), -1);
   for(long i=1;i<n;i++){
-	for(long j=i+1;j<n;j++){
-	  GEN prod=algmul(A, gel(basis, i), gel(basisconj, j));
-	  GEN tr=gdivgs(algtrace(A, prod, 0), 2);
-	  gcoeff(M, i, j)=tr;
-	  gcoeff(M, j, i)=tr;//OK since we copy at the end.
-	}
+    for(long j=i+1;j<n;j++){
+      GEN prod=algmul(A, gel(basis, i), gel(basisconj, j));
+      GEN tr=gdivgs(algtrace(A, prod, 0), 2);
+      gcoeff(M, i, j)=tr;
+      gcoeff(M, j, i)=tr;//OK since we copy at the end.
+    }
   }
   return gerepilecopy(top, M);
 }
@@ -3453,16 +3453,16 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
   else mret=nvposs;
   GEN ret=vectrunc_init(mret), norm;
   for(long i=1;i<nvposs;i++){
-	mid=avma;
-	norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
-	if(gequal(norm, gen_1)){
-	  avma=mid;
-	  if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
-	  else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
-	  if(lg(ret)>=mret) break;//Done
-	  continue;
-	}
-	avma=mid;
+    mid=avma;
+    norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
+    if(gequal(norm, gen_1)){
+      avma=mid;
+      if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
+      else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
+      if(lg(ret)>=mret) break;//Done
+      continue;
+    }
+    avma=mid;
   }
   return gerepilecopy(top, ret);
 }
