@@ -1270,7 +1270,7 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
     }
     points=shallowconcat1(points);
     GEN Unew=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-    if(gcmp(gel(Unew, 6), areabound)==-1){
+    if(gcmp(gel(Unew, 6), areabound)<0){
       long minnew=1, maxnew=lg(points)-1;
       bot=avma;
       while(minnew+1<maxnew){
@@ -1279,7 +1279,7 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
         GEN newpoints=cgetg(cind+1,t_VEC);
         for(long i=1;i<=cind;i++) gel(newpoints, i)=gel(points, i);
         Unew=normalizedbasis(newpoints, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-        if(gcmp(gel(Unew, 6), areabound)==-1) maxnew=cind;
+        if(gcmp(gel(Unew, 6), areabound)<0) maxnew=cind;
         else minnew=cind;
       }
       GEN ret=mkvec3(stoi(neltsgen+maxnew), stoi(lg(gel(Unew, 1))-1), area);

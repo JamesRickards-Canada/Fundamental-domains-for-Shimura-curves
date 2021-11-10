@@ -354,7 +354,7 @@ mat_nfcholesky(GEN nf, GEN A)
   return gerepileupto(top, ret);
 }
 
-//Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions.
+//Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions. I think nf may have to be totally real? That's all I use it for no there is no issue anyway.
 static GEN
 quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
 {
@@ -372,7 +372,7 @@ quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
   GEN Cp=nfeltembed(nf, C, gen_1, prec);
   
   GEN disc=gsub(gsqr(Bp), gmulsg(4, gmul(Ap, Cp)));//B^2-4AC
-  GEN rt=real_i(gsqrt(disc, prec));//We use greal in case disc==0 but it is approximated as -E^(-large).
+  GEN rt=real_i(gsqrt(disc, prec));//We use real_i in case disc==0 but it is approximated as -E^(-large).
   GEN mBp=gneg(Bp), twoAp=gmulsg(2, Ap);//-B, 2A
 
   GEN r1=ground(gdiv(gadd(mBp, rt), twoAp));//We have enough precision that the rounded answer will be correct if there is an integral solution
@@ -410,9 +410,9 @@ smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec)
   R=qfgaussred_positive(R);
   if (!R) return NULL;//In case there was an issue with R.
   for(long i=1; i<l; i++){
-    GEN s = gsqrt(gcoeff(R,i,i), newprec);
-    gcoeff(R,i,i) = s;
-    for(long j=i+1;j<l;j++) gcoeff(R,i,j) = gmul(s, gcoeff(R,i,j));
+    GEN s = gsqrt(gcoeff(R, i, i), newprec);
+    gcoeff(R, i, i) = s;
+    for(long j=i+1;j<l;j++) gcoeff(R, i, j) = gmul(s, gcoeff(R, i, j));
   }
   /* now R~*R = A in LLL basis */
   GEN Rinv = RgM_inv_upper(R);
@@ -428,8 +428,8 @@ smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec)
   l = lg(R);
   GEN vnorm = cgetg(l, t_VEC);
   for(long j=1; j<l; j++) gel(vnorm, j) = gnorml2(gel(Rinvtrans, j));
-  GEN rperm = cgetg(l,t_MAT);
-  GEN uperm = cgetg(l,t_MAT);
+  GEN rperm = cgetg(l, t_MAT);
+  GEN uperm = cgetg(l, t_MAT);
   GEN perm = indexsort(vnorm);
   for(long i=1; i<l; i++) {uperm[l-i] = U[perm[i]]; rperm[l-i] = R[perm[i]]; }
   U = uperm;
@@ -606,7 +606,7 @@ arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec)
   GEN a1=radialangle(c, p1, gen_0, prec);
   GEN a2=shiftangle(radialangle(c, p2, gen_0, prec), a1, gen_0, prec);//No tolerance concerns
   GEN angint1=shiftangle(radialangle(c, gel(pts, 1), gen_0, prec), a1, gen_0, prec);//the angle formed by pts[1] to c with base a1. Again, no tolerance need.
-  if(gcmp(a2, angint1)==1) return gerepilecopy(top, gel(pts, 1));//No need for tolerance, as if this is an issue our points p1 and p2 would be equal up to tolerance.
+  if(gcmp(a2, angint1)>0) return gerepilecopy(top, gel(pts, 1));//No need for tolerance, as if this is an issue our points p1 and p2 would be equal up to tolerance.
   return gerepilecopy(top, gel(pts, 2));
 }
 
@@ -1384,7 +1384,7 @@ isometriccircle_psu(GEN g, GEN tol, long prec)
   pari_TRY{
     GEN ipts=circle_int(geod, mkvec3s(0, 1, 0), tol, prec);//Intersect with x^2+y^2=1
     GEN ang=anglediff(garg(gsub(gel(ipts, 2), gel(geod, 1)), prec), garg(gsub(gel(ipts, 1), gel(geod, 1)), prec), tol, prec);
-    if(gcmp(ang, mppi(prec))==1){//Properly orienting the start and endpoints
+    if(gcmp(ang, mppi(prec))>0){//Properly orienting the start and endpoints
       gel(geod, 3)=gel(ipts, 2);
     gel(geod, 4)=gel(ipts, 1);
     }
@@ -1678,7 +1678,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
         else{U[ulen]=side;lastsidenew=0;}
         continue;
       }
-      else if(gcmp(ang, pi)==1){//We DID come in from below
+      else if(gcmp(ang, pi)>0){//We DID come in from below
         ulen++;
         U[ulen]=0;//Side at oo
         gel(vertices, ulen)=mkvec2(gel(L, 3), garg(gel(L, 3), prec));//Side at oo
@@ -1720,7 +1720,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       //Now we have a proper "normal" intersection
       ang1=garg(inter, prec);
       ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);//Angle to the new vtx from the previous as a bases
-      if(gcmp(ang, pi)!=-1 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
+      if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
         while(ulen>1){
           ulen--;
           if(U[ulen]>0) L=gel(gel(Ubase, 2), U[ulen]);
@@ -1728,13 +1728,13 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
           inter=gel(arc_int(L, sidecirc, tol, prec), 1);//They MUST intersect
           ang1=garg(inter, prec);
           ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);
-          if(gcmp(ang, pi)!=-1 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
+          if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
           break;//At this point we have reached where we need to insert the new side.
         }
       }
       //Now we are ready to insert it.
       if(finalstretch && !leftoverGs){//Done if we intersected before the original intersection, and must continue on if not.
-        if(gcmp(pi, anglediff(ang1, gel(gel(vertices, side+1), 2), tol, prec))==1){startpt++;continue;}//We have superseeded the previous side, increase start point.
+        if(gcmp(pi, anglediff(ang1, gel(gel(vertices, side+1), 2), tol, prec))>0){startpt++;continue;}//We have superseeded the previous side, increase start point.
         ulen++;
         U[ulen]=U[side];
         gel(vertices, ulen)=mkvec2(inter, ang1);
@@ -1917,7 +1917,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
     else if(isnew==1) continue;//Not new
     //Now we = the min, so need to see which initial point is longer
     ang=anglediff(garg(gel(gel(gel(G, i), 3), 3), prec), garg(gel(gel(gel(G, hminind), 3), 3), prec), tol, prec);
-    if(gcmp(ang, pi)==-1) hminind=i;//Better min.
+    if(gcmp(ang, pi)<0) hminind=i;//Better min.
   }
   avma=mid;//Don't need these calcs other than hminind
   GEN baseang;
@@ -1963,10 +1963,10 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
     if(lg(inter)==1){//It did NOT intersect.
       ang1=garg(gel(L, 3), prec);
       ang=anglediff(ang1, gel(termangles, ordering[side]), tol, prec);//Angle to the initial point of L from the terminal point of the new side.
-      if(gcmp(ang, pi)==-1 && ordering[side]!=U[ulen]){//the new side is contained entirely in L, OR comes in from below (the last check guarentees that it isn't ths same side; applicable when the final normalized boundary has 1 iso circle.
+      if(gcmp(ang, pi)<0 && ordering[side]!=U[ulen]){//the new side is contained entirely in L, OR comes in from below (the last check guarentees that it isn't ths same side; applicable when the final normalized boundary has 1 iso circle.
         ang2=garg(gel(L, 4), prec);
         ang=anglediff(gel(termangles, ordering[side]), ang2, tol, prec);//Angle to the terminal point of the new side from the terminal point of L
-        if(gcmp(ang, pi)==-1){
+        if(gcmp(ang, pi)<0){
           avma=mid;//the new side is contained entirely in L, discard and continue on (may as well reset avma).
           continue;
         }
@@ -1987,7 +1987,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       if(gequal0(ang)){
         if(tolcmp(gel(gel(gel(G, ordering[side]), 3), 2), gel(gel(gel(G, U[ulen]), 3), 2), tol, prec)<=0){avma=mid;continue;}//This side lies inside the previous one, continue on (compared radii).
       }
-      else if(gcmp(ang, pi)==-1){//We DID come in from below
+      else if(gcmp(ang, pi)<0){//We DID come in from below
         ulen++;
         U[ulen]=-1;//Side at oo
         gel(vertices, ulen)=mkvec2(gel(L, 3), garg(gel(L, 3), prec));//Side at oo
@@ -2002,14 +2002,14 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       if(toleq(inter, gel(gel(gel(G, ordering[side]), 3), 3), tol, prec)){avma=mid;continue;}//The side lies entirely in the previous side
       ang1=garg(inter, prec);
       ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);//Angle to the new vtx from the previous as a bases
-      if(gcmp(ang, pi)!=-1 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
+      if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
         while(ulen>1){
           ulen--;
           L=gel(gel(G, U[ulen]), 3);//The old side we look at
           inter=gel(arc_int(L, sidecirc, tol, prec), 1);//They MUST intersect
           ang1=garg(inter, prec);
           ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);
-          if(gcmp(ang, pi)!=-1 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
+          if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
           break;//At this point we have reached where we need to insert the new side.
         }
       }
@@ -2093,7 +2093,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
     else if(lg(inter)==3){
       d1=gabs(gsub(gel(inter, 1), v), prec);
       d2=gabs(gsub(gel(inter, 2), v), prec);
-      if(gcmp(d1, d2)==-1) v=gel(inter, 1);//Finding which intersection is closer to v. Tolerance not required.
+      if(gcmp(d1, d2)<0) v=gel(inter, 1);//Finding which intersection is closer to v. Tolerance not required.
       else v=gel(inter, 2);
     }
     else pari_err_TYPE("Should have been intersections, but there were none", inter);//This should never happen, but here in case.
@@ -2128,7 +2128,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
     else if(lg(inter)==3){//Two intersection points
       d1=gabs(gsub(gel(inter, 1), v), prec);
       d2=gabs(gsub(gel(inter, 1), v2), prec);
-      if(gcmp(d1, d2)==-1) v=gel(inter, 1);//Intersection[1] is closer to v than v2, so this is right.
+      if(gcmp(d1, d2)<0) v=gel(inter, 1);//Intersection[1] is closer to v than v2, so this is right.
       else v=gel(inter, 2);
     }
     else pari_err_TYPE("Should have been intersections, but there were none", inter);//This should never happen, but here in case.
@@ -2797,7 +2797,7 @@ tolcmp(GEN x, GEN y, GEN tol, long prec)
     avma=top;
     return ret;
   }//Exact objects
-  if(gcmp(gabs(d, prec), tol)==-1){avma=top;return 0;}//Within tolerance
+  if(gcmp(gabs(d, prec), tol)<0){avma=top;return 0;}//Within tolerance
   long ret=gsigne(d);
   avma=top;return ret;
 }
@@ -2818,7 +2818,7 @@ toleq(GEN x, GEN y, GEN tol, long prec)
   GEN d=gsub(x, y);
   if(gequal0(d)){avma=top;return 1;}//Deemed equal already
   if(precision(d)==0){avma=top;return 0;}//Exact objects
-  if(gcmp(gabs(d, prec), tol)==-1){avma=top;return 1;}//Within tolerance
+  if(gcmp(gabs(d, prec), tol)<0){avma=top;return 1;}//Within tolerance
   avma=top;return 0;
 }
 
@@ -3180,7 +3180,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
     }
     U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
     if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
-    if(gcmp(gel(U, 6), areabound)==-1){
+    if(gcmp(gel(U, 6), areabound)<0){
       if(dumppartial) fclose(f);
       return gerepileupto(top, U);
     }
