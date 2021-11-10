@@ -101,7 +101,7 @@ GEN
 divoo(GEN a, GEN b)
 {
   if(gequal0(b)){//b=0
-    if(gcmpgs(a,0)>=0) return mkoo();
+    if(gcmpgs(a, 0)>=0) return mkoo();
     return mkmoo();
   }
   if(typ(a)==t_INFINITY){//a=+/-oo
@@ -109,7 +109,7 @@ divoo(GEN a, GEN b)
     return mkmoo();
   }
   if(typ(b)==t_INFINITY) return gen_0;
-  return gdiv(a,b);
+  return gdiv(a, b);
 }
 
 
@@ -338,13 +338,7 @@ mat_nfcholesky(GEN nf, GEN A)
     else{
       for(long j=i+1;j<=n;j++){
         gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));//M[j,i]=M[i,j]
-        pari_CATCH(CATCH_ALL){
-          gcoeff(M, i, j)=gen_0;
-        }
-        pari_TRY{//Only issue is a current bug with pari when M[i,j]=0
-          gcoeff(M, i, j)=nfdiv(nf, gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
-        }
-        pari_ENDCATCH
+        gcoeff(M, i, j)=nfdiv(nf, gcoeff(M, i, j), gcoeff(M, i, i));//M[i,j]=M[i,j]/M[i,i]
       }
     }
     for(long j=i+1;j<=n;j++){
@@ -364,7 +358,7 @@ mat_nfcholesky(GEN nf, GEN A)
 static GEN
 quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
 {
-  pari_sp top=avma;
+  pari_sp top=avma;  
   if(gequal0(A)){//Actually a linear. This case occurs when dealing with small vectors in the quaternion algebra ramified nowhere.
     if(gequal0(B)) return cgetg(1, t_VEC);//We say there are no soln's when A=B=0
     GEN x=gneg(nfdiv(nf, C, B));//Solution
@@ -546,7 +540,7 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
       Cco=nfadd(nf, gel(Tcond, 1), nfmul(nf, q11U1, gel(Ucond, 1)));//Ax_1^2+Bx_1+C=0 is necessary
 
       gel(x, 1)=gen_0;
-      x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
+	  x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
       if(gequal0(x)) xpass0=1;//This is the last check
       for(long j=1;j<lg(x1sols);j++){//We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.
         if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
