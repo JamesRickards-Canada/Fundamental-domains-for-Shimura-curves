@@ -540,7 +540,7 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
       Cco=nfadd(nf, gel(Tcond, 1), nfmul(nf, q11U1, gel(Ucond, 1)));//Ax_1^2+Bx_1+C=0 is necessary
 
       gel(x, 1)=gen_0;
-	  x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
+      x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);//Tcond_1+q_11(x_1+Ucond_1)^2
       if(gequal0(x)) xpass0=1;//This is the last check
       for(long j=1;j<lg(x1sols);j++){//We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.
         if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
@@ -1213,9 +1213,9 @@ hdist_ud(GEN z1, GEN z2, long prec)
   GEN num=gadd(a, b);
   GEN denom=gsub(a, b);
   if(gequal0(denom)){
-	pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance.");
-	avma=top;
-	return mkoo();
+    pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance.");
+    avma=top;
+    return mkoo();
   }
   return gerepileupto(top, glog(gdiv(num, denom), prec));//log((a+b)/(a-b))
 }
