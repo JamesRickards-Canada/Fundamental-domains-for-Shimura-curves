@@ -47,27 +47,27 @@ GEN hdist(GEN z1, GEN z2, long prec);
 GEN hdist_ud(GEN z1, GEN z2, long prec);
 
 //FUNDAMENTAL DOMAIN COMPUTATION
-GEN isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec);
+GEN isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec);
 GEN isometriccircle_psu(GEN g, GEN tol, long prec);
-GEN normalizedbasis(GEN G, GEN U, GEN mats, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), int (*istriv)(GEN *, GEN), GEN tol, long prec);
-GEN normalizedboundary(GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec);
+GEN normalizedbasis(GEN G, GEN U, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec);
+GEN normalizedboundary(GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec);
 GEN psltopsu(GEN g, GEN p);
 GEN psltopsu_mats(GEN g, GEN M);
 GEN psltopsu_transmats(GEN p);
 GEN randompoint_ud(GEN R, long prec);
 GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec);
-GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
-GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
-GEN reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec);
+GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
+GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
+GEN reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
 GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec);
 GEN rootgeodesic_uhp(GEN M, GEN tol, long prec);
 
 //FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
-GEN minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
+GEN minimalcycles_bytype(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
 GEN normalizedboundary_oosides(GEN U);
-GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec);
-GEN presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
-GEN signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN));
+GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
+GEN presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
+GEN signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
 
 //HELPER METHODS
 GEN deftol(long prec);
@@ -104,11 +104,11 @@ GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelt
 GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nform, GEN nformpart, long prec);
 
 //BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
-GEN qalg_fdominv(GEN *data, GEN x);
-GEN qalg_fdomm2rembed(GEN *data, GEN x, long prec);
-GEN qalg_fdommul(GEN *data, GEN x, GEN y);
-GEN qalg_fdomtrace(GEN *data, GEN x);
-int qalg_istriv(GEN *data, GEN x);
+GEN qalg_fdominv(GEN data, GEN x);
+GEN qalg_fdomm2rembed(GEN data, GEN x, long prec);
+GEN qalg_fdommul(GEN data, GEN x, GEN y);
+GEN qalg_fdomtrace(GEN data, GEN x);
+int qalg_istriv(GEN data, GEN x);
 
 //3: SHALLOW RETRIEVAL METHODS
 GEN qalg_get_alg(GEN Q);

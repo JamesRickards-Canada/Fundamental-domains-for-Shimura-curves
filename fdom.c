@@ -60,7 +60,7 @@ static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 static GEN edgepairing(GEN U, GEN tol, int rboth, long prec);
 static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
 static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec);
-static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec);
+static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec);
 static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec);
 static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec);
 static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec);
@@ -1243,9 +1243,9 @@ hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec)
 
 
 /*Let Gamma be a Fuschian group; the following methods allow us to compute a fundamental domain for Gamma, following the paper of John Voight. We are assuming that we have an "exact" way to deal with the elements of Gamma. In otherwords, we need separate methods to:
-i)  Multiply elements of Gamma: format as GEN eltmul(GEN *data, GEN x, GEN y), with data the extra data you need.
-ii) Find the image of g in PSL(1, 1): format as GEN gamtopsl(GEN *data, GEN g, long prec), with data the extra data you need (e.g. the quaterniona algebra in the case of Shimura curves).
-iii) Identify if g is trivial in Gamma: format as int istriv(GEN *data, GEN g). Need to take care as we care about being trivial in PSL, whereas most representations of Gamma are for SL (so need to check with +/-id).
+i)  Multiply elements of Gamma: format as GEN eltmul(GEN data, GEN x, GEN y), with data the extra data you need.
+ii) Find the image of g in PSL(1, 1): format as GEN gamtopsl(GEN data, GEN g, long prec), with data the extra data you need (e.g. the quaterniona algebra in the case of Shimura curves).
+iii) Identify if g is trivial in Gamma: format as int istriv(GEN data, GEN g). Need to take care as we care about being trivial in PSL, whereas most representations of Gamma are for SL (so need to check with +/-id).
 iv) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
 We pass references to these methods into the methods here.
 We do computations mostly in PSU, and shift from PSL to PSU via phi(z):=(z-p)/(z-conj(p)) for some given upper half plane point p.
@@ -1308,7 +1308,7 @@ edgepairing(GEN U, GEN tol, int rboth, long prec)
 
 //Computes the isometric circle for g, returning [g, image in PSU(1, 1), circle]. Must pass in mats (psltopsu_transmats(p)), and a method that translates g to an element of PSL(2, R).
 GEN
-isometriccircle_mats(GEN g, GEN mats, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec)
+isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ginpsl=gamtopsl(data, g, prec);
@@ -1385,7 +1385,7 @@ isometriccircle_psu(GEN g, GEN tol, long prec)
 
 //Returns the normalized basis of G. Follows Algorithm 4.7 of Voight. Can pass in Ubase as a normalized boundary to append to, or Ubase=0 means we just start with G.
 GEN
-normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), int (*istriv)(GEN *, GEN), GEN tol, long prec)
+normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma, mid;
   long w=lg(G);
@@ -1849,7 +1849,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
 
 //Initializes the inputs for normalizedboundary_append. Works BEST if p is given as an EXACT number.
 static GEN
-normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec)
+normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec)
 {
   pari_sp top=avma;
   long lx;
@@ -2030,7 +2030,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
 
 //Initializes the inputs for normalizedboundary_givencircles. Works BEST if p is given as an EXACT number.
 GEN
-normalizedboundary(GEN G, GEN mats, GEN id, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN tol, long prec)
+normalizedboundary(GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec)
 {
   pari_sp top=avma;
   long lx;
@@ -2270,7 +2270,7 @@ randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec)
 
 //Reduces g with respect to z as in reduceelt_givenpsu, but does so much more efficiently using the normalized boundary provided.
 GEN
-reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec)
+reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN delta=gamid;
@@ -2295,7 +2295,7 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtop
 
 //Algorithm 4.3 of Voight. Inputs G, a finite subset of Gamma, corresponding to Gmats in PSU(1, 1), g (->gmat) an element of Gamma, z in the unit disc. This G-reduces g, i.e. translating gz to the exterior domain of G. Returns [gbar, delta, decomp], where gbar=delta*g. gbar is (G, z)-reduced, delta is in <G>, and delta=G[i1]*G[i2]*...*G[in] with decomp=[i1, i2, ..., in] (vecsmall).
 GEN
-reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec)
+reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN delta=gamid;
@@ -2335,7 +2335,7 @@ reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN *dat
 
 //Reduces z to the interior of U (Almost identical to reduceelt_givennormbound). Returns [g, z'], where g is the transition element and z' is the new point.
 GEN
-reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN tol, long prec)
+reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN g=gamid;
@@ -2450,7 +2450,7 @@ minimalcycles(GEN pair)
 
 //Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m.
 GEN
-minimalcycles_bytype(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN))
+minimalcycles_bytype(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN))
 {
   pari_sp top=avma;
   GEN G=gel(U, 1);
@@ -2492,7 +2492,7 @@ normalizedboundary_oosides(GEN U)
 
 //Returns the group presentation of the fundamental domain U. The return is a vector, where the 1st element is the list of indices of the generators, 2nd element is the vector of relations, whose ith element is a relation of the form [indices, powers], where indices and powers are vecsmall's. If indices=[i1,i2,...,ik] and powers=[p1,p2,...,pk], then this corresponds to g_{i1}^p1*...*g_{ik}^{pk}=1.
 GEN
-presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN))
+presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN))
 {
   pari_sp top=avma;
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//Minimal cycles by type.
@@ -2615,7 +2615,7 @@ presentation(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*
 
 //Finds the image of the root geodesic of g in the fundamental domain specified by U.
 GEN
-rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, long), GEN (*eltmul)(GEN *, GEN, GEN), GEN (*eltinv)(GEN *, GEN), GEN tol, long prec)
+rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN gpsl=gamtopsl(data, g, prec), mats=gel(U, 8);//The image in PSL
@@ -2670,7 +2670,7 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, 
 
 //Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).
 GEN
-signature(GEN U, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), GEN (*elttrace)(GEN *, GEN), int (*istriv)(GEN *, GEN))
+signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN))
 {
   pari_sp top=avma;
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//The minimal cycles and their types.
@@ -2889,7 +2889,7 @@ algfdomminimalcycles(GEN U, GEN A, GEN O, long prec)
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, minimalcycles_bytype(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+  return gerepileupto(top, minimalcycles_bytype(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Returns the presentation of the algebra A, obtained from the fundamental domain U.
@@ -2900,7 +2900,7 @@ algfdompresentation(GEN U, GEN A, GEN O, long prec)
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, presentation(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+  return gerepileupto(top, presentation(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Reduces the norm 1 element x with respect to the fundamental domain fdom and the point z (default z=0)
@@ -2912,7 +2912,7 @@ algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec)
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, reduceelt_givennormbound(U, g, z, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, tol, prec));
+  return gerepileupto(top, reduceelt_givennormbound(U, g, z, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, tol, prec));
 }
 
 //Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
@@ -2924,7 +2924,7 @@ algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec)
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, rootgeodesic_fd(U, g, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
+  return gerepileupto(top, rootgeodesic_fd(U, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
     
 }
 
@@ -2936,7 +2936,7 @@ algfdomsignature(GEN U, GEN A, GEN O, long prec)
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, signature(U, id, &Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+  return gerepileupto(top, signature(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
 //Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
@@ -2974,7 +2974,7 @@ algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec)
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   GEN tol=deftol(prec);
-  return gerepileupto(top, normalizedbasis(G, gen_0, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
+  return gerepileupto(top, normalizedbasis(G, gen_0, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
 
 //Returns the normalized boundary of the set of elements G
@@ -2987,7 +2987,7 @@ algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec)
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   GEN tol=deftol(prec);
-  return gerepileupto(top, normalizedboundary(G, mats, id, &Q, &qalg_fdomm2rembed, tol, prec));
+  return gerepileupto(top, normalizedboundary(G, mats, id, Q, &qalg_fdomm2rembed, tol, prec));
 }
 
 //Returns the norm to Q of the discriminant of A
@@ -3105,7 +3105,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
     if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
     else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
   }
-  U=normalizedbasis(partialset, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+  U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
@@ -3161,7 +3161,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
       if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
       pari_printf("%d elements found\n", lg(points)-1);
     }
-    U=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+    U=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
     if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
     if(gcmp(gel(U, 6), areabound)<0){
       if(dumppartial) fclose(f);
@@ -3221,7 +3221,7 @@ qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec)
   GEN O=qalg_get_order(Q);
   long n=lg(O);//The lg of a normal entry
   GEN basisimage=cgetg(n, t_VEC);//The image of the basis elements in M_2(R)
-  for(long i=1;i<n;i++) gel(basisimage, i)=qalg_fdomm2rembed(&Q, gel(O, i), prec);
+  for(long i=1;i<n;i++) gel(basisimage, i)=qalg_fdomm2rembed(Q, gel(O, i), prec);
 
   GEN tvars=cgetg(n, t_VECSMALL);
   GEN xvars=cgetg(n, t_VEC);
@@ -3466,21 +3466,21 @@ qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts,
 //BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
 
 
-//Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
+//Must pass data as a quaternion algebra. This just formats things correctly for the fundamental domain.
 GEN
-qalg_fdominv(GEN *data, GEN x)
+qalg_fdominv(GEN data, GEN x)
 {
-  return alginv(qalg_get_alg(*data), x);
+  return alginv(qalg_get_alg(data), x);
 }
 
-//Must pass *data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
+//Must pass data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
 GEN
-qalg_fdomm2rembed(GEN *data, GEN x, long prec)
+qalg_fdomm2rembed(GEN data, GEN x, long prec)
 {
   pari_sp top=avma;
-  GEN A=qalg_get_alg(*data);
-  GEN rts=qalg_get_roots(*data);
-  GEN varnos=qalg_get_varnos(*data); 
+  GEN A=qalg_get_alg(data);
+  GEN rts=qalg_get_roots(data);
+  GEN varnos=qalg_get_varnos(data); 
   GEN b=gsubst(lift(alg_get_b(A)), varnos[1], gel(rts, 1));//Inputting the real value of K into b
   if(lg(x)!=3) x=algbasistoalg(A, x);//Converting it to algebraic representation
   x=liftall(x);//Lifiting x
@@ -3496,23 +3496,23 @@ qalg_fdomm2rembed(GEN *data, GEN x, long prec)
   return gerepilecopy(top, M);
 }
 
-//Must pass *data as a quaternion algebra. This just formats things correctly for the fundamental domain.
+//Must pass data as a quaternion algebra. This just formats things correctly for the fundamental domain.
 GEN
-qalg_fdommul(GEN *data, GEN x, GEN y)
+qalg_fdommul(GEN data, GEN x, GEN y)
 {
-  return algmul(qalg_get_alg(*data), x, y);
+  return algmul(qalg_get_alg(data), x, y);
 }
 
-//Must pass *data as a quaternion algebra. Returns the trace of x.
+//Must pass data as a quaternion algebra. Returns the trace of x.
 GEN
-qalg_fdomtrace(GEN *data, GEN x)
+qalg_fdomtrace(GEN data, GEN x)
 {
-  return algtrace(qalg_get_alg(*data), x, 0);
+  return algtrace(qalg_get_alg(data), x, 0);
 }
 
 //Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
 int
-qalg_istriv(GEN *data, GEN x)
+qalg_istriv(GEN data, GEN x)
 {
   if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
   for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;

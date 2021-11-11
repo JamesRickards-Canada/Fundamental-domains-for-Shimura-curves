@@ -229,16 +229,7 @@ algmulvec(GEN A, GEN G, GEN L)
   pari_sp top=avma;
   GEN Lsmall=gtovecsmall(L);//L in vecsmall
   GEN elt=gel(alg_get_basis(A), 1);//The identity
-  pari_CATCH(CATCH_ALL){
-    avma=top;
-    pari_CATCH_reset();
-    pari_err_TYPE("Invalid inputs; perhaps G is not formatted correctly or L has indices that are too large?", mkvec2(G, L));
-    return gen_0;
-  }
-  pari_TRY{
-    for(long i=1;i<lg(Lsmall);i++) elt=algmul(A, elt, gel(G, Lsmall[i]));
-  }
-  pari_ENDCATCH
+  for(long i=1;i<lg(Lsmall);i++) elt=algmul(A, elt, gel(G, Lsmall[i]));
   return gerepileupto(top, elt);
 }
 
@@ -1269,7 +1260,7 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
       pari_ENDCATCH
     }
     points=shallowconcat1(points);
-    GEN Unew=normalizedbasis(points, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+    GEN Unew=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
     if(gcmp(gel(Unew, 6), areabound)<0){
       long minnew=1, maxnew=lg(points)-1;
       bot=avma;
@@ -1278,7 +1269,7 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
         long cind=(maxnew+minnew)/2;
         GEN newpoints=cgetg(cind+1,t_VEC);
         for(long i=1;i<=cind;i++) gel(newpoints, i)=gel(points, i);
-        Unew=normalizedbasis(newpoints, U, mats, id, &Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+        Unew=normalizedbasis(newpoints, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
         if(gcmp(gel(Unew, 6), areabound)<0) maxnew=cind;
         else minnew=cind;
       }
