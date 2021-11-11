@@ -1008,18 +1008,18 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
     if(toleq(rtpart, gen_0, tol, prec)){//Only one intersection point
       GEN ret=cgetg(2, t_VEC);
       gel(ret, 1)=cgetg(3, t_COMPLEX);
-      gel(gel(ret, 1), 1)=gcopy(x1);
-      gel(gel(ret, 1), 2)=gcopy(y1);
+      gmael(ret, 1, 1)=gcopy(x1);
+      gmael(ret, 1, 2)=gcopy(y1);
       return gerepileupto(top, ret);
     }
     //Two intersection points
     GEN y1py2=gmulgs(imag_i(gel(c, 1)), 2);//2*imag(c[1])
     GEN ret=cgetg(3, t_VEC);
     gel(ret, 1)=cgetg(3, t_COMPLEX);gel(ret, 2)=cgetg(3, t_COMPLEX);
-    gel(gel(ret, 1), 1)=gcopy(x1);
-    gel(gel(ret, 1), 2)=gcopy(y1);
-    gel(gel(ret, 2), 1)=gcopy(x1);
-    gel(gel(ret, 2), 2)=gsub(y1py2, y1);
+    gmael(ret, 1, 1)=gcopy(x1);
+    gmael(ret, 1, 2)=gcopy(y1);
+    gmael(ret, 2, 1)=gcopy(x1);
+    gmael(ret, 2, 2)=gsub(y1py2, y1);
     return gerepileupto(top, ret);
   }
   //Now y=mx+b with m finite
@@ -1035,8 +1035,8 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
     GEN y1part=gmul(gel(l, 1), x1);//l[1]*x1
     GEN ret=cgetg(2, t_VEC);
     gel(ret, 1)=cgetg(3, t_COMPLEX);
-    gel(gel(ret, 1), 1)=gcopy(x1);
-    gel(gel(ret, 1), 2)=gadd(y1part, gel(l, 2));//y1=l[1]*x1+l[2];
+    gmael(ret, 1, 1)=gcopy(x1);
+    gmael(ret, 1, 2)=gadd(y1part, gel(l, 2));//y1=l[1]*x1+l[2];
     return gerepileupto(top, ret);
   }
   //Two roots
@@ -1046,10 +1046,10 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
   GEN y2part=gmul(gel(l, 1), x2);//l[1]*x2
   GEN ret=cgetg(3, t_VEC);
   gel(ret, 1)=cgetg(3, t_COMPLEX);gel(ret, 2)=cgetg(3, t_COMPLEX);
-  gel(gel(ret, 1), 1)=gcopy(x1);
-  gel(gel(ret, 1), 2)=gadd(y1part, gel(l, 2));//l[1]*x1+l[2];
-  gel(gel(ret, 2), 1)=gcopy(x2);
-  gel(gel(ret, 2), 2)=gadd(y2part, gel(l, 2));//l[1]*x2+l[2];
+  gmael(ret, 1, 1)=gcopy(x1);
+  gmael(ret, 1, 2)=gadd(y1part, gel(l, 2));//l[1]*x1+l[2];
+  gmael(ret, 2, 1)=gcopy(x2);
+  gmael(ret, 2, 2)=gadd(y2part, gel(l, 2));//l[1]*x2+l[2];
   return gerepileupto(top, ret);
 }
 
@@ -1196,23 +1196,11 @@ GEN
 hdist(GEN z1, GEN z2, long prec)
 {
   pari_sp top=avma;
-  GEN expd;
-  pari_CATCH(CATCH_ALL){
-    avma=top;
-    pari_CATCH_reset();
-    pari_err_TYPE("Please enter two complex numbers in the upper half plane", mkvec2(z1, z2));
-    return gen_0;
-  }
-  pari_TRY{
-    GEN x1=gel(z1,1);
-    GEN y1=gel(z1,2);
-    GEN x2=gel(z2,1);
-    GEN y2=gel(z2,2);
-    GEN x=gaddsg(1,gdiv(gadd(gsqr(gsub(x2,x1)),gsqr(gsub(y2,y1))),gmul(gmulsg(2,y1),y2)));
-    expd=gadd(x,gsqrt(gsubgs(gsqr(x), 1), prec));
-  }
-  pari_ENDCATCH
-  return gerepileupto(top,glog(expd, prec));
+  GEN x1=gel(z1, 1), y1=gel(z1, 2);
+  GEN x2=gel(z2, 1), y2=gel(z2, 2);
+  GEN x=gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)),gsqr(gsub(y2, y1))),gmul(gmulsg(2, y1), y2)));
+  GEN expd=gadd(x, gsqrt(gsubgs(gsqr(x), 1), prec));
+  return gerepileupto(top, glog(expd, prec));
 }
 
 //The hyperbolic distance between z1 and z2 in the unit disc model
@@ -1220,21 +1208,16 @@ GEN
 hdist_ud(GEN z1, GEN z2, long prec)
 {
   pari_sp top=avma;
-  GEN a = gabs(gsubsg(1, gmul(z1, conj_i(z2))), prec);//|1-z1*conj(z2)|
-  GEN b = gabs(gsub(z1, z2), prec);//|z1-z2|
+  GEN a=gabs(gsubsg(1, gmul(z1, conj_i(z2))), prec);//|1-z1*conj(z2)|
+  GEN b=gabs(gsub(z1, z2), prec);//|z1-z2|
   GEN num=gadd(a, b);
   GEN denom=gsub(a, b);
-  GEN ret;
-  pari_CATCH(e_INV){
-    avma=top;
-    pari_CATCH_reset();
-    return mkoo();
+  if(gequal0(denom)){
+	pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance.");
+	avma=top;
+	return mkoo();
   }
-  pari_TRY{
-    ret=gerepileupto(top, glog(gdiv(num, denom), prec));//log((a+b)/(a-b))
-  }
-  pari_ENDCATCH
-  return ret;
+  return gerepileupto(top, glog(gdiv(num, denom), prec));//log((a+b)/(a-b))
 }
 
 //Given the isometric circles (in order) and the vertices (so that circles[i] intersect circles[i+1] is vertices[i]), returns the area of the convex hyperbolic polygon. If one of the sides is oo (an entry of circles is 0), the answer will be oo. If there are n vertices with angles a1,...,an, then the area is is (n-2)Pi-sum(ai)
@@ -1285,19 +1268,19 @@ edgepairing(GEN U, GEN tol, int rboth, long prec)
   GEN unpair=vectrunc_init(lU+1), vim, vimang, pair=vectrunc_init(lU);//Unpair stores the unpaired edges, pair stores the paired edges
   long ind1, ind2, i1, i2;
   for(long i=1;i<lU;i++){
-    if(gequal0(gel(gel(U, 5), i))){vectrunc_append(pair, mkvecsmall2(i, i));continue;}//oo side, go next (we say it is paired with itself)
+    if(gequal0(gmael(U, 5, i))){vectrunc_append(pair, mkvecsmall2(i, i));continue;}//oo side, go next (we say it is paired with itself)
     ind1=i;
-    vim=mat_eval(gel(gel(U, 5), i), gel(gel(U, 3), ind1));//The new vertex
+    vim=mat_eval(gmael(U, 5, i), gmael(U, 3, ind1));//The new vertex
     vimang=shiftangle(garg(vim, prec), baseangle, tol, prec);//The new angle
     i1=gen_search(vangles, vimang, 0, &toldata, &tolcmp_sort);
-    if(i1!=0) if(!toleq(vim, gel(gel(U, 3), i1), tol, prec)) i1=0;//Just because the angles are equal, the points don't have to be (though this occurence is expected to be extremely rare).
+    if(i1!=0) if(!toleq(vim, gmael(U, 3, i1), tol, prec)) i1=0;//Just because the angles are equal, the points don't have to be (though this occurence is expected to be extremely rare).
     if(i==1) ind2=lU-1;
     else ind2=i-1;//The two vertices of the side, this is the second one
-    vim=mat_eval(gel(gel(U, 5), i), gel(gel(U, 3), ind2));//The second new vertex
+    vim=mat_eval(gmael(U, 5, i), gmael(U, 3, ind2));//The second new vertex
     if(i1!=0){//If ind2 is paired, it MUST be paired to vertex i1+1
       i2=i1+1;
       if(i2==lU) i2=1;//Wrap around
-      if(!toleq(vim, gel(gel(U, 3), i2), tol, prec)) i2=0;
+      if(!toleq(vim, gmael(U, 3, i2), tol, prec)) i2=0;
       if(i2!=0){
         if(i<=i2) vectrunc_append(pair, mkvecsmall2(i, i2));//i<=i2 is put so that we are not pairing things twice.
       }
@@ -1306,7 +1289,7 @@ edgepairing(GEN U, GEN tol, int rboth, long prec)
     else{//ind1 not paired
       vimang=shiftangle(garg(vim, prec), baseangle, tol, prec);//The second new angle
       i2=gen_search(vangles, vimang, 0, &toldata, &tolcmp_sort);
-      if(i2!=0) if(!toleq(vim, gel(gel(U, 3), i2), tol, prec)) i2=0;//Just because the angles are equal, the points don't have to be (though this occurence is expected to be extremely rare).
+      if(i2!=0) if(!toleq(vim, gmael(U, 3, i2), tol, prec)) i2=0;//Just because the angles are equal, the points don't have to be (though this occurence is expected to be extremely rare).
       if(i2!=0) vectrunc_append(unpair, mkvecsmall2(i, ind1));//First vtx not paired
        else vectrunc_append(unpair, mkvecsmall3(i, ind1, ind2));//Neither vtx paired
     }
@@ -1451,12 +1434,12 @@ normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN *data, GEN (*gamtopsl
       gind=gel(unpair, i)[1];
       for(long k=2;k<lg(gel(unpair, i));k++){//The 1 or 2 vertices
         vind=gel(unpair, i)[k];
-        v=gel(gel(U, 3), vind);
+        v=gmael(U, 3, vind);
         if(toleq(gabs(v, prec), gen_1, tol, prec)){//Infinite vertex
-          if(gind==vind) v=normalizedbasis_shiftpoint(gel(gel(U, 2), gind), scale, 1, prec);
-          else v=normalizedbasis_shiftpoint(gel(gel(U, 2), gind), scale, 0, prec);
+          if(gind==vind) v=normalizedbasis_shiftpoint(gmael(U, 2, gind), scale, 1, prec);
+          else v=normalizedbasis_shiftpoint(gmael(U, 2, gind), scale, 0, prec);
         }
-        g=gel(gel(U, 1), gind);
+        g=gmael(U, 1, gind);
         gbardat=reduceelt_givennormbound(U, g, v, gamid, data, gamtopsl, eltmul, tol, prec);//Reduce with respect to v (and not 0 like in step 3).
         vectrunc_append(Gaddnew, gel(gbardat, 1));
       } 
@@ -1498,18 +1481,18 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
   GEN pi=mppi(prec);//Pi
   GEN moo=mkmoo();
   GEN inter, ang, ang1, ang2, sidecirc, sidecirctermang, Ltermang, ten=stoi(10);
-  GEN L=gel(gel(Ubase, 2), 1);//The current segment we are looking for intersections with.
+  GEN L=gmael(Ubase, 2, 1);//The current segment we are looking for intersections with.
   GEN baseang=garg(gel(L, 4), prec);//Angle to the terminal point of the first element of Ubase
   GEN Utermangles=cgetg(nUp1, t_VEC);//The angles to the terminal points in Ubase
   for(long i=1;i<nUp1;i++){
-    L=gel(gel(Ubase, 2), i);
+    L=gmael(Ubase, 2, i);
     if(gequal0(L)) gel(Utermangles, i)=gen_0;//infinite side, ignoring
     else gel(Utermangles, i)=shiftangle(garg(gel(L, 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
   }
   GEN Gtermangles=cgetg(nGp1, t_VEC);
   for(long i=1;i<nGp1;i++){
-    if(gequal0(gel(gel(G, i), 3))) gel(Gtermangles, i)=moo;//Does not give rise to a circle, want to ignore. -oo will ALWAYS be less than the start angle.
-    else gel(Gtermangles, i)=shiftangle(garg(gel(gel(gel(G, i), 3), 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
+    if(gequal0(gmael(G, i, 3))) gel(Gtermangles, i)=moo;//Does not give rise to a circle, want to ignore. -oo will ALWAYS be less than the start angle.
+    else gel(Gtermangles, i)=shiftangle(garg(gmael3(G, i, 3, 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
   }
   GEN Gord=indexsort(Gtermangles);//The order in which we want to look at the elements of G.
   long Gordind=0;
@@ -1518,7 +1501,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
   }//Moving past the -2's, i.e. elements of G giving no circle. These occur first as the other angles are >-2.
   if(Gordind==0) return gerepilecopy(top, Ubase);//No new circles.
   U[1]=1;
-  gel(vertices, 1)=mkvec2(gel(gel(gel(Ubase, 2), 1), 4), baseang);//The first vertex is initially set to be the start angle of the first side.
+  gel(vertices, 1)=mkvec2(gmael3(Ubase, 2, 1, 4), baseang);//The first vertex is initially set to be the start angle of the first side.
   long ulen=1;//The current length of U and vertices. If we have to delete some vertices, this can decrease.
   long side, sidem1;//We basically re-insert the first side back at the end
   GEN gang=gel(Gtermangles, Gord[Gordind]);//The angle to the terminal side of the current element of G.
@@ -1541,39 +1524,39 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
     if(finalstretch && !leftoverGs){//We go back and hit the start of U
       if(U[side]==0){startpt++;continue;}
       else if(U[side]>0){
-        sidecirc=gel(gel(Ubase, 2), U[side]);
+        sidecirc=gmael(Ubase, 2, U[side]);
         sidecirctermang=gel(Utermangles, U[side]);
         newsidefromG=0;
       }
       else{
-        sidecirc=gel(gel(G, -U[side]), 3);
+        sidecirc=gmael(G, -U[side], 3);
         sidecirctermang=gel(Gtermangles, -U[side]);
         newsidefromG=1;
       }
       if(U[ulen]>0){
-        L=gel(gel(Ubase, 2), U[ulen]);
+        L=gmael(Ubase, 2, U[ulen]);
         Ltermang=gel(Utermangles, U[ulen]);
       }
       else{
-        L=gel(gel(G, -U[ulen]), 3);
+        L=gmael(G, -U[ulen], 3);
         Ltermang=gel(Gtermangles, -U[ulen]);
       }
     }
-    else if(gequal0(gel(gel(Ubase, 2), side))) continue;//We skip past infinite sides of Ubase.
+    else if(gequal0(gmael(Ubase, 2, side))) continue;//We skip past infinite sides of Ubase.
     else if(lastsidenew==0){//Working on a non-infinite side of Ubase, and the last side was also a side of Ubase
       if(tolcmp(gang, gel(Utermangles, side), tol, prec)==1 && !leftoverGs){//Consecutive old sides
-        if(gequal0(gel(gel(Ubase, 2), sidem1))){//The last side was infinite and skipped over; must re-insert it.
+        if(gequal0(gmael(Ubase, 2, sidem1))){//The last side was infinite and skipped over; must re-insert it.
           ulen++;
           U[ulen]=0;
-          gel(vertices, ulen)=mkvec2(gel(gel(Ubase, 3), sidem1-1), gel(gel(Ubase, 4), sidem1-1));//The infinite side
+          gel(vertices, ulen)=mkvec2(gmael(Ubase, 3, sidem1-1), gmael(Ubase, 4, sidem1-1));//The infinite side
           ulen++;
           U[ulen]=side;
-          gel(vertices, ulen)=mkvec2(gel(gel(Ubase, 3), sidem1), gel(gel(Ubase, 4), sidem1));
+          gel(vertices, ulen)=mkvec2(gmael(Ubase, 3, sidem1), gmael(Ubase, 4, sidem1));
           continue;//Go on
         }
         //Now we check if the new vertex is beyond the old one
-        ang=gel(gel(Ubase, 4), sidem1);//Angle to the intersection point
-        ang1=anglediff(ang, gel(gel(vertices, ulen), 2), tol, prec);//ang-angle to the previous vertex.
+        ang=gmael(Ubase, 4, sidem1);//Angle to the intersection point
+        ang1=anglediff(ang, gmael(vertices, ulen, 2), tol, prec);//ang-angle to the previous vertex.
         if(gequal0(ang1) || gcmp(ang1, pi)>=0){//Delete last side and go backwards. The previous side MUST be a new side.
           avma=mid;
           ulen--;
@@ -1583,29 +1566,29 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
         }
         ulen++;
         U[ulen]=side;
-        gel(vertices, ulen)=mkvec2(gel(gel(Ubase, 3), sidem1), gel(gel(Ubase, 4), sidem1));
+        gel(vertices, ulen)=mkvec2(gmael(Ubase, 3, sidem1), gmael(Ubase, 4, sidem1));
         continue;//Go on
       }
       //Here, this means that we need to try to insert G[Gord[Gordind]] BEFORE the current side.
-      sidecirc=gel(gel(G, Gord[Gordind]), 3);//The new side we are trying to insert
+      sidecirc=gmael(G, Gord[Gordind], 3);//The new side we are trying to insert
       sidecirctermang=gang;//Terminal angle
-      L=gel(gel(Ubase, 2), sidem1);//The previous side
-      if(gequal0(L)){L=gel(gel(Ubase, 2), sidem1-1);Ltermang=gel(Utermangles, sidem1-1);}//If the previous side was oo, we go back one further, as this side is not oo.
+      L=gmael(Ubase, 2, sidem1);//The previous side
+      if(gequal0(L)){L=gmael(Ubase, 2, sidem1-1);Ltermang=gel(Utermangles, sidem1-1);}//If the previous side was oo, we go back one further, as this side is not oo.
       else Ltermang=gel(Utermangles, sidem1);
       newsidefromG=1;
     }
     else{//Now we check if we are inserting a new side or an old side
       if(tolcmp(gang, gel(Utermangles, side), tol, prec)==1 && !leftoverGs){//Inserting old side
-        sidecirc=gel(gel(Ubase, 2), side);//The old side we are trying to insert
+        sidecirc=gmael(Ubase, 2, side);//The old side we are trying to insert
         sidecirctermang=gel(Utermangles, side);//Terminal angle
-        L=gel(gel(G, -U[ulen]), 3);//The newly inserted side
+        L=gmael(G, -U[ulen], 3);//The newly inserted side
         Ltermang=gel(Gtermangles, -U[ulen]);
         newsidefromG=0;
       }
       else{
-        sidecirc=gel(gel(G, Gord[Gordind]), 3);//The new side we are trying to insert
+        sidecirc=gmael(G, Gord[Gordind], 3);//The new side we are trying to insert
         sidecirctermang=gang;//Terminal angle
-        L=gel(gel(G, -U[ulen]), 3);//The newly inserted side
+        L=gmael(G, -U[ulen], 3);//The newly inserted side
         Ltermang=gel(Gtermangles, -U[ulen]);
         newsidefromG=1;
       }
@@ -1719,22 +1702,22 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       }
       //Now we have a proper "normal" intersection
       ang1=garg(inter, prec);
-      ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);//Angle to the new vtx from the previous as a bases
+      ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);//Angle to the new vtx from the previous as a bases
       if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
         while(ulen>1){
           ulen--;
-          if(U[ulen]>0) L=gel(gel(Ubase, 2), U[ulen]);
-          else L=gel(gel(G, -U[ulen]), 3);//U[ulen]=0 is impossible; it is guarenteed that we do not backtrack past an infinite side in this algorithm.
+          if(U[ulen]>0) L=gmael(Ubase, 2, U[ulen]);
+          else L=gmael(G, -U[ulen], 3);//U[ulen]=0 is impossible; it is guarenteed that we do not backtrack past an infinite side in this algorithm.
           inter=gel(arc_int(L, sidecirc, tol, prec), 1);//They MUST intersect
           ang1=garg(inter, prec);
-          ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);
+          ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);
           if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
           break;//At this point we have reached where we need to insert the new side.
         }
       }
       //Now we are ready to insert it.
       if(finalstretch && !leftoverGs){//Done if we intersected before the original intersection, and must continue on if not.
-        if(gcmp(pi, anglediff(ang1, gel(gel(vertices, side+1), 2), tol, prec))>0){startpt++;continue;}//We have superseeded the previous side, increase start point.
+        if(gcmp(pi, anglediff(ang1, gmael(vertices, side+1, 2), tol, prec))>0){startpt++;continue;}//We have superseeded the previous side, increase start point.
         ulen++;
         U[ulen]=U[side];
         gel(vertices, ulen)=mkvec2(inter, ang1);
@@ -1765,7 +1748,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
   ang1=anglediff(gel(Utermangles, 1), gen_0, tol, prec);
   while(U[k]<=0){//U[1] in the start position can only be superseeded by a new edge.
     if(U[k]==0){k--;continue;}//We may have added in a 0 edge
-    L=gel(gel(G, -U[k]), 3);
+    L=gmael(G, -U[k], 3);
     inter=arcseg_int(L, L0, tol, prec);
     if(lg(inter)!=1){//Intersection
       inter=real_i(gel(inter, 1));//Intersected [0, 1]
@@ -1780,15 +1763,15 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
     }
     k--;
   }
-  if(U[startpt]>0) L=gel(gel(Ubase, 2), U[startpt]);
-  else L=gel(gel(G, -U[startpt]), 3);
+  if(U[startpt]>0) L=gmael(Ubase, 2, U[startpt]);
+  else L=gmael(G, -U[startpt], 3);
   inter=arcseg_int(L, L0, tol, prec);
   if(lg(inter)>1){//Intersect. Now we need to go forward, as it is possible that the best intersection with [0, 1] was added right after the first side.
     inter=real_i(gel(inter, 1));
     if(tolcmp(mininter, inter, tol, prec)!=-1){best=ulen;mininter=inter;}//The first arc was better
     k=2;
     while(U[k]<0){
-      L=gel(gel(G, -U[k]), 3);
+      L=gmael(G, -U[k], 3);
       inter=arcseg_int(L, L0, tol, prec);
       if(lg(inter)==1) break;//No, intersection, done
       inter=real_i(gel(inter, 1));//Intersected [0, 1]
@@ -1803,58 +1786,58 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
   
   avma=mid;
   long np1=ulen-startpt+1;
-  GEN firstang=gel(gel(vertices, startpt+1), 2);//The angle to the first vertex
+  GEN firstang=gmael(vertices, startpt+1, 2);//The angle to the first vertex
   //By wrapping back around, we have ulen-startpt sides: the last side is the same as the first.
   GEN ret=cgetg(NORMBOUND, t_VEC);
   for(long i=1;i<=5;i++) gel(ret, i)=cgetg(np1, t_VEC);//elements, icircs, vertices, matrices, term angles. Places 6, 7 will store the area and side pairing (0 for now)
   long j=1, h;
   for(long i=best;i<ulen;i++){
     if(U[i]==0){//Side at oo
-      gel(gel(ret, 1), j)=gcopy(id);//Element
-      gel(gel(ret, 2), j)=gen_0;//No circle
-      gel(gel(ret, 3), j)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), j)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), j)=gen_0;//No matrix
+      gmael(ret, 1, j)=gcopy(id);//Element
+      gmael(ret, 2, j)=gen_0;//No circle
+      gmael(ret, 3, j)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, j)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, j)=gen_0;//No matrix
     }//Now we have a real side
     else if(U[i]<0){
       h=-U[i];
-      gel(gel(ret, 1), j)=gcopy(gel(gel(G, h), 1));//Element
-      gel(gel(ret, 2), j)=gcopy(gel(gel(G, h), 3));//Circle
-      gel(gel(ret, 3), j)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), j)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), j)=gcopy(gel(gel(G, h), 2));//Matrix
+      gmael(ret, 1, j)=gcopy(gmael(G, h, 1));//Element
+      gmael(ret, 2, j)=gcopy(gmael(G, h, 3));//Circle
+      gmael(ret, 3, j)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, j)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, j)=gcopy(gmael(G, h, 2));//Matrix
     }
     else{
-      gel(gel(ret, 1), j)=gcopy(gel(gel(Ubase, 1), U[i]));//Element
-      gel(gel(ret, 2), j)=gcopy(gel(gel(Ubase, 2), U[i]));//Circle
-      gel(gel(ret, 3), j)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), j)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), j)=gcopy(gel(gel(Ubase, 5), U[i]));//Matrix
+      gmael(ret, 1, j)=gcopy(gmael(Ubase, 1, U[i]));//Element
+      gmael(ret, 2, j)=gcopy(gmael(Ubase, 2, U[i]));//Circle
+      gmael(ret, 3, j)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, j)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, j)=gcopy(gmael(Ubase, 5, U[i]));//Matrix
     }
     j++;
   }
   for(long i=startpt;i<best;i++){
     if(U[i]==0){//Side at oo
-      gel(gel(ret, 1), j)=gcopy(id);//Element
-      gel(gel(ret, 2), j)=gen_0;//No circle
-      gel(gel(ret, 3), j)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), j)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), j)=gen_0;//No matrix
+      gmael(ret, 1, j)=gcopy(id);//Element
+      gmael(ret, 2, j)=gen_0;//No circle
+      gmael(ret, 3, j)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, j)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, j)=gen_0;//No matrix
     }//Now we have a real side
     else if(U[i]<0){
       h=-U[i];
-      gel(gel(ret, 1), j)=gcopy(gel(gel(G, h), 1));//Element
-      gel(gel(ret, 2), j)=gcopy(gel(gel(G, h), 3));//Circle
-      gel(gel(ret, 3), j)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), j)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), j)=gcopy(gel(gel(G, h), 2));//Matrix
+      gmael(ret, 1, j)=gcopy(gmael(G, h, 1));//Element
+      gmael(ret, 2, j)=gcopy(gmael(G, h, 3));//Circle
+      gmael(ret, 3, j)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, j)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, j)=gcopy(gmael(G, h, 2));//Matrix
     }
     else{
-      gel(gel(ret, 1), j)=gcopy(gel(gel(Ubase, 1), U[i]));//Element
-      gel(gel(ret, 2), j)=gcopy(gel(gel(Ubase, 2), U[i]));//Circle
-      gel(gel(ret, 3), j)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), j)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), j)=gcopy(gel(gel(Ubase, 5), U[i]));//Matrix
+      gmael(ret, 1, j)=gcopy(gmael(Ubase, 1, U[i]));//Element
+      gmael(ret, 2, j)=gcopy(gmael(Ubase, 2, U[i]));//Circle
+      gmael(ret, 3, j)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, j)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, j)=gcopy(gmael(Ubase, 5, U[i]));//Matrix
     }
     j++;
   }
@@ -1907,7 +1890,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
   int isnew;
   GEN Hmin=gen_1;
   for(long i=1;i<np1;i++){//We start by finding intersections with L.
-    sidecirc=gel(gel(G, i), 3);
+    sidecirc=gmael(G, i, 3);
     if(gequal0(sidecirc)) continue;//Ignore elts of G giving no circle.
     inter=arcseg_int(sidecirc, L0, tol, prec);
     if(lg(inter)==1) continue;//No intersection
@@ -1916,17 +1899,17 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
     if(isnew==-1){hminind=i;Hmin=inter;continue;}//New min
     else if(isnew==1) continue;//Not new
     //Now we = the min, so need to see which initial point is longer
-    ang=anglediff(garg(gel(gel(gel(G, i), 3), 3), prec), garg(gel(gel(gel(G, hminind), 3), 3), prec), tol, prec);
+    ang=anglediff(garg(gmael3(G, i, 3, 3), prec), garg(gmael3(G, hminind, 3, 3), prec), tol, prec);
     if(gcmp(ang, pi)<0) hminind=i;//Better min.
   }
   avma=mid;//Don't need these calcs other than hminind
   GEN baseang;
-  if(hminind>0) baseang=garg(gel(gel(gel(G, hminind), 3), 4), prec);//The base angle to the terminal point.
+  if(hminind>0) baseang=garg(gmael3(G, hminind, 3, 4), prec);//The base angle to the terminal point.
   else baseang=gen_0;//We start from the 0 angle instead.
   GEN termangles=cgetg(np1, t_VEC);
   for(long i=1;i<np1;i++){
-    if(gequal0(gel(gel(G, i), 3))) gel(termangles, i)=moo;//Does not give rise to a circle, want to ignore. -oo will ALWAYS be less than the start angle.
-    else gel(termangles, i)=shiftangle(garg(gel(gel(gel(G, i), 3), 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
+    if(gequal0(gmael(G, i, 3))) gel(termangles, i)=moo;//Does not give rise to a circle, want to ignore. -oo will ALWAYS be less than the start angle.
+    else gel(termangles, i)=shiftangle(garg(gmael3(G, i, 3, 4), prec), baseang, tol, prec);//Angle to origin in [baseind, baseind+2*Pi)
   }
   //We now order G by the angle to the terminal points.
   GEN ordering=indexsort(termangles);//The order in which we want to look at the elements of G.
@@ -1950,15 +1933,15 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
     }
   }
   U[1]=ordering[startind];
-  gel(vertices, 1)=mkvec2(gel(gel(gel(G, ordering[startind]), 3), 4), gel(termangles, ordering[startind]));//The first vertex is initially set to be the start angle of the first side.
+  gel(vertices, 1)=mkvec2(gmael3(G, ordering[startind], 3, 4), gel(termangles, ordering[startind]));//The first vertex is initially set to be the start angle of the first side.
   long ulen=1;//The current length of U and vertices. If we have to delete some vertices, this can decrease.
-  GEN L=gel(gel(G, ordering[startind]), 3), ang2;//The current segment we are looking for intersections with.
+  GEN L=gmael(G, ordering[startind], 3), ang2;//The current segment we are looking for intersections with.
   long side;//We basically re-insert the first side back at the end
   for(long sid=startind+1;sid<=np1;sid++){//Doing things for the current side.
     if(sid==np1) side=startind;
     else side=sid;
     mid=avma;
-    sidecirc=gel(gel(G, ordering[side]), 3);//The circle arc of the next side
+    sidecirc=gmael(G, ordering[side], 3);//The circle arc of the next side
     inter=arc_int(L, sidecirc, tol, prec);//Intersection of L and the next side.
     if(lg(inter)==1){//It did NOT intersect.
       ang1=garg(gel(L, 3), prec);
@@ -1978,14 +1961,14 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       gel(vertices, ulen)=mkvec2(gel(L, 3), ang1);
       ulen++;
       U[ulen]=ordering[side];
-      gel(vertices, ulen)=mkvec2(gel(gel(gel(G, ordering[side]), 3), 4), gel(termangles, ordering[side]));//The terminal point of sidecirc is a vertex.
-      L=gel(gel(G, ordering[side]), 3);//Setting L
+      gel(vertices, ulen)=mkvec2(gmael3(G, ordering[side], 3, 4), gel(termangles, ordering[side]));//The terminal point of sidecirc is a vertex.
+      L=gmael(G, ordering[side], 3);//Setting L
     }
     else{//It DID intersect
       //It may be that this new side actually comes into U[1] from the bottom. Then we need a side at oo
       ang=anglediff(gel(termangles, U[ulen]), gel(termangles, ordering[side]), tol, prec);//Angle from the terminal angle of the last side to the terminal angle of the new side.
       if(gequal0(ang)){
-        if(tolcmp(gel(gel(gel(G, ordering[side]), 3), 2), gel(gel(gel(G, U[ulen]), 3), 2), tol, prec)<=0){avma=mid;continue;}//This side lies inside the previous one, continue on (compared radii).
+        if(tolcmp(gmael3(G, ordering[side], 3, 2), gmael3(G, U[ulen], 3, 2), tol, prec)<=0){avma=mid;continue;}//This side lies inside the previous one, continue on (compared radii).
       }
       else if(gcmp(ang, pi)<0){//We DID come in from below
         ulen++;
@@ -1993,22 +1976,22 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
         gel(vertices, ulen)=mkvec2(gel(L, 3), garg(gel(L, 3), prec));//Side at oo
         ulen++;
         U[ulen]=ordering[side];
-        gel(vertices, ulen)=mkvec2(gel(gel(gel(G, ordering[side]), 3), 4), gel(termangles, ordering[side]));
-        L=gel(gel(G, ordering[side]), 3);
+        gel(vertices, ulen)=mkvec2(gmael3(G, ordering[side], 3, 4), gel(termangles, ordering[side]));
+        L=gmael(G, ordering[side], 3);
         continue;
       }
       //Now we are sure did not come in from below.
       inter=gel(inter, 1);//The point
-      if(toleq(inter, gel(gel(gel(G, ordering[side]), 3), 3), tol, prec)){avma=mid;continue;}//The side lies entirely in the previous side
+      if(toleq(inter, gmael3(G, ordering[side], 3, 3), tol, prec)){avma=mid;continue;}//The side lies entirely in the previous side
       ang1=garg(inter, prec);
-      ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);//Angle to the new vtx from the previous as a bases
+      ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);//Angle to the new vtx from the previous as a bases
       if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
         while(ulen>1){
           ulen--;
-          L=gel(gel(G, U[ulen]), 3);//The old side we look at
+          L=gmael(G, U[ulen], 3);//The old side we look at
           inter=gel(arc_int(L, sidecirc, tol, prec), 1);//They MUST intersect
           ang1=garg(inter, prec);
-          ang=anglediff(ang1, gel(gel(vertices, ulen), 2), tol, prec);
+          ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);
           if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
           break;//At this point we have reached where we need to insert the new side.
         }
@@ -2020,24 +2003,24 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       gel(vertices, ulen)=mkvec2(inter, ang1);
     }
   }
-  GEN firstang=gel(gel(vertices, 2), 2);//The angle to the first vertex
+  GEN firstang=gmael(vertices, 2, 2);//The angle to the first vertex
   //By wrapping back around, we have ulen-1 sides: the last side is the same as the first.
   GEN ret=cgetg(NORMBOUND, t_VEC);
   for(long i=1;i<=5;i++) gel(ret, i)=cgetg(ulen, t_VEC);//elements, icircs, vertices, matrices, term angles. Places 6, 7 will store the area and side pairing (0 for now)
   for(long i=1;i<ulen;i++){
     if(U[i]==-1){//Side at oo
-      gel(gel(ret, 1), i)=gcopy(id);//Element
-      gel(gel(ret, 2), i)=gen_0;//No circle
-      gel(gel(ret, 3), i)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-      gel(gel(ret, 4), i)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-      gel(gel(ret, 5), i)=gen_0;//No matrix
+      gmael(ret, 1, i)=gcopy(id);//Element
+      gmael(ret, 2, i)=gen_0;//No circle
+      gmael(ret, 3, i)=gcopy(gmael(vertices, i+1, 1));//Vertex
+      gmael(ret, 4, i)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+      gmael(ret, 5, i)=gen_0;//No matrix
       continue;
     }//Now we have a real side
-    gel(gel(ret, 1), i)=gcopy(gel(gel(G, U[i]), 1));//Element
-    gel(gel(ret, 2), i)=gcopy(gel(gel(G, U[i]), 3));//Circle
-    gel(gel(ret, 3), i)=gcopy(gel(gel(vertices, i+1), 1));//Vertex
-    gel(gel(ret, 4), i)=shiftangle(gel(gel(vertices, i+1), 2), firstang, tol, prec);//Vertex angle
-    gel(gel(ret, 5), i)=gcopy(gel(gel(G, U[i]), 2));//Matrix
+    gmael(ret, 1, i)=gcopy(gmael(G, U[i], 1));//Element
+    gmael(ret, 2, i)=gcopy(gmael(G, U[i], 3));//Circle
+    gmael(ret, 3, i)=gcopy(gmael(vertices, i+1, 1));//Vertex
+    gmael(ret, 4, i)=shiftangle(gmael(vertices, i+1, 2), firstang, tol, prec);//Vertex angle
+    gmael(ret, 5, i)=gcopy(gmael(G, U[i], 2));//Matrix
   }
   gel(ret, 6)=hpolygon_area(gel(ret, 2), gel(ret, 3), tol, prec);//Area
   gel(ret, 7)=gen_0;
@@ -2088,7 +2071,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
       gel(ret, 2)=mkvecsmall(-1);
       return gerepileupto(top, ret); 
     }
-    inter=arcseg_int(gel(gel(U, 2), ind), c, tol, prec);
+    inter=arcseg_int(gmael(U, 2, ind), c, tol, prec);
     if(lg(inter)==2) v=gel(inter, 1);//1 intersection point, the most common
     else if(lg(inter)==3){
       d1=gabs(gsub(gel(inter, 1), v), prec);
@@ -2123,7 +2106,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
   GEN vang, ang, pi=mppi(prec);//Base angle+Pi
   int where, ind2;
   for(;;){//We intersect, see if it is on the sement or left or right of it. If left go to next index, if right go to previous
-    inter=arc_int(gel(gel(U, 2), ind), c, tol, prec);
+    inter=arc_int(gmael(U, 2, ind), c, tol, prec);
     if(lg(inter)==2) v=gel(inter, 1);//Only 1 intersection point, the most common case
     else if(lg(inter)==3){//Two intersection points
       d1=gabs(gsub(gel(inter, 1), v), prec);
@@ -2133,7 +2116,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
     }
     else pari_err_TYPE("Should have been intersections, but there were none", inter);//This should never happen, but here in case.
     vang=garg(v, prec);//Angle to v
-    ang=anglediff(gel(gel(U, 4), ind), vang, tol, prec);//Angle to the vertex from v.
+    ang=anglediff(gmael(U, 4, ind), vang, tol, prec);//Angle to the vertex from v.
     where=tolcmp(ang, pi, tol, prec);
     if(where==1){//Left of the vertex, continue
       ind++;
@@ -2142,7 +2125,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
     }
     if(ind==1) ind2=lU-1;
     else ind2=ind-1;
-    ang=anglediff(vang, gel(gel(U, 4), ind2), tol, prec);//Angle to v with reference to vertex 2
+    ang=anglediff(vang, gmael(U, 4, ind2), tol, prec);//Angle to v with reference to vertex 2
     where=tolcmp(pi, ang, tol, prec);//No need for cases this time
     if(where>=0) break;//Correct side!
     ind=ind2;//We must go backwards to the side ind2
@@ -2165,10 +2148,10 @@ normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
     return -1;
   }
   pari_TRY{
-    GEN ang=shiftangle(garg(z, prec), gel(gel(U, 4), 1), tol, prec);//Shifting to base angle
+    GEN ang=shiftangle(garg(z, prec), gmael(U, 4, 1), tol, prec);//Shifting to base angle
     long ind=gen_search(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
     if(ind==lg(gel(U, 1))) ind=1;//Insert at the end means the first circle.
-    GEN circle=gel(gel(U, 2), ind);
+    GEN circle=gmael(U, 2, ind);
     if(gequal0(circle)){pari_CATCH_reset();avma=top;return -1;}//Intersects with the edge of the unit disc.
     outside=tolcmp(gel(circle, 2), gabs(gsub(z, gel(circle, 1)), prec), tol, prec);//Are we outside?
     if(outside==0) outside=-1;
@@ -2298,8 +2281,8 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN *data, GEN (*gamtop
   for(;;){
     outside=normalizedboundary_outside(U, z, tol, prec);
     if(outside==-1) break;//Done:Either reached inside or the boundary.
-    z=mat_eval(gel(gel(U, 5), outside), z);//Update z
-    delta=eltmul(data, gel(gel(U, 1), outside), delta);//update delta
+    z=mat_eval(gmael(U, 5, outside), z);//Update z
+    delta=eltmul(data, gmael(U, 1, outside), delta);//update delta
     llist_putstart(&decomp, outside);//add outside to the list
     count++;
   }
@@ -2360,8 +2343,8 @@ reducepoint(GEN U, GEN z, GEN gamid, GEN *data, GEN (*eltmul)(GEN *, GEN, GEN), 
   for(;;){
     outside=normalizedboundary_outside(U, z, tol, prec);
     if(outside==-1) break;//Done:Either reached inside or the boundary.
-    z=mat_eval(gel(gel(U, 5), outside), z);//Update z
-    g=eltmul(data, gel(gel(U, 1), outside), g);//update g
+    z=mat_eval(gmael(U, 5, outside), z);//Update z
+    g=eltmul(data, gmael(U, 1, outside), g);//update g
   }
   GEN ret=cgetg(3, t_VEC);
   gel(ret, 1)=gcopy(g);
@@ -2503,7 +2486,7 @@ normalizedboundary_oosides(GEN U)
 {
   long n=lg(gel(U, 1));
   GEN sides=vecsmalltrunc_init(n);
-  for(long i=1;i<n;i++) if(gequal0(gel(gel(U, 2), i))) vecsmalltrunc_append(sides, i);//Append the sides
+  for(long i=1;i<n;i++) if(gequal0(gmael(U, 2, i))) vecsmalltrunc_append(sides, i);//Append the sides
   return sides;
 }
 
@@ -2668,8 +2651,8 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN *data, GEN (*gamtopsl)(GEN *, GEN, 
     }
     llist_putstart(&sides, gel(vend, 2)[1]);//Adding the side hit.
     count++;
-    vstart=mat_eval(gel(gel(U, 5), gel(vend, 2)[1]), gel(vend, 1));//The new start vertex
-    g=eltmul(data, eltmul(data, gel(gel(U, 1), gel(vend, 2)[1]), g), eltinv(data, gel(gel(U, 1), gel(vend, 2)[1])));//Conjugating g by the side hit
+    vstart=mat_eval(gmael(U, 5, gel(vend, 2)[1]), gel(vend, 1));//The new start vertex
+    g=eltmul(data, eltmul(data, gmael(U, 1, gel(vend, 2)[1]), g), eltinv(data, gmael(U, 1, gel(vend, 2)[1])));//Conjugating g by the side hit
     gpsl=gamtopsl(data, g, prec);//The image in PSL of the new g
     geod=rootgeodesic_ud(gpsl, mats, tol, prec);//The new geodesic
     if(toleq(vbase, vstart, tol, prec)){
@@ -3029,7 +3012,7 @@ algramifiedplacesf(GEN A)
   GEN rp=vectrunc_init(nhass);
   for(long i=1;i<nhass;i++){
     if(gel(hass, 2)[i]==0) continue;//Unramified
-    vectrunc_append(rp, gel(gel(hass, 1), i));//Ramified
+    vectrunc_append(rp, gmael(hass, 1, i));//Ramified
   }
   return gerepilecopy(top, rp);
 }
@@ -3146,9 +3129,9 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
     for(long i=1;i<iN;i++){//Random points in ball of radius R
       if(0<ooend){//Going near infinite side
         long iside=((i-1)%ooend)+1;
-        ang2=gel(gel(U, 4), oosides[iside]);
-        if(oosides[iside]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-        else ang1=gel(gel(U, 4), oosides[iside]-1);
+        ang2=gmael(U, 4, oosides[iside]);
+        if(oosides[iside]==1) ang1=gmael(U, 4, lg(gel(U, 1))-1);//Last side, which is the previous side
+        else ang1=gmael(U, 4, oosides[iside]-1);
         w=randompoint_udarc(R, ang1, ang2, prec);
       }
       else w=randompoint_ud(R, prec);//Random point

@@ -105,10 +105,10 @@ python_printfdom(GEN U, char *filename, long prec)
   for(long i=1;i<lg(arcs);i++){
     arc=gel(arcs, i);
     if(gequal0(arc)) continue;//Not a circle
-    if(i==1) v1=gel(gel(U, 3), lg(arcs)-1);
-    else v1=gel(gel(U, 3), i-1);
-    v2=gel(gel(U, 3), i);//The two vertices
-    pari_fprintf(f, "%lf %lf %lf %lf %lf\n", rtodbl(gtofp(real_i(gel(arc, 1)), prec)), rtodbl(gtofp(imag_i(gel(arc, 1)), prec)), rtodbl(gtofp(gel(arc, 2), prec)), rtodbl(gmul(garg(gsub(v1, gel(gel(gel(U, 2), i), 1)), prec), fact)), rtodbl(gmul(garg(gsub(v2, gel(gel(gel(U, 2), i), 1)), prec), fact)));
+    if(i==1) v1=gmael(U, 3, lg(arcs)-1);
+    else v1=gmael(U, 3, i-1);
+    v2=gmael(U, 3, i);//The two vertices
+    pari_fprintf(f, "%lf %lf %lf %lf %lf\n", rtodbl(gtofp(real_i(gel(arc, 1)), prec)), rtodbl(gtofp(imag_i(gel(arc, 1)), prec)), rtodbl(gtofp(gel(arc, 2), prec)), rtodbl(gmul(garg(gsub(v1, gmael3(U, 2, i, 1)), prec), fact)), rtodbl(gmul(garg(gsub(v2, gmael3(U, 2, i, 1)), prec), fact)));
   }
   fclose(f);
   avma=top;
@@ -1241,9 +1241,9 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
     points=cgetg(iN, t_VEC);
     for(long i=1;i<iN;i++){//Random points in ball of radius R
       if(i<=ooend){//Going near infinite side
-        ang2=gel(gel(U, 4), oosides[i]);
-        if(oosides[i]==1) ang1=gel(gel(U, 4), lg(gel(U, 1))-1);//Last side, which is the previous side
-        else ang1=gel(gel(U, 4), oosides[i]-1);
+        ang2=gmael(U, 4, oosides[i]);
+        if(oosides[i]==1) ang1=gmael(U, 4, lg(gel(U, 1))-1);//Last side, which is the previous side
+        else ang1=gmael(U, 4, oosides[i]-1);
         w=randompoint_udarc(R, ang1, ang2, prec);
       }
       else w=randompoint_ud(R, prec);//Random point
