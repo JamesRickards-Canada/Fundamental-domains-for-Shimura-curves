@@ -229,7 +229,11 @@ algmulvec(GEN A, GEN G, GEN L)
   pari_sp top=avma;
   GEN Lsmall=gtovecsmall(L);//L in vecsmall
   GEN elt=gel(alg_get_basis(A), 1);//The identity
-  for(long i=1;i<lg(Lsmall);i++) elt=algmul(A, elt, gel(G, Lsmall[i]));
+  for(long i=1;i<lg(Lsmall);i++){
+	long ind=Lsmall[i];
+	if(ind<0) elt=algmul(A, elt, alginv(A, gel(G, -ind)));
+	else elt=algmul(A, elt, gel(G, ind));
+  }
   return gerepileupto(top, elt);
 }
 

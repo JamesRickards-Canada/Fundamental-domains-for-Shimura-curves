@@ -77,7 +77,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	install("algeichler_conj","GG","algeichler_conj","./libfdom.so");
 	addhelp(algeichler_conj,"Inputs A, x: quaternion algebra A, invertible element x.\n Returns the Eichler order O intersect xOx^(-1).");
 	install("algmulvec","GGG","algmulvec","./libfdom.so");
-	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]].");
+	addhelp(algmulvec,"Inputs A, G, L: algebra A, G=vector of elements of A, L a vecsmall or vector of indices.\n Returns G[L[1]]*G[L[2]]*...*G[L[n]]. If an index is negative, we take the inverse of that element.");
 	install("algorderconj","GGDG","algorderconj","./libfdom.so");
 	addhelp(algorderconj,"Inputs: A, x, {O=NULL}: algebra A, invertible element x, order O (in terms of the stored order).\n Returns xOx^{-1}, where the columns generate this new order over Z (with respect to the stored order in O).");
 	install("algorderdisc","GGD1,L,D1,L,","algorderdisc","./libfdom.so");
