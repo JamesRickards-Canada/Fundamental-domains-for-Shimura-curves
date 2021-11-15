@@ -87,7 +87,7 @@ GEN algfdompresentation(GEN U, GEN A, GEN O, long prec);
 GEN algfdomreduce(GEN g, GEN U, GEN A, GEN O, GEN z, long prec);
 GEN algfdomrootgeodesic(GEN g, GEN U, GEN A, GEN O, long prec);
 GEN algfdomsignature(GEN U, GEN A, GEN O, long prec);
-GEN algfdomword(GEN g, GEN U, GEN P, GEN A, GEN O, long prec);
+GEN algfdomword(GEN g, GEN P, GEN U, GEN A, GEN O, long prec);
 GEN algmoreprec(GEN A, long increment, long prec);
 GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec);

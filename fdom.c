@@ -2830,7 +2830,7 @@ signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttra
 
 //Writes g as a word in terms of the presentation.
 GEN
-word(GEN U, GEN P, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
+word(GEN P, GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ginv=eltinv(data, g);//g^-1
@@ -3091,13 +3091,13 @@ algfdomsignature(GEN U, GEN A, GEN O, long prec)
 
 //Writes g as a word in the presentation P.
 GEN
-algfdomword(GEN g, GEN U, GEN P, GEN A, GEN O, long prec){
+algfdomword(GEN g, GEN P, GEN U, GEN A, GEN O, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, word(U, P, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
+  return gerepileupto(top, word(P, U, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 }
 
 //Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
