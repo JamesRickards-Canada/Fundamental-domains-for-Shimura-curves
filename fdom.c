@@ -75,8 +75,9 @@ static GEN psl_roots(GEN M, GEN tol, long prec);
 
 //2: FUNDAMENTAL DOMAIN OTHER COMPUTATIONS
 static GEN minimalcycles(GEN pair);
-static void presentation_updatewords(GEN words, long lgwords, long ind, GEN repl);
+static void presentation_updatewords(GEN words, long ind, GEN repl);
 static GEN word_collapse(GEN word);
+static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl);
 
 //2: GEOMETRIC HELPER METHODS
 static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
@@ -2519,13 +2520,17 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
 	for(long j=2;j<=cyctype[i];j++) cy=vecsmall_concat(cy, cy1);//Concat to make the power right.
 	gel(cyc, i)=cy;//The actual relations are now stored in the cycles.
   }
-  return gerepilecopy(top, mkvec2(cyc, cyctype));
   GEN H=cgetg(lgelts, t_VECSMALL);//We start by taking only one of g or g^(-1) for all g.
   for(long i=1;i<lgelts;i++){//H[i]=1 if g=g^(-1), and for exactly one of [g,g^(-1)] for all other g.
     long pairedind=pairing[i];//What side i is paired to.
     if(pairedind>=i){H[i]=1;ngens++;}//No need to update words, we are keeping this generator for now.
-    else{H[i]=0;gel(words, i)[1]=-pairedind;}//H[i]=0 and update the word to g^-1, g is the paired index.
+    else{//H[i]=0 and update the word to g^-1, g is the paired index.
+	  H[i]=0;
+	  gel(words, i)[1]=-pairedind;
+	}
   }
+  return ghalf;
+  /*
   long ind=1, k;
   while(ind<lgcyc && cyctype[ind]==0) ind++;//Find the first accidental cycle.
   long ellind=ind;
@@ -2635,70 +2640,92 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
       else{gmael(relations, k, 1)[i]=-w;gmael(relations, k, 2)[i]=-1;}
     }
   }
-  return gerepilecopy(top, mkvec3(indused, relations, words));
+  return gerepilecopy(top, mkvec3(indused, relations, words));*/
 }
 
-//Assume U[1][ind] is written as the word replacement. We replace all instances of ind in words by repl. The powers are always +/-1. words is kept up to date, so that inverses are already accounted for.
+//Perform word_substitute(word, ind, repl, invrepl) on each word in words, and updates it. This is OK since word is a GEN vector, so we are updating the memory addresses.
 static void
-presentation_updatewords(GEN words, long lgwords, long ind, GEN repl){
+presentation_updatewords(GEN words, long ind, GEN repl){
   long lrepl, mind=-ind;//length of the replacement word, and -ind.
   GEN invrepl=cgetg_copy(repl, &lrepl);//The inverse of repl
   long invreplind=lrepl;
   for(long i=1;i<lrepl;i++){invreplind--;invrepl[invreplind]=-repl[i];}//Negate and reverse repl.
-  for(long i=1;i<lgwords;i++){//Looking at words[i]
-	GEN word=gel(words, i);//The indices of word
-	long lword=lg(word);//The number of indices in the current word.
-	for(long j=1;j<lword;j++){
-	  if(word[j]!=ind && word[j]!=mind) continue;//Go on.
-	  //We found ind! Now replace it.
-	  GEN actualrep;//What we actually replace with.
-	  if(word[j]>0) actualrep=repl;//Replace with repl
-	  else actualrep=invrepl;//Replace with invrepl
-	  long part1e=j-1, part2s=1, part2e=lrepl-1, part3s=j+1;//The last index of word[1...j-1] we save, the first index of repl we add, the last index we add, and the first index of word[j+1..] we add. This is set to the default assumed values. If the start and end of the replacements cancel, we change this.
-	  while(part1e>=1 && part2s<=part2e){//Stop once too much.
-		if(word[part1e]!=-actualrep[part2s]) break;//Do not cancel.
-		part1e--;
-		part2s++;
-	  }
-	  if(part2s>part2e){//We cancelled all of repl! Cancel part 1 with part 3.
-		while(part1e>=1 && part3s<lword){
-		  if(word[part1e]!=-word[part3s]) break;//Do not cancel
-		  part1e--;
-		  part3s++;
-		}
-	  }
-	  else{
-	    while(part2e>=part2s && part3s<lword){
-		  if(actualrep[part2e]!=-word[part3s]) break;//Do not cancel
-		  part2e--;
-		  part3s++;
-		}
-		if(part2e<part2s){//We cancelled all of repl!
-		  while(part1e>=1 && part3s<lword){
-		    if(word[part1e]!=-word[part3s]) break;//Do not cancel
-		    part1e--;
-		    part3s++;
-		  }
-		}
-	  }
-	  //Ok, now we have cancelled ALL that we can. We MUST be left with something, as our word is not the identity.
-	  long newlg=part1e+part2e-part2s+lword-part3s+2;
-	  GEN newword=cgetg(newlg, t_VECSMALL);
-	  for(long k=1;k<=part1e;k++) newword[k]=word[k];//Starts the same
-	  long newi=part1e+1;//The index in newword
-	  for(long k=part2s;k<=part2e;k++){newword[newi]=actualrep[k];newi++;}
-	  for(long k=part3s;k<lword;k++){newword[newi]=word[k];newi++;}
-	  gel(words, i)=newword;//Finally, replacing the word
-	  i--;//We MUST do this again, in case ind occured multiple times in this word (at most twice I think).
-	  break;//We break out of it, to restart trying this word.
-	}
-  }
+  for(long i=1;i<lg(words);i++) gel(words, i)=word_substitute(gel(words, i), ind, repl, invrepl);//Substitute!
 }
 
-//Given a word, "collapses" it down. I.e. if we have indices i, i correspodning to e1, e2, replaces this by i and e1+e2 (or deletes it if e1+e2=0). Contines down until we have a reduced word.
+//Given a word, "collapses" it down. I.e. if we have indices i, i correspodning to e1, e2, replaces this by i and e1+e2 (or deletes it if e1+e2=0). Continues down until we have a reduced word.
 static GEN
 word_collapse(GEN word){
-  return ghalf;
+  pari_sp top=avma;
+  long lgword=lg(word), last1=0, newlg=lgword;//last1 tracks the last value of 1 in H that we have tracked. newlg tracks the new length.
+  GEN H=const_vecsmall(lgword-1, 1);//H tracks if we keep each index in the collapsed word.
+  for(long i=1;i<lg(word)-1;i++){//We go through the word.
+	if(word[i]!=-word[i+1]){last1=i;continue;}//Nothing to do here, move on. H[i]=1 is necessarily true.
+	H[i]=0;
+	H[i+1]=0;//Deleting i and i+1
+	newlg-=2;//2 less entries
+	if(last1==0){i++;continue;}//All previous entries are already deleted, along with i+1, so just move on to i+2.
+	long next1=i+2;//Next entry with 1
+	while(last1>0 && next1<lgword){
+	  if(word[last1]!=-word[next1]) break;//Maximum collapsing achieved.
+	  H[last1]=0;
+	  H[next1]=0;
+	  newlg-=2;//2 less entries
+	  while(last1>0 && H[last1]==0) last1--;//Going backwards
+	  while(next1<lgword && H[next1]==0) next1++;//Going forwards
+	}
+	i=next1-1;//We do i++ at the end of the loop, so we want to go on to i=next1 next.
+  }
+  GEN newword=cgetg(newlg, t_VECSMALL);
+  long nind=1;
+  for(long i=1;i<lgword;i++){
+	if(H[i]==0) continue;//Go on
+	newword[nind]=word[i];
+	nind++;
+  }
+  return gerepileupto(top, newword);
+}
+
+//Assume word is a word. We replace all instances of the index ind in word with repl, and then collapse down to a reduced word (with regards to the free group on the indices). We return the new word. Thus, substitute_word([1,2,3,-4,5], 3, [-2, -2, 5, 4])=[1, -2, 5, 5]. Can pass invrepl as 0.
+static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl){
+  pari_sp top=avma;
+  long lrepl;//length of the replacement word
+  if(gequal0(invrepl)){//Finding invrepl if not passed in.
+    invrepl=cgetg_copy(repl, &lrepl);//The inverse of repl
+    long invreplind=lrepl;
+    for(long i=1;i<lrepl;i++){invreplind--;invrepl[invreplind]=-repl[i];}//Negate and reverse repl, for when we have to substitute the inverse.
+  }
+  else lrepl=lg(repl);
+  long nreplace=0, mind=-ind, lgword;//nreplace ounts how many replacement we need to perform, and mind is -ind.
+  GEN replaceplaces=cgetg_copy(word, &lgword);//index 1 means replace this with repl,-1 with invrepl, and 0 means keep.
+  for(long i=1;i<lgword;i++){
+	if(word[i]==ind){replaceplaces[i]=1;nreplace++;}
+	else if(word[i]==mind){replaceplaces[i]=-1;nreplace++;}
+	else replaceplaces[i]=0;
+  }
+  if(nreplace==0) return gerepileupto(top, word_collapse(word));//Nothing to replace! Just collapse the word down.
+  long newwordlg=lgword+nreplace*(lrepl-2);//The new lg
+  GEN newword=cgetg(newwordlg, t_VECSMALL);//The new word
+  long newind=1;
+  for(long i=1;i<lgword;i++){//Make the new word
+	if(replaceplaces[i]==0){//Move this index to the new word
+      newword[newind]=word[i];
+	  newind++;
+	}
+	else if(replaceplaces[i]==1){//Add in repl
+	  for(long j=1;j<lrepl;j++){
+		newword[newind]=repl[j];
+		newind++;
+	  }
+	}
+	else{//Add in invrepl
+	  for(long j=1;j<lrepl;j++){
+		newword[newind]=invrepl[j];
+		newind++;
+	  }
+	}
+  }
+  return gerepileupto(top, word_collapse(newword));//Collapse the finalword.
 }
 
 //Finds the image of the root geodesic of g in the fundamental domain specified by U.
