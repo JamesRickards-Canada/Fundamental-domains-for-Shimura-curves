@@ -1253,10 +1253,11 @@ hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec)
 
 
 /*Let Gamma be a Fuschian group; the following methods allow us to compute a fundamental domain for Gamma, following the paper of John Voight. We are assuming that we have an "exact" way to deal with the elements of Gamma. In otherwords, we need separate methods to:
-i)  Multiply elements of Gamma: format as GEN eltmul(GEN data, GEN x, GEN y), with data the extra data you need.
-ii) Find the image of g in PSL(1, 1): format as GEN gamtopsl(GEN data, GEN g, long prec), with data the extra data you need (e.g. the quaterniona algebra in the case of Shimura curves).
-iii) Identify if g is trivial in Gamma: format as int istriv(GEN data, GEN g). Need to take care as we care about being trivial in PSL, whereas most representations of Gamma are for SL (so need to check with +/-id).
-iv) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
+i)  Multiply elements of Gamma: format as GEN eltmul(GEN data, GEN x, GEN y), with data the extra data you need (e.g. the quaterniona algebra in the case of Shimura curves).
+ii) Invert elements of Gamma: format as GEN eltinv(GEN data, GEN x), with the extra data you need.
+iii) Find the image of g in PSL(1, 1): format as GEN gamtopsl(GEN data, GEN g, long prec), with data the extra data you need.
+iv) Identify if g is trivial in Gamma: format as int istriv(GEN data, GEN g). Need to take care as we care about being trivial in PSL, whereas most representations of Gamma are for SL (so need to check with +/-id).
+v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
 We pass references to these methods into the methods here.
 We do computations mostly in PSU, and shift from PSL to PSU via phi(z):=(z-p)/(z-conj(p)) for some given upper half plane point p.
 */
@@ -2517,18 +2518,18 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
   for(long i=1;i<lgcyc;i++){//The relations are in reverse.
     if(cyctype[i]==0) gel(cyc, i)=mkvecsmall(0);//We do not care about the parabolic relations (for Shimura curves, there rarely/never are any?)
     GEN cy1=vecsmall_reverse(gel(cyc, i)), cy=cy1;//The element, whose 1/2/3rd power is 1.
-	for(long j=2;j<=cyctype[i];j++) cy=vecsmall_concat(cy, cy1);//Concat to make the power right.
-	gel(cyc, i)=cy;//The actual relations are now stored in the cycles.
+    for(long j=2;j<=cyctype[i];j++) cy=vecsmall_concat(cy, cy1);//Concat to make the power right.
+    gel(cyc, i)=cy;//The actual relations are now stored in the cycles.
   }
   GEN H=cgetg(lgelts, t_VECSMALL);//We start by taking only one of g or g^(-1) for all g. In general, H tracks which elements are left in the generating set.
   for(long i=1;i<lgelts;i++){//Initially, H[i]=1 if g=g^(-1), and for exactly one of [g, g^(-1)] for all other g.
     long pairedind=pairing[i];//What side i is paired to.
     if(pairedind>=i){H[i]=1;ngens++;}//No need to update words, we are keeping this generator for now.
     else{//H[i]=0 and update the word to g^-1, g is the paired index.
-	  H[i]=0;
-	  gel(words, i)[1]=-pairedind;
-	  presentation_updatewords(cyc, i, gel(words, i));//Update the cycles.
-	}
+      H[i]=0;
+      gel(words, i)[1]=-pairedind;
+      presentation_updatewords(cyc, i, gel(words, i));//Update the cycles.
+    }
   }
 
   //At this point, we have replaced all inverses.
@@ -2545,18 +2546,18 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
       long lastrel=ellind-1;//The last relation we consider. We swap this with the relation we find every step and decrease it, so we only need to consider relations from accind+1 to lastrel at each step.
       long indrep=1, torep;//indrep stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement. No collapsing occurs, since each index and its inverse appear at most once in the relations (and cannot disappear, unless we cancel them).
       GEN repind=gen_0, cycle;//repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.
-	  
-	  //Now we look for a common term.
+      
+      //Now we look for a common term.
       for(long i=1;i<naccident;i++){//Each step we solve the relation.
         for(long j=indrep;j<lg(r);j++){//Trying to replace index j. We stop once we find one replacable.
           torep=r[j];//What we try to replace.
-		  long mtorep=-torep;//The inverse.
+          long mtorep=-torep;//The inverse.
           for(long l=accind+1;l<=lastrel;l++){//Looking at cycle l
             for(long m=1;m<lg(gel(cyc, l));m++){//element m of cycle l
-			  long thisind=gel(cyc, l)[m];
+              long thisind=gel(cyc, l)[m];
               if(thisind==torep || thisind==mtorep){//Replace it!
-			    if(torep>0) H[torep]=0;//Make sure it has been deleted from H.
-				else H[mtorep]=0;
+                if(torep>0) H[torep]=0;//Make sure it has been deleted from H.
+                else H[mtorep]=0;
                 repind=mkvecsmall3(j, l, m);
                 l=lastrel+1;//Break loop
                 j=lg(r);//Break loop
@@ -2567,13 +2568,13 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
         }
         //Now, repind gives us all the information we need to do the replacement.
         cycle=gel(cyc, repind[2]);//The cycle being deleted.
-		long lcyc=lg(cycle);
-		GEN repl=cgetg(lcyc-1, t_VECSMALL);//cycle[repind[3]]. we have a1*...*an=1 -> a_m=a_{m-1}^(-1)*...*a_1^(-1)*a_n^(-1)*a_{n-1}^(-1)*...*a_{m+1}^(-1).
-		long irepl=1;
-		for(long j=repind[3]-1;j>0;j--){repl[irepl]=-cycle[j];irepl++;}
-	    for(long j=lcyc-1;j>repind[3];j--){repl[irepl]=-cycle[j];irepl++;}//Replace index cycle[repind[3]] with the word repl.
-		presentation_updatewords(words, cycle[repind[3]], repl);//Replace the words.
-		r=word_substitute(r, cycle[repind[3]], repl, gen_0);//Replace it in r. No need to replace it in the other relations, since it cannot appear.
+        long lcyc=lg(cycle);
+        GEN repl=cgetg(lcyc-1, t_VECSMALL);//cycle[repind[3]]. we have a1*...*an=1 -> a_m=a_{m-1}^(-1)*...*a_1^(-1)*a_n^(-1)*a_{n-1}^(-1)*...*a_{m+1}^(-1).
+        long irepl=1;
+        for(long j=repind[3]-1;j>0;j--){repl[irepl]=-cycle[j];irepl++;}
+        for(long j=lcyc-1;j>repind[3];j--){repl[irepl]=-cycle[j];irepl++;}//Replace index cycle[repind[3]] with the word repl.
+        presentation_updatewords(words, cycle[repind[3]], repl);//Replace the words.
+        r=word_substitute(r, cycle[repind[3]], repl, gen_0);//Replace it in r. No need to replace it in the other relations, since it cannot appear.
         indrep=repind[1];//The index we replaced.
         gel(cyc, repind[2])=gel(cyc, lastrel);//Replace the relation we replaced with the last one.
         lastrel--;//One less relation.
@@ -2582,77 +2583,77 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
   }
   //Now we are almost done. If there is an elliptic cycle, we can do one final replacement.
   if(ellind<lgcyc){
-	ngens--;//One less generator.
-	long irel=0, rind=0;//r[rind] shares an index with cyc[irel].
+    ngens--;//One less generator.
+    long irel=0, rind=0;//r[rind] shares an index with cyc[irel].
     for(long i=ellind;i<lgcyc;i++){//Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);U=algfdom(A, , I/2);P=algfdomminimalcycles(U, A)
-	  long maxj=(lg(gel(cyc, i))-1)/cyctype[i];//Since the elliptic relation is repeated cyctype[i] times, we only need to check the first grouping of indices.
-	  for(long j=1;j<=maxj;j++){
-		long ind=gel(cyc, i)[j], mind=-ind;
-		for(long rinc=1;rinc<lg(r);rinc++){//There MUST be an accidental cycle, so r is non-zero.
-		  if(r[rinc]!=ind && r[rinc]!=mind) continue;//Not equal
-		  irel=i;
-		  rind=rinc;
-		  j=maxj+1;//break
-		  i=lgcyc;//break
-		  break;//break
-		}
-	  }
-	}
-	//Now we solve for the index with r.
-	if(r[rind]>0) H[r[rind]]=0;//Deleting from H.
-	else H[-r[rind]]=0;
-	long lr=lg(r);
-	GEN repl=cgetg(lr-1, t_VECSMALL);
-	long irepl=1;
-	for(long j=rind-1;j>0;j--){repl[irepl]=-r[j];irepl++;}
-	for(long j=lr-1;j>rind;j--){repl[irepl]=-r[j];irepl++;}//The replacment for r.
-	presentation_updatewords(words, r[rind], repl);//Replace the words.
-	gel(cyc, irel)=word_substitute(gel(cyc, irel), r[rind], repl, gen_0);//Update the elliptic relation.
+      long maxj=(lg(gel(cyc, i))-1)/cyctype[i];//Since the elliptic relation is repeated cyctype[i] times, we only need to check the first grouping of indices.
+      for(long j=1;j<=maxj;j++){
+        long ind=gel(cyc, i)[j], mind=-ind;
+        for(long rinc=1;rinc<lg(r);rinc++){//There MUST be an accidental cycle, so r is non-zero.
+          if(r[rinc]!=ind && r[rinc]!=mind) continue;//Not equal
+          irel=i;
+          rind=rinc;
+          j=maxj+1;//break
+          i=lgcyc;//break
+          break;//break
+        }
+      }
+    }
+    //Now we solve for the index with r.
+    if(r[rind]>0) H[r[rind]]=0;//Deleting from H.
+    else H[-r[rind]]=0;
+    long lr=lg(r);
+    GEN repl=cgetg(lr-1, t_VECSMALL);
+    long irepl=1;
+    for(long j=rind-1;j>0;j--){repl[irepl]=-r[j];irepl++;}
+    for(long j=lr-1;j>rind;j--){repl[irepl]=-r[j];irepl++;}//The replacment for r.
+    presentation_updatewords(words, r[rind], repl);//Replace the words.
+    gel(cyc, irel)=word_substitute(gel(cyc, irel), r[rind], repl, gen_0);//Update the elliptic relation.
   }
   //Ok, time to finish. H tracks which indices remain, words track the words, and we have some relations. We have to change the indices to in terms of the remaining generators.
   GEN gens=cgetg(ngens+1, t_VEC);//The generators.
   long igens=1, Hind=1;
   for(long i=1;i<lgelts;i++){
-	if(H[i]==1){
-	  H[i]=Hind;
-	  Hind++;
-	  gel(gens, igens)=gmael(U, 1, i);
-	  igens++;
-	}
+    if(H[i]==1){
+      H[i]=Hind;
+      Hind++;
+      gel(gens, igens)=gmael(U, 1, i);
+      igens++;
+    }
   }//Index i is replaced with index H[i].
   //Let's do words first.
   for(long i=1;i<lgelts;i++){
-	for(long j=1;j<lg(gel(words, i));j++){
-	  long k=gel(words, i)[j];
-	  if(k>0) gel(words, i)[j]=H[k];
-	  else gel(words, i)[j]=-H[-k];
-	}
+    for(long j=1;j<lg(gel(words, i));j++){
+      long k=gel(words, i)[j];
+      if(k>0) gel(words, i)[j]=H[k];
+      else gel(words, i)[j]=-H[-k];
+    }
   }
   //Now, relations
   GEN relations;
   if(ellind<lgcyc){//There were elliptic relations, and this is all that remains (since the final accidental relation was combined into an elliptic one).
-	long nell=lgcyc-ellind+1;//Number of relations;
-	relations=cgetg(nell, t_VEC);
-	long relind=1;
-	for(long i=ellind;i<lgcyc;i++){
-	  long lr;
-	  gel(relations, relind)=cgetg_copy(gel(cyc, i), &lr);
-	  for(long j=1;j<lr;j++){
-		long k=gel(cyc, i)[j];
-		if(k>0) gel(relations, relind)[j]=H[k];
-		else gel(relations, relind)[j]=-H[-k];
-	  }
-	  relind++;
-	}
+    long nell=lgcyc-ellind+1;//Number of relations;
+    relations=cgetg(nell, t_VEC);
+    long relind=1;
+    for(long i=ellind;i<lgcyc;i++){
+      long lr;
+      gel(relations, relind)=cgetg_copy(gel(cyc, i), &lr);
+      for(long j=1;j<lr;j++){
+        long k=gel(cyc, i)[j];
+        if(k>0) gel(relations, relind)[j]=H[k];
+        else gel(relations, relind)[j]=-H[-k];
+      }
+      relind++;
+    }
   }
   else{//No elliptic relations, so just r leftover.
-	long lr=lg(r);
-	for(long i=1;i<lr;i++){
-	  long k=r[i];
-	  if(k>0) r[i]=H[k];
-	  else r[i]=-H[-k];
-	}
-	relations=mkvec(r);
+    long lr=lg(r);
+    for(long i=1;i<lr;i++){
+      long k=r[i];
+      if(k>0) r[i]=H[k];
+      else r[i]=-H[-k];
+    }
+    relations=mkvec(r);
   }
   return gerepilecopy(top, mkvec3(gens, relations, words));
 }
@@ -2674,28 +2675,28 @@ word_collapse(GEN word){
   long lgword=lg(word), last1=0, newlg=lgword;//last1 tracks the last value of 1 in H that we have tracked. newlg tracks the new length.
   GEN H=const_vecsmall(lgword-1, 1);//H tracks if we keep each index in the collapsed word.
   for(long i=1;i<lg(word)-1;i++){//We go through the word.
-	if(word[i]!=-word[i+1]){last1=i;continue;}//Nothing to do here, move on. H[i]=1 is necessarily true.
-	H[i]=0;
-	H[i+1]=0;//Deleting i and i+1
-	newlg-=2;//2 less entries
-	if(last1==0){i++;continue;}//All previous entries are already deleted, along with i+1, so just move on to i+2.
-	long next1=i+2;//Next entry with 1
-	while(last1>0 && next1<lgword){
-	  if(word[last1]!=-word[next1]) break;//Maximum collapsing achieved.
-	  H[last1]=0;
-	  H[next1]=0;
-	  newlg-=2;//2 less entries
-	  while(last1>0 && H[last1]==0) last1--;//Going backwards
-	  while(next1<lgword && H[next1]==0) next1++;//Going forwards
-	}
-	i=next1-1;//We do i++ at the end of the loop, so we want to go on to i=next1 next.
+    if(word[i]!=-word[i+1]){last1=i;continue;}//Nothing to do here, move on. H[i]=1 is necessarily true.
+    H[i]=0;
+    H[i+1]=0;//Deleting i and i+1
+    newlg-=2;//2 less entries
+    if(last1==0){i++;continue;}//All previous entries are already deleted, along with i+1, so just move on to i+2.
+    long next1=i+2;//Next entry with 1
+    while(last1>0 && next1<lgword){
+      if(word[last1]!=-word[next1]) break;//Maximum collapsing achieved.
+      H[last1]=0;
+      H[next1]=0;
+      newlg-=2;//2 less entries
+      while(last1>0 && H[last1]==0) last1--;//Going backwards
+      while(next1<lgword && H[next1]==0) next1++;//Going forwards
+    }
+    i=next1-1;//We do i++ at the end of the loop, so we want to go on to i=next1 next.
   }
   GEN newword=cgetg(newlg, t_VECSMALL);
   long nind=1;
   for(long i=1;i<lgword;i++){
-	if(H[i]==0) continue;//Go on
-	newword[nind]=word[i];
-	nind++;
+    if(H[i]==0) continue;//Go on
+    newword[nind]=word[i];
+    nind++;
   }
   return gerepileupto(top, newword);
 }
@@ -2713,31 +2714,31 @@ static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl){
   long nreplace=0, mind=-ind, lgword;//nreplace ounts how many replacement we need to perform, and mind is -ind.
   GEN replaceplaces=cgetg_copy(word, &lgword);//index 1 means replace this with repl,-1 with invrepl, and 0 means keep.
   for(long i=1;i<lgword;i++){
-	if(word[i]==ind){replaceplaces[i]=1;nreplace++;}
-	else if(word[i]==mind){replaceplaces[i]=-1;nreplace++;}
-	else replaceplaces[i]=0;
+    if(word[i]==ind){replaceplaces[i]=1;nreplace++;}
+    else if(word[i]==mind){replaceplaces[i]=-1;nreplace++;}
+    else replaceplaces[i]=0;
   }
   if(nreplace==0) return gerepileupto(top, word_collapse(word));//Nothing to replace! Just collapse the word down.
   long newwordlg=lgword+nreplace*(lrepl-2);//The new lg
   GEN newword=cgetg(newwordlg, t_VECSMALL);//The new word
   long newind=1;
   for(long i=1;i<lgword;i++){//Make the new word
-	if(replaceplaces[i]==0){//Move this index to the new word
+    if(replaceplaces[i]==0){//Move this index to the new word
       newword[newind]=word[i];
-	  newind++;
-	}
-	else if(replaceplaces[i]==1){//Add in repl
-	  for(long j=1;j<lrepl;j++){
-		newword[newind]=repl[j];
-		newind++;
-	  }
-	}
-	else{//Add in invrepl
-	  for(long j=1;j<lrepl;j++){
-		newword[newind]=invrepl[j];
-		newind++;
-	  }
-	}
+      newind++;
+    }
+    else if(replaceplaces[i]==1){//Add in repl
+      for(long j=1;j<lrepl;j++){
+        newword[newind]=repl[j];
+        newind++;
+      }
+    }
+    else{//Add in invrepl
+      for(long j=1;j<lrepl;j++){
+        newword[newind]=invrepl[j];
+        newind++;
+      }
+    }
   }
   return gerepileupto(top, word_collapse(newword));//Collapse the finalword.
 }
@@ -2827,6 +2828,24 @@ signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttra
   return gerepileupto(top, rvec);
 }
 
+//Writes g as a word in terms of the presentation.
+GEN
+word(GEN U, GEN P, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
+{
+  pari_sp top=avma;
+  GEN ginv=eltinv(data, g);//g^-1
+  GEN gred=reduceelt_givennormbound(U, ginv, gen_0, gamid, data, gamtopsl, eltmul, tol, prec);//Reduction of g^-1, which gives a word for g.
+  GEN oldword=gel(gred, 3);//g as a word in U[1].
+  long newlg=1;
+  for(long i=1;i<lg(oldword);i++) newlg=newlg+lg(gmael(P, 3, oldword[i]))-1;//Getting the new length.
+  GEN newword=cgetg(newlg, t_VECSMALL);
+  long inew=1;
+  for(long i=1;i<lg(oldword);i++){
+    GEN repl=gmael(P, 3, oldword[i]);//What to sub in.
+    for(long j=1;j<lg(repl);j++){newword[inew]=repl[j];inew++;}
+  }
+  return gerepileupto(top, word_collapse(newword));
+}
 
 
 //GEOMETRIC HELPER METHODS
@@ -3034,9 +3053,9 @@ algfdompresentation(GEN U, GEN A, GEN O, long prec)
   return gerepileupto(top, presentation(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
-//Reduces the norm 1 element x with respect to the fundamental domain fdom and the point z (default z=0)
+//Reduces the norm 1 element g with respect to the fundamental domain fdom and the point z (default z=0)
 GEN
-algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec)
+algfdomreduce(GEN g, GEN U, GEN A, GEN O, GEN z, long prec)
 {
   pari_sp top=avma;
   GEN tol=deftol(prec);
@@ -3048,7 +3067,7 @@ algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec)
 
 //Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
 GEN
-algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec)
+algfdomrootgeodesic(GEN g, GEN U, GEN A, GEN O, long prec)
 {
   pari_sp top=avma;
   GEN tol=deftol(prec);
@@ -3068,6 +3087,17 @@ algfdomsignature(GEN U, GEN A, GEN O, long prec)
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, signature(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+}
+
+//Writes g as a word in the presentation P.
+GEN
+algfdomword(GEN g, GEN U, GEN P, GEN A, GEN O, long prec){
+  pari_sp top=avma;
+  GEN tol=deftol(prec);
+  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  return gerepileupto(top, word(U, P, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 }
 
 //Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).

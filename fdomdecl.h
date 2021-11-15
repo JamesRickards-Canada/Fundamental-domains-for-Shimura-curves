@@ -68,6 +68,7 @@ GEN normalizedboundary_oosides(GEN U);
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
 GEN presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
 GEN signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
+GEN word(GEN U, GEN P, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
 
 //HELPER METHODS
 GEN deftol(long prec);
@@ -83,9 +84,10 @@ GEN algfdomarea(GEN A, GEN O, int lessprec, long prec);
 GEN algfdom_bestC(GEN A, GEN O, long prec);
 GEN algfdomminimalcycles(GEN U, GEN A, GEN O, long prec);
 GEN algfdompresentation(GEN U, GEN A, GEN O, long prec);
-GEN algfdomreduce(GEN U, GEN A, GEN O, GEN g, GEN z, long prec);
-GEN algfdomrootgeodesic(GEN U, GEN A, GEN O, GEN g, long prec);
+GEN algfdomreduce(GEN g, GEN U, GEN A, GEN O, GEN z, long prec);
+GEN algfdomrootgeodesic(GEN g, GEN U, GEN A, GEN O, long prec);
 GEN algfdomsignature(GEN U, GEN A, GEN O, long prec);
+GEN algfdomword(GEN g, GEN U, GEN P, GEN A, GEN O, long prec);
 GEN algmoreprec(GEN A, long increment, long prec);
 GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec);
