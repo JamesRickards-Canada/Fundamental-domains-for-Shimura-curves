@@ -2470,7 +2470,7 @@ minimalcycles_bytype(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), G
   GEN types=cgetg(ncyc, t_VECSMALL);//The types
   for(long i=1;i<ncyc;i++){
     cyc=gel(cycles, i);
-    if(lg(cyc)==2 && cyc[1]<0) g=gel(G, -cyc[1]);//Minimal cycle that was the middle of a side.
+    if(cyc[1]<0){g=gel(G, -cyc[1]);cyc[1]=-cyc[1];}//Minimal cycle that was the middle of a side. We update it to be positive now.
     else{
       g=gamid;
       for(long j=1;j<lg(cyc);j++) g=eltmul(data, gel(G, cyc[j]), g);//Multiply on the left by G[cyc[j]]
@@ -2501,7 +2501,9 @@ normalizedboundary_oosides(GEN U)
   return sides;
 }
 
-//Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of indices of the generators in terms of U[1]. V[2] is the vector of relations, whose ith element is a relation of the form [indices, powers], where indices and powers are vecsmall's. If indices=[i1,i2,...,ik] and powers=[p1,p2,...,pk], then this corresponds to g_{i1}^p1*...*g_{ik}^{pk}=1, where V[1] corresponds to g_i1, ..., g_ik. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term has power +/-1 ALWAYS, so we format it as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].
+// whose ith element is a relation of the form [indices, powers], where indices and powers are vecsmall's. If indices=[i1,i2,...,ik] and powers=[p1,p2,...,pk], then this corresponds to g_{i1}^p1*...*g_{ik}^{pk}=1, where V[1] corresponds to g_i1, ..., g_ik.
+
+//Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].
 GEN
 presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN))
 {
@@ -2512,6 +2514,12 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//Minimal cycles by type.
   GEN cyc=gel(mcyc, 1), cyctype=gel(mcyc, 2), pairing=gel(U, 7);//Cycles, types, pairing
   long lgcyc=lg(cyc), ngens=0;
+  for(long i=1;i<lgcyc;i++){//The relations are in reverse.
+    GEN cy1=vecsmall_reverse(gel(cyc, i)), cy=cy1;//The element, whose 1/2/3rd power is 1.
+	for(long j=2;j<=cyctype[i];j++) cy=vecsmall_concat(cy, cy1);//Concat to make the power right.
+	gel(cyc, i)=cy;//The actual relations are now stored in the cycles.
+  }
+  return gerepilecopy(top, mkvec2(cyc, cyctype));
   GEN H=cgetg(lgelts, t_VECSMALL);//We start by taking only one of g or g^(-1) for all g.
   for(long i=1;i<lgelts;i++){//H[i]=1 if g=g^(-1), and for exactly one of [g,g^(-1)] for all other g.
     long pairedind=pairing[i];//What side i is paired to.
@@ -2755,7 +2763,7 @@ signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttra
   pari_sp top=avma;
   GEN mcyc=minimalcycles_bytype(U, gamid, data, eltmul, elttrace, istriv);//The minimal cycles and their types.
   long nfixed=0, lgcyc=lg(gel(mcyc, 1));//The number of fixed sides, and number of cycles+1
-  for(long i=1;i<lgcyc;i++){if(gmael(mcyc, 1, i)[1]<0) nfixed++;}
+  for(long i=1;i<lgcyc;i++){if(lg(gmael(mcyc, 1, i))==2 && gel(mcyc, 2)[i]==2) nfixed++;}//Fixed sides MUST correspond to length 1 cycles with order 2.
   long genus=((lg(gel(U, 1))-1+nfixed)/2-lgcyc+2)/2;//2*g+t+s+1_{t+s>0}=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C. We are actually overcounting by 1 if t+s=0 and there are no accidental cycles, but this is impossible as there is >=1 cycle.
   long s, firstell=lgcyc;//s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.
   int foundlastpar=0;
