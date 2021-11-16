@@ -1423,7 +1423,7 @@ normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)
     }
     Gaddnew=vectrunc_init(2*lg(Gadd));//The reductions to add to G
     for(long i=1;i<lg(Gadd);i++){//Doing step 3
-      gbardat=reduceelt_givennormbound(U, gel(Gadd, i), gen_0, gamid, data, gamtopsl, eltmul, tol, prec);//Finding gbar=red_U(g).
+      gbardat=reduceelt_givennormbound(U, gel(Gadd, i), gen_0, data, gamtopsl, eltmul, eltinv, tol, prec);//Finding gbar=red_U(g).
       gbar=gel(gbardat, 1);
       if(!istriv(data, gbar)){
         vectrunc_append(Gaddnew, eltinv(data, gbar));//If not trivial, add the inverse.
@@ -1451,7 +1451,7 @@ normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)
           else v=normalizedbasis_shiftpoint(gmael(U, 2, gind), scale, 0, prec);
         }
         g=gmael(U, 1, gind);
-        gbardat=reduceelt_givennormbound(U, g, v, gamid, data, gamtopsl, eltmul, tol, prec);//Reduce with respect to v (and not 0 like in step 3).
+        gbardat=reduceelt_givennormbound(U, g, v, data, gamtopsl, eltmul, eltinv, tol, prec);//Reduce with respect to v (and not 0 like in step 3).
         vectrunc_append(Gaddnew, gel(gbardat, 1));
       } 
     }
@@ -2281,25 +2281,31 @@ randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec)
 
 //Reduces g with respect to z as in reduceelt_givenpsu, but does so much more efficiently using the normalized boundary provided.
 GEN
-reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
+reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
-  GEN delta=gamid;
   llist *decomp=NULL;
-  GEN gmat=psltopsu_mats(gamtopsl(data, g, prec), gel(U, 8));
+  GEN gmat=psltopsu_mats(gamtopsl(data, g, prec), gel(U, 8));//The PSU version of g
+  GEN gbar=g;//gmat=delta*g; we start with delta=1, but keep track of gbar.
+  GEN zorig=z;//The original z.
   z=mat_eval(gmat, z);//gz, the real start point
   long count=0, outside;
   for(;;){
     outside=normalizedboundary_outside(U, z, tol, prec);
-    if(outside==-1) break;//Done:Either reached inside or the boundary.
+    if(outside==-1){//Done:Either reached inside or the boundary. We do recompile z here, to make sure we didn't lose too much precision.
+	  z=mat_eval(psltopsu_mats(gamtopsl(data, gbar, prec), gel(U, 8)), zorig);
+	  outside=normalizedboundary_outside(U, z, tol, prec);
+	  if(outside==-1) break;//OK, we are actually done.
+	}
     z=mat_eval(gmael(U, 5, outside), z);//Update z
-    delta=eltmul(data, gmael(U, 1, outside), delta);//update delta
+    gbar=eltmul(data, gmael(U, 1, outside), gbar);//update gbar
     llist_putstart(&decomp, outside);//add outside to the list
     count++;
   }
+  GEN ginv=eltinv(data, g);//g^-1
   GEN ret=cgetg(4, t_VEC);
-  gel(ret, 1)=eltmul(data, delta, g);//gbar=delta*g
-  gel(ret, 2)=gcopy(delta);
+  gel(ret, 1)=gcopy(gbar);
+  gel(ret, 2)=eltmul(data, gbar, ginv);//delta=gbar*g^(-1)
   gel(ret, 3)=llist_tovecsmall(decomp, count, 1);
   return gerepileupto(top, ret);
 }
@@ -2830,11 +2836,11 @@ signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttra
 
 //Writes g as a word in terms of the presentation.
 GEN
-word(GEN P, GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec)
+word(GEN P, GEN U, GEN g, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ginv=eltinv(data, g);//g^-1
-  GEN gred=reduceelt_givennormbound(U, ginv, gen_0, gamid, data, gamtopsl, eltmul, tol, prec);//Reduction of g^-1, which gives a word for g.
+  GEN gred=reduceelt_givennormbound(U, ginv, gen_0, data, gamtopsl, eltmul, eltinv, tol, prec);//Reduction of g^-1, which gives a word for g.
   if(!istriv(data, gel(gred, 1))) pari_warn(warner, "We could not reduce the element to the identity. Increase the precision perhaps?");
   GEN oldword=gel(gred, 3);//g as a word in U[1].
   long newlg=1;
@@ -3060,10 +3066,10 @@ algfdomreduce(GEN g, GEN U, GEN A, GEN O, GEN z, long prec)
 {
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q;
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, reduceelt_givennormbound(U, g, z, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, tol, prec));
+  return gerepileupto(top, reduceelt_givennormbound(U, g, z, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 }
 
 //Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
@@ -3095,10 +3101,10 @@ GEN
 algfdomword(GEN g, GEN P, GEN U, GEN A, GEN O, long prec){
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
+  GEN Q;
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, word(P, U, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
+  return gerepileupto(top, word(P, U, g, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
 
 //Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).

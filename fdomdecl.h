@@ -56,7 +56,7 @@ GEN psltopsu_mats(GEN g, GEN M);
 GEN psltopsu_transmats(GEN p);
 GEN randompoint_ud(GEN R, long prec);
 GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec);
-GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
+GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
 GEN reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
 GEN reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
 GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec);
@@ -68,7 +68,7 @@ GEN normalizedboundary_oosides(GEN U);
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
 GEN presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
 GEN signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
-GEN word(GEN U, GEN P, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec);
+GEN word(GEN U, GEN P, GEN g, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec);
 
 //HELPER METHODS
 GEN deftol(long prec);
