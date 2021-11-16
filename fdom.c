@@ -2310,17 +2310,20 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN
   return gerepileupto(top, ret);
 }
 
-//TO DO: UPDATE THIS
 //Reduces z to the interior of U (Almost identical to reduceelt_givennormbound). Returns [g, z'], where g is the transition element and z' is the new point.
 GEN
-reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
+reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
-  GEN g=gamid;
+  GEN g=gamid, zorig=z;
   long outside;
   for(;;){
     outside=normalizedboundary_outside(U, z, tol, prec);
-    if(outside==-1) break;//Done:Either reached inside or the boundary.
+    if(outside==-1){//Done:Either reached inside or the boundary.
+      z=mat_eval(psltopsu_mats(gamtopsl(data, g, prec), gel(U, 8)), zorig);//One more check in case of precision loss.
+      outside=normalizedboundary_outside(U, z, tol, prec);
+      if(outside==-1) break;//OK, we are actually done.
+    }
     z=mat_eval(gmael(U, 5, outside), z);//Update z
     g=eltmul(data, gmael(U, 1, outside), g);//update g
   }
@@ -2720,7 +2723,7 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
   GEN z;
   if(gequal0(gel(geod, 8))) z=arc_midpoint(geod, gel(geod, 3), gel(geod, 4), tol, prec);//First move the midpoint to the fundamental domain;
   else z=gdivgs(gadd(gel(geod, 3), gel(geod, 4)), 2);//When geod is a line segment, do this instead (Q ram at 11, 13 and g=[11/2, 3/2, 0, 0] e.g.)
-  GEN red=reducepoint(U, z, gamid, data, eltmul, tol, prec);
+  GEN red=reducepoint(U, z, gamid, data, gamtopsl, eltmul, tol, prec);
   g=eltmul(data, eltmul(data, gel(red, 1), g), eltinv(data, gel(red, 1)));//Conjugating g by gel(red, 1);
   gpsl=gamtopsl(data, g, prec);//The image in PSL of the new g
   geod=rootgeodesic_ud(gpsl, mats, tol, prec);//The new geodesic, which necessarily goes through z, and hence the interior.

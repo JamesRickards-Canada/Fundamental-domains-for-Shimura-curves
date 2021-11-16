@@ -57,7 +57,7 @@ GEN psltopsu_transmats(GEN p);
 GEN randompoint_ud(GEN R, long prec);
 GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec);
 GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
-GEN reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
+GEN reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
 GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec);
 GEN rootgeodesic_uhp(GEN M, GEN tol, long prec);
 
