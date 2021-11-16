@@ -2293,10 +2293,10 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN
   for(;;){
     outside=normalizedboundary_outside(U, z, tol, prec);
     if(outside==-1){//Done:Either reached inside or the boundary. We do recompile z here, to make sure we didn't lose too much precision.
-	  z=mat_eval(psltopsu_mats(gamtopsl(data, gbar, prec), gel(U, 8)), zorig);
-	  outside=normalizedboundary_outside(U, z, tol, prec);
-	  if(outside==-1) break;//OK, we are actually done.
-	}
+      z=mat_eval(psltopsu_mats(gamtopsl(data, gbar, prec), gel(U, 8)), zorig);
+      outside=normalizedboundary_outside(U, z, tol, prec);
+      if(outside==-1) break;//OK, we are actually done.
+    }
     z=mat_eval(gmael(U, 5, outside), z);//Update z
     gbar=eltmul(data, gmael(U, 1, outside), gbar);//update gbar
     llist_putstart(&decomp, outside);//add outside to the list
@@ -2306,46 +2306,6 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN
   GEN ret=cgetg(4, t_VEC);
   gel(ret, 1)=gcopy(gbar);
   gel(ret, 2)=eltmul(data, gbar, ginv);//delta=gbar*g^(-1)
-  gel(ret, 3)=llist_tovecsmall(decomp, count, 1);
-  return gerepileupto(top, ret);
-}
-
-//Algorithm 4.3 of Voight. Inputs G, a finite subset of Gamma, corresponding to Gmats in PSU(1, 1), g (->gmat) an element of Gamma, z in the unit disc. This G-reduces g, i.e. translating gz to the exterior domain of G. Returns [gbar, delta, decomp], where gbar=delta*g. gbar is (G, z)-reduced, delta is in <G>, and delta=G[i1]*G[i2]*...*G[in] with decomp=[i1, i2, ..., in] (vecsmall).
-GEN
-reduceelt_givenpsu(GEN G, GEN Gmats, GEN g, GEN gmat, GEN z, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec)
-{
-  pari_sp top=avma;
-  GEN delta=gamid;
-  llist *decomp=NULL;
-  z=mat_eval(gmat, z);//gz, the real start point
-  GEN mindist, curdist=hdist_ud(z, gen_0, prec), znew, zmin, dist;
-  long ind, n=lg(G), count=0;
-  for(;;){
-    zmin=mat_eval(gel(Gmats, 1), z);
-    mindist=hdist_ud(zmin, gen_0, prec);
-    if(typ(mindist)==t_COMPLEX) mindist=mkoo();//Rounding error forced point outside the unit disc.
-    ind=1;
-    for(long i=2;i<n;i++){
-      if(gequal0(gel(Gmats, i))) continue;//oo side, ignore
-      znew=mat_eval(gel(Gmats, i), z);
-      dist=hdist_ud(znew, gen_0, prec);//Distance to g_i*z
-      if(typ(dist)==t_COMPLEX) continue;//Rounding error forced us onto point is too close to being outside the unit disc.
-      if(tolcmp(dist, mindist, tol, prec)==-1){//Strictly smaller distance
-        zmin=znew;
-        mindist=dist;
-        ind=i;
-      }
-    }
-    if(tolcmp(mindist, curdist, tol, prec)!=-1) break;//Done
-    count++;
-    z=zmin;
-    curdist=mindist;
-    delta=eltmul(data, gel(G, ind), delta);
-    llist_putstart(&decomp, ind);
-  }
-  GEN ret=cgetg(4, t_VEC);
-  gel(ret, 1)=eltmul(data, delta, g);//gbar=delta*g
-  gel(ret, 2)=gcopy(delta);
   gel(ret, 3)=llist_tovecsmall(decomp, count, 1);
   return gerepileupto(top, ret);
 }
