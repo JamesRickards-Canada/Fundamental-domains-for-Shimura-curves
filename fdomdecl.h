@@ -68,7 +68,7 @@ GEN normalizedboundary_oosides(GEN U);
 GEN rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
 GEN presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
 GEN signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttrace)(GEN, GEN), int (*istriv)(GEN, GEN));
-GEN word(GEN U, GEN P, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
+GEN word(GEN U, GEN P, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec);
 
 //HELPER METHODS
 GEN deftol(long prec);

@@ -2830,11 +2830,12 @@ signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elttra
 
 //Writes g as a word in terms of the presentation.
 GEN
-word(GEN P, GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
+word(GEN P, GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ginv=eltinv(data, g);//g^-1
   GEN gred=reduceelt_givennormbound(U, ginv, gen_0, gamid, data, gamtopsl, eltmul, tol, prec);//Reduction of g^-1, which gives a word for g.
+  if(!istriv(data, gel(gred, 1))) pari_warn(warner, "We could not reduce the element to the identity. Increase the precision perhaps?");
   GEN oldword=gel(gred, 3);//g as a word in U[1].
   long newlg=1;
   for(long i=1;i<lg(oldword);i++) newlg=newlg+lg(gmael(P, 3, oldword[i]))-1;//Getting the new length.
@@ -3097,7 +3098,7 @@ algfdomword(GEN g, GEN P, GEN U, GEN A, GEN O, long prec){
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
-  return gerepileupto(top, word(P, U, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
+  return gerepileupto(top, word(P, U, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
 
 //Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
