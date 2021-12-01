@@ -1206,9 +1206,9 @@ GEN
 hdist(GEN z1, GEN z2, long prec)
 {
   pari_sp top=avma;
-  GEN x1=gel(z1, 1), y1=gel(z1, 2);
-  GEN x2=gel(z2, 1), y2=gel(z2, 2);
-  GEN x=gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)),gsqr(gsub(y2, y1))),gmul(gmulsg(2, y1), y2)));
+  GEN x1=real_i(z1), y1=imag_i(z1);
+  GEN x2=real_i(z2), y2=imag_i(z2);
+  GEN x=gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)), gsqr(gsub(y2, y1))), gmul(gmulsg(2, y1), y2)));
   GEN expd=gadd(x, gsqrt(gsubgs(gsqr(x), 1), prec));
   return gerepileupto(top, glog(expd, prec));
 }

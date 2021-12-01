@@ -7,4 +7,4 @@ hdiscradius(100)
 hdiscradius(10^6)
 hdist(I, 2*I+10)
 hdist(0.2+I/4, 5*I-11.2)
-
+hdist(-1, 2)
