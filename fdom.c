@@ -705,8 +705,8 @@ GEN
 mat_eval(GEN M, GEN x)
 {
   pari_sp top = avma;
-  if(typ(x)==t_INFINITY) return gerepileupto(top,divoo(gcoeff(M, 1, 1), gcoeff(M, 2, 1)));
-  return gerepileupto(top,divoo(gadd(gmul(gcoeff(M, 1, 1), x), gcoeff(M, 1, 2)), gadd(gmul(gcoeff(M, 2, 1), x), gcoeff(M, 2, 2))));
+  if(typ(x)==t_INFINITY) return gerepileupto(top, divoo(gcoeff(M, 1, 1), gcoeff(M, 2, 1)));
+  return gerepileupto(top, divoo(gadd(gmul(gcoeff(M, 1, 1), x), gcoeff(M, 1, 2)), gadd(gmul(gcoeff(M, 2, 1), x), gcoeff(M, 2, 2))));
 }
 
 //Midpoint of p1 and p2
@@ -722,6 +722,7 @@ GEN
 mobius_gp(GEN M, GEN c, long prec)
 {
   pari_sp top=avma;
+  if(typ(M)!=t_MAT || lg(M)!=3 || lg(gel(M, 1))!=3) pari_err_TYPE("M needs to be a 2x2 matrix", M);
   GEN tol=deftol(prec);
   return gerepileupto(top, mobius(M, c, tol, prec));
 }
@@ -1223,7 +1224,7 @@ hdist_ud(GEN z1, GEN z2, long prec)
   GEN num=gadd(a, b);
   GEN denom=gsub(a, b);
   if(gequal0(denom)){
-    pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance.");
+    pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance");
     avma=top;
     return mkoo();
   }
