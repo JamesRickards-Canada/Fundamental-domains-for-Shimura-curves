@@ -18,6 +18,7 @@
 static GEN algd(GEN A, GEN a);
 static GEN algfromnormdisc(GEN F, GEN D, GEN infram);
 static int subset_lexincrem(GEN S, long n);
+static GEN voidalgmul(void *A, GEN x, GEN y);
 
 //3: OPTIMIZING THE VALUE OF C FOR ENUMERATION
 static GEN enum_bestC_givenAB(long n, GEN A, GEN B, long prec);
@@ -227,14 +228,25 @@ GEN
 algmulvec(GEN A, GEN G, GEN L)
 {
   pari_sp top=avma;
-  GEN Lsmall=gtovecsmall(L);//L in vecsmall
-  GEN elt=gel(alg_get_basis(A), 1);//The identity
-  for(long i=1;i<lg(Lsmall);i++){
-    long ind=Lsmall[i];
-    if(ind<0) elt=algmul(A, elt, alginv(A, gel(G, -ind)));
-    else elt=algmul(A, elt, gel(G, ind));
+  long n=lg(L);
+  if(n==1) return gerepilecopy(top, gel(alg_get_basis(A), 1));//The identity
+  GEN elts=cgetg(n, t_VEC);
+  if(typ(L)==t_VECSMALL){
+    for(long i=1;i<n;i++){
+      long ind=L[i];
+      if(ind>0) gel(elts, i)=gel(G, ind);
+      else gel(elts, i)=alginv(A, gel(G, -ind));
+    }
   }
-  return gerepileupto(top, elt);
+  else if(typ(L)==t_VEC){
+    for(long i=1;i<n;i++){
+      long ind=itos(gel(L, i));
+      if(ind>0) gel(elts, i)=gel(G, ind);
+      else gel(elts, i)=alginv(A, gel(G, -ind));
+    }
+  }
+  else pari_err_TYPE("L needs to be a vector or vecsmall of indices", L);
+  return gerepileupto(top, gen_product(elts, &A, &voidalgmul));
 }
 
 //Returns the order formed by conjugating O by x. The columns are written in terms of the stored basis of A. If O=NULL, assumes we are conjugating the stored maximal order
@@ -604,7 +616,9 @@ qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long maxelts
   return gerepilecopy(top, ret);
 }
 
-
+//Formats algmul for use in gen_product
+static GEN
+voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 
 //SECTION 3: PRODUCING DATA FOR MY PAPER
