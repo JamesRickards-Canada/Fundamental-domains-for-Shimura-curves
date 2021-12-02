@@ -89,6 +89,9 @@ static long tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
+//3: QUATERNION ALGEBRA METHODS
+static GEN voidalgmul(void *A, GEN x, GEN y);
+
 //3: FUNDAMENTAL DOMAIN COMPUTATION
 static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, GEN tol, long prec);
 
@@ -3097,6 +3100,32 @@ algmoreprec(GEN A, long increment, long prec)
   return gerepileupto(top, alginit(newnf, mkvec2(a, b), -1, 1));
 }
 
+//Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
+GEN
+algmulvec(GEN A, GEN G, GEN L)
+{
+  pari_sp top=avma;
+  long n=lg(L);
+  if(n==1) return gerepilecopy(top, gel(alg_get_basis(A), 1));//The identity
+  GEN elts=cgetg(n, t_VEC);
+  if(typ(L)==t_VECSMALL){
+    for(long i=1;i<n;i++){
+      long ind=L[i];
+      if(ind>0) gel(elts, i)=gel(G, ind);
+      else gel(elts, i)=alginv(A, gel(G, -ind));
+    }
+  }
+  else if(typ(L)==t_VEC){
+    for(long i=1;i<n;i++){
+      long ind=itos(gel(L, i));
+      if(ind>0) gel(elts, i)=gel(G, ind);
+      else gel(elts, i)=alginv(A, gel(G, -ind));
+    }
+  }
+  else pari_err_TYPE("L needs to be a vector or vecsmall of indices", L);
+  return gerepileupto(top, gen_product(elts, &A, &voidalgmul));
+}
+
 //Returns the normalized basis of the set of elements G
 GEN
 algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec)
@@ -3178,6 +3207,10 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
   if(type==1) return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, nfdecomp, nformpart, prec));
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, 0, nform, nformpart, prec)); 
 }
+
+//Formats algmul for use in gen_product
+static GEN
+voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 
 
