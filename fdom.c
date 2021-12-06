@@ -377,7 +377,7 @@ quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
     GEN x=gneg(nfdiv(nf, C, B));//Solution
     x=lift(basistoalg(nf, x));
     if(typ(x)==t_INT) return gerepilecopy(top, mkvec(x));//Solution!
-    avma=top;
+    set_avma(top);
     return cgetg(1, t_VEC);
   }
   GEN Ap=nfeltembed(nf, A, gen_1, prec);//Doesn't matter which place, since if we have an integer solution iff it works for all places
@@ -633,7 +633,7 @@ circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec)
   GEN ang=anglediff(atanoo(s2, prec), atanoo(s1, prec), tol, prec), pi=mppi(prec);//Difference in angles in [0, 2*Pi]
   int topi=tolcmp(ang, pi, tol, prec);//We want to be in the range [0, Pi), so potentially subtract off Pi
   if(topi==-1) return gerepileupto(top, ang);
-  else if(topi==0){avma=top;return gen_0;}//Same angle
+  else if(topi==0){set_avma(top);return gen_0;}//Same angle
   return gerepileupto(top, gsub(ang, pi));//Subtract off pi
 }
 
@@ -889,10 +889,10 @@ arc_int(GEN c1, GEN c2, GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ipts=circle_int(c1, c2, tol, prec);
-  if(lg(ipts)==1){avma=top;return cgetg(1, t_VEC);}//No intersection
+  if(lg(ipts)==1){set_avma(top);return cgetg(1, t_VEC);}//No intersection
   if(lg(ipts)==2){//One intersection point (tangent circles)
-    if(!onarc(c1, gel(ipts, 1), tol, prec)){avma=top;return cgetg(1, t_VEC);}//Not on arc 1
-    if(!onarc(c2, gel(ipts, 1), tol, prec)){avma=top;return cgetg(1, t_VEC);}//Not on arc 2
+    if(!onarc(c1, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on arc 1
+    if(!onarc(c2, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on arc 2
     return gerepilecopy(top, ipts);//On arc
   }
   //Two intersections
@@ -907,7 +907,7 @@ arc_int(GEN c1, GEN c2, GEN tol, long prec)
     return gerepileupto(top, ret);
   }
   //Now i1=0
-  if(i2==0){avma=top;return cgetg(1, t_VEC);}//Not on either arc
+  if(i2==0){set_avma(top);return cgetg(1, t_VEC);}//Not on either arc
   GEN ret=cgetg(2, t_VEC);//Just point 2
   gel(ret, 1)=gcopy(gel(ipts, 2));
   return gerepileupto(top, ret);
@@ -919,10 +919,10 @@ arcseg_int(GEN c, GEN l, GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ipts=circleline_int(c, l, tol, prec);
-  if(lg(ipts)==1){avma=top;return cgetg(1, t_VEC);}//No intersection
+  if(lg(ipts)==1){set_avma(top);return cgetg(1, t_VEC);}//No intersection
   if(lg(ipts)==2){//One intersection point (tangent circles)
-    if(!onarc(c, gel(ipts, 1), tol, prec)){avma=top;return cgetg(1, t_VEC);}//Not on arc
-    if(!onseg(l, gel(ipts, 1), tol, prec)){avma=top;return cgetg(1, t_VEC);}//Not on segment
+    if(!onarc(c, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on arc
+    if(!onseg(l, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on segment
     return gerepilecopy(top, ipts);//On both
   }
   //Two intersections
@@ -937,7 +937,7 @@ arcseg_int(GEN c, GEN l, GEN tol, long prec)
     return gerepileupto(top, ret);
   }
   //Now i1=0
-  if(i2==0){avma=top;return cgetg(1, t_VEC);}//Not on either
+  if(i2==0){set_avma(top);return cgetg(1, t_VEC);}//Not on either
   GEN ret=cgetg(2, t_VEC);//Just point 2
   gel(ret, 1)=gcopy(gel(ipts, 2));
   return gerepileupto(top, ret);
@@ -953,7 +953,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
   GEN a1ma2=gsub(a1, a2), b1mb2=gsub(b1, b2), x1, x2, y1, y2;
   int oneint=0;
   if(gcmp(gabs(a1ma2, prec), gabs(b1mb2, prec))>=0){//We want to divide by the larger of the two quantities to maximize precision and avoid errors when the centres are on the same line.
-    if(toleq(a1ma2, gen_0, tol, prec)==1){avma=top;return cgetg(1, t_VEC);}//Same centre, cannot intersect.
+    if(toleq(a1ma2, gen_0, tol, prec)==1){set_avma(top);return cgetg(1, t_VEC);}//Same centre, cannot intersect.
     //u=(r1^2-r2^2+b2^2-b1^2+a2^2-a1^2)/(2*a2-2*a1)-a1;
     GEN u=gsub(gdiv(gsub(gadd(gsub(gadd(gsub(gsqr(r1), gsqr(r2)), gsqr(b2)), gsqr(b1)), gsqr(a2)), gsqr(a1)), gmulgs(a1ma2, -2)), a1);
     GEN v=gneg(gdiv(b1mb2, a1ma2));//v=(b1-b2)/(a2-a1), and x=a1+u+vy
@@ -961,7 +961,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     GEN vsqrp1=gaddgs(gsqr(v), 1);//v^2+1
     GEN rtpart=gsub(gsqr(uvmb1), gmul(vsqrp1, gadd(gsqr(b1), gsub(gsqr(u), gsqr(r1)))));//(u*v-b1)^2-(v^2+1)*(b1^2+u^2-r1^2)
     oneint=tolcmp(rtpart, gen_0, tol, prec);//Comparing rtpart to 0
-    if(oneint==-1){avma=top;return cgetg(1, t_VEC);}//rtpart must be square rooted, so if it's negative the circles do not intersect
+    if(oneint==-1){set_avma(top);return cgetg(1, t_VEC);}//rtpart must be square rooted, so if it's negative the circles do not intersect
     if(oneint==0){//One intersection, so we take rtpart=0. This is CRUCIAL, as taking the square root kills our precision if we don't do this here.
       y1=gdiv(gneg(uvmb1), vsqrp1);//y1=(b1-u*v)/(1*v^2+1)
       x1=gadd(gadd(a1, u), gmul(v, y1));//x1=a1+u+v*y1
@@ -975,7 +975,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     }
   }
   else{
-    if(toleq(b1mb2, gen_0, tol, prec)==1){avma=top;return cgetg(1, t_VEC);}//Same centre, cannot intersect.
+    if(toleq(b1mb2, gen_0, tol, prec)==1){set_avma(top);return cgetg(1, t_VEC);}//Same centre, cannot intersect.
     //u=(r1^2-r2^2+b2^2-b1^2+a2^2-a1^2)/(2*b2-2*b1)-b1;
     GEN u=gsub(gdiv(gsub(gadd(gsub(gadd(gsub(gsqr(r1), gsqr(r2)), gsqr(b2)), gsqr(b1)), gsqr(a2)), gsqr(a1)), gmulgs(b1mb2, -2)), b1);
     GEN v=gneg(gdiv(a1ma2, b1mb2));//v=(a1-a2)/(b2-b1), and y=b1+u+vx
@@ -983,7 +983,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     GEN vsqrp1=gaddgs(gsqr(v), 1);//v^2+1
     GEN rtpart=gsub(gsqr(uvma1), gmul(vsqrp1, gadd(gsqr(a1), gsub(gsqr(u), gsqr(r1)))));//(u*v-a1)^2-(v^2+1)*(a1^2+u^2-r1^2))
     oneint=tolcmp(rtpart, gen_0, tol, prec);//Comparing rtpart to 0
-    if(oneint==-1){avma=top;return cgetg(1, t_VEC);}//rtpart must be square rooted, so if it's negative the circles do not intersect
+    if(oneint==-1){set_avma(top);return cgetg(1, t_VEC);}//rtpart must be square rooted, so if it's negative the circles do not intersect
     if(oneint==0){//One intersection, so we take rtpart=0. This is CRUCIAL, as taking the square root kills our precision if we don't do this here.
       x1=gdiv(gneg(uvma1), vsqrp1);//x1=(a1-u*v)/(v^2+1);
       y1=gadd(gadd(b1, u), gmul(v, x1));//y1=b1+u+v*x1;
@@ -1017,7 +1017,7 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
   if(typ(gel(l, 1))==t_INFINITY){
     GEN x1=gel(l, 2);
     GEN rtpart=gsub(gsqr(gel(c, 2)), gsqr(gsub(x1, real_i(gel(c, 1)))));//c[2]^2-(x1-real(c[1]))^2
-    if(gsigne(rtpart)==-1){avma=top;return cgetg(1, t_VEC);}//No intersections.
+    if(gsigne(rtpart)==-1){set_avma(top);return cgetg(1, t_VEC);}//No intersections.
     GEN y1=gadd(imag_i(gel(c, 1)), gsqrt(rtpart, prec));//y1=imag(c[1])+sqrt(c[2]^2-(x1-real(c[1]))^2)
     if(toleq(rtpart, gen_0, tol, prec)){//Only one intersection point
       GEN ret=cgetg(2, t_VEC);
@@ -1043,7 +1043,7 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
   GEN C=gadd(gsqr(real_i(gel(c, 1))), gsub(gsqr(l2mic1), gsqr(gel(c, 2))));//real(c[1])^2+(l[2]-imag(c[1]))^2-c[2]^2
   GEN rtpart=gsub(gsqr(B), gmulsg(4, gmul(A, C)));
   int rtpartsig=tolcmp(rtpart, gen_0, tol, prec);
-  if(rtpartsig==-1){avma=top;return cgetg(1, t_VEC);}//No intersection
+  if(rtpartsig==-1){set_avma(top);return cgetg(1, t_VEC);}//No intersection
   if(rtpartsig==0){//One root, and rtpart=0
     GEN x1=gdiv(B, gmulgs(A, -2));//-B/(2A)
     GEN y1part=gmul(gel(l, 1), x1);//l[1]*x1
@@ -1104,8 +1104,8 @@ onarc(GEN c, GEN p, GEN tol, long prec)
   if(toleq(gel(c, 3), p, tol, prec)) return 1;//p=the start point. We have this done seperately in case rounding errors take the angle to <c[5], as this will cause issues with the shifting angle.
   pari_sp top=avma;
   GEN angle=shiftangle(radialangle(c, p, tol, prec), gel(c, 5), tol, prec);//Getting the angle in the range [c[5], c[5]+2*Pi)
-  if(tolcmp(angle, gel(c, 6), tol, prec)<=0){avma=top;return 1;}//On the arc
-  avma=top;
+  if(tolcmp(angle, gel(c, 6), tol, prec)<=0){set_avma(top);return 1;}//On the arc
+  set_avma(top);
   return 0;//Beyond the arc.
 }
 
@@ -1123,26 +1123,26 @@ onseg(GEN l, GEN p, GEN tol, long prec)
   if(typ(gel(l, 1))==t_INFINITY){//Vertical line
     if(typ(gel(l, 3))==t_INFINITY){//Start point in oo
       if(equali1(gel(l, 6))){//p must lie BELOW l[4]
-          if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)<=0){avma=top;return 1;}//Lies below l[4]
-          avma=top;return 0;//lies above l[4]
+          if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)<=0){set_avma(top);return 1;}//Lies below l[4]
+          set_avma(top);return 0;//lies above l[4]
       }
       //p must lie ABOVE l[4]
-      if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)>=0){avma=top;return 1;}//Lies above l[4]
-      avma=top;return 0;//lies below l[4]
+      if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)>=0){set_avma(top);return 1;}//Lies above l[4]
+      set_avma(top);return 0;//lies below l[4]
     }
     if(typ(gel(l, 4))==t_INFINITY){//End point is oo
       if(equali1(gel(l, 6))){//p must lie ABOVE l[3]
-          if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)>=0){avma=top;return 1;}//Lies above l[3]
-          avma=top;return 0;//lies below l[3]
+          if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)>=0){set_avma(top);return 1;}//Lies above l[3]
+          set_avma(top);return 0;//lies below l[3]
       }
       //p must lie BELOW l[3]
-      if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)<=0){avma=top;return 1;}//Lies below l[3]
-      avma=top;return 0;//lies above l[3]
+      if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)<=0){set_avma(top);return 1;}//Lies below l[3]
+      set_avma(top);return 0;//lies above l[3]
     }
     //Start and end points are finite
     int i1=tolcmp(imag_i(gsub(p, gel(l, 3))), gen_0, tol, prec);//sign of imag(p)-imag(l[3])
     int i2=tolcmp(imag_i(gsub(p, gel(l, 4))), gen_0, tol, prec);//sign of imag(p)-imag(l[4])
-    avma=top;
+    set_avma(top);
     if(i1==0 || i2==0) return 1;//endpoint
     if(i1==i2){//p on the same side of l[3] and l[4], so return 1 iff l passes through oo
         if(gequal(gel(l, 7), gen_1)) return 0;//Not through oo
@@ -1155,26 +1155,26 @@ onseg(GEN l, GEN p, GEN tol, long prec)
   //Non-vertical line
   if(typ(gel(l, 3))==t_INFINITY){//Start point in oo
     if(equali1(gel(l, 6))){//p must lie LEFT OF l[4]
-      if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)<=0){avma=top;return 1;}//Lies left of l[4]
-      avma=top;return 0;//lies right of  l[4]
+      if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)<=0){set_avma(top);return 1;}//Lies left of l[4]
+      set_avma(top);return 0;//lies right of  l[4]
     }
     //p must lie RIGHT OF l[4]
-    if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)>=0){avma=top;return 1;}//Lies right of l[4]
-    avma=top;return 0;//lies left of l[4]
+    if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)>=0){set_avma(top);return 1;}//Lies right of l[4]
+    set_avma(top);return 0;//lies left of l[4]
   }
   if(typ(gel(l, 4))==t_INFINITY){//End point is oo
     if(equali1(gel(l, 6))){//p must lie RIGHT OF l[3]
-      if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)>=0){avma=top;return 1;}//Lies right of l[3]
-      avma=top;return 0;//lies below l[3]
+      if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)>=0){set_avma(top);return 1;}//Lies right of l[3]
+      set_avma(top);return 0;//lies below l[3]
     }
     //p must lie LEFT OF l[3]
-    if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)<=0){avma=top;return 1;}//Lies left of l[3]
-    avma=top;return 0;//lies above l[3]
+    if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)<=0){set_avma(top);return 1;}//Lies left of l[3]
+    set_avma(top);return 0;//lies above l[3]
   }
   //Start and end points are finite
   int i1=tolcmp(real_i(gsub(p, gel(l, 3))), gen_0, tol, prec);//sign of real(p)-real(l[3])
   int i2=tolcmp(real_i(gsub(p, gel(l, 4))), gen_0, tol, prec);//sign of real(p)-real(l[4])
-  avma=top;
+  set_avma(top);
   if(i1==0 || i2==0) return 1;//endpoint
   if(i1==i2){//p on the same side of l[3] and l[4], so return 1 iff l passes through oo
     if(gequal(gel(l, 7), gen_1)) return 0;//Not through oo
@@ -1228,7 +1228,7 @@ hdist_ud(GEN z1, GEN z2, long prec)
   GEN denom=gsub(a, b);
   if(gequal0(denom)){
     pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance");
-    avma=top;
+    set_avma(top);
     return mkoo();
   }
   return gerepileupto(top, glog(gdiv(num, denom), prec));//log((a+b)/(a-b))
@@ -1243,7 +1243,7 @@ hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec)
   if(blen==1 || gequal0(gel(circles, 1))) return mkoo();//No cicles or the first is 0, i.e. an infinite side
   GEN ang, area=gmulsg(blen-3, mppi(prec));//We subtract off from area.
   for(long i=1;i<blen-1;i++){
-    if(gequal0(gel(circles, i+1))){avma=top;return mkoo();}//The next side is infinite
+    if(gequal0(gel(circles, i+1))){set_avma(top);return mkoo();}//The next side is infinite
     ang=circle_angle(gel(circles, i+1), gel(circles, i), gel(vertices, i), tol, prec);//Do in opposite order to get correct angle
     area=gsub(area, ang);
   }
@@ -1335,7 +1335,7 @@ isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long),
   //If we reach here, we did not have enough precision
   long newprec=prec;
   pari_CATCH(CATCH_ALL){
-    avma=top;
+    set_avma(top);
     pari_CATCH_reset();
     pari_err(e_MISC,"Could not increase precision enough. Please increase precision/memory");
     return gen_0;
@@ -1343,7 +1343,7 @@ isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long),
   pari_TRY{
     do{
       if(newprec-prec==5) pari_err(e_MISC,"Throw");
-      avma=top;
+      set_avma(top);
       newprec++;//Increase precision
       tol=deftol(newprec);
       if(precision(gel(mats, 3))>0){//p is inexact
@@ -1375,7 +1375,7 @@ isometriccircle_psu(GEN g, GEN tol, long prec)
   gel(geod, 2)=gabs(gel(geod, 2), prec);//We do things in this order to save a division.
   gel(geod, 7)=gen_1;//Always oriented counterclockwise
   pari_CATCH(CATCH_ALL){
-    avma=top;
+    set_avma(top);
     pari_CATCH_reset();
     return gen_m1;//We increase precision in g and retry.
   }
@@ -1573,7 +1573,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
         ang=gmael(Ubase, 4, sidem1);//Angle to the intersection point
         ang1=anglediff(ang, gmael(vertices, ulen, 2), tol, prec);//ang-angle to the previous vertex.
         if(gequal0(ang1) || gcmp(ang1, pi)>=0){//Delete last side and go backwards. The previous side MUST be a new side.
-          avma=mid;
+          set_avma(mid);
           ulen--;
           lastsidenew=1;
           sid--;
@@ -1617,21 +1617,21 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       if(tolcmp(ang, ang1, tol, prec)<=0){//sidecirc is contained within L
         if(finalstretch && !leftoverGs){
           if(!gequal(L, sidecirc)){
-            avma=mid;
+            set_avma(mid);
             startpt++;//We add 1 to startpt to signal that we must start at a different point.
             continue;
           }
           //L=sidecirc, and so we are actually done. This should only happen when Ubase has 1 non-trivial side, and we don't end up adding in any sides that can do better (i.e. the output is the same as the input). So we just continue on and let the rest do its thing.
         }
         else if(newsidefromG){//Failed to insert since it did not help.
-          avma=mid;
+          set_avma(mid);
           Gordind++;
           if(Gordind==nGp1){gang=ten;}//We are done with G, so we just want to start appending old sides.
           else gang=gel(Gtermangles, Gord[Gordind]);
           sid--;//We need to try again with the current side since we "jumped the line" with the element of G.
           continue;
         }//We also want to leave lastsidenew unchanged, as we did not insert
-        else{avma=mid;continue;}
+        else{set_avma(mid);continue;}
       }
       //We have two new sides: a side at infinity, and this side.
       ulen++;
@@ -1661,7 +1661,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       ang=anglediff(sidecirctermang, Ltermang, tol, prec);//Angle from the terminal angle of the last side to the terminal angle of the new side.
       if(gequal0(ang)){
         if(tolcmp(gel(sidecirc, 2), gel(L, 2), tol, prec)<=0){//This side lies inside the previous one, continue on (compared radii).
-          avma=mid;
+          set_avma(mid);
           if(finalstretch && !leftoverGs) startpt++;
           else if(newsidefromG){//Failed to insert since it did not help.
             Gordind++;
@@ -1704,7 +1704,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       inter=gel(inter, 1);//The point
       if(toleq(inter, gel(L, 3), tol, prec)){//The side lies entirely in the previous side OR touches it at the end
         if(toleq(inter, gel(sidecirc, 3), tol, prec)){//Lies inside
-          avma=mid;
+          set_avma(mid);
           if(finalstretch && !leftoverGs) startpt++;
           else if(newsidefromG){//Failed to insert since it did not help.
             Gordind++;
@@ -1799,7 +1799,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
     if(gequal(mininter, gen_2) && U[k]<0) best++;//There was NO intersection with [0, 1], so we are ending up on an infinite side! This is not right, so we must increment it by one. If best=ulen then we did not boop it backward, so don't need to increment if forward
   }
   
-  avma=mid;
+  set_avma(mid);
   long np1=ulen-startpt+1;
   GEN firstang=gmael(vertices, startpt+1, 2);//The angle to the first vertex
   //By wrapping back around, we have ulen-startpt sides: the last side is the same as the first.
@@ -1917,7 +1917,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
     ang=anglediff(garg(gmael3(G, i, 3, 3), prec), garg(gmael3(G, hminind, 3, 3), prec), tol, prec);
     if(gcmp(ang, pi)<0) hminind=i;//Better min.
   }
-  avma=mid;//Don't need these calcs other than hminind
+  set_avma(mid);//Don't need these calcs other than hminind
   GEN baseang;
   if(hminind>0) baseang=garg(gmael3(G, hminind, 3, 4), prec);//The base angle to the terminal point.
   else baseang=gen_0;//We start from the 0 angle instead.
@@ -1934,7 +1934,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
   }//Moving past the -2's, i.e. elements of G giving no circle. These occur first as the other angles are >=0. If hind!=0, then ordering[startind]=hind.
   //Now we start at G[ordering[ind]]. For the first element, we ONLY need to store the index.
   if(startind==0){//NO valid isometric circles inputted.
-    avma=top;
+    set_avma(top);
     GEN retempty=cgetg(NORMBOUND, t_VEC);
     for(long i=1;i<=5;i++) gel(retempty, i)=cgetg(1, t_VEC);//elements, icircs, vertices, matrices, area, sidepairing
     gel(retempty, 6)=mkoo();
@@ -1965,7 +1965,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
         ang2=garg(gel(L, 4), prec);
         ang=anglediff(gel(termangles, ordering[side]), ang2, tol, prec);//Angle to the terminal point of the new side from the terminal point of L
         if(gcmp(ang, pi)<0){
-          avma=mid;//the new side is contained entirely in L, discard and continue on (may as well reset avma).
+          set_avma(mid);//the new side is contained entirely in L, discard and continue on (may as well reset avma).
           continue;
         }
         //Now we are actually coming in from below, so can continue on as normal.
@@ -1983,7 +1983,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       //It may be that this new side actually comes into U[1] from the bottom. Then we need a side at oo
       ang=anglediff(gel(termangles, U[ulen]), gel(termangles, ordering[side]), tol, prec);//Angle from the terminal angle of the last side to the terminal angle of the new side.
       if(gequal0(ang)){
-        if(tolcmp(gmael3(G, ordering[side], 3, 2), gmael3(G, U[ulen], 3, 2), tol, prec)<=0){avma=mid;continue;}//This side lies inside the previous one, continue on (compared radii).
+        if(tolcmp(gmael3(G, ordering[side], 3, 2), gmael3(G, U[ulen], 3, 2), tol, prec)<=0){set_avma(mid);continue;}//This side lies inside the previous one, continue on (compared radii).
       }
       else if(gcmp(ang, pi)<0){//We DID come in from below
         ulen++;
@@ -1997,7 +1997,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       }
       //Now we are sure did not come in from below.
       inter=gel(inter, 1);//The point
-      if(toleq(inter, gmael3(G, ordering[side], 3, 3), tol, prec)){avma=mid;continue;}//The side lies entirely in the previous side
+      if(toleq(inter, gmael3(G, ordering[side], 3, 3), tol, prec)){set_avma(mid);continue;}//The side lies entirely in the previous side
       ang1=garg(inter, prec);
       ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);//Angle to the new vtx from the previous as a bases
       if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
@@ -2158,7 +2158,7 @@ normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
   pari_sp top=avma;
   int outside;
   pari_CATCH(CATCH_ALL){//Catching if U is trivial OR z=0
-    avma=top;
+    set_avma(top);
     pari_CATCH_reset();
     return -1;
   }
@@ -2167,13 +2167,13 @@ normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
     long ind=gen_search(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
     if(ind==lg(gel(U, 1))) ind=1;//Insert at the end means the first circle.
     GEN circle=gmael(U, 2, ind);
-    if(gequal0(circle)){pari_CATCH_reset();avma=top;return -1;}//Intersects with the edge of the unit disc.
+    if(gequal0(circle)){pari_CATCH_reset();set_avma(top);return -1;}//Intersects with the edge of the unit disc.
     outside=tolcmp(gel(circle, 2), gabs(gsub(z, gel(circle, 1)), prec), tol, prec);//Are we outside?
     if(outside==0) outside=-1;
     else if(outside==1) outside=ind;
   }
   pari_ENDCATCH
-  avma=top;
+  set_avma(top);
   return outside;//There is no tolerance issues with our search for ind; they are taken care of by the tolerance check with inside (the only possible issues occur if z and v[ind] or v[ind-1] are equal up to tolerance, but of course that is solved by the one tolcmp).
 }
 
@@ -2834,7 +2834,7 @@ anglediff(GEN ang, GEN bot, GEN tol, long prec)
   pari_sp top=avma;
   GEN twopi=Pi2n(1, prec);
   GEN angdiff=gmod(gsub(ang, bot), twopi);
-  if(toleq(angdiff, twopi, tol, prec) || toleq(angdiff, gen_0, tol, prec)){avma=top;return gen_0;}
+  if(toleq(angdiff, twopi, tol, prec) || toleq(angdiff, gen_0, tol, prec)){set_avma(top);return gen_0;}
   return gerepileupto(top, angdiff);
 }
 
@@ -2889,7 +2889,7 @@ shiftangle(GEN ang, GEN bot, GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN diff=anglediff(ang, bot, tol, prec);
-  if(gequal0(diff)){avma=top;return gcopy(bot);}
+  if(gequal0(diff)){set_avma(top);return gcopy(bot);}
   return gerepileupto(top, gadd(bot, diff));
 }
 
@@ -2902,12 +2902,12 @@ tolcmp(GEN x, GEN y, GEN tol, long prec)
   GEN d=gsub(x, y);
   if(precision(d)==0){
     long ret=gsigne(d);
-    avma=top;
+    set_avma(top);
     return ret;
   }//Exact objects
-  if(gcmp(gabs(d, prec), tol)<0){avma=top;return 0;}//Within tolerance
+  if(gcmp(gabs(d, prec), tol)<0){set_avma(top);return 0;}//Within tolerance
   long ret=gsigne(d);
-  avma=top;return ret;
+  set_avma(top);return ret;
 }
 
 //Data points to [tol, vecsmall(prec)]. Used to sort/search a list with tolerance.
@@ -2924,10 +2924,10 @@ toleq(GEN x, GEN y, GEN tol, long prec)
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY || gequal0(tol)) return gequal(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
-  if(gequal0(d)){avma=top;return 1;}//Deemed equal already
-  if(precision(d)==0){avma=top;return 0;}//Exact objects
-  if(gcmp(gabs(d, prec), tol)<0){avma=top;return 1;}//Within tolerance
-  avma=top;return 0;
+  if(gequal0(d)){set_avma(top);return 1;}//Deemed equal already
+  if(precision(d)==0){set_avma(top);return 0;}//Exact objects
+  if(gcmp(gabs(d, prec), tol)<0){set_avma(top);return 1;}//Within tolerance
+  set_avma(top);return 0;
 }
 
 
@@ -3593,13 +3593,13 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
     mid=avma;
     norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
     if(gequal(norm, gen_1)){
-      avma=mid;
+      set_avma(mid);
       if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
       else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
       if(lg(ret)>=mret) break;//Done
       continue;
     }
-    avma=mid;
+    set_avma(mid);
   }
   return gerepilecopy(top, ret);
 }

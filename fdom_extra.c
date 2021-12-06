@@ -67,7 +67,7 @@ python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec
     python_plotviewer(line);
     pari_free(line);
   }
-  avma=top;
+  set_avma(top);
 }
 
 //Launches the plotviewer with the given inputs.
@@ -111,7 +111,7 @@ python_printfdom(GEN U, char *filename, long prec)
     pari_fprintf(f, "%lf %lf %lf %lf %lf\n", rtodbl(gtofp(real_i(gel(arc, 1)), prec)), rtodbl(gtofp(imag_i(gel(arc, 1)), prec)), rtodbl(gtofp(gel(arc, 2), prec)), rtodbl(gmul(garg(gsub(v1, gmael3(U, 2, i, 1)), prec), fact)), rtodbl(gmul(garg(gsub(v2, gmael3(U, 2, i, 1)), prec), fact)));
   }
   fclose(f);
-  avma=top;
+  set_avma(top);
 }
 
 
@@ -204,7 +204,7 @@ algfromnormdisc(GEN F, GEN D, GEN infram)
   long nfacsp1=lg(gel(pfac, 1));//# prime factors+1
   long nramplaces=nfacsp1-1;
   for(long i=1;i<lg(infram);i++) if(!gequal0(gel(infram, i))) nramplaces++;//Adding the number of oo ramified places
-  if(nramplaces%2==1){avma=top;return gen_0;}//Odd number of ramification places, BAD
+  if(nramplaces%2==1){set_avma(top);return gen_0;}//Odd number of ramification places, BAD
   GEN pfacideals=zerovec(nfacsp1-1), hass=cgetg(nfacsp1, t_VEC), possideals;
   long expon;
   for(long i=1;i<nfacsp1;i++){
@@ -216,7 +216,7 @@ algfromnormdisc(GEN F, GEN D, GEN infram)
         break;
       }
     }
-    if(gequal0(gel(pfacideals, i))){avma=top;return gen_0;}//Nope, return 0
+    if(gequal0(gel(pfacideals, i))){set_avma(top);return gen_0;}//Nope, return 0
     gel(hass, i)=gen_1;//The vector of 1's
   }
   return alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1);
@@ -278,7 +278,7 @@ algorderdisc(GEN A, GEN O, int reduced, int factored)
     }
   }
   pari_warn(warner, "We did not succeed in finding the discriminant.");
-  avma=top;
+  set_avma(top);
   return gen_0;
 }
 
@@ -310,14 +310,14 @@ algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap)
   if(maxcomptime) pari_alarm(maxcomptime);
   pari_CATCH(CATCH_ALL){
     pari_warn(warner, "Time limit or memory exceeded, skipping.");
-    avma=top;
+    set_avma(top);
     pari_CATCH_reset();
     return gen_0;
   }
   pari_TRY{
     A=algfromnormdisc(F, D, infram);
     if(gequal0(A)){//Nope
-      avma=top;
+      set_avma(top);
       pari_CATCH_reset();
       return gen_0;
     }
@@ -325,7 +325,7 @@ algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap)
     long varn=rnf_get_varn(L);
     GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
     if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){//Must swap a, b
-      if(!allowswap){avma=top;A=gen_0;}//We do not allow the swap.
+      if(!allowswap){set_avma(top);A=gen_0;}//We do not allow the swap.
       else{//Allowing the swap
         GEN b=lift(alg_get_b(A));
         GEN aden=Q_denom(a), bden=Q_denom(b);
@@ -356,14 +356,14 @@ algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap)
   if(maxcomptime) pari_alarm(maxcomptime);
   pari_CATCH(CATCH_ALL){
     pari_warn(warner, "Time limit or memory exceeded, skipping.");
-    avma=top;
+    set_avma(top);
     pari_CATCH_reset();
     return gen_0;
   }
   pari_TRY{
     A=algfromnormdisc(F, D, infram);
     if(gequal0(A)){//Nope
-      avma=top;
+      set_avma(top);
       pari_CATCH_reset();
       return gen_0;
     }
@@ -377,7 +377,7 @@ algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap)
     if(gsigne(gsubst(a, nf_get_varn(F), gel(nf_get_roots(F), place)))!=1){
       if(allowswap) A=gerepilecopy(top, mkvec2(b, a));//Must swap a, b
       else{
-        avma=top;//If we do not allow the swapping of a, b (recommended if deg(F)>=6), we do not return anything.
+        set_avma(top);//If we do not allow the swapping of a, b (recommended if deg(F)>=6), we do not return anything.
         A=gen_0;
       }
     }
@@ -483,10 +483,10 @@ smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int al
       mid=avma;
       GEN prod=gen_1;
       for(long i=1;i<=ndiv;i++) prod=mulii(prod, gel(pposs_nm, sub[i]));//Computing the norm.
-      if(cmpii(prod, pDmin)==-1) avma=mid;//Too small, just go on.
+      if(cmpii(prod, pDmin)==-1) set_avma(mid);//Too small, just go on.
       else{
         if(cmpii(prod, pDmax)==1){//Too large
-          avma=mid;
+          set_avma(mid);
           long nind=0;
           for(long i=ndiv;i>=2;i--){if(sub[i]>sub[i-1]+1){nind=i-1;break;}}
           if(nind==0) break;//Done, we will always be too large for now on out.
@@ -578,13 +578,13 @@ qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long maxelts
     mid=avma;
     norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
     if(gequal(norm, nm)){
-      avma=mid;
+      set_avma(mid);
       if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
       else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
       if(lg(ret)>=mret) break;//Done
       continue;
     }
-    avma=mid;
+    set_avma(mid);
   }
   return gerepilecopy(top, ret);
 }
@@ -736,7 +736,7 @@ enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange)
   pari_fprintf(f, "    \\addplot[red, ultra thick, samples=1000, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, gel(reg, 1), invpower);
   pari_fprintf(f, ";%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
   fclose(f);
-  avma=top;
+  set_avma(top);
 }
 
 //Returns the number of non-trivial elements. Must be in the basis representation
@@ -844,7 +844,7 @@ enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GE
     GEN z=randompoint_ud(R, prec);
     GEN elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, normdecomp, nformpart, prec);
     if(lg(elts)>1) found=found+enum_nontrivial(elts);
-    avma=mid;
+    set_avma(mid);
   }
   GEN expect=gdiv(gmul(gmulgs(Pi2n(1, prec), Ntests), gsubgs(C, nf_get_degree(nf))), area);
   return gerepilecopy(top, mkvec2(stoi(found), expect));
@@ -871,7 +871,7 @@ enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL)
   pari_fprintf(f, "    \\addplot[red, ultra thick, samples=1000, domain=%Pf:%Pf] (x, %Pf+%Pf*x", Cmin, Cmax, gel(reg, 1), gel(reg, 2));
   pari_fprintf(f, ");%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 3));
   fclose(f);
-  avma=top;
+  set_avma(top);
 }
 
 //Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.
@@ -905,7 +905,7 @@ enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec)
       GEN z=randompoint_ud(R, prec);
       qalg_smallnorm1elts_qfminim(Q, p, gel(Cset, i), gen_0, z, 0, nfdecomp, normformpart, prec);
       t=timer_get(&T);
-      avma=mid;
+      set_avma(mid);
     }
     gel(avgtimes, i)=rdivss(t, 1000*tries, prec);
     if(i%10==0) pari_printf("%d test cases done.\n", i);
@@ -975,7 +975,7 @@ enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata)
   for(long i=2;i<=2*n;i++) pari_fprintf(f, "*x");
   pari_fprintf(f, ");%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
   fclose(f);
-  avma=top;
+  set_avma(top);
 }
 
 //Returns the time taken to find nelts non-trivial elements
@@ -1001,7 +1001,7 @@ enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long prec)
     }
   }//Tr_{nf/Q}(nrd(elt));
   long tottime=enum_timeforNelts_givendata(Q, p, C, nelts, R, type, nform, nfdecomp, nformpart, prec);
-  avma=top;
+  set_avma(top);
   return tottime;
 }
 
@@ -1022,7 +1022,7 @@ enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GE
       if(lg(elts)!=1){
         if(enum_nontrivial(elts)>0) found++;
       }
-      avma=mid;
+      set_avma(mid);
     }
     time=timer_delay(&T);
   }
@@ -1034,11 +1034,11 @@ enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GE
       if(lg(elts)!=1){
         if(enum_nontrivial(elts)>0) found++;
       }
-      avma=mid;
+      set_avma(mid);
     }
     time=timer_delay(&T);
   }
-  avma=top;
+  set_avma(top);
   return time;
 }
 
@@ -1097,7 +1097,7 @@ enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long nel
     enum_timeforNelts_plot(A, bestC, bestC_val, fname);
     plot_compile(fname, WSL);
   }
-  avma=top;
+  set_avma(top);
 }
 
 //Prepares a basic latex plot of the data.
@@ -1121,7 +1121,7 @@ enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fname)
   pari_fprintf(f, "    \\draw[dashed, red, ultra thick] (%Pf, 0) -- (%Pf, %.3f);\n", bestC, bestC, bestC_val);
   pari_fprintf(f, "  \\end{axis}\n\\end{tikzpicture}\n\\end{document}");
   fclose(f);
-  avma=top;
+  set_avma(top);
 }
 
 
@@ -1253,7 +1253,7 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
       long minnew=1, maxnew=lg(points)-1;
       bot=avma;
       while(minnew+1<maxnew){
-        avma=bot;
+        set_avma(bot);
         long cind=(maxnew+minnew)/2;
         GEN newpoints=cgetg(cind+1,t_VEC);
         for(long i=1;i<=cind;i++) gel(newpoints, i)=gel(points, i);
@@ -1366,6 +1366,6 @@ plot_compile(char *fname, int WSL)
     if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
     pari_free(line);
   }
-  avma=top;
+  set_avma(top);
 }
 
