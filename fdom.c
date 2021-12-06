@@ -3519,14 +3519,8 @@ qalg_fdombestC(GEN Q, long prec)
   GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
   GEN npart;
-  if(n==1) npart=dbltor(2.8304840896);
-  else if(n==2) npart=dbltor(0.9331764427);
-  else if(n==3) npart=dbltor(0.9097513831);
-  else if(n==4) npart=dbltor(0.9734563346);
-  else if(n==5) npart=dbltor(1.0195386113);
-  else if(n==6) npart=dbltor(1.0184814342);
-  else if(n==7) npart=dbltor(0.9942555240);
-  else if(n==8) npart=dbltor(0.9644002039);
+  double npart_d[9]={0, 2.8304840896, 0.9331764427, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
+  if(n<=8) npart=dbltor(npart_d[n]);
   else npart=gen_1;
   GEN best=gerepileupto(top, gmul(npart, discpartroot));//npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)
   if(gcmpgs(best, n)<=0) best=gerepileupto(top, gaddsg(n, gen_2));//Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).
