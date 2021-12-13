@@ -2559,7 +2559,7 @@ presentation(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*elt
   if(ellind<lgcyc){
     ngens--;//One less generator.
     long irel=0, rind=0;//r[rind] shares an index with cyc[irel].
-    for(long i=ellind;i<lgcyc;i++){//Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);U=algfdom(A, , I/2);P=algfdomminimalcycles(U, A)
+    for(long i=ellind;i<lgcyc;i++){//Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);U=algfdom(A, , I/2);P=algfdomminimalcycles(U)
       long maxj=(lg(gel(cyc, i))-1)/cyctype[i];//Since the elliptic relation is repeated cyctype[i] times, we only need to check the first grouping of indices.
       for(long j=1;j<=maxj;j++){
         long ind=gel(cyc, i)[j], mind=-ind;
@@ -3009,9 +3009,11 @@ algfdom_bestC(GEN A, GEN O, long prec)
 
 //Returns the minimal cycles in the fundamental domain U of the algebra A.
 GEN
-algfdomminimalcycles(GEN U, GEN A, GEN O, long prec)
+algfdomminimalcycles(GEN U, long prec)
 {
   pari_sp top=avma;
+  GEN A=algfdom_get_alg(U);
+  GEN O=algfdom_get_order(U);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
@@ -3020,20 +3022,24 @@ algfdomminimalcycles(GEN U, GEN A, GEN O, long prec)
 
 //Returns the presentation of the algebra A, obtained from the fundamental domain U.
 GEN
-algfdompresentation(GEN U, GEN A, GEN O, long prec)
+algfdompresentation(GEN U, long prec)
 {
   pari_sp top=avma;
+  GEN A=algfdom_get_alg(U);
+  GEN O=algfdom_get_order(U);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, presentation(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
-//Reduces the norm 1 element g with respect to the fundamental domain fdom and the point z (default z=0)
+//Reduces the norm 1 element g with respect to the normalized boundary U and the point z (default z=0)
 GEN
-algfdomreduce(GEN g, GEN U, GEN A, GEN O, GEN z, long prec)
+algfdomreduce(GEN g, GEN U, GEN z, long prec)
 {
   pari_sp top=avma;
+  GEN A=algfdom_get_alg(U);
+  GEN O=algfdom_get_order(U);
   GEN tol=deftol(prec);
   GEN Q;
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -3043,9 +3049,11 @@ algfdomreduce(GEN g, GEN U, GEN A, GEN O, GEN z, long prec)
 
 //Returns the root geodesic of g translated to the fundamental domain U. Output is [elements, arcs, vecsmall of sides hit, vecsmall of sides left from].
 GEN
-algfdomrootgeodesic(GEN g, GEN U, GEN A, GEN O, long prec)
+algfdomrootgeodesic(GEN g, GEN U, long prec)
 {
   pari_sp top=avma;
+  GEN A=algfdom_get_alg(U);
+  GEN O=algfdom_get_order(U);
   GEN tol=deftol(prec);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -3056,9 +3064,11 @@ algfdomrootgeodesic(GEN g, GEN U, GEN A, GEN O, long prec)
 
 //Returns the signature of the quaternion algebra A with fundamental domain U.
 GEN
-algfdomsignature(GEN U, GEN A, GEN O, long prec)
+algfdomsignature(GEN U, long prec)
 {
   pari_sp top=avma;
+  GEN A=algfdom_get_alg(U);
+  GEN O=algfdom_get_order(U);
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
@@ -3067,8 +3077,10 @@ algfdomsignature(GEN U, GEN A, GEN O, long prec)
 
 //Writes g as a word in the presentation P.
 GEN
-algfdomword(GEN g, GEN P, GEN U, GEN A, GEN O, long prec){
+algfdomword(GEN g, GEN P, GEN U, long prec){
   pari_sp top=avma;
+  GEN A=algfdom_get_alg(U);
+  GEN O=algfdom_get_order(U);
   GEN tol=deftol(prec);
   GEN Q;
   if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
@@ -3218,7 +3230,9 @@ voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 
 //Returns the algebra of the fundamental domain
-GEN algfdomalg(GEN U){
+GEN
+algfdomalg(GEN U)
+{
   pari_sp top=avma;
   return gerepilecopy(top, algfdom_get_alg(U));
 }
@@ -3227,7 +3241,9 @@ GEN algfdomalg(GEN U){
 GEN algfdom_get_alg(GEN U){return gel(U, 9);}
 
 //Returns the order of the fundamental domain. If NULL, returns 0, since NULL is not friendly to the GP interface.
-GEN algfdomorder(GEN U){
+GEN
+algfdomorder(GEN U)
+{
   pari_sp top=avma;
   GEN O=algfdom_get_order(U);
   if(O) return gerepilecopy(top, O);
@@ -3235,7 +3251,9 @@ GEN algfdomorder(GEN U){
 }
 
 //Shallow version of algfdomalg
-GEN algfdom_get_order(GEN U){
+GEN
+algfdom_get_order(GEN U)
+{
   GEN O=gel(U, 10);
   if(gequal0(O)) return NULL;//If 0, we format it as NULL.
   return O;
