@@ -2979,8 +2979,9 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   pari_RETRY{
     U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
   }pari_ENDCATCH
-  if(precinc) pari_warn(warner, "Precision increased %d times to %d (the number of times it increased may be wrong, but the final precision should be correct). Please recompile your number field and algebra with precision \\p%Pd", precinc, newprec, precision00(U, NULL));
-  return gerepileupto(top, U);
+  if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).", newprec, precision00(U, NULL));
+  if(O) return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, O))));//Supplied Eichler order
+  return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, gen_0))));//Maximal order
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
@@ -3331,7 +3332,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
     if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
     if(gcmp(gel(U, 6), areabound)<0){
       if(dumppartial) fclose(f);
-      return gerepileupto(top, U);
+      return U;
     }
     if(pass>1 && (ooend==0 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
     nsidesp1=lg(gel(U, 1));//How many sides+1
