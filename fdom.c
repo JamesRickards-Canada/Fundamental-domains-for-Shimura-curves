@@ -3214,6 +3214,33 @@ static GEN
 voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 
+//FUNDAMENTAL DOMAIN RETRIEVAL METHODS
+
+
+//Returns the algebra of the fundamental domain
+GEN algfdomalg(GEN U){
+  pari_sp top=avma;
+  return gerepilecopy(top, algfdom_get_alg(U));
+}
+
+//Shallow version of algfdomalg
+GEN algfdom_get_alg(GEN U){return gel(U, 9);}
+
+//Returns the order of the fundamental domain. If NULL, returns 0, since NULL is not friendly to the GP interface.
+GEN algfdomorder(GEN U){
+  pari_sp top=avma;
+  GEN O=algfdom_get_order(U);
+  if(O) return gerepilecopy(top, O);
+  return gen_0;
+}
+
+//Shallow version of algfdomalg
+GEN algfdom_get_order(GEN U){
+  GEN O=gel(U, 10);
+  if(gequal0(O)) return NULL;//If 0, we format it as NULL.
+  return O;
+}
+
 
 //FUNDAMENTAL DOMAIN COMPUTATION
 

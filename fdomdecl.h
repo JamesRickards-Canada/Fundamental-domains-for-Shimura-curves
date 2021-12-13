@@ -95,6 +95,12 @@ GEN algnormdisc(GEN A);
 GEN algramifiedplacesf(GEN A);
 GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
 
+//FUNDAMENTAL DOMAIN RETRIEVAL METHODS
+GEN algfdomalg(GEN U);
+GEN algfdom_get_alg(GEN U);
+GEN algfdomorder(GEN U);
+GEN algfdom_get_order(GEN U);
+
 //HELPER METHODS
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
 GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long prec);
