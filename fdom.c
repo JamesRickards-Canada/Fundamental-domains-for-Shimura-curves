@@ -2979,7 +2979,7 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   pari_RETRY{
     U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
   }pari_ENDCATCH
-  if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).", newprec, precision00(U, NULL));
+  if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A)", newprec, precision00(U, NULL));
   if(O) return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, O))));//Supplied Eichler order
   return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, gen_0))));//Maximal order
 }

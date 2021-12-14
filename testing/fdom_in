@@ -63,7 +63,7 @@ testalgsignature(L)={
       F=nfinit(L[i][1][j]);
 	  A=alginit(F, L[i][2][j]);
 	  U=algfdom(A);
-	  print(algfdomsignature(U, A));\\At least this is one invariant.
+	  print(algfdomsignature(U));\\At least this is one invariant.
     );
   );
 }

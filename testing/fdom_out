@@ -68,4 +68,63 @@ Type '?fdom' for help.
   ***                 ^-----------------
   *** mobius: incorrect type in M needs to be a 2x2 matrix (t_INT).
 Pass random points test
+[0, Vecsmall([2, 2, 3, 3]), 0]
+[4, Vecsmall([]), 0]
+[3, Vecsmall([3, 3, 3, 3]), 0]
+[9, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2]), 0]
+[37, Vecsmall([]), 0]
+[39, Vecsmall([2, 2, 2, 2]), 0]
+[2, Vecsmall([3]), 0]
+[2, Vecsmall([3, 3, 3, 3, 3]), 0]
+[16, Vecsmall([]), 0]
+[8, Vecsmall([]), 0]
+[2, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 3]), 0]
+[12, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3]),
+ 0]
+[1, Vecsmall([9, 9]), 0]
+[3, Vecsmall([2, 2, 2, 2]), 0]
+[4, Vecsmall([2, 2]), 0]
+[1, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]), 0]
+[29, Vecsmall([]), 0]
+[29, Vecsmall([]), 0]
+[3, Vecsmall([3, 3, 3, 3, 3, 3]), 0]
+[13, Vecsmall([]), 0]
+[5, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 5, 5]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[37, Vecsmall([]), 0]
+[8, Vecsmall([]), 0]
+[10, Vecsmall([]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 6, i.e. \p77. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[10, Vecsmall([2, 2, 3, 3, 3, 3, 11, 11]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 6, i.e. \p77. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[25, Vecsmall([2, 2, 3, 3, 3, 3]), 0]
+[5, Vecsmall([3, 3, 3, 3]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[9, Vecsmall([3, 3, 3, 3]), 0]
+[5, Vecsmall([]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[9, Vecsmall([]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[2, Vecsmall([3, 3, 5, 5]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[8, Vecsmall([7]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[5, Vecsmall([3, 3, 3, 3, 7, 7, 21]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[11, Vecsmall([]), 0]
+  *** algfdom: Warning: Increasing precision.
+  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A).
+[5, Vecsmall([7, 7, 7, 7]), 0]
+[16, Vecsmall([]), 0]
 Total time spent: 604
