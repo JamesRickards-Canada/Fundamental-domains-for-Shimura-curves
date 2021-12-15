@@ -75,7 +75,6 @@ GEN deftol(long prec);
 
 //SECTION 3: QUATERNIONIC METHODS
 
-
 //QUATERNION METHODS
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
 GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);

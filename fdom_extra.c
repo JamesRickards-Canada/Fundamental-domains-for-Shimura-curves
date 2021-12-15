@@ -567,6 +567,7 @@ qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long maxelts
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
+  absrednorm=RgM_gtofp(absrednorm, prec);//absrednorm can have integer/rational entries, we want to make sure all entries are t_REAL, as otherwise it's a little slower, and a segmentation fault can occur in rare instances.
   GEN O=qalg_get_order(Q);
   int nonmax=0;
   if(!gequal(qalg_get_level(Q), gen_1)) nonmax=1;

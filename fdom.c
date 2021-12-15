@@ -14,6 +14,11 @@ POSSIBLE FUTURE ADDITIONS:
 #include <pari/pari.h>
 #endif
 
+#ifndef PARIPRIVLIB
+#define PARIPRIVLIB
+#include <pari/paripriv.h>
+#endif
+
 #ifndef METHDECL
 #define METHDECL
 #include "fdomdecl.h"
@@ -3285,7 +3290,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
   GEN gamma=dbltor(2.1);//2.1
   if(gequal0(R)) R=hdiscradius(gpow(area, gamma, prec), prec);//Setting R
   GEN epsilon=gdivgs(gen_1, 6);
-  
+
   if(dispprogress) pari_printf("Initial constants:\n   C=%P.8f\n   N=%Ps\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N, R, area);
   
   GEN id=gel(alg_get_basis(A), 1);//The identity  
@@ -3627,6 +3632,7 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
   GEN nf=alg_get_center(A);
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
+  absrednorm=RgM_gtofp(absrednorm, prec);//absrednorm can have integer/rational entries, we want to make sure all entries are t_REAL, as otherwise it's a little slower, and a segmentation fault can occur in rare instances.
   GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
   GEN O=qalg_get_order(Q);
   int nonmax=0;
