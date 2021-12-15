@@ -2984,7 +2984,7 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   pari_RETRY{
     U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
   }pari_ENDCATCH
-  if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A)", newprec, precision00(U, NULL));
+  if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b)", newprec, precision00(U, NULL));
   if(O) return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, O))));//Supplied Eichler order
   return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, gen_0))));//Maximal order
 }
@@ -3105,17 +3105,26 @@ algmoreprec(GEN A, long increment, long prec)
   GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
   GEN b=lift(alg_get_b(A));
   GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
+  int nodenom=1;
   if(!isint1(aden)){
+	nodenom=0;
     a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
     pari_warn(warner,"Changed the value of a, since it had a denominator.");
   }
   if(!isint1(bden)){
+	nodenom=0;
     b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
     pari_warn(warner,"Changed the value of a, since it had a denominator.");
   }
   long newprec=prec+increment;
   GEN newnf=nfinit(nf_get_pol(nf), newprec);
-  return gerepileupto(top, alginit(newnf, mkvec2(a, b), -1, 1));
+  GEN Anew=alginit(newnf, mkvec2(a, b), -1, 1);//The new algebra. 
+  if(!nodenom) return gerepileupto(top, Anew);//We updated a and b, so nothing more to do.
+  GEN basis_want=alg_get_basis(A);
+  GEN basis_dontwant=alg_get_invbasis(Anew);
+  GEN basis_change=RgM_mul(basis_dontwant, basis_want);
+  Anew=alg_changeorder(Anew, basis_change);
+  return gerepileupto(top, Anew);
 }
 
 //Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
