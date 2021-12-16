@@ -2970,20 +2970,21 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
   if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
+  
   long newprec=prec;
   unsigned int precinc=0;
-  pari_CATCH(e_PREC){
+  for(;;){
+    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
+    if(U) break;//Success, we have enough precision!
+    //If we reach here, we need more precision.
     pari_warn(warner, "Increasing precision");
-    newA=algmoreprec(newA, 1, newprec);
+    newA=algmoreprec(newA, 1, newprec);//Increments the precision by 1.
     newprec++;
     precinc++;
     tol=deftol(newprec);
     if(!O) Q=qalg_fdominitialize(newA, NULL, NULL, newprec);//Maximal order in A
     else Q=qalg_fdominitialize(newA, gel(O, 1), gel(O, 2), newprec);//Supplied Eichler order
   }
-  pari_RETRY{
-    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), tol, newprec);
-  }pari_ENDCATCH
   if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b)", newprec, precision00(U, NULL));
   if(O) return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, O))));//Supplied Eichler order
   return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, gen_0))));//Maximal order
@@ -3107,12 +3108,12 @@ algmoreprec(GEN A, long increment, long prec)
   GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
   int nodenom=1;
   if(!isint1(aden)){
-	nodenom=0;
+    nodenom=0;
     a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
     pari_warn(warner,"Changed the value of a, since it had a denominator.");
   }
   if(!isint1(bden)){
-	nodenom=0;
+    nodenom=0;
     b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
     pari_warn(warner,"Changed the value of a, since it had a denominator.");
   }
@@ -3231,7 +3232,13 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
       gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
     }
   }//Tr_{nf/Q}(nrd(elt));
-  if(type==1) return gerepileupto(top, qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, nfdecomp, nformpart, prec));
+  if(type==1){
+    GEN result=qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, nfdecomp, nformpart, prec);
+    if(result) return gerepileupto(top, result);//Non-null
+    pari_warn(warner, "Precision too low. Please increase the precision and try again");
+    set_avma(top);
+    return gen_0;
+  }
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, 0, nform, nformpart, prec)); 
 }
 
@@ -3308,7 +3315,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
   
   long fourn=4*nfdeg;//The lg of a normal entry
   GEN nformpart=qalg_normform(Q);
-  GEN nfdecomp, nform;//nfdecomp used if type=1, nform if type=2
+  GEN nfdecomp=NULL, nform=NULL;//nfdecomp used if type=1, nform if type=2
   if(lg(qalg_get_rams(Q))==1) type=1;//We must use qfminim, since our implementation of condition won't work in a non-division algebra.
   long maxelts=1;
   if(type==1 || (type==0 && nfdeg>=2)){//qfminim
@@ -3331,15 +3338,15 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
     if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
     else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
   }
+  if(!partialset) return gc_NULL(top);//Precision too low
   U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
 
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
 
   mid=avma;
-  long pass=0, ooend=0, nskip, nsidesp1=lg(gel(U, 1));//How many sides+1; pass tracks which pass we are on
+  long pass=0, ooend=0, nsidesp1=lg(gel(U, 1));//How many sides+1; pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
-  int anyskipped=0;
 
   for(;;){
     pass++;
@@ -3350,7 +3357,6 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
       if(dispprogress) pari_printf("%d infinite sides\n", ooend);
     }
     iN=itos(gfloor(N))+1;
-    nskip=0;//How many points are skipped due to poor precision
     points=cgetg(iN, t_VEC);
     for(long i=1;i<iN;i++){//Random points in ball of radius R
       if(0<ooend){//Going near infinite side
@@ -3361,30 +3367,14 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
         w=randompoint_udarc(R, ang1, ang2, prec);
       }
       else w=randompoint_ud(R, prec);//Random point
-      pari_CATCH(CATCH_ALL){
-        GEN err=pari_err_last();//Get the error
-        long errcode=err_get_num(err);
-        pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
-        if(errcode==e_TYPE){//If R is large
-          if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-          anyskipped=1;
-          nskip++;
-          gel(points, i)=cgetg(1, t_VEC);
-        }
-        else pari_err(errcode);
-      }
-      pari_TRY{
-        GEN smallelts;
-        if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
-        else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
-        if(smallelts) gel(points, i)=smallelts;
-        else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-      }
-      pari_ENDCATCH
+      GEN smallelts;
+      if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+      else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
+      if(smallelts) gel(points, i)=smallelts;
+      else return gc_NULL(top);//Must increase precision I guess.
     }
     points=shallowconcat1(points);
     if(dispprogress){
-      if(nskip) pari_printf("%d points skipped due to lack of precision\n", nskip);
       pari_printf("%d elements found\n", lg(points)-1);
     }
     U=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
@@ -3642,7 +3632,9 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
   GEN mats=psltopsu_transmats(p);
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   absrednorm=RgM_gtofp(absrednorm, prec);//absrednorm can have integer/rational entries, we want to make sure all entries are t_REAL, as otherwise it's a little slower, and a segmentation fault can occur in rare instances.
-  GEN vposs=gel(qfminim0(absrednorm, C, NULL, 2, prec), 3);
+  GEN fpresult=fincke_pohst(absrednorm, C, -1, prec, NULL);//Calling fincke-pohst, which is basically qfminim0, but returns NULL instead of raising an error.
+  if(!fpresult) return gc_NULL(top);//Occurs when the precision is too low. Return NULL and maybe recompute above.
+  GEN vposs=gel(fpresult, 3);
   GEN O=qalg_get_order(Q);
   int nonmax=0;
   if(!gequal(qalg_get_level(Q), gen_1)) nonmax=1;

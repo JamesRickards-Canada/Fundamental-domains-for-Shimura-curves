@@ -772,7 +772,9 @@ enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec)
       gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
     }
   }//Tr_{K/Q}(nrd(elt));
-  return gerepileupto(top, enum_successrate_givendata(Q, p, C, Ntests, R, area, normdecomp, nformpart, prec));
+  GEN retdat=enum_successrate_givendata(Q, p, C, Ntests, R, area, normdecomp, nformpart, prec);
+  if(!retdat) pari_err_PREC("Precision is too low, please increase");
+  return gerepileupto(top, retdat);
 }
 
 //enum_successrate, but over a range of C. Prints the observed data to file plots/build/fname.dat (if not NULL), and returns [A, B, R^2]: the predicted heuristic of A+BC and the R^2 value of this heuristic (B=2Pi/area, A=-2*pi*n/area)
@@ -803,7 +805,9 @@ enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntes
   GEN C=Cmin;
   GEN blen=gdivgs(gsub(Cmax, Cmin), ntrials-1);
   for(long i=1;i<=ntrials;i++){//Each trial
-    gel(found, i)=gel(enum_successrate_givendata(Q, p, C, Ntests, R, area, normdecomp, nformpart, prec), 1);
+    GEN getdat=enum_successrate_givendata(Q, p, C, Ntests, R, area, normdecomp, nformpart, prec);
+    if(!getdat) pari_err_PREC("Precision is too low, please increase");
+    gel(found, i)=gel(getdat, 1);
     gel(Cmat, i)=mkcol2(gen_1, C);
     C=gadd(C, blen);
     if(i%10==0) pari_printf("Trial %d done.\n", i);
@@ -844,6 +848,7 @@ enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GE
     mid=avma;
     GEN z=randompoint_ud(R, prec);
     GEN elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, normdecomp, nformpart, prec);
+    if(!elts) return gc_NULL(top);//Precision too low
     if(lg(elts)>1) found=found+enum_nontrivial(elts);
     set_avma(mid);
   }
@@ -904,7 +909,8 @@ enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec)
       mid=avma;
       tries++;
       GEN z=randompoint_ud(R, prec);
-      qalg_smallnorm1elts_qfminim(Q, p, gel(Cset, i), gen_0, z, 0, nfdecomp, normformpart, prec);
+      GEN theelts=qalg_smallnorm1elts_qfminim(Q, p, gel(Cset, i), gen_0, z, 0, nfdecomp, normformpart, prec);
+      if(!theelts) return gc_NULL(top);
       t=timer_get(&T);
       set_avma(mid);
     }
@@ -928,6 +934,7 @@ enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime
     C=gadd(C, blen);
   }
   GEN times=enum_time(A, p, Clist, mintesttime, prec);//Executing the computation
+  if(!times) pari_err_PREC("Precision is too low, please increase");
   if(fdata){
     if(!pari_is_dir("plots/build")){//Checking the directory
       int s=system("mkdir -p plots/build");
@@ -1002,6 +1009,7 @@ enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long prec)
     }
   }//Tr_{nf/Q}(nrd(elt));
   long tottime=enum_timeforNelts_givendata(Q, p, C, nelts, R, type, nform, nfdecomp, nformpart, prec);
+  if(tottime==-1) pari_err_PREC("Precision is too low, please increase");
   set_avma(top);
   return tottime;
 }
@@ -1020,6 +1028,7 @@ enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GE
     while(found<nelts){
       z=randompoint_ud(R, prec);//Random point
       elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 1, nfdecomp, nformpart, prec);
+      if(!elts) return gc_long(top, -1);
       if(lg(elts)!=1){
         if(enum_nontrivial(elts)>0) found++;
       }
@@ -1085,6 +1094,7 @@ enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long nel
   for(long i=1;i<=ntrials;i++){
     C=gel(Clist, i);
     long t=enum_timeforNelts_givendata(Q, p, C, nelts, R, type, nform, nfdecomp, nformpart, prec);
+    if(t==-1) pari_err_PREC("Precision is too low, please increase");
     double tins=t/((double)1000);
     pari_fprintf(f, "%Pf %.3f\n", C, tins);
     pari_printf("%Pf %.3f\n", C, tins);
@@ -1136,19 +1146,21 @@ algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec)
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q=qalg_fdominitialize(A, NULL, NULL, prec), newA=A, U;
-  long precinc=0, newprec=prec;
-  pari_CATCH(e_PREC){
+  
+  long newprec=prec;
+  unsigned int precinc=0;
+  for(;;){
+    U=qalg_fdom_nelts(Q, p, CNRdata, type, tol, newprec);
+    if(U) break;//Success, we have enough precision!
+    //If we reach here, we need more precision.
     pari_warn(warner, "Increasing precision");
-    precinc++;
-    newA=algmoreprec(newA, 1, newprec);
+    newA=algmoreprec(newA, 1, newprec);//Increments the precision by 1.
     newprec++;
+    precinc++;
     tol=deftol(newprec);
     Q=qalg_fdominitialize(newA, NULL, NULL, newprec);
   }
-  pari_RETRY{
-    U=qalg_fdom_nelts(Q, p, CNRdata, type, tol, newprec);
-  }pari_ENDCATCH
-  if(precinc) pari_warn(warner, "Precision increased %d times to %d.", precinc, newprec);
+  if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b)", newprec, precision00(U, NULL));
   return gerepileupto(top, U);
 }
 
@@ -1205,9 +1217,8 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
   }//Tr_{nf/Q}(nrd(elt));
 
   mid=avma;
-  long pass=0, ooend=0, nsidesp1=1, nskip;//pass tracks which pass we are on
+  long pass=0, ooend=0, nsidesp1=1;//pass tracks which pass we are on
   GEN oosides=cgetg(1, t_VEC), ang1, ang2;//Initialize, so that lg(oosides)=1 to start.
-  int anyskipped=0;
   long neltsgen=0;
 
   for(;;){
@@ -1217,7 +1228,6 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
       ooend=lg(oosides)-1;
     }
     iN=itos(gfloor(N))+1;
-    nskip=0;//How many points are skipped due to poor precision
     points=cgetg(iN, t_VEC);
     for(long i=1;i<iN;i++){//Random points in ball of radius R
       if(i<=ooend){//Going near infinite side
@@ -1227,26 +1237,11 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
         w=randompoint_udarc(R, ang1, ang2, prec);
       }
       else w=randompoint_ud(R, prec);//Random point
-      pari_CATCH(CATCH_ALL){
-        GEN err=pari_err_last();//Get the error
-        long errcode=err_get_num(err);
-        pari_printf("");//Seems to be required, else I get a segmentation fault? weird...
-        if(errcode==e_TYPE){//If R is large
-          if(!anyskipped) pari_printf("Point skipped, consider stopping the job increasing the precision (or decreasing R) to avoid this\n");
-          anyskipped=1;
-          nskip++;
-          gel(points, i)=cgetg(1, t_VEC);
-        }
-        else pari_err(errcode);
-      }
-      pari_TRY{
-        GEN smallelts;
-        if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
-        else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
-        if(smallelts) gel(points, i)=smallelts;
-        else gel(points, i)=cgetg(1, t_VEC);//There was an issue (possibly precision induced)
-      }
-      pari_ENDCATCH
+      GEN smallelts;
+      if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
+      else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
+      if(smallelts) gel(points, i)=smallelts;
+      else return gc_NULL(top);//Must increase precision I guess.
     }
     points=shallowconcat1(points);
     GEN Unew=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
