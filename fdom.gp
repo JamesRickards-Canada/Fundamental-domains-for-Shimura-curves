@@ -2,16 +2,14 @@ print("\n\nType '?fdom' for help.\n\n");
 addhelp(fdom, "This package can be used to compute fundamental domains for Shimura curves (the PARI code can be easily adapted to compute fundamental domains for any discrete subgroup of PSL(2, R)).\n For each subtopic ``P (p)'', call ?p to access a basic description and list of methods. Subtopics:\n Geometry (geo)\n Visualizing fundamental domains with Python (vfd)\n Quaternion methods (quat)");
 
 \\GEOMETRY
-	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscarea, hdiscradius, hdist, hdist_ud, mat_eval, mobius, randompoint_ud");
+	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscarea, hdiscradius, hdist, mat_eval, mobius, randompoint_ud");
 
 	install("hdiscarea","Gp","hdiscarea","./libfdom.so");
 	addhelp(hdiscarea,"Input R, a positive real number.\n Returns the hyperbolic area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2.");
 	install("hdiscradius","Gp","hdiscradius","./libfdom.so");
-	addhelp(hdiscradius,"Inpu area, a positive real number.\n Returns the radius of the hyperbolic disc with that area.");
-	install("hdist","GGp","hdist","./libfdom.so");
-	addhelp(hdist,"Inputs z1, z2 complex numbers in the upper half plane.\n Returns the hyperbolic distance between z1 and z2.");
-	install("hdist_ud","GGp","hdist_ud","./libfdom.so");
-	addhelp(hdist_ud,"Inputs z1, z2 complex numbers inside the unit disc.\n Returns the hyperbolic distance between z1 and z2 in the unit disc model.");
+	addhelp(hdiscradius,"Input area, a positive real number.\n Returns the radius of the hyperbolic disc with that area.");
+	install("hdist","GGD0,L,p","hdist","./libfdom.so");
+	addhelp(hdist,"Inputs z1, z2, {flag=0}: complex numbers in the upper half plane z1 and z2, and flag=0, 1.\n Returns the hyperbolic distance between z1 and z2. If flag=0 we use the upper half plane model, and if flag=1 we use the unit disc model.");
 	install("mat_eval","GG","mat_eval","./libfdom.so");
 	addhelp(mat_eval, "Inputs M, x; M a matrix, and x number.\n Returns Mx with M acting via Mobius transformation. x=+/-oo is allowed.");
 	install("mobius_gp","GGp","mobius","./libfdom.so");

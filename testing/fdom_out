@@ -15,7 +15,7 @@ Type '?fdom' for help.
   *** hdist: impossible inverse in dvmdii: 0.
 1.4911107878430456834096259848401624718
 14.507657988940916942322147853071767588
-  *** hdist_ud: Warning: You may not have enough precision to compute the hyperbolic distance.
+  *** hdist: Warning: You may not have enough precision to compute the hyperbolic distance.
 +oo
 -4*I
 -4*I

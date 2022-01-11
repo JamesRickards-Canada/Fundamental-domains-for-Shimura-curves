@@ -43,8 +43,7 @@ GEN mobius_gp(GEN M, GEN c, long prec);
 //DISTANCES/AREAS
 GEN hdiscarea(GEN R, long prec);
 GEN hdiscradius(GEN area, long prec);
-GEN hdist(GEN z1, GEN z2, long prec);
-GEN hdist_ud(GEN z1, GEN z2, long prec);
+GEN hdist(GEN z1, GEN z2, long flag, long prec);
 
 //FUNDAMENTAL DOMAIN COMPUTATION
 GEN isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec);

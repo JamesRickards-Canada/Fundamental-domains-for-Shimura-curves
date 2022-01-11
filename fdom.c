@@ -66,6 +66,7 @@ static int onarc(GEN c, GEN p, GEN tol, long prec);
 static int onseg(GEN l, GEN p, GEN tol, long prec);
 
 //2: DISTANCES
+static GEN hdist_ud(GEN z1, GEN z2, long prec);
 static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 
 //2: FUNDAMENTAL DOMAIN COMPUTATION
@@ -1210,20 +1211,21 @@ hdiscradius(GEN area, long prec)
   return gerepileupto(top, gtofp(gmulgs(gasinh(gsqrt(gdiv(area, Pi2n(2, prec)), prec), prec), 2), prec));
 }
 
-//z1 and z2 are complex numbers, this computes the hyperbolic distance between them.
+//z1 and z2 are complex numbers, this computes the hyperbolic distance between them. If flag=0, assumes upper half plane model; if flag=1, assumes unit disc model.
 GEN
-hdist(GEN z1, GEN z2, long prec)
+hdist(GEN z1, GEN z2, long flag, long prec)
 {
   pari_sp top=avma;
+  if(flag) return hdist_ud(z1, z2, prec);
   GEN x1=real_i(z1), y1=imag_i(z1);
   GEN x2=real_i(z2), y2=imag_i(z2);
   GEN x=gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)), gsqr(gsub(y2, y1))), gmul(gmulsg(2, y1), y2)));
   GEN expd=gadd(x, gsqrt(gsubgs(gsqr(x), 1), prec));
-  return gerepileupto(top, glog(expd, prec));
+  return gerepileupto(top, glog(expd, prec));  
 }
 
 //The hyperbolic distance between z1 and z2 in the unit disc model
-GEN
+static GEN
 hdist_ud(GEN z1, GEN z2, long prec)
 {
   pari_sp top=avma;

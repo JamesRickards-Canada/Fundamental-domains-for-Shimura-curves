@@ -8,12 +8,12 @@ hdiscradius(100)
 hdiscradius(10^6)
 
 hdist(I, 2*I+10)
-hdist(0.2+I/4, 5*I-11.2)
+hdist(0.2+I/4, 5*I-11.2, 0)
 hdist(-1, 2) \\Error
 
-hdist_ud(0.0123+I/2, -0.4)
-hdist_ud(0.999*I, 0.999)
-hdist_ud(0, 1) \\Error
+hdist(0.0123+I/2, -0.4, 1)
+hdist(0.999*I, 0.999, 1)
+hdist(0, 1, 1) \\Error
 
 M1=[4, 5;I, 2];
 M2=[0, 3;1, 4];
@@ -54,7 +54,7 @@ mobius(2, [0, 1, 0]) \\Error
 rdists=vector(50, i, random(15)+1);
 rpoints=vector(50, i, randompoint_ud(rdists[i]));
 rpointpass=1;
-for(i=1, 50, if(hdist_ud(0, rpoints[i])>rdists[i],rpointpass=0));
+for(i=1, 50, if(hdist(0, rpoints[i], 1)>rdists[i],rpointpass=0));
 if(rpointpass==1, print("Pass random points test"), print("Fail random points test"));
 
 testalgfdom(L)={
