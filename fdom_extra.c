@@ -570,7 +570,7 @@ qalg_smallelts_qfminim(GEN Q, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long maxelts
   absrednorm=RgM_gtofp(absrednorm, prec);//absrednorm can have integer/rational entries, we want to make sure all entries are t_REAL, as otherwise it's a little slower, and a segmentation fault can occur in rare instances.
   GEN O=qalg_get_order(Q);
   int nonmax=0;
-  if(!gequal(qalg_get_level(Q), gen_1)) nonmax=1;
+  if(!gequal1(qalg_get_level(Q))) nonmax=1;
   long nvposs=lg(vposs), mret;
   if(maxelts) mret=maxelts+1;
   else mret=nvposs;
@@ -746,7 +746,7 @@ enum_nontrivial(GEN L)
 {
   long nt=0;
   for(long i=1;i<lg(L);i++){
-    if(!gequal(gmael(L, i, 1), gen_1) && !gequal(gmael(L, i, 1), gen_m1)){nt++;continue;}
+    if(!gequal1(gmael(L, i, 1)) && !gequalm1(gmael(L, i, 1))){nt++;continue;}
     for(long j=2;j<lg(gel(L, i));j++) if(!gequal0(gmael(L, i, j))){nt++;break;}
   }
   return nt;

@@ -764,20 +764,20 @@ mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec)
   else{//segment
     if(typ(gel(c, 3))==t_INFINITY){//Start point infinity
       GEN u;
-      if(gequal(gel(c, 6), gen_1)) u=gen_m2;//segment goes vertically up or right
+      if(gequal1(gel(c, 6))) u=gen_m2;//segment goes vertically up or right
       else u=gen_2;//segment goes vertically down or left
       if(typ(gel(c, 1))==t_INFINITY) extpt=mat_eval(M, gadd(gel(c, 4), gmul(u, gen_I())));//Vertical line, M(c[4]+U*I)
       else extpt=mat_eval(M, gadd(gel(c, 4), gmul(u, gaddsg(1, gmul(gel(c, 1), gen_I())))));//non-vertical line, M(c[4]+u+u*c[1]*I)
     }
     else if(typ(gel(c, 4))==t_INFINITY){//End point infinity
       GEN u;
-      if(gequal(gel(c, 6), gen_1)) u=gen_2;//segment goes vertically up or right
+      if(gequal1(gel(c, 6))) u=gen_2;//segment goes vertically up or right
       else u=gen_m2;//segment goes vertically down or left
       if(typ(gel(c, 1))==t_INFINITY) extpt=mat_eval(M, gadd(gel(c, 3), gmul(u, gen_I())));//Vertical line, M(c[3]+U*I)
       else extpt=mat_eval(M, gadd(gel(c, 3), gmul(u, gaddsg(1, gmul(gel(c, 1), gen_I())))));//non-vertical line, M(c[3]+u+u*c[1]*I)
     }
     else{//Start/end points in the plane
-      if(gequal(gel(c, 7), gen_1)) extpt=mat_eval(M, midpoint(gel(c, 3), gel(c, 4)));//Does not go through oo, can take midpoint
+      if(gequal1(gel(c, 7))) extpt=mat_eval(M, midpoint(gel(c, 3), gel(c, 4)));//Does not go through oo, can take midpoint
       else extpt=mat_eval(M, mkoo());//Use oo, since the line goes through there
     }
   }
@@ -804,7 +804,7 @@ mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec)
     }
   }
   else{//Line
-    if(isarc==1 && gequal(gel(c, 7), gen_m1)){//We need to reverse the order of the points, because the arc ran backwards.
+    if(isarc==1 && gequalm1(gel(c, 7))){//We need to reverse the order of the points, because the arc ran backwards.
       gel(ret, 3)=endpt2;
       gel(ret, 4)=endpt1;
     }
@@ -1121,7 +1121,7 @@ onseg(GEN l, GEN p, GEN tol, long prec)
 {
   if(lg(l)==CIRCLEN) return 1;//Allow input of a line, so return is trivially 1
   if(typ(p)==t_INFINITY){//p is the point at oo
-    if(!gequal0(gel(l, 6)) || gequal(gel(l, 7), gen_m1)) return 1;//oo is an endpoint OR the seg passes through oo
+    if(!gequal0(gel(l, 6)) || gequalm1(gel(l, 7))) return 1;//oo is an endpoint OR the seg passes through oo
     return 0;//If not, does not pass through oo
   }
   pari_sp top=avma;
@@ -1151,11 +1151,11 @@ onseg(GEN l, GEN p, GEN tol, long prec)
     set_avma(top);
     if(i1==0 || i2==0) return 1;//endpoint
     if(i1==i2){//p on the same side of l[3] and l[4], so return 1 iff l passes through oo
-        if(gequal(gel(l, 7), gen_1)) return 0;//Not through oo
+        if(gequal1(gel(l, 7))) return 0;//Not through oo
         return 1;//through oo
     }
     //p is between l[3] and l[4], so return 1 iff l does not pass through oo
-    if(gequal(gel(l, 7), gen_1)) return 1;//not through oo
+    if(gequal1(gel(l, 7))) return 1;//not through oo
     return 0;//through oo
   }
   //Non-vertical line
@@ -1183,11 +1183,11 @@ onseg(GEN l, GEN p, GEN tol, long prec)
   set_avma(top);
   if(i1==0 || i2==0) return 1;//endpoint
   if(i1==i2){//p on the same side of l[3] and l[4], so return 1 iff l passes through oo
-    if(gequal(gel(l, 7), gen_1)) return 0;//Not through oo
+    if(gequal1(gel(l, 7))) return 0;//Not through oo
     return 1;//through oo
   }
   //p is between l[3] and l[4], so return 1 iff l does not pass through oo
-  if(gequal(gel(l, 7), gen_1)) return 1;//not through oo
+  if(gequal1(gel(l, 7))) return 1;//not through oo
   return 0;//through oo
 }
 
@@ -1338,7 +1338,7 @@ isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long),
   gel(ret, 1)=gcopy(g);
   gel(ret, 2)=psltopsu_mats(ginpsl, mats);
   gel(ret, 3)=isometriccircle_psu(gel(ret, 2), tol, prec);
-  if(!gequal(gel(ret, 3), gen_m1)) return gerepileupto(top, ret);//Everything A-OK
+  if(!gequalm1(gel(ret, 3))) return gerepileupto(top, ret);//Everything A-OK
   //If we reach here, we did not have enough precision
   long newprec=prec;
   pari_CATCH(CATCH_ALL){
@@ -1363,7 +1363,7 @@ isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long),
       gel(ret, 2)=psltopsu_mats(ginpsl, mats);
       gel(ret, 3)=isometriccircle_psu(gel(ret, 2), tol, newprec);
     }
-    while(gequal(gel(ret, 3), gen_m1));
+    while(gequalm1(gel(ret, 3)));
     pari_CATCH_reset();
     return gerepileupto(top, ret);
   }
@@ -2083,7 +2083,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
   pari_sp top=avma;
   GEN v, ret, inter, d1, d2;
   long ind;
-  if(gequal(gel(c, 8), gen_1)){//Line segment; the index found from normalizedboundary_outside is correct guarenteed.
+  if(gequal1(gel(c, 8))){//Line segment; the index found from normalizedboundary_outside is correct guarenteed.
     if(start==1) v=gel(c, 3);
     else v=gel(c, 4);
     ind=normalizedboundary_outside(U, v, tol, prec);//This is the index
@@ -2109,11 +2109,11 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
   }
   GEN v2;//The other point
   if(start==1){
-    if(gequal(gel(c, 7), gen_m1)){v=gel(c, 4);v2=gel(c, 3);}//If directed backwards, need the terminal point as the start
+    if(gequalm1(gel(c, 7))){v=gel(c, 4);v2=gel(c, 3);}//If directed backwards, need the terminal point as the start
     else {v=gel(c, 3);v2=gel(c, 4);}//If undirected or directed forwards, the initial point is the start
   }
   else{
-    if(gequal(gel(c, 7), gen_m1)){v=gel(c, 3);v2=gel(c, 4);}//If directed backwards, need the initial point.
+    if(gequalm1(gel(c, 7))){v=gel(c, 3);v2=gel(c, 4);}//If directed backwards, need the initial point.
     else{v=gel(c, 4);v2=gel(c, 3);}//Undirected/forwards, the terminal point is the start.
   }
   ind=normalizedboundary_outside(U, v, tol, prec);
@@ -2752,7 +2752,7 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
     vend=normalizedboundary_sideint(U, geod, 0, tol, prec);
     glist_putstart(&Gs, g);
     if(gequal0(gel(geod, 8))){//Arc
-      if(gequal(gel(geod, 7), gen_m1)) glist_putstart(&circs, arc_init(geod, gel(vend, 1), vstart, -1, prec));//geod travelling backwards
+      if(gequalm1(gel(geod, 7))) glist_putstart(&circs, arc_init(geod, gel(vend, 1), vstart, -1, prec));//geod travelling backwards
       else glist_putstart(&circs, arc_init(geod, vstart, gel(vend, 1), 1, prec));//geod travelling normally
     }
     else{//Segment
@@ -2871,12 +2871,12 @@ geom_check(GEN c)
   int len=lg(c);
   if(len==CIRCLEN){//Circle or line
     if(gequal0(gel(c, 3))) return 0;//Circle
-    if(gequal(gel(c, 3), gen_1)) return 1;//Line
+    if(gequal1(gel(c, 3))) return 1;//Line
     return -1;//Neither
   }
   else if(len==ARCLEN){
     if(gequal0(gel(c, 8))) return 2;//Circle arc
-    if(gequal(gel(c, 8), gen_1)) return 3;//Line segment
+    if(gequal1(gel(c, 8))) return 3;//Line segment
     return -1;//Neither
   }
   return -1;//Not a circle/line
@@ -3533,7 +3533,7 @@ qalg_fdomarea(GEN Q, long computeprec, long prec)
     norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));//Product of N(p)-1 over finite p ramifying in A
   }
   GEN elevpart=gen_1, ell=qalg_get_level(Q);
-  if(!gequal(ell, gen_1)){//We have an Eichler part
+  if(!gequal1(ell)){//We have an Eichler part
     GEN ifact=idealfactor(F, ell);
     if(!gequal0(ifact)){//If this does not trigger we are done; the level got passed in as an ideal of norm 1 by accident.
       for(long i=1;i<lg(gel(ifact, 1));i++){
@@ -3567,7 +3567,7 @@ qalg_fdombestC(GEN Q, long prec)
   long n=nf_get_degree(nf);//Degree of field
   GEN algdisc=algnormdisc(A);//Norm of disc
   GEN l=qalg_get_level(Q);
-  if(!gequal(l, gen_1)) algdisc=mulii(algdisc, idealnorm(nf, l));//Incorporating the norm to Q of the level.  
+  if(!gequal1(l)) algdisc=mulii(algdisc, idealnorm(nf, l));//Incorporating the norm to Q of the level.  
   GEN discpart=gmul(nf_get_disc(nf), gsqrt(algdisc, prec));//disc(F)*sqrt(algdisc)
   GEN discpartroot=gpow(discpart, gdivgs(gen_1, n), prec);//discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)
   GEN npart;
@@ -3639,7 +3639,7 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
   GEN vposs=gel(fpresult, 3);
   GEN O=qalg_get_order(Q);
   int nonmax=0;
-  if(!gequal(qalg_get_level(Q), gen_1)) nonmax=1;
+  if(!gequal1(qalg_get_level(Q))) nonmax=1;
   long nvposs=lg(vposs), mret;
   if(maxelts) mret=maxelts+1;
   else mret=nvposs;
@@ -3647,7 +3647,7 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
   for(long i=1;i<nvposs;i++){
     mid=avma;
     norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
-    if(gequal(norm, gen_1)){
+    if(gequal1(norm)){
       set_avma(mid);
       if(nonmax) vectrunc_append(ret, QM_QC_mul(O, gel(vposs, i)));//Change of basis backwards
       else vectrunc_append(ret, gel(vposs, i));//Don't append a copy, will copy at the end.
@@ -3668,7 +3668,7 @@ qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts,
   GEN absrednorm=qalg_absrednormqf(Q, mats, z1, z2, nformpart, prec);
   GEN A=qalg_get_alg(Q);
   GEN vs=smallvectors_nfcondition(absrednorm, C, maxelts, mkvec3(alg_get_center(A), nform, gen_1), prec);
-  if(gequal(qalg_get_level(Q), gen_1)) return gerepileupto(top, vs);
+  if(gequal1(qalg_get_level(Q))) return gerepileupto(top, vs);
   //Now, non-maximal, change of basis back
   GEN O=qalg_get_order(Q);
   long l;
@@ -3729,7 +3729,7 @@ qalg_fdomtrace(GEN data, GEN x)
 int
 qalg_istriv(GEN data, GEN x)
 {
-  if(!gequal(gel(x, 1), gen_1) && !gequal(gel(x, 1), gen_m1)) return 0;
+  if(!gequal1(gel(x, 1)) && !gequalm1(gel(x, 1))) return 0;
   for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;
   return 1;
 }
