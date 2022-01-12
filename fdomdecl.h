@@ -16,9 +16,6 @@ typedef struct listtype2{//A generic linked list of longs, stores data and next 
 
 //SECTION 1: BASE METHODS
 
-//INFINITY 
-GEN divoo(GEN a, GEN b);
-
 //LISTS
 void glist_free(glist *l);
 GEN glist_pop(glist **head_ref);
@@ -41,8 +38,7 @@ GEN mat_eval(GEN M, GEN x);
 GEN mobius_gp(GEN M, GEN c, long prec);
 
 //DISTANCES/AREAS
-GEN hdiscarea(GEN R, long prec);
-GEN hdiscradius(GEN area, long prec);
+GEN hdiscrandom(GEN R, long prec);
 GEN hdist(GEN z1, GEN z2, long flag, long prec);
 
 //FUNDAMENTAL DOMAIN COMPUTATION
@@ -53,8 +49,6 @@ GEN normalizedboundary(GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, G
 GEN psltopsu(GEN g, GEN p);
 GEN psltopsu_mats(GEN g, GEN M);
 GEN psltopsu_transmats(GEN p);
-GEN randompoint_ud(GEN R, long prec);
-GEN randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec);
 GEN reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec);
 GEN reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN tol, long prec);
 GEN rootgeodesic_ud(GEN M, GEN mats, GEN tol, long prec);

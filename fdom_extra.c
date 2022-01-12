@@ -846,7 +846,7 @@ enum_successrate_givendata(GEN Q, GEN p, GEN C, long Ntests, GEN R, GEN area, GE
   long found=0;
   for(long test=1;test<=Ntests;test++){
     mid=avma;
-    GEN z=randompoint_ud(R, prec);
+    GEN z=hdiscrandom(R, prec);
     GEN elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 0, normdecomp, nformpart, prec);
     if(!elts) return gc_NULL(top);//Precision too low
     if(lg(elts)>1) found=found+enum_nontrivial(elts);
@@ -908,7 +908,7 @@ enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec)
     while(t<mintesttime){//Make sure we do at least mintesttime per test
       mid=avma;
       tries++;
-      GEN z=randompoint_ud(R, prec);
+      GEN z=hdiscrandom(R, prec);
       GEN theelts=qalg_smallnorm1elts_qfminim(Q, p, gel(Cset, i), gen_0, z, 0, nfdecomp, normformpart, prec);
       if(!theelts) return gc_NULL(top);
       t=timer_get(&T);
@@ -1026,7 +1026,7 @@ enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GE
   if(type==1){//qfminim
     mid=avma;
     while(found<nelts){
-      z=randompoint_ud(R, prec);//Random point
+      z=hdiscrandom(R, prec);//Random point
       elts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, z, 1, nfdecomp, nformpart, prec);
       if(!elts) return gc_long(top, -1);
       if(lg(elts)!=1){
@@ -1039,7 +1039,7 @@ enum_timeforNelts_givendata(GEN Q, GEN p, GEN C, long nelts, GEN R, int type, GE
   else{//condition
     mid=avma;
     while(found<nelts){
-      z=randompoint_ud(R, prec);//Random point
+      z=hdiscrandom(R, prec);//Random point
       elts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, z, 1, nform, nformpart, prec);
       if(lg(elts)!=1){
         if(enum_nontrivial(elts)>0) found++;
@@ -1234,9 +1234,9 @@ qalg_fdom_nelts(GEN Q, GEN p, GEN CNRdata, int type, GEN tol, long prec)
         ang2=gmael(U, 4, oosides[i]);
         if(oosides[i]==1) ang1=gmael(U, 4, lg(gel(U, 1))-1);//Last side, which is the previous side
         else ang1=gmael(U, 4, oosides[i]-1);
-        w=randompoint_udarc(R, ang1, ang2, prec);
+        w=hdiscrandom_arc(R, ang1, ang2, prec);
       }
-      else w=randompoint_ud(R, prec);//Random point
+      else w=hdiscrandom(R, prec);//Random point
       GEN smallelts;
       if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
       else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);

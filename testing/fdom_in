@@ -1,12 +1,6 @@
 \r fdom;
 
 \\Geometry
-hdiscarea(2)
-hdiscarea(11)
-
-hdiscradius(100)
-hdiscradius(10^6)
-
 hdist(I, 2*I+10)
 hdist(0.2+I/4, 5*I-11.2, 0)
 hdist(-1, 2) \\Error
@@ -23,6 +17,7 @@ mat_eval(M1, I+2)
 mat_eval(M2, oo)
 mat_eval(M2, -4.5)
 
+install("mobius_gp","GGp","mobius","./libfdom.so");\\We don't install this automatically.
 c1=[I, 2, 0];\\Centred at I, radius 2
 c2=[1, 1, 2, 1+I, 0, Pi/2, 1, 0];\\Centred at 1, radius 1, from 0 to 1+I
 c3=[0, 1, I, (1+I)/sqrt(2), Pi/2, Pi/4, -1, 0];\\Centred at 0, radius1, from (1+I)/sqrt(2) to I (the long way around).
@@ -52,7 +47,7 @@ mobius(M2, l6)
 mobius(2, [0, 1, 0]) \\Error
 
 rdists=vector(50, i, random(15)+1);
-rpoints=vector(50, i, randompoint_ud(rdists[i]));
+rpoints=vector(50, i, hdiscrandom(rdists[i]));
 rpointpass=1;
 for(i=1, 50, if(hdist(0, rpoints[i], 1)>rdists[i],rpointpass=0));
 if(rpointpass==1, print("Pass random points test"), print("Fail random points test"));

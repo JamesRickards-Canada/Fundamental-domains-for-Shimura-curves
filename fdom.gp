@@ -2,20 +2,16 @@ print("\n\nType '?fdom' for help.\n\n");
 addhelp(fdom, "This package can be used to compute fundamental domains for Shimura curves (the PARI code can be easily adapted to compute fundamental domains for any discrete subgroup of PSL(2, R)).\n For each subtopic ``P (p)'', call ?p to access a basic description and list of methods. Subtopics:\n Geometry (geo)\n Visualizing fundamental domains with Python (vfd)\n Quaternion methods (quat)");
 
 \\GEOMETRY
-	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscarea, hdiscradius, hdist, mat_eval, mobius, randompoint_ud");
+	addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscrandom, hdist, mat_eval");
 
-	install("hdiscarea","Gp","hdiscarea","./libfdom.so");
-	addhelp(hdiscarea,"Input R, a positive real number.\n Returns the hyperbolic area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2.");
-	install("hdiscradius","Gp","hdiscradius","./libfdom.so");
-	addhelp(hdiscradius,"Input area, a positive real number.\n Returns the radius of the hyperbolic disc with that area.");
+	install("hdiscrandom","Gp","hdiscrandom","./libfdom.so");
+	addhelp(hdiscrandom,"Input R, a positive real number.\n Returns a random point in the ball of radius R centred at 0 in the unit disc model of the hyperbolic plane.");
 	install("hdist","GGD0,L,p","hdist","./libfdom.so");
 	addhelp(hdist,"Inputs z1, z2, {flag=0}: complex numbers in the upper half plane z1 and z2, and flag=0, 1.\n Returns the hyperbolic distance between z1 and z2. If flag=0 we use the upper half plane model, and if flag=1 we use the unit disc model.");
 	install("mat_eval","GG","mat_eval","./libfdom.so");
 	addhelp(mat_eval, "Inputs M, x; M a matrix, and x number.\n Returns Mx with M acting via Mobius transformation. x=+/-oo is allowed.");
-	install("mobius_gp","GGp","mobius","./libfdom.so");
-	addhelp(mobius,"Inputs M, c: a 2x2 matrix M, and a circle/line/arc/segment c.\n This returns M(c), where M acts as a Mobius map.");
-	install("randompoint_ud","Gp","randompoint_ud","./libfdom.so");
-	addhelp(randompoint_ud,"Input R, a positive real number.\n Returns a random point in the ball of radius R centred at 0 in the unit disc model of the hyperbolic plane.");
+	\\install("mobius_gp","GGp","mobius","./libfdom.so");
+	\\addhelp(mobius,"Inputs M, c: a 2x2 matrix M, and a circle/line/arc/segment c.\n This returns M(c), where M acts as a Mobius map.");
 
 \\Visualization
 	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods:\n python_plotviewer, python_printarcs, python_printfdom.");
@@ -36,7 +32,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algabsrednorm,"Inputs A, p, {z1=0}, {z2=0}: quaternion algebra A split at one real place, upper half plane point p, unit disc points z1, z2.\n Returns the quadratic form q that satisfies Q_{z1, z2}(g)=cosh(d(g(z_1), z_2))+n-1 for g of norm 1 in the order of A. If g is written in the basis representation, g~*q*g gives the value of Q_{z1, z2}(g). Finding small vectors with respect to q allows one to determine if z1 and z2 are close on the quotient, and to find which element makes them close.");
 	install("algfdom","GDGD0,G,D0,L,D0,L,D0,G,D0,G,p","algfdom","./libfdom.so");
 	addhelp(algfdom,"Inputs A, {O=NULL}, {p=I/2}, {dispprogress=0}, {dumppartial=0}, {partialset=0}, {constants=0}: quaternion algebra A split at one real place, [Ord, l] an Eichler order Ord (4n x 4x matrix written in the basis of the stored maximal order, columns spanning the order) of level l, upper half plane point p, dispprogress=0,1, dumppartial=0,1, partialset=0 or a set of norm 1 elements of A, constants=0 or [C, R, passes, type].\n Computes and returns the fundamental domain for the group of units of norm 1 in O, where O is set to the pre-computed maximal order in A if not supplied. We use the unit disc model, which the upper half plane is mapped to via p->0. p need to NOT be a fixed point of this group under the standard embedding into PSL(2, R) (p=I/2 is safe for quaternion algebras over Q). If dispprogress=1, displays partial progress. If dumppartial=1, this dumps generating sets of partial results to 'algfdom_partialdata_log.txt', where i is a number. This is useful in case of error, for example running out of memory, lack of precision, segmentation fault, etc. partialset is either 0 or a vector of norm 1 elements of A that can be used as a starting base for the fundamental domain. If any of C, R, passes, or type is 0, it is auto-set. C is the constant used in solving Q_{z_1, z_2}(x)<=C, R is the radius we choose random points from, passes is used to specify the estimated number of passes (larger=less points per pass). If type=1, we enumerate using qfminim. If type=2, we enumerate using the `improved' Fincke-Pohst method. If type=0, we automatically choose type 1 if n>=2 and type 2 if n=1 (which seems to be the optimal choice).");
-	install("algfdom_bestC","GDGp","algfdom_bestC","./libfdom.so");
+	install("algfdom_bestC","GDGp","algfdom_bestC","./libfdom.so");\\No need to make this public in the future?
 	addhelp(algfdom_bestC,"Input A, {O=NULL}: a quaternion algebra corresponding to a Shimura curve.\n Returns the (theoretically) optimal value of C to input into algsmallnorm1elts to minimize expected time to find a new element.");
 	install("algfdomalg","G","algfdomalg","./libfdom.so");
 	addhelp(algfdomalg,"Input U, a fundamental domain.\n Returns the algebra associated to the fundamental domain. If the computation increased the precision, then this algebra has been recomputed to the new precision, and should be used for all future computations involving U.");

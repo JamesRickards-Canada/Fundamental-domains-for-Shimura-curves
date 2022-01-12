@@ -33,6 +33,9 @@ POSSIBLE FUTURE ADDITIONS:
 
 //STATIC DECLARATIONS
 
+//INFINITY 
+static GEN divoo(GEN a, GEN b);
+
 //1: SHORT VECTORS IN LATTICES
 static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
 static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec);
@@ -66,6 +69,8 @@ static int onarc(GEN c, GEN p, GEN tol, long prec);
 static int onseg(GEN l, GEN p, GEN tol, long prec);
 
 //2: DISTANCES
+static GEN hdiscradius(GEN area, long prec);
+static GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 static GEN hdist_ud(GEN z1, GEN z2, long prec);
 static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 
@@ -115,8 +120,9 @@ static GEN qalg_basis_conj(GEN Q, GEN x);
 //INFINITY 
 
 
+
 //Divides a and b, and allows for oo and division by 0. Returns oo for 0/0.
-GEN 
+static GEN 
 divoo(GEN a, GEN b)
 {
   if(gequal0(b)){//b=0
@@ -134,6 +140,7 @@ divoo(GEN a, GEN b)
 
 
 //LISTS
+
 
 
 //List of GENs
@@ -237,7 +244,6 @@ glist_togvec_append(glist *l, GEN v, long length, int dir)
     return rvec;
 }
 
-
 //List of longs
 
 //Frees the memory pari_malloc'ed by llist
@@ -338,7 +344,9 @@ llist_tovecsmall(llist *l, long length, int dir)
 }
 
 
+
 //SHORT VECTORS IN LATTICES
+
 
 
 //Computes the Cholesky decomposition of A (nxn symmetric matrix) whose coefficients are in nf. Returns the nxn matrix B so that x^TAx is expressible as sum(i=1..n)b_ii(x_i+sum(j=i+1..n)b_ijxj)^2. Note that A does not need to be positive definite, but it CANNOT represent 0 (as then we cannot write the quadratic form as a sum/difference of squares). The result in this case will be meaningless.
@@ -593,7 +601,9 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
 //GEN tol -> The tolerance.
 
 
+
 //BASIC LINE, CIRCLE, AND POINT OPERATIONS
+
 
 
 //Creates the arc on circle c going from p1 to p2 counterclockwise. if dir=1, the arc is oriented counterclockwise, else it is clockwise (i.e. clockwise from p2 to p1). If dir=0, we take it to be unoriented
@@ -886,7 +896,9 @@ slope(GEN p1, GEN p2, GEN tol, long prec)
 }
 
 
+
 //INTERSECTION OF LINES/CIRCLES
+
 
 
 //Returns the intersection points of two arcs
@@ -1192,23 +1204,45 @@ onseg(GEN l, GEN p, GEN tol, long prec)
 }
 
 
+
 //DISTANCES/AREAS
 
 
-//Given a radius R>0, this returns the area of the hyperbolic disc of radius R. The formula is 4*Pi*sinh(R/2)^2
-GEN
-hdiscarea(GEN R, long prec)
-{
-  pari_sp top=avma;
-  return gerepileupto(top, gtofp(gmul(Pi2n(2, prec), gsqr(gsinh(gdivgs(R, 2), prec))), prec));
-}
 
-//Given the area of a hyperbolic disc, this returns the radius.
-GEN
+//Given the area of a hyperbolic disc, this returns the radius. The formula is area=4*Pi*sinh(R/2)^2, or R=2arcsinh(sqrt(area/4Pi))
+static GEN
 hdiscradius(GEN area, long prec)
 {
   pari_sp top=avma;
   return gerepileupto(top, gtofp(gmulgs(gasinh(gsqrt(gdiv(area, Pi2n(2, prec)), prec), prec), 2), prec));
+}
+
+//Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).
+GEN
+hdiscrandom(GEN R, long prec)
+{
+  pari_sp top=avma;
+  GEN arg=gmul(randomr(prec), Pi2n(1, prec));//Random angle
+  GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
+  //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
+  GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec));//A random element in [0, a(R)/4Pi].
+  GEN r=gmulsg(2, gasinh(gsqrt(dist, prec), prec));//The radius
+  GEN e2r=gexp(r, prec);
+  return gerepileupto(top, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
+}
+
+//Returns a random point z in the unit disc, uniform inside the ball of radius R, with argument uniform in [ang1, ang2]. See page 19 of Page (before section 2.5).
+static GEN
+hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec)
+{
+  pari_sp top=avma;
+  GEN arg=gadd(ang1, gmul(randomr(prec), gsub(ang2, ang1)));//Random angle in [ang1, ang2]
+  GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
+  //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
+  GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec));//A random element in [0, a(R)/4Pi].
+  GEN r=gmulsg(2, gasinh(gsqrt(dist, prec), prec));//The radius
+  GEN e2r=gexp(r, prec);
+  return gerepileupto(top, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
 }
 
 //z1 and z2 are complex numbers, this computes the hyperbolic distance between them. If flag=0, assumes upper half plane model; if flag=1, assumes unit disc model.
@@ -1260,7 +1294,9 @@ hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec)
 }
 
 
+
 //FUNDAMENTAL DOMAIN COMPUTATION
+
 
 
 /*Let Gamma be a Fuschian group; the following methods allow us to compute a fundamental domain for Gamma, following the paper of John Voight. We are assuming that we have an "exact" way to deal with the elements of Gamma. In otherwords, we need separate methods to:
@@ -2260,34 +2296,6 @@ psl_roots(GEN M, GEN tol, long prec)
   gel(ret, 1)=gdiv(r1num, twoa);
   gel(ret, 2)=gdiv(r2num, twoa);
   return gerepileupto(top, ret);
-}
-
-//Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).
-GEN
-randompoint_ud(GEN R, long prec)
-{
-  pari_sp top=avma;
-  GEN arg=gmul(randomr(prec), Pi2n(1, prec));//Random angle
-  GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
-  //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
-  GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec));//A random element in [0, a(R)/4Pi].
-  GEN r=gmulsg(2, gasinh(gsqrt(dist, prec), prec));//The radius
-  GEN e2r=gexp(r, prec);
-  return gerepileupto(top, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
-}
-
-//Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).
-GEN
-randompoint_udarc(GEN R, GEN ang1, GEN ang2, long prec)
-{
-  pari_sp top=avma;
-  GEN arg=gadd(ang1, gmul(randomr(prec), gsub(ang2, ang1)));//Random angle in [ang1, ang2]
-  GEN zbound=expIr(arg);//The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]
-  //a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
-  GEN dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec));//A random element in [0, a(R)/4Pi].
-  GEN r=gmulsg(2, gasinh(gsqrt(dist, prec), prec));//The radius
-  GEN e2r=gexp(r, prec);
-  return gerepileupto(top, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
 }
 
 //Reduces g with respect to z as in reduceelt_givenpsu, but does so much more efficiently using the normalized boundary provided.
@@ -3366,9 +3374,9 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
         ang2=gmael(U, 4, oosides[iside]);
         if(oosides[iside]==1) ang1=gmael(U, 4, lg(gel(U, 1))-1);//Last side, which is the previous side
         else ang1=gmael(U, 4, oosides[iside]-1);
-        w=randompoint_udarc(R, ang1, ang2, prec);
+        w=hdiscrandom_arc(R, ang1, ang2, prec);
       }
-      else w=randompoint_ud(R, prec);//Random point
+      else w=hdiscrandom(R, prec);//Random point
       GEN smallelts;
       if(type==1) smallelts=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, w, maxelts, nfdecomp, nformpart, prec);
       else smallelts=qalg_smallnorm1elts_condition(Q, p, C, gen_0, w, maxelts, nform, nformpart, prec);
