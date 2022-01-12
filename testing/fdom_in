@@ -57,6 +57,7 @@ if(rpointpass==1, print("Pass random points test"), print("Fail random points te
 
 \\This function tests the following methods:
 \\algfdom, algfdomalg, algfdomarea, algfdomsignature, algfdompresentation, algfdomword, algmulvec
+\\algfdomminimalcycles is implicitly checked via both algfdompresentation and algfdomsignature.
 testalgfdom(L)={
   my(errrtol, F, A, U, P, g, word, newg);
   errtol=10^-19;
@@ -64,8 +65,10 @@ testalgfdom(L)={
     for(j=1,length(L[i][1]),
       F=nfinit(L[i][1][j]);
 	  A=alginit(F, L[i][2][j]);
+	  printf("%Pd\n", algnormdisc(A));
 	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the defualt precision
 	  U=algfdom(A);
+	  if(algfdomorder(U)!=0,print("Order is wrong!"));
 	  A=algfdomalg(U);
 	  print(algfdomsignature(U));\\Invariant.
 	  P=algfdompresentation(U);
