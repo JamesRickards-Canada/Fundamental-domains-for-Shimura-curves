@@ -61,8 +61,8 @@ if(rpointpass==1, print("Pass random points test"), print("Fail random points te
 testalgfdom(L)={
   my(errrtol, F, A, U, P, g, word, newg);
   errtol=10^-19;
-  for(i=1,length(L),
-    for(j=1,length(L[i][1]),
+  for(i=1,#L,
+    for(j=1,#L[i][1],
       F=nfinit(L[i][1][j]);
 	  A=alginit(F, L[i][2][j]);
 	  printf("%Pd\n", algnormdisc(A));
@@ -72,7 +72,7 @@ testalgfdom(L)={
 	  A=algfdomalg(U);
 	  print(algfdomsignature(U));\\Invariant.
 	  P=algfdompresentation(U);
-	  g=algmulvec(A, U[1], vector(5+random(15), k, (2*random(2)-1)*(random(length(U[1]))+1)));\\Random norm 1 element.
+	  g=algmulvec(A, U[1], vector(5+random(15), k, (2*random(2)-1)*(random(#U[1])+1)));\\Random norm 1 element.
 	  word=algfdomword(g, P, U);
 	  newg=algmulvec(A, P[1], word);
 	  if(newg==g || newg==-g,print("Passed word test"),print("Failed word test"));

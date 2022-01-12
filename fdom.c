@@ -2259,7 +2259,7 @@ psl_roots(GEN M, GEN tol, long prec)
   pari_sp top = avma;
   GEN trace=gadd(gcoeff(M, 1, 1), gcoeff(M, 2, 2));
   int sgn=tolcmp(trace, gen_0, tol, prec);
-  if(sgn==0) pari_err_TYPE("Please enter a hyperbolic matrix", M);
+  if(sgn==0) pari_err_TYPE("Please enter a hyperbolic matrix", M);//Same fixed point, necessarily elliptic
   GEN a, b, c;
   if(sgn==1){//Positive trace, correct order
     a=gcoeff(M, 2, 1);
@@ -2271,7 +2271,7 @@ psl_roots(GEN M, GEN tol, long prec)
     b=gsub(gcoeff(M, 1, 1), gcoeff(M, 2, 2));
     c=gcoeff(M, 1, 2);
   }//[a',b';c',d'] -> c'x^2+(d'-a')x-b'=0, but for the roots to be in proper order, we need the trace to be positive.
-  if(toleq(a, gen_0, tol, prec)){//a=0, roots are oo and -c/b (b!=0 else M=[+/-1, x;0;+/-1], not hyperbolic.
+  if(toleq(a, gen_0, tol, prec)){//a=0, roots are oo and -c/b (b!=0 else M=[+/-1, x;0;+/-1]), not hyperbolic.
     GEN rnum=gneg(c);
     int bsgn=tolcmp(b, gen_0, tol, prec);
     GEN ret=cgetg(3, t_VEC);
@@ -2838,6 +2838,7 @@ word(GEN P, GEN U, GEN g, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmu
 }
 
 
+
 //GEOMETRIC HELPER METHODS
 
 
@@ -2956,7 +2957,9 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 */
 
 
+
 //QUATERNION ALGEBRA METHODS
+
 
 
 //Returns the absolute reduced norm with respect to z1 and z2, i.e. the quadratic from Q_{z_1, z_2}(g) for g in the algebra. If the output is q, then g (written in basis form) has value g~*q*g.
@@ -2967,6 +2970,24 @@ algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
   GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
   GEN mats=psltopsu_transmats(p);
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
+}
+
+//Returns -1 if g is  elliptic, 0 if g is parabolic, and 1 if g is hyperbolic. Assumes g has reduced norm 1, but does not check this.
+int
+algelttype(GEN A, GEN g){
+  pari_sp top=avma;
+  GEN gtrace=lift(algtrace(A, g, 0));//The trace of g. g is only parabolic if g==+/-2
+  if(gequal(gtrace, gen_2) || gequal(gtrace, gen_m2)) return gc_int(top, 0);//Parabolic
+  if(gequal0(gtrace)) return gc_int(top, -1);//Elliptic
+  
+  //Now we have to find the trace with respect to the unramified location;
+  long split=algsplitoo(A);//oo split place
+  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K). gtrace lives in K.
+  long Kvar=nf_get_varn(K);//Variable number for K
+  GEN Kroot=gel(nf_get_roots(K), split);
+  GEN greal=gsubst(gtrace, Kvar, Kroot);
+  if(gcmp(greal, gen_2)<0 && gcmp(greal, gen_m2)>0) return gc_int(top, -1);//Elliptic. No need for tolerance here, will not equal 2 unless exactly.
+  return gc_int(top, 1);//Hyperbolic
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as [Ord, level].
@@ -3257,7 +3278,9 @@ static GEN
 voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 
+
 //FUNDAMENTAL DOMAIN RETRIEVAL METHODS
+
 
 
 //Returns the algebra of the fundamental domain
@@ -3291,7 +3314,9 @@ algfdom_get_order(GEN U)
 }
 
 
+
 //FUNDAMENTAL DOMAIN COMPUTATION
+
 
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit. We can pass C, R, type, and they will be auto-set if passed as 0.
@@ -3401,7 +3426,9 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
 }
 
 
+
 //HELPER METHODS
+
 
 
 //If A is an algebra over nf, let decomp be the Cholesky decomposition of the norm form. This returns the norm of x given the decomposition (this is ~10x faster than algnorm).
@@ -3686,7 +3713,9 @@ qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts,
 }
 
 
+
 //BASIC OPERATIONS FOR NORMALIZED BASIS ET AL
+
 
 
 //Must pass data as a quaternion algebra. This just formats things correctly for the fundamental domain.
@@ -3743,7 +3772,9 @@ qalg_istriv(GEN data, GEN x)
 }
 
 
+
 //SHALLOW RETRIEVAL METHODS
+
 
 
 //Shallow method to return the algebra
