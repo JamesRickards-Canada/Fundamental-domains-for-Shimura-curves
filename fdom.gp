@@ -25,7 +25,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algabsrednorm, algalgto1ijk, algbasisto1ijk, algeichler_conj, algfdom, algfdomalg, algfdomarea, algfdomminimalcycles, algfdomorder, algfdompresentation, algfdomreduce, algfdomrootgeodesic, algfdomsignature, algfdomword, algmulvec, algnormdisc, algorderconj, algorderdisc, algorderlevel, algramifiedplacesf, algreduceddisc, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras, smallalgebras_area.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algabsrednorm, algalgto1ijk, algbasisto1ijk, algeichler_conj, algfdom, algfdomalg, algfdomarea, algfdomminimalcycles, algfdomorder, algfdompresentation, algfdomrootgeodesic, algfdomsignature, algfdomword, algmulvec, algnormdisc, algorderconj, algorderdisc, algorderlevel, algramifiedplacesf, algreduceddisc, algshimura, algshimura_ab, algsmallnorm1elts, algswapab, smallalgebras, smallalgebras_area.");
 
 	\\fdom
 	install("algabsrednorm","GGD0,G,D0,G,p","algabsrednorm","./libfdom.so");
@@ -42,8 +42,6 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(algfdomorder,"Input U, a fundamental domain.\n Returns the order associated to the fundamental domain. If we took the maximal order stored in algfdomalg(U), then this returns 0.");
 	install("algfdompresentation","Gp","algfdompresentation","./libfdom.so");
 	addhelp(algfdompresentation,"Inputs U, a fundamental domain.\n Returns the group presentation of the fundamental domain U. The return is a vector V, where V[1] is the vector of generators (a subset of U[1]), V[2] is the vector of relations, and V[3] is the representation of U[1][i] as a word in V[1]. A word/relation is listed as Vecsmall([i1, i2, ..., ik]), which corresponds to the equation V[1][|i1|]^{sign(i1)}*...*V[1][|ik|]^{sign(ik)} (i.e. g_1^2g_2^-1->[1, 1, -2]).");
-	install("algfdomreduce","GGD0,G,p","algfdomreduce","./libfdom.so");
-	addhelp(algfdomreduce,"Inputs g, U, {z=0}: an element g of norm 1 in an order in an algebra, normalized boundary of a subset of this order, and a point z in the unit disc.\n Returns the triple [gammabar, delta, decomp], where gammabar=delta*g is (G,z)-reduced (i.e. distance between gammabar*z and 0 is less than or equal to the distance between g'*gammabar*z for all g' in G), and decomp is the vecsmall [i1, i2, ..., in] with delta=G[i1]*G[i2]*...*G[in], with G=U[1]. If z=0 and we have the full fundamental domain, then gammabar=+/-1.");
 	install("algfdomrootgeodesic","GGp","algfdomrootgeodesic","./libfdom.so");
 	addhelp(algfdomrootgeodesic,"Inputs g, U: an element g of norm 1 in an order in an algebra, fundamental domain of this order.\n Returns the root geodesic of g in the fundamental domain. The format is [g's, circle arcs, vecsmall(sides hit), vecsmall(sides emenating from)].");
 	install("algfdomsignature","Gp","algfdomsignature","./libfdom.so");
@@ -65,6 +63,9 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	\\addhelp(algnormalizedbasis, "Inputs A, {O=NULL}, G, p: quaternion algebra A split at one real place, Eichler order O, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized basis associated to G.");
 	\\install("algnormalizedboundary","GDGGGp","algnormalizedboundary","./libfdom.so");
 	\\addhelp(algnormalizedboundary, "Inputs A, {O=NULL}, G, p: quaternion algebra A split at one real place, Eichler order O, set G of elements of norm 1 in the order in A, upper half plane point p.\n Returns the normalized boundary associated to G. The format of the output is [elements, icircs, vertices, vertex angles, matrices, area, 0, mats]. The circle corresponding to elements[i] is icircs[i], and the vertices are vertices[i-1] and vertices[i]. matrices[i] is the image in PSU(1,1) of elements[i]. The element 1 corresponds to a section on the unit circle, which also corresponds to a circle of 0. Vertex angles stores the radial angle to the ith vertex (with base angle being the first one). The area is the area, and the 0 stores the side pairing when we have a fundamental domain (so a priori stores nothing).");
+	\\install("algfdomreduce","GGD0,G,p","algfdomreduce","./libfdom.so");
+	\\addhelp(algfdomreduce,"Inputs g, U, {z=0}: an element g of norm 1 in an order in an algebra, normalized boundary of a subset of this order, and a point z in the unit disc.\n Returns the triple [gammabar, delta, decomp], where gammabar=delta*g is (G,z)-reduced (i.e. distance between gammabar*z and 0 is less than or equal to the distance between g'*gammabar*z for all g' in G), and decomp is the vecsmall [i1, i2, ..., in] with delta=G[i1]*G[i2]*...*G[in], with G=U[1]. If z=0 and we have the full fundamental domain, then gammabar=+/-1.");
+	
 	
 	\\fdom_extra
 	install("algsmallelts","GDGGGGD0,G,D0,G,p","algsmallelts","./libfdom.so");\\Still working on this.

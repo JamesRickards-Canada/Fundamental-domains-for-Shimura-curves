@@ -64,97 +64,133 @@ Type '?fdom' for help.
   ***                 ^-----------------
   *** mobius: incorrect type in M needs to be a 2x2 matrix (t_INT).
 Pass random points test
+2.0943951023931954923084289221863352561
 [0, Vecsmall([2, 2, 3, 3]), 0]
 Passed word test
+37.699111843077518861551720599354034610
 [4, Vecsmall([]), 0]
 Passed word test
+41.887902047863909846168578443726705123
 [3, Vecsmall([3, 3, 3, 3]), 0]
 Passed word test
+125.66370614359172953850573533118011537
 [9, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2]), 0]
 Passed word test
+452.38934211693022633862064719224841532
 [37, Vecsmall([]), 0]
 Passed word test
+490.08845396000774520017236779160244993
 [39, Vecsmall([2, 2, 2, 2]), 0]
 Passed word test
+16.755160819145563938467431377490682049
 [2, Vecsmall([3]), 0]
 Passed word test
+33.510321638291127876934862754981364098
 [2, Vecsmall([3, 3, 3, 3, 3]), 0]
 Passed word test
+188.49555921538759430775860299677017305
 [16, Vecsmall([]), 0]
 Passed word test
+87.964594300514210676954014731826080758
 [8, Vecsmall([]), 0]
 Passed word test
+50.265482457436691815402294132472046147
 [2, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 3]), 0]
 Passed word test
+209.43951023931954923084289221863352561
 [12, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3]),
  0]
 Passed word test
+11.170107212763709292311620918327121366
 [1, Vecsmall([9, 9]), 0]
 Passed word test
+37.699111843077518861551720599354034610
 [3, Vecsmall([2, 2, 2, 2]), 0]
 Passed word test
+43.982297150257105338477007365913040378
 [4, Vecsmall([2, 2]), 0]
 Passed word test
+50.265482457436691815402294132472046147
 [1, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]), 0]
 Passed word test
+351.85837720205684270781605892730432303
 [29, Vecsmall([]), 0]
 Passed word test
+351.85837720205684270781605892730432303
 [29, Vecsmall([]), 0]
 Passed word test
+50.265482457436691815402294132472046147
 [3, Vecsmall([3, 3, 3, 3, 3, 3]), 0]
 Passed word test
+150.79644737231007544620688239741613844
 [13, Vecsmall([]), 0]
 Passed word test
+93.828900587215158055417615713947819474
 [5, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 5, 5]), 0]
 Passed word test
+452.38934211693022633862064719224841532
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [37, Vecsmall([]), 0]
 Passed word test
+87.964594300514210676954014731826080758
 [8, Vecsmall([]), 0]
 Passed word test
+113.09733552923255658465516179806210383
 [10, Vecsmall([]), 0]
 Passed word test
+147.55965494133877332173021951767362032
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 6, i.e. \p77. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [10, Vecsmall([2, 2, 3, 3, 3, 3, 11, 11]), 0]
 Passed word test
+324.63124087094530130780648293888196470
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 6, i.e. \p77. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [25, Vecsmall([2, 2, 3, 3, 3, 3]), 0]
 Passed word test
+67.020643276582255753869725509962728189
 [5, Vecsmall([3, 3, 3, 3]), 0]
 Passed word test
+117.28612573401894756927201964243477433
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [9, Vecsmall([3, 3, 3, 3]), 0]
 Passed word test
+50.265482457436691815402294132472046127
 [5, Vecsmall([]), 0]
 Passed word test
+100.53096491487338363080458826494409225
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [9, Vecsmall([]), 0]
 Passed word test
+30.997047515419293286164748048357761790
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [2, Vecsmall([3, 3, 5, 5]), 0]
 Passed word test
+93.350181706668141942889974817448085701
 [8, Vecsmall([7]), 0]
 Passed word test
+83.775804095727819692337156887453410244
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [5, Vecsmall([3, 3, 3, 3, 7, 7, 21]), 0]
 Passed word test
+125.66370614359172953850573533118011537
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [11, Vecsmall([]), 0]
 Passed word test
+71.807832082052416879146134474960065924
   *** algfdom: Warning: Increasing precision.
   *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
 [5, Vecsmall([7, 7, 7, 7]), 0]
 Passed word test
+188.49555921538759430775860299677017302
 [16, Vecsmall([]), 0]
 Passed word test
   ***   at top-level: algfdom(A)
