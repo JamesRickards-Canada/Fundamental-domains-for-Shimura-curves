@@ -1,6 +1,7 @@
 \r fdom;
 
 \\Geometry
+
 hdist(I, 2*I+10)
 hdist(0.2+I/4, 5*I-11.2, 0)
 hdist(-1, 2) \\Error
@@ -52,6 +53,10 @@ rpointpass=1;
 for(i=1, 50, if(hdist(0, rpoints[i], 1)>rdists[i],rpointpass=0));
 if(rpointpass==1, print("Pass random points test"), print("Fail random points test"));
 
+\\Quaternion algebras
+
+\\This function tests the following methods:
+\\algfdom, algfdomalg, algfdomsignature, algfdompresentation, algfdomword, algmulvec
 testalgfdom(L)={
   my(F, A, U, P, g, word, newg);
   for(i=1,length(L),
@@ -59,6 +64,7 @@ testalgfdom(L)={
       F=nfinit(L[i][1][j]);
 	  A=alginit(F, L[i][2][j]);
 	  U=algfdom(A);
+	  A=algfdomalg(U);
 	  print(algfdomsignature(U));\\Invariant.
 	  P=algfdompresentation(U);
 	  g=algmulvec(A, U[1], vector(5+random(15), k, (2*random(2)-1)*(random(length(U[1]))+1)));\\Random norm 1 element.
