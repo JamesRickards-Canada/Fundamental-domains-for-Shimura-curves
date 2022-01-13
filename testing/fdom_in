@@ -56,10 +56,10 @@ if(rpointpass==1, print("Pass random points test"), print("Fail random points te
 \\Quaternion algebras
 
 \\This function tests the following methods:
-\\algfdom, algfdomalg, algfdomarea, algfdomsignature, algfdompresentation, algfdomword, algmulvec
+\\algelttype, algfdom, algfdomalg, algfdomarea, algfdomsignature, algfdompresentation, algfdomrootgeodesic algfdomword, algmulvec
 \\algfdomminimalcycles is implicitly checked via both algfdompresentation and algfdomsignature.
 testalgfdom(L)={
-  my(errrtol, F, A, U, P, g, word, newg);
+  my(errrtol, F, A, U, P, g, word, newg, geod);
   errtol=10^-19;
   for(i=1,#L,
     for(j=1,#L[i][1],
@@ -76,6 +76,7 @@ testalgfdom(L)={
 	  word=algfdomword(g, P, U);
 	  newg=algmulvec(A, P[1], word);
 	  if(newg==g || newg==-g,print("Passed word test"),print("Failed word test"));
+	  if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));\\No error should be raised if this works.
     );
   );
 }
