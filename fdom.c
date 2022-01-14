@@ -98,7 +98,8 @@ static long tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 
-//3: QUATERNION ALGEBRA METHODS
+//3: QUATERNION ALGEBRA NON-FDOM METHODS
+static GEN algd(GEN A, GEN a);
 static GEN voidalgmul(void *A, GEN x, GEN y);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
@@ -2956,18 +2957,22 @@ To compute the fundamental domain, we store the quaternion algebra as [A, ramdat
 
 
 
-//QUATERNION ALGEBRA METHODS
+//QUATERNION ALGEBRA NON-FDOM METHODS
 
 
 
-//Returns the absolute reduced norm with respect to z1 and z2, i.e. the quadratic from Q_{z_1, z_2}(g) for g in the algebra. If the output is q, then g (written in basis form) has value g~*q*g.
-GEN
-algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
+//Given a1, ..., a4 in A, this returns d(a1,...,a4), i.e. det(trd(a_i*a_j))
+static GEN
+algd(GEN A, GEN a)
 {
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
-  GEN mats=psltopsu_transmats(p);
-  return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
+  GEN M=cgetg(5, t_MAT);
+  for(long i=1;i<5;i++) gel(M, i)=cgetg(5, t_COL);
+  for(long i=1;i<5;i++){//Setting the coefficients of M
+    gcoeff(M, i, i)=algtrace(A, algsqr(A, gel(a, i)), 0);
+    for(long j=i+1;j<5;j++) gcoeff(M, i, j)=gcoeff(M, j, i)=algtrace(A, algmul(A, gel(a, i), gel(a, j)), 0);
+  }
+  return gerepileupto(top, nfM_det(alg_get_center(A), M));
 }
 
 //Returns -1 if g is  elliptic, 0 if g is parabolic, and 1 if g is hyperbolic. Assumes g has reduced norm 1, but does not check this.
@@ -2986,6 +2991,175 @@ algelttype(GEN A, GEN g){
   GEN greal=gsubst(gtrace, Kvar, Kroot);
   if(gcmp(greal, gen_2)<0 && gcmp(greal, gen_m2)>0) return gc_int(top, -1);//Elliptic. No need for tolerance here, will not equal 2 unless exactly.
   return gc_int(top, 1);//Hyperbolic
+}
+
+//Given a supposed order O, this returns 1 if it is indeed an order. O is input as a Z-matrix, i.e. as a suborder of the given maximal order.
+int
+algisorder(GEN A, GEN O){
+  pari_sp top=avma;
+  GEN Oinv=QM_inv(O);
+  long n=lg(O);
+  for(long i=1;i<n;i++){
+    for(long j=1;j<n;j++){
+      GEN elt=algmul(A, gel(O, i), gel(O, j));
+      if(!RgV_is_ZV(gmul(Oinv, elt))) return gc_int(top, 0);
+    }
+  }
+  return gc_int(top, 1);
+}
+
+//Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
+GEN
+algmoreprec(GEN A, long increment, long prec)
+{
+  pari_sp top=avma;
+  if(increment<=0) increment=1;
+  GEN nf=alg_get_center(A);
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=nf(sqrt(a))
+  long varn=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN b=lift(alg_get_b(A));
+  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
+  int nodenom=1;
+  if(!isint1(aden)){
+    nodenom=0;
+    a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
+    pari_warn(warner,"Changed the value of a, since it had a denominator.");
+  }
+  if(!isint1(bden)){
+    nodenom=0;
+    b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
+    pari_warn(warner,"Changed the value of a, since it had a denominator.");
+  }
+  long newprec=prec+increment;
+  GEN newnf=nfinit(nf_get_pol(nf), newprec);
+  GEN Anew=alginit(newnf, mkvec2(a, b), -1, 1);//The new algebra. 
+  if(!nodenom) return gerepileupto(top, Anew);//We updated a and b, so nothing more to do.
+  GEN basis_want=alg_get_basis(A);
+  GEN basis_dontwant=alg_get_invbasis(Anew);
+  GEN basis_change=RgM_mul(basis_dontwant, basis_want);
+  Anew=alg_changeorder(Anew, basis_change);
+  return gerepileupto(top, Anew);
+}
+
+//Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
+GEN
+algmulvec(GEN A, GEN G, GEN L)
+{
+  pari_sp top=avma;
+  long n=lg(L);
+  if(n==1) return gerepilecopy(top, gel(alg_get_basis(A), 1));//The identity
+  GEN elts=cgetg(n, t_VEC);
+  if(typ(L)==t_VECSMALL){
+    for(long i=1;i<n;i++){
+      long ind=L[i];
+      if(ind>0) gel(elts, i)=gel(G, ind);
+      else gel(elts, i)=alginv(A, gel(G, -ind));
+    }
+  }
+  else if(typ(L)==t_VEC){
+    for(long i=1;i<n;i++){
+      long ind=itos(gel(L, i));
+      if(ind>0) gel(elts, i)=gel(G, ind);
+      else gel(elts, i)=alginv(A, gel(G, -ind));
+    }
+  }
+  else pari_err_TYPE("L needs to be a vector or vecsmall of indices", L);
+  return gerepileupto(top, gen_product(elts, &A, &voidalgmul));
+}
+
+//Returns the norm to Q of the discriminant of A
+GEN
+algnormdisc(GEN A)
+{
+  pari_sp top=avma;
+  GEN nf=alg_get_center(A);//Field
+  GEN rams=algramifiedplacesf(A);
+  GEN algdisc=gen_1;
+  for(long i=1;i<lg(rams);i++) algdisc=mulii(algdisc, idealnorm(nf, gel(rams, i)));//Norm to Q of the ramification
+  return gerepileupto(top, algdisc);
+}
+
+//Given an order O in A, returns the discriminant of the order, which is disc(algebra)*level
+GEN
+algorderdisc(GEN A, GEN O, int reduced, int factored)
+{
+  pari_sp top=avma;
+  GEN F=alg_get_center(A);//The centre
+  GEN zdisc=sqri(mulii(ZM_det(O), algnormdisc(A)));//The norm to Q of the (non-reduced) discriminant
+  GEN I=gen_0;//Stores the ideal generated by d(a1, a2, a3, a4) as we run across the basis.
+  long lbas=lg(O);
+  for(long i1=1;i1<lbas;i1++){
+    for(long i2=i1+1;i2<lbas;i2++){
+      for(long i3=i2+1;i3<lbas;i3++){
+        for(long i4=1;i4<lbas;i4++){
+          GEN d=algd(A, mkvec4(gel(O, i1), gel(O, i2), gel(O, i3), gel(O, i4)));
+          I=idealadd(F, I, d);
+          if(equalii(idealnorm(F, I), zdisc)){//We are done!
+            if(!reduced && !factored) return gerepilecopy(top, I);
+            GEN fact=idealfactor(F, I);
+            if(!reduced && factored) return gerepileupto(top, fact);//From now on, we want it reduced
+            for(long i=1;i<lg(gel(fact, 1));i++) gcoeff(fact, i, 2)=shifti(gcoeff(fact, i, 2), -1);//Divide by 2
+            if(factored) return gerepilecopy(top, fact);
+            return gerepileupto(top, idealfactorback(F, fact, NULL, 0));
+          }
+        }
+      }
+    }
+  }
+  pari_warn(warner, "We did not succeed in finding the discriminant.");
+  set_avma(top);
+  return gen_0;
+}
+
+//Returns the level of the order O.
+GEN
+algorderlevel(GEN A, GEN O, int factored)
+{
+  pari_sp top=avma;
+  GEN F=alg_get_center(A);
+  GEN odisc=algorderdisc(A, O, 0, 0);
+  GEN adisc=idealpow(F, algreduceddisc(A), gen_2);
+  GEN levelsqr=idealdivexact(F, odisc, adisc);//Divides exactly
+  GEN fact=idealfactor(F, levelsqr);
+  for(long i=1;i<lg(gel(fact, 1));i++) gcoeff(fact, i, 2)=shifti(gcoeff(fact, i, 2), -1);//Divide by 2
+  if(factored) return gerepilecopy(top, fact);
+  return gerepileupto(top, idealfactorback(F, fact, NULL, 0));
+}
+
+//Returns the vector of finite ramified places of the algebra A.
+GEN
+algramifiedplacesf(GEN A)
+{
+  pari_sp top=avma;
+  GEN hass=alg_get_hasse_f(A);//Shallow
+  long nhass=lg(gel(hass, 2));
+  GEN rp=vectrunc_init(nhass);
+  for(long i=1;i<nhass;i++){
+    if(gel(hass, 2)[i]==0) continue;//Unramified
+    vectrunc_append(rp, gmael(hass, 1, i));//Ramified
+  }
+  return gerepilecopy(top, rp);
+}
+
+//Formats algmul for use in gen_product
+static GEN
+voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
+
+
+
+//QUATERNION ALGEBRA METHODS
+
+
+
+//Returns the absolute reduced norm with respect to z1 and z2, i.e. the quadratic from Q_{z_1, z_2}(g) for g in the algebra. If the output is q, then g (written in basis form) has value g~*q*g.
+GEN
+algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
+{
+  pari_sp top=avma;
+  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN mats=psltopsu_transmats(p);
+  return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
 
 //Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as [Ord, level].
@@ -3123,66 +3297,6 @@ algfdomword(GEN g, GEN P, GEN U, long prec){
   return gerepileupto(top, word(P, U, g, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
 
-//Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
-GEN
-algmoreprec(GEN A, long increment, long prec)
-{
-  pari_sp top=avma;
-  if(increment<=0) increment=1;
-  GEN nf=alg_get_center(A);
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=nf(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  GEN b=lift(alg_get_b(A));
-  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
-  int nodenom=1;
-  if(!isint1(aden)){
-    nodenom=0;
-    a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-    pari_warn(warner,"Changed the value of a, since it had a denominator.");
-  }
-  if(!isint1(bden)){
-    nodenom=0;
-    b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-    pari_warn(warner,"Changed the value of a, since it had a denominator.");
-  }
-  long newprec=prec+increment;
-  GEN newnf=nfinit(nf_get_pol(nf), newprec);
-  GEN Anew=alginit(newnf, mkvec2(a, b), -1, 1);//The new algebra. 
-  if(!nodenom) return gerepileupto(top, Anew);//We updated a and b, so nothing more to do.
-  GEN basis_want=alg_get_basis(A);
-  GEN basis_dontwant=alg_get_invbasis(Anew);
-  GEN basis_change=RgM_mul(basis_dontwant, basis_want);
-  Anew=alg_changeorder(Anew, basis_change);
-  return gerepileupto(top, Anew);
-}
-
-//Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec
-GEN
-algmulvec(GEN A, GEN G, GEN L)
-{
-  pari_sp top=avma;
-  long n=lg(L);
-  if(n==1) return gerepilecopy(top, gel(alg_get_basis(A), 1));//The identity
-  GEN elts=cgetg(n, t_VEC);
-  if(typ(L)==t_VECSMALL){
-    for(long i=1;i<n;i++){
-      long ind=L[i];
-      if(ind>0) gel(elts, i)=gel(G, ind);
-      else gel(elts, i)=alginv(A, gel(G, -ind));
-    }
-  }
-  else if(typ(L)==t_VEC){
-    for(long i=1;i<n;i++){
-      long ind=itos(gel(L, i));
-      if(ind>0) gel(elts, i)=gel(G, ind);
-      else gel(elts, i)=alginv(A, gel(G, -ind));
-    }
-  }
-  else pari_err_TYPE("L needs to be a vector or vecsmall of indices", L);
-  return gerepileupto(top, gen_product(elts, &A, &voidalgmul));
-}
-
 //Returns the normalized basis of the set of elements G
 GEN
 algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec)
@@ -3207,33 +3321,6 @@ algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec)
   else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedboundary(G, mats, id, Q, &qalg_fdomm2rembed, tol, prec));
-}
-
-//Returns the norm to Q of the discriminant of A
-GEN
-algnormdisc(GEN A)
-{
-  pari_sp top=avma;
-  GEN nf=alg_get_center(A);//Field
-  GEN rams=algramifiedplacesf(A);
-  GEN algdisc=gen_1;
-  for(long i=1;i<lg(rams);i++) algdisc=mulii(algdisc, idealnorm(nf, gel(rams, i)));//Norm to Q of the ramification
-  return gerepileupto(top, algdisc);
-}
-
-//Returns the vector of finite ramified places of the algebra A.
-GEN
-algramifiedplacesf(GEN A)
-{
-  pari_sp top=avma;
-  GEN hass=alg_get_hasse_f(A);//Shallow
-  long nhass=lg(gel(hass, 2));
-  GEN rp=vectrunc_init(nhass);
-  for(long i=1;i<nhass;i++){
-    if(gel(hass, 2)[i]==0) continue;//Unramified
-    vectrunc_append(rp, gmael(hass, 1, i));//Ramified
-  }
-  return gerepilecopy(top, rp);
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order O
@@ -3270,10 +3357,6 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
   }
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, 0, nform, nformpart, prec)); 
 }
-
-//Formats algmul for use in gen_product
-static GEN
-voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 
 

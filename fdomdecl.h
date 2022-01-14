@@ -70,9 +70,18 @@ GEN deftol(long prec);
 
 //SECTION 3: QUATERNIONIC METHODS
 
+//QUATERNION ALGEBRA NON-FDOM METHODS
+int algelttype(GEN A, GEN g);
+int algisorder(GEN A, GEN O);
+GEN algmoreprec(GEN A, long increment, long prec);
+GEN algmulvec(GEN A, GEN G, GEN L);
+GEN algnormdisc(GEN A);
+GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
+GEN algorderlevel(GEN A, GEN O, int factored);
+GEN algramifiedplacesf(GEN A);
+
 //QUATERNION METHODS
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
-int algelttype(GEN A, GEN g);
 GEN algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec);
 GEN algfdomarea(GEN A, GEN O, int lessprec, long prec);
 GEN algfdom_bestC(GEN A, GEN O, long prec);
@@ -82,12 +91,8 @@ GEN algfdomreduce(GEN g, GEN U, GEN z, long prec);
 GEN algfdomrootgeodesic(GEN g, GEN U, long prec);
 GEN algfdomsignature(GEN U, long prec);
 GEN algfdomword(GEN g, GEN P, GEN U, long prec);
-GEN algmoreprec(GEN A, long increment, long prec);
-GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec);
-GEN algnormdisc(GEN A);
-GEN algramifiedplacesf(GEN A);
 GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
 
 //FUNDAMENTAL DOMAIN RETRIEVAL METHODS
@@ -138,10 +143,7 @@ GEN algbasisto1ijk(GEN A, GEN x);
 void algeichler1(GEN A, GEN I);
 GEN algeichler2(GEN A, GEN O);
 GEN algeichler_conj(GEN A, GEN x);
-int algisorder(GEN A, GEN O);
 GEN algorderconj(GEN A, GEN x, GEN O);
-GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
-GEN algorderlevel(GEN A, GEN O, int factored);
 GEN algreduceddisc(GEN A);
 GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
