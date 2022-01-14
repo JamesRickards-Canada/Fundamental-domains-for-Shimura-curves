@@ -648,7 +648,7 @@ circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec)
   GEN ang=anglediff(atanoo(s2, prec), atanoo(s1, prec), tol, prec), pi=mppi(prec);//Difference in angles in [0, 2*Pi]
   int topi=tolcmp(ang, pi, tol, prec);//We want to be in the range [0, Pi), so potentially subtract off Pi
   if(topi==-1) return gerepileupto(top, ang);
-  else if(topi==0){set_avma(top);return gen_0;}//Same angle
+  else if(topi==0) return gc_const(top, gen_0);//Same angle
   return gerepileupto(top, gsub(ang, pi));//Subtract off pi
 }
 
@@ -761,15 +761,15 @@ mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec)
       GEN u;
       if(gequal1(gel(c, 6))) u=gen_m2;//segment goes vertically up or right
       else u=gen_2;//segment goes vertically down or left
-      if(typ(gel(c, 1))==t_INFINITY) extpt=mat_eval(M, gadd(gel(c, 4), gmul(u, gen_I())));//Vertical line, M(c[4]+U*I)
-      else extpt=mat_eval(M, gadd(gel(c, 4), gmul(u, gaddsg(1, gmul(gel(c, 1), gen_I())))));//non-vertical line, M(c[4]+u+u*c[1]*I)
+      if(typ(gel(c, 1))==t_INFINITY) extpt=mat_eval(M, gadd(gel(c, 4), mulcxI(u)));//Vertical line, M(c[4]+U*I)
+      else extpt=mat_eval(M, gadd(gel(c, 4), gmul(u, gaddsg(1, mulcxI(gel(c, 1))))));//non-vertical line, M(c[4]+u+u*c[1]*I)
     }
     else if(typ(gel(c, 4))==t_INFINITY){//End point infinity
       GEN u;
       if(gequal1(gel(c, 6))) u=gen_2;//segment goes vertically up or right
       else u=gen_m2;//segment goes vertically down or left
-      if(typ(gel(c, 1))==t_INFINITY) extpt=mat_eval(M, gadd(gel(c, 3), gmul(u, gen_I())));//Vertical line, M(c[3]+U*I)
-      else extpt=mat_eval(M, gadd(gel(c, 3), gmul(u, gaddsg(1, gmul(gel(c, 1), gen_I())))));//non-vertical line, M(c[3]+u+u*c[1]*I)
+      if(typ(gel(c, 1))==t_INFINITY) extpt=mat_eval(M, gadd(gel(c, 3), mulcxI(u)));//Vertical line, M(c[3]+U*I)
+      else extpt=mat_eval(M, gadd(gel(c, 3), gmul(u, gaddsg(1, mulcxI(gel(c, 1))))));//non-vertical line, M(c[3]+u+u*c[1]*I)
     }
     else{//Start/end points in the plane
       if(gequal1(gel(c, 7))) extpt=mat_eval(M, midpoint(gel(c, 3), gel(c, 4)));//Does not go through oo, can take midpoint
@@ -825,7 +825,7 @@ mobius_circle(GEN M, GEN c, GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN p1=mat_eval(M, gadd(gel(c, 1), gel(c, 2)));//M(c[1]+c[2])
-  GEN p2=mat_eval(M, gadd(gel(c, 1), gmul(gel(c, 2), gen_I())));//M(c[1]+c[2]*I)
+  GEN p2=mat_eval(M, gadd(gel(c, 1), mulcxI(gel(c, 2))));//M(c[1]+c[2]*I)
   GEN p3=mat_eval(M, gsub(gel(c, 1), gel(c, 2)));//M(c[1]-c[2])
   return gerepileupto(top, circle_fromppp(p1, p2, p3, tol, prec));
 }
@@ -835,15 +835,16 @@ static GEN
 mobius_line(GEN M, GEN l, GEN tol, long prec)
 {
   pari_sp top=avma;
-  GEN p1, p2, p3, I=gen_I();
+  GEN p1, p2, p3;
   if(typ(gel(l, 1))==t_INFINITY){//Vertical line
+    GEN I=gen_I();
     p1=mat_eval(M, gel(l, 2));//M(x-intercept)
     p2=mat_eval(M, gadd(gel(l, 2), I));//M(x-intercept+I)
     p3=mat_eval(M, gsub(gel(l, 2), I));//M(x-intercept-I)
   }
   else{//Non-vertical line
-    GEN slopeIp1=gaddgs(gmul(gel(l, 1), I), 1);//1+Slope*I
-    GEN p1base=gmul(gel(l, 2), I);//y-intercept
+    GEN slopeIp1=mkcomplex(gen_1, gel(l, 1));//gaddgs(mulcxI(gel(l, 1)), 1);//1+Slope*I
+    GEN p1base=mulcxI(gel(l, 2));//y-intercept
     GEN p2base=gadd(p1base, slopeIp1);//y-intercept+1+slope*I
     GEN p3base=gadd(p2base, slopeIp1);//y-intercept+2+2*slope*I
     p1=mat_eval(M, p1base);p2=mat_eval(M, p2base);p3=mat_eval(M, p3base);
@@ -991,12 +992,9 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
       y2=gadd(b1pu, gmul(v, x2));//y2=b1+u+v*x2;
     }
   }
-  if(oneint==0){//One point of intersection (0 pts of intersection was already dealt with and returned)
-    GEN y1I=gmul(gen_I(), y1);
-    return gerepilecopy(top, mkvec(gadd(x1, y1I)));
-  }
-  GEN y1I=gmul(gen_I(), y1), y2I=gmul(gen_I(), y2);
-  return gerepilecopy(top, mkvec2(gadd(x1, y1I), gadd(x2, y2I)));
+  GEN P1=mkcomplex(x1, y1);
+  if(oneint==0) return gerepilecopy(top, mkvec(P1));//One point of intersection (0 pts of intersection was already dealt with and returned)
+  return gerepilecopy(top, mkvec2(P1, mkcomplex(x2, y2)));
 }
 
 //Returns the intersection points of c and l
@@ -1012,13 +1010,7 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
     if(toleq(rtpart, gen_0, tol, prec)) return gerepilecopy(top, mkvec(mkcomplex(x1, y1)));
     //Two intersection points
     GEN y1py2=gmulgs(imag_i(gel(c, 1)), 2);//2*imag(c[1])
-    GEN ret=cgetg(3, t_VEC);
-    gel(ret, 1)=cgetg(3, t_COMPLEX);gel(ret, 2)=cgetg(3, t_COMPLEX);
-    gmael(ret, 1, 1)=gcopy(x1);
-    gmael(ret, 1, 2)=gcopy(y1);
-    gmael(ret, 2, 1)=gcopy(x1);
-    gmael(ret, 2, 2)=gsub(y1py2, y1);
-    return gerepileupto(top, ret);
+	return gerepilecopy(top, mkvec2(mkcomplex(x1, y1), mkcomplex(x1, gsub(y1py2, y1))));
   }
   //Now y=mx+b with m finite
   GEN A=gaddgs(gsqr(gel(l, 1)), 1);//l[1]^2+1
@@ -1027,28 +1019,20 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
   GEN C=gadd(gsqr(real_i(gel(c, 1))), gsub(gsqr(l2mic1), gsqr(gel(c, 2))));//real(c[1])^2+(l[2]-imag(c[1]))^2-c[2]^2
   GEN rtpart=gsub(gsqr(B), gmulsg(4, gmul(A, C)));
   int rtpartsig=tolcmp(rtpart, gen_0, tol, prec);
-  if(rtpartsig==-1){set_avma(top);return cgetg(1, t_VEC);}//No intersection
+  if(rtpartsig==-1) return gc_0vec(top);//No intersection
   if(rtpartsig==0){//One root, and rtpart=0
     GEN x1=gdiv(B, gmulgs(A, -2));//-B/(2A)
     GEN y1part=gmul(gel(l, 1), x1);//l[1]*x1
-    GEN ret=cgetg(2, t_VEC);
-    gel(ret, 1)=cgetg(3, t_COMPLEX);
-    gmael(ret, 1, 1)=gcopy(x1);
-    gmael(ret, 1, 2)=gadd(y1part, gel(l, 2));//y1=l[1]*x1+l[2];
-    return gerepileupto(top, ret);
+	return gerepilecopy(top, mkvec(mkcomplex(x1, gadd(y1part, gel(l, 2)))));//y1=l[1]*x1+l[2];
   }
   //Two roots
   GEN x1=gdiv(gsub(gsqrt(rtpart, prec), B), gmulgs(A, 2));//x1=(-B+sqrt(B^2-4*A*C))/(2*A);
   GEN x2=gsub(gneg(gdiv(B, A)), x1);//-B/A-x1
   GEN y1part=gmul(gel(l, 1), x1);//l[1]*x1
   GEN y2part=gmul(gel(l, 1), x2);//l[1]*x2
-  GEN ret=cgetg(3, t_VEC);
-  gel(ret, 1)=cgetg(3, t_COMPLEX);gel(ret, 2)=cgetg(3, t_COMPLEX);
-  gmael(ret, 1, 1)=gcopy(x1);
-  gmael(ret, 1, 2)=gadd(y1part, gel(l, 2));//l[1]*x1+l[2];
-  gmael(ret, 2, 1)=gcopy(x2);
-  gmael(ret, 2, 2)=gadd(y2part, gel(l, 2));//l[1]*x2+l[2];
-  return gerepileupto(top, ret);
+  GEN y1=gadd(y1part, gel(l, 2));//l[1]*x1+l[2];
+  GEN y2=gadd(y2part, gel(l, 2));//l[1]*x2+l[2];
+  return gerepilecopy(top, mkvec2(mkcomplex(x1, y1), mkcomplex(x2, y2)));
 }
 
 //The intersection of two lines
@@ -1060,24 +1044,15 @@ line_int(GEN l1, GEN l2, GEN tol, long prec)
   pari_sp top=avma;
   if(typ(s1)==t_INFINITY){//l1 vertical
     GEN ypart=gmul(s2, gel(l1, 2));//s2*l1[2]
-    GEN ipt=cgetg(3, t_COMPLEX);
-    gel(ipt, 1)=gcopy(gel(l1, 2));
-    gel(ipt, 2)=gadd(ypart, gel(l2, 2));//s2*l1[2]+l2[2]
-    return gerepileupto(top, ipt);
+	return gerepilecopy(top, mkcomplex(gel(l1, 2), gadd(ypart, gel(l2, 2))));//y=s2*l1[2]+l2[2]
   }
   if(typ(s2)==t_INFINITY){//l2 vertical
     GEN ypart=gmul(s1, gel(l2, 2));//s1*l2[2]
-    GEN ipt=cgetg(3, t_COMPLEX);
-    gel(ipt, 1)=gcopy(gel(l2, 2));
-    gel(ipt, 2)=gadd(ypart, gel(l1, 2));//s1*l2[2]+l1[2]
-    return gerepileupto(top, ipt);
+	return gerepilecopy(top, mkcomplex(gel(l2, 2), gadd(ypart, gel(l1, 2))));//y=s1*l2[2]+l1[2]
   }
   GEN x=gdiv(gsub(gel(l2, 2), gel(l1, 2)), gsub(s1, s2));//(l2[2]-l1[2])/(s1-s2)
   GEN ypart=gmul(s1, x);//s1*x
-  GEN ipt=cgetg(3, t_COMPLEX);
-  gel(ipt, 1)=gcopy(x);
-  gel(ipt, 2)=gadd(ypart, gel(l1, 2));//s1*x+l1[2]
-  return gerepileupto(top, ipt);
+  return gerepilecopy(top, mkcomplex(x, gadd(ypart, gel(l1, 2))));//y=s1*x+l1[2]
 }
 
 //p is assumed to be on the circle defined by c; this checks if it is actually on the arc (running counterclockwise from c[3] to c[4]).
@@ -1088,9 +1063,8 @@ onarc(GEN c, GEN p, GEN tol, long prec)
   if(toleq(gel(c, 3), p, tol, prec)) return 1;//p=the start point. We have this done seperately in case rounding errors take the angle to <c[5], as this will cause issues with the shifting angle.
   pari_sp top=avma;
   GEN angle=shiftangle(radialangle(c, p, tol, prec), gel(c, 5), tol, prec);//Getting the angle in the range [c[5], c[5]+2*Pi)
-  if(tolcmp(angle, gel(c, 6), tol, prec)<=0){set_avma(top);return 1;}//On the arc
-  set_avma(top);
-  return 0;//Beyond the arc.
+  if(tolcmp(angle, gel(c, 6), tol, prec)<=0) return gc_int(top, 1);//On the arc
+  return gc_int(top, 0);//Beyond the arc.
 }
 
 //p is assumed to be on the line defined by l; this checks if it is actually on the segment l
@@ -1107,21 +1081,21 @@ onseg(GEN l, GEN p, GEN tol, long prec)
   if(typ(gel(l, 1))==t_INFINITY){//Vertical line
     if(typ(gel(l, 3))==t_INFINITY){//Start point in oo
       if(equali1(gel(l, 6))){//p must lie BELOW l[4]
-          if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)<=0){set_avma(top);return 1;}//Lies below l[4]
-          set_avma(top);return 0;//lies above l[4]
+          if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)<=0) return gc_int(top, 1);//Lies below l[4]
+          return gc_int(top, 0);//lies above l[4]
       }
       //p must lie ABOVE l[4]
-      if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)>=0){set_avma(top);return 1;}//Lies above l[4]
-      set_avma(top);return 0;//lies below l[4]
+      if(tolcmp(imag_i(p), imag_i(gel(l, 4)), tol, prec)>=0) return gc_int(top, 1);//Lies above l[4]
+      return gc_int(top, 0);//lies below l[4]
     }
     if(typ(gel(l, 4))==t_INFINITY){//End point is oo
       if(equali1(gel(l, 6))){//p must lie ABOVE l[3]
-          if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)>=0){set_avma(top);return 1;}//Lies above l[3]
-          set_avma(top);return 0;//lies below l[3]
+          if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)>=0) return gc_int(top, 1);//Lies above l[3]
+          return gc_int(top, 0);//lies below l[3]
       }
       //p must lie BELOW l[3]
-      if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)<=0){set_avma(top);return 1;}//Lies below l[3]
-      set_avma(top);return 0;//lies above l[3]
+      if(tolcmp(imag_i(p), imag_i(gel(l, 3)), tol, prec)<=0) return gc_int(top, 1);//Lies below l[3]
+      return gc_int(top, 0);//lies above l[3]
     }
     //Start and end points are finite
     int i1=tolcmp(imag_i(gsub(p, gel(l, 3))), gen_0, tol, prec);//sign of imag(p)-imag(l[3])
@@ -1139,21 +1113,21 @@ onseg(GEN l, GEN p, GEN tol, long prec)
   //Non-vertical line
   if(typ(gel(l, 3))==t_INFINITY){//Start point in oo
     if(equali1(gel(l, 6))){//p must lie LEFT OF l[4]
-      if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)<=0){set_avma(top);return 1;}//Lies left of l[4]
-      set_avma(top);return 0;//lies right of  l[4]
+      if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)<=0) return gc_int(top, 1);//Lies left of l[4]
+      return gc_int(top, 0);//lies right of  l[4]
     }
     //p must lie RIGHT OF l[4]
-    if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)>=0){set_avma(top);return 1;}//Lies right of l[4]
-    set_avma(top);return 0;//lies left of l[4]
+    if(tolcmp(real_i(p), real_i(gel(l, 4)), tol, prec)>=0) return gc_int(top, 1);//Lies right of l[4]
+    return gc_int(top, 0);//lies left of l[4]
   }
   if(typ(gel(l, 4))==t_INFINITY){//End point is oo
     if(equali1(gel(l, 6))){//p must lie RIGHT OF l[3]
-      if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)>=0){set_avma(top);return 1;}//Lies right of l[3]
-      set_avma(top);return 0;//lies below l[3]
+      if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)>=0) return gc_int(top, 1);//Lies right of l[3]
+      return gc_int(top, 0);//lies below l[3]
     }
     //p must lie LEFT OF l[3]
-    if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)<=0){set_avma(top);return 1;}//Lies left of l[3]
-    set_avma(top);return 0;//lies above l[3]
+    if(tolcmp(real_i(p), real_i(gel(l, 3)), tol, prec)<=0) return gc_int(top, 1);//Lies left of l[3]
+    return gc_int(top, 0);//lies above l[3]
   }
   //Start and end points are finite
   int i1=tolcmp(real_i(gsub(p, gel(l, 3))), gen_0, tol, prec);//sign of real(p)-real(l[3])
