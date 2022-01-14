@@ -179,6 +179,85 @@ algd(GEN A, GEN a)
   return gerepileupto(top, nfM_det(alg_get_center(A), M));
 }
 
+//Given an algebra A/K and an ideal I in K that is coprime to the discriminant of A (not checked), this prints text suitable for Magma to create an Eichler order of that level. Copy the output into algeichler to initialize the order here. We must not be using the variables i, j, or k in A or K.
+void
+algeichler1(GEN A, GEN I){
+  pari_sp top=avma;
+  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
+  long kdeg=nf_get_degree(K);
+  long Kvar=nf_get_varn(K);//Variable number of K
+  GEN gKvar=pol_x(Kvar);//The actual polynomial
+  
+  pari_printf("SetColumns(0);\n");//So that we can copy-paste easily.
+  if(kdeg==1) pari_printf("F:=RationalsAsNumberField();\n");//Over Q, must do this.
+  else{
+    pari_printf("R<%Ps>:=PolynomialRing(Rationals());\n", gKvar);//Variable
+    pari_printf("F<%Ps>:=NumberField(%Ps);\n", gKvar, nf_get_pol(K));//Field
+  }
+  pari_printf("ZF:=MaximalOrder(F);\n");//Ring of integers of field
+  
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+  long Lvar=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, Lvar, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN b=lift(alg_get_b(A));//This extracts a and b from the algebra.
+  
+  pari_printf("A<t2, t3, t4>:=QuaternionAlgebra<F|%Ps, %Ps>;\n", a, b);//Algebra. t2 -> i, t3 ->j, t4 ->k
+  
+  //Now we compute our current maximal order in terms of 1, i, j, k.
+  long n=4*kdeg;//The length of the basis.
+  GEN basis=cgetg(n+1, t_VEC);//Stores the basis in terms of 1, i, j, k
+  for(long i=1;i<=n;i++) gel(basis, i)=algbasisto1ijk(A, col_ei(n, i));
+  GEN polbasis=zerovec(n);//basis, but we make the polynomials with t2, t3, t4
+  for(long i=1;i<=n;i++){
+    gel(polbasis, i)=gadd(gel(polbasis, i), gmael(basis, i, 1));//1
+    gel(polbasis, i)=gadd(gel(polbasis, i), gmul(gmael(basis, i, 2), pol_x(2)));//i
+    gel(polbasis, i)=gadd(gel(polbasis, i), gmul(gmael(basis, i, 3), pol_x(3)));//j
+    gel(polbasis, i)=gadd(gel(polbasis, i), gmul(gmael(basis, i, 4), pol_x(4)));//k
+  }
+  
+  pari_printf("Maxord:=Order(%Ps);\n", polbasis);//Maximal order of algebra
+  
+  GEN Imat=idealhnf(K, I);//Puts it into a square matrix
+  GEN Kbasis=nf_get_zk(K);//The basis of K
+  GEN Ibasis=zerovec(kdeg);
+  for(long i=1;i<=kdeg;i++){
+    for(long j=1;j<=kdeg;j++){
+      gel(Ibasis, i)=gadd(gel(Ibasis, i), gmul(gcoeff(Imat, j, i), gel(Kbasis, j)));
+    }
+  }
+  
+  pari_printf("Idl:=ideal<ZF|");
+  for(long i=1;i<=kdeg-1;i++) pari_printf("%Ps, ", gel(Ibasis, i));
+  pari_printf("%Ps>;\n", gel(Ibasis, kdeg));//Tranlated ideal of K
+  pari_printf("OEich:=Order(Maxord, Idl);\n");//Eichler order
+  pari_printf("B:=ZBasis(OEich);\n");//Z-basis of the order
+  pari_printf("B;\n\n");//Output B.
+  avma=top;
+}
+
+//Given the magma output of algeichler1 as O, this outputs the corresponding Eichler order.
+GEN
+algeichler2(GEN A, GEN O){
+  pari_sp top=avma;
+  long n;
+  GEN O1ijk=cgetg_copy(O, &n);//The order with entries back as vectors wrt [1, i, j, k]
+  long ivar=fetch_user_var("t2"), jvar=fetch_user_var("t3"), kvar=fetch_user_var("t4");
+  GEN Ai=pol_x(ivar), Aj=pol_x(jvar), Ak=pol_x(kvar);//i, j, k
+  for(long i=1;i<n;i++){
+    GEN elt=gel(O, i);//The element
+    GEN icoef=polcoef(elt, 1, ivar);//i coeff
+    elt=gsub(elt, gmul(icoef, Ai));
+    GEN jcoef=polcoef(elt, 1, jvar);//j coeff
+    elt=gsub(elt, gmul(jcoef, Aj));
+    GEN kcoef=polcoef(elt, 1, kvar);//k coeff
+    elt=gsub(elt, gmul(kcoef, Ak));
+    gel(O1ijk, i)=mkvec4(simplify(elt), icoef, jcoef, kcoef);
+  }
+  GEN M=cgetg(n, t_MAT);
+  for(long i=1;i<n;i++) gel(M, i)=alg1ijktobasis(A, gel(O1ijk, i));
+  return gerepileupto(top, hnf(M));
+}
+
 //Returns the Eichler order given by O intersect x O x^(-1); the output is [Z-basis of order, level].
 GEN
 algeichler_conj(GEN A, GEN x)
@@ -220,6 +299,20 @@ algfromnormdisc(GEN F, GEN D, GEN infram)
     gel(hass, i)=gen_1;//The vector of 1's
   }
   return alginit(F, mkvec3(gen_2, mkvec2(pfacideals, hass), infram), -1, 1);
+}
+
+//Given a supposed order O, this returns 1 if it is indeed an order. O is input as a Z-matrix, i.e. as a suborder of the given maximal order.
+int algisorder(GEN A, GEN O){
+  pari_sp top=avma;
+  GEN Oinv=QM_inv(O);
+  long n=lg(O);
+  for(long i=1;i<n;i++){
+    for(long j=1;j<n;j++){
+      GEN elt=algmul(A, gel(O, i), gel(O, j));
+      if(!RgV_is_ZV(gmul(Oinv, elt))) return gc_int(top, 0);
+    }
+  }
+  return gc_int(top, 1);
 }
 
 //Returns the order formed by conjugating O by x. The columns are written in terms of the stored basis of A. If O=NULL, assumes we are conjugating the stored maximal order

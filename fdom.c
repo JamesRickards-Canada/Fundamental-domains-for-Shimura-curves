@@ -69,8 +69,6 @@ static int onarc(GEN c, GEN p, GEN tol, long prec);
 static int onseg(GEN l, GEN p, GEN tol, long prec);
 
 //2: DISTANCES
-static GEN hdiscradius(GEN area, long prec);
-static GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 static GEN hdist_ud(GEN z1, GEN z2, long prec);
 static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 
@@ -1210,7 +1208,7 @@ onseg(GEN l, GEN p, GEN tol, long prec)
 
 
 //Given the area of a hyperbolic disc, this returns the radius. The formula is area=4*Pi*sinh(R/2)^2, or R=2arcsinh(sqrt(area/4Pi))
-static GEN
+GEN
 hdiscradius(GEN area, long prec)
 {
   pari_sp top=avma;
@@ -1232,7 +1230,7 @@ hdiscrandom(GEN R, long prec)
 }
 
 //Returns a random point z in the unit disc, uniform inside the ball of radius R, with argument uniform in [ang1, ang2]. See page 19 of Page (before section 2.5).
-static GEN
+GEN
 hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec)
 {
   pari_sp top=avma;

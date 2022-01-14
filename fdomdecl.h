@@ -38,7 +38,9 @@ GEN mat_eval(GEN M, GEN x);
 GEN mobius_gp(GEN M, GEN c, long prec);
 
 //DISTANCES/AREAS
+GEN hdiscradius(GEN area, long prec);
 GEN hdiscrandom(GEN R, long prec);
+GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 GEN hdist(GEN z1, GEN z2, long flag, long prec);
 
 //FUNDAMENTAL DOMAIN COMPUTATION
@@ -133,7 +135,10 @@ GEN alg1ijktoalg(GEN A, GEN x);
 GEN alg1ijktobasis(GEN A, GEN x);
 GEN algalgto1ijk(GEN A, GEN x);
 GEN algbasisto1ijk(GEN A, GEN x);
+void algeichler1(GEN A, GEN I);
+GEN algeichler2(GEN A, GEN O);
 GEN algeichler_conj(GEN A, GEN x);
+int algisorder(GEN A, GEN O);
 GEN algorderconj(GEN A, GEN x, GEN O);
 GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
 GEN algorderlevel(GEN A, GEN O, int factored);
