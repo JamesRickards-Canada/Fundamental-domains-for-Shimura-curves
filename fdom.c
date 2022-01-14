@@ -380,7 +380,7 @@ mat_nfcholesky(GEN nf, GEN A)
   return gerepileupto(top, ret);
 }
 
-//Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions. I think nf may have to be totally real? That's all I use it for no there is no issue anyway.
+//Solves Ax^2+Bx+C=0 in the integers (A, B, C belong to nf) and returns the vector of solutions. I think nf may have to be totally real? That's all I use it for so there is no issue anyway.
 static GEN
 quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
 {
@@ -657,12 +657,8 @@ static GEN
 circle_fromcp(GEN cent, GEN p, long prec)
 {
   pari_sp top=avma;
-  GEN pmcent=gsub(p, cent);
-  GEN ret=cgetg(4, t_VEC);
-  gel(ret, 1)=gcopy(cent);
-  gel(ret, 2)=gabs(pmcent, prec);
-  gel(ret, 3)=gen_0;
-  return gerepileupto(top, ret);
+  GEN abspmcent=gabs(gsub(p, cent), prec);
+  return gerepilecopy(top, mkvec3(cent, abspmcent, gen_0));
 }
 
 //Circle through 3 points (with one allowed to be oo, making a line instead)
@@ -694,20 +690,10 @@ circle_tangentslope(GEN c, GEN p, long prec)
 static GEN
 line_fromsp(GEN s, GEN p)
 {
-  if(typ(s)==t_INFINITY){//oo slope
-    GEN ret=cgetg(4, t_VEC);
-    gel(ret, 1)=mkoo();
-    gel(ret, 2)=greal(p);//x-intercept
-    gel(ret, 3)=gen_1;
-    return ret;
-  }
+  if(typ(s)==t_INFINITY) retmkvec3(mkoo(), greal(p), gen_1);//oo slope
   pari_sp top=avma;
-  GEN strealp=gmul(s, real_i(p)), imagp=imag_i(p);
-  GEN ret=cgetg(4, t_VEC);
-  gel(ret, 1)=gcopy(s);
-  gel(ret, 2)=gsub(imagp, strealp);//y=intercept
-  gel(ret, 3)=gen_1;
-  return gerepileupto(top, ret);
+  GEN strealp=gmul(s, real_i(p));
+  return gerepilecopy(top, mkvec3(s, gsub(imag_i(p), strealp), gen_1));
 }
 
 //Line through two points
@@ -906,10 +892,10 @@ arc_int(GEN c1, GEN c2, GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ipts=circle_int(c1, c2, tol, prec);
-  if(lg(ipts)==1){set_avma(top);return cgetg(1, t_VEC);}//No intersection
+  if(lg(ipts)==1) return gc_0vec(top);//No intersection
   if(lg(ipts)==2){//One intersection point (tangent circles)
-    if(!onarc(c1, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on arc 1
-    if(!onarc(c2, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on arc 2
+    if(!onarc(c1, gel(ipts, 1), tol, prec)) return gc_0vec(top);//Not on arc 1
+    if(!onarc(c2, gel(ipts, 1), tol, prec)) return gc_0vec(top);//Not on arc 2
     return gerepilecopy(top, ipts);//On arc
   }
   //Two intersections
@@ -919,15 +905,11 @@ arc_int(GEN c1, GEN c2, GEN tol, long prec)
   if(i2==1) i2=onarc(c2, gel(ipts, 2), tol, prec);//Now i2==1 iff the ipts[2] is on both c1 and c2
   if(i1==1){
     if(i2==1) return gerepilecopy(top, ipts);//Both pts on the arcs
-    GEN ret=cgetg(2, t_VEC);//Just point 1
-    gel(ret, 1)=gcopy(gel(ipts, 1));
-    return gerepileupto(top, ret);
+	return gerepilecopy(top, mkvec(gel(ipts, 1)));//Just point 1
   }
   //Now i1=0
-  if(i2==0){set_avma(top);return cgetg(1, t_VEC);}//Not on either arc
-  GEN ret=cgetg(2, t_VEC);//Just point 2
-  gel(ret, 1)=gcopy(gel(ipts, 2));
-  return gerepileupto(top, ret);
+  if(i2==0) return gc_0vec(top);//Not on either arc
+  return gerepilecopy(top, mkvec(gel(ipts, 2)));//Just point 2
 }
 
 //Returns the intersection points of an arc and a segment
@@ -936,10 +918,10 @@ arcseg_int(GEN c, GEN l, GEN tol, long prec)
 {
   pari_sp top=avma;
   GEN ipts=circleline_int(c, l, tol, prec);
-  if(lg(ipts)==1){set_avma(top);return cgetg(1, t_VEC);}//No intersection
+  if(lg(ipts)==1) return gc_0vec(top);//No intersection
   if(lg(ipts)==2){//One intersection point (tangent circles)
-    if(!onarc(c, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on arc
-    if(!onseg(l, gel(ipts, 1), tol, prec)){set_avma(top);return cgetg(1, t_VEC);}//Not on segment
+    if(!onarc(c, gel(ipts, 1), tol, prec)) return gc_0vec(top);//Not on arc
+    if(!onseg(l, gel(ipts, 1), tol, prec)) return gc_0vec(top);//Not on segment
     return gerepilecopy(top, ipts);//On both
   }
   //Two intersections
@@ -949,15 +931,11 @@ arcseg_int(GEN c, GEN l, GEN tol, long prec)
   if(i2==1) i2=onseg(l, gel(ipts, 2), tol, prec);//Now i2==1 iff the ipts[2] is on both c and l
   if(i1==1){
     if(i2==1) return gerepilecopy(top, ipts);//Both pts on both
-    GEN ret=cgetg(2, t_VEC);//Just point 1
-    gel(ret, 1)=gcopy(gel(ipts, 1));
-    return gerepileupto(top, ret);
+    return gerepilecopy(top, mkvec(gel(ipts, 1)));//Just point 1
   }
   //Now i1=0
-  if(i2==0){set_avma(top);return cgetg(1, t_VEC);}//Not on either
-  GEN ret=cgetg(2, t_VEC);//Just point 2
-  gel(ret, 1)=gcopy(gel(ipts, 2));
-  return gerepileupto(top, ret);
+  if(i2==0) return gc_0vec(top);//Not on either
+  return gerepilecopy(top, mkvec(gel(ipts, 2)));//Just point 2
 }
 
 //Returns the set of points in the intersection of circles c1, c2
@@ -970,7 +948,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
   GEN a1ma2=gsub(a1, a2), b1mb2=gsub(b1, b2), x1, x2, y1, y2;
   int oneint=0;
   if(gcmp(gabs(a1ma2, prec), gabs(b1mb2, prec))>=0){//We want to divide by the larger of the two quantities to maximize precision and avoid errors when the centres are on the same line.
-    if(toleq(a1ma2, gen_0, tol, prec)==1){set_avma(top);return cgetg(1, t_VEC);}//Same centre, cannot intersect.
+    if(toleq(a1ma2, gen_0, tol, prec)==1) return gc_0vec(top);//Same centre, cannot intersect.
     //u=(r1^2-r2^2+b2^2-b1^2+a2^2-a1^2)/(2*a2-2*a1)-a1;
     GEN u=gsub(gdiv(gsub(gadd(gsub(gadd(gsub(gsqr(r1), gsqr(r2)), gsqr(b2)), gsqr(b1)), gsqr(a2)), gsqr(a1)), gmulgs(a1ma2, -2)), a1);
     GEN v=gneg(gdiv(b1mb2, a1ma2));//v=(b1-b2)/(a2-a1), and x=a1+u+vy
@@ -978,7 +956,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     GEN vsqrp1=gaddgs(gsqr(v), 1);//v^2+1
     GEN rtpart=gsub(gsqr(uvmb1), gmul(vsqrp1, gadd(gsqr(b1), gsub(gsqr(u), gsqr(r1)))));//(u*v-b1)^2-(v^2+1)*(b1^2+u^2-r1^2)
     oneint=tolcmp(rtpart, gen_0, tol, prec);//Comparing rtpart to 0
-    if(oneint==-1){set_avma(top);return cgetg(1, t_VEC);}//rtpart must be square rooted, so if it's negative the circles do not intersect
+    if(oneint==-1) return gc_0vec(top);//rtpart must be square rooted, so if it's negative the circles do not intersect
     if(oneint==0){//One intersection, so we take rtpart=0. This is CRUCIAL, as taking the square root kills our precision if we don't do this here.
       y1=gdiv(gneg(uvmb1), vsqrp1);//y1=(b1-u*v)/(1*v^2+1)
       x1=gadd(gadd(a1, u), gmul(v, y1));//x1=a1+u+v*y1
@@ -992,7 +970,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     }
   }
   else{
-    if(toleq(b1mb2, gen_0, tol, prec)==1){set_avma(top);return cgetg(1, t_VEC);}//Same centre, cannot intersect.
+    if(toleq(b1mb2, gen_0, tol, prec)==1) return gc_0vec(top);//Same centre, cannot intersect.
     //u=(r1^2-r2^2+b2^2-b1^2+a2^2-a1^2)/(2*b2-2*b1)-b1;
     GEN u=gsub(gdiv(gsub(gadd(gsub(gadd(gsub(gsqr(r1), gsqr(r2)), gsqr(b2)), gsqr(b1)), gsqr(a2)), gsqr(a1)), gmulgs(b1mb2, -2)), b1);
     GEN v=gneg(gdiv(a1ma2, b1mb2));//v=(a1-a2)/(b2-b1), and y=b1+u+vx
@@ -1000,7 +978,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     GEN vsqrp1=gaddgs(gsqr(v), 1);//v^2+1
     GEN rtpart=gsub(gsqr(uvma1), gmul(vsqrp1, gadd(gsqr(a1), gsub(gsqr(u), gsqr(r1)))));//(u*v-a1)^2-(v^2+1)*(a1^2+u^2-r1^2))
     oneint=tolcmp(rtpart, gen_0, tol, prec);//Comparing rtpart to 0
-    if(oneint==-1){set_avma(top);return cgetg(1, t_VEC);}//rtpart must be square rooted, so if it's negative the circles do not intersect
+    if(oneint==-1) return gc_0vec(top);//rtpart must be square rooted, so if it's negative the circles do not intersect
     if(oneint==0){//One intersection, so we take rtpart=0. This is CRUCIAL, as taking the square root kills our precision if we don't do this here.
       x1=gdiv(gneg(uvma1), vsqrp1);//x1=(a1-u*v)/(v^2+1);
       y1=gadd(gadd(b1, u), gmul(v, x1));//y1=b1+u+v*x1;
@@ -1015,15 +993,10 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
   }
   if(oneint==0){//One point of intersection (0 pts of intersection was already dealt with and returned)
     GEN y1I=gmul(gen_I(), y1);
-    GEN ret=cgetg(2, t_VEC);
-    gel(ret, 1)=gadd(x1, y1I);
-    return gerepileupto(top, ret);
+    return gerepilecopy(top, mkvec(gadd(x1, y1I)));
   }
   GEN y1I=gmul(gen_I(), y1), y2I=gmul(gen_I(), y2);
-  GEN ret=cgetg(3, t_VEC);
-  gel(ret, 1)=gadd(x1, y1I);
-  gel(ret, 2)=gadd(x2, y2I);
-  return gerepileupto(top, ret);
+  return gerepilecopy(top, mkvec2(gadd(x1, y1I), gadd(x2, y2I)));
 }
 
 //Returns the intersection points of c and l
@@ -1034,15 +1007,9 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
   if(typ(gel(l, 1))==t_INFINITY){
     GEN x1=gel(l, 2);
     GEN rtpart=gsub(gsqr(gel(c, 2)), gsqr(gsub(x1, real_i(gel(c, 1)))));//c[2]^2-(x1-real(c[1]))^2
-    if(gsigne(rtpart)==-1){set_avma(top);return cgetg(1, t_VEC);}//No intersections.
+    if(gsigne(rtpart)==-1) return gc_0vec(top);//No intersections.
     GEN y1=gadd(imag_i(gel(c, 1)), gsqrt(rtpart, prec));//y1=imag(c[1])+sqrt(c[2]^2-(x1-real(c[1]))^2)
-    if(toleq(rtpart, gen_0, tol, prec)){//Only one intersection point
-      GEN ret=cgetg(2, t_VEC);
-      gel(ret, 1)=cgetg(3, t_COMPLEX);
-      gmael(ret, 1, 1)=gcopy(x1);
-      gmael(ret, 1, 2)=gcopy(y1);
-      return gerepileupto(top, ret);
-    }
+    if(toleq(rtpart, gen_0, tol, prec)) return gerepilecopy(top, mkvec(mkcomplex(x1, y1)));
     //Two intersection points
     GEN y1py2=gmulgs(imag_i(gel(c, 1)), 2);//2*imag(c[1])
     GEN ret=cgetg(3, t_VEC);
@@ -2862,6 +2829,10 @@ atanoo(GEN x, long prec)
   return gatan(x, prec);
 }
 
+//Resets avma and returns the vector []
+INLINE GEN
+gc_0vec(pari_sp av){set_avma(av);return cgetg(1, t_VEC);}
+
 //Returns gcmp(x, y), except if x==y, returns -1. Useful for gen_search when you ALWAYS want to return the index where it should be inserted/is
 static int
 gcmp_strict(void *data, GEN x, GEN y)
@@ -3141,6 +3112,19 @@ algramifiedplacesf(GEN A)
   }
   return gerepilecopy(top, rp);
 }
+
+//Returns the reduced discriminant of A as an ideal in the centre.
+GEN
+algreduceddisc(GEN A)
+{
+  pari_sp top=avma;
+  GEN F=alg_get_center(A);
+  GEN rplaces=algramifiedplacesf(A);
+  long l=lg(rplaces);
+  GEN e=const_vecsmall(l-1, 1);//Vecsmall of 1's
+  return gerepileupto(top, idealfactorback(F, rplaces, e, 0));
+}
+
 
 //Formats algmul for use in gen_product
 static GEN
@@ -3770,7 +3754,7 @@ qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts,
   GEN O=qalg_get_order(Q);
   long l;
   GEN v=cgetg_copy(vs, &l);
-  for(long i=1;i<l;i++) gel(v, i)=QM_QC_mul(O, gel(vs, i));
+  for(long i=1;i<l;i++) gel(v, i)=QM_QC_mul(O, gel(vs, i));//Can't use QM_mul since this is a vector of columns and not a matrix
   return gerepilecopy(top, v);
 }
 

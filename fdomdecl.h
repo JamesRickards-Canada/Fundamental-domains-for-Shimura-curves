@@ -66,6 +66,7 @@ GEN word(GEN U, GEN P, GEN g, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*e
 
 //HELPER METHODS
 GEN deftol(long prec);
+INLINE GEN gc_0vec(pari_sp av);
 
 
 //SECTION 3: QUATERNIONIC METHODS
@@ -79,6 +80,7 @@ GEN algnormdisc(GEN A);
 GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
 GEN algorderlevel(GEN A, GEN O, int factored);
 GEN algramifiedplacesf(GEN A);
+GEN algreduceddisc(GEN A);
 
 //QUATERNION METHODS
 GEN algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec);
@@ -145,7 +147,6 @@ void algeichler1(GEN A, GEN I);
 GEN algeichler2(GEN A, GEN O);
 GEN algeichler_conj(GEN A, GEN x);
 GEN algorderconj(GEN A, GEN x, GEN O);
-GEN algreduceddisc(GEN A);
 GEN algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algshimura_ab(GEN F, GEN D, long place, long maxcomptime, int allowswap);
 GEN algswapab(GEN A);

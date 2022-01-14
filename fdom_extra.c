@@ -299,18 +299,6 @@ algorderconj(GEN A, GEN x, GEN O)
   return gerepilecopy(top, Oconj);
 }
 
-//Returns the reduced discriminant of A as an ideal in the centre.
-GEN
-algreduceddisc(GEN A)
-{
-  pari_sp top=avma;
-  GEN F=alg_get_center(A);
-  GEN rplaces=algramifiedplacesf(A);
-  long l=lg(rplaces);
-  GEN e=const_vecsmall(l-1, 1);//Vecsmall of 1's
-  return gerepileupto(top, idealfactorback(F, rplaces, e, 0));
-}
-
 //Returns a quaternion algebra over F (of degree n) with |N_{F/Q}(discriminant)|=D and split at the infinite place place only, if this exists. We also guarantee that a>0. F must be a totally real field.
 GEN
 algshimura(GEN F, GEN D, long place, long maxcomptime, int allowswap)
