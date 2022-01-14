@@ -107,14 +107,26 @@ print(length(P[1]));
 O1=[1, 0, 0, 0; 0, 4, 0, 0; 0, 0, 1, 0; 0, 0, 0, 1];\\level 4
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 O2=[1, 0, 0, 0; 0, 13, 0, 0; 0, 0, 1, 0; 0, 0, 0, 1];\\level 13
 if(!algisorder(A, O2), print("Not an order"));
 print(algorderlevel(A, O2, 0));
+U=algfdom(A, O2);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 O3=[1, 0, 0, 0; 0, 80, 0, 0; 0, 0, 1, 0; 0, 0, 0, 1];\\level 80
 if(!algisorder(A, O3), print("Not an order"));
 print(algorderlevel(A, O3, 0));
+U=algfdom(A, O3);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [3, -1]);\\Ramified at 2, 3
@@ -126,10 +138,18 @@ print(length(P[1]));
 O1=[1, 0, 0, 0; 0, 5, 0, 3; 0, 0, 1, 0; 0, 0, 0, 1];\\level 5
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 O2=[1, 0, 0, 0; 0, 7, 1, 2; 0, 0, 11, 2; 0, 0, 0, 1];\\level 77
 if(!algisorder(A, O2), print("Not an order"));
 print(algorderlevel(A, O2, 0));
+U=algfdom(A, O2);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [21, 715]);\\Ramified at 11, 13
@@ -141,10 +161,10 @@ print(length(P[1]));
 O1=[1, 0, 0, 0; 0, 10, 7, 1; 0, 0, 1, 0; 0, 0, 0, 1];
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-
-O2=[1, 0, 0, 0; 0, 24, 23, 17; 0, 0, 1, 0; 0, 0, 0, 1];
-if(!algisorder(A, O2), print("Not an order"));
-print(algorderlevel(A, O2, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 
 setrand(1);
@@ -159,10 +179,18 @@ print(length(P[1]));
 O1=[1, 0, 0, 0, 0, 0, 0, 0; 0, 1, 0, 0, 0, 0, 0, 0; 0, 0, 5, 1, 4, 3, 0, 1; 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 1];\\Level the other prime above 5
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 O2=[1, 0, 0, 0, 0, 0, 0, 0; 0, 14, 4, 10, 3, 3, 12, 13; 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 1];\\Ideal of norm 14.
 if(!algisorder(A, O2), print("Not an order"));
 print(algorderlevel(A, O2, 0));
+U=algfdom(A, O2);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [-y + 1, -48*y - 111]);\\Ramified above 2
@@ -174,10 +202,18 @@ print(length(P[1]));
 O1=[1, 0, 0, 0, 0, 0, 0, 0; 0, 19, 0, 8, 1, 8, 13, 5; 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 1];
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 O2=[1, 0, 0, 0, 0, 0, 0, 0; 0, 10, 0, 2, 0, 5, 0, 5; 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 1];
 if(!algisorder(A, O2), print("Not an order"));
 print(algorderlevel(A, O2, 0));
+U=algfdom(A, O2);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 
 setrand(1);
@@ -192,10 +228,18 @@ print(length(P[1]));
 O1=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 10, 0, 8, 0, 0, 2, 5, 2, 6, 2, 2; 0, 0, 10, 6, 0, 0, 6, 7, 6, 5, 3, 8; 0, 0, 0, 2, 0, 0, 1, 1, 1, 1, 1, 0; 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];\\Ramified above 2 and 5
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 1));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 O2=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 11, 9, 1, 0, 0, 5, 4, 10, 10, 0, 2; 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];\\Ramified above 11
 if(!algisorder(A, O2), print("Not an order"));
 print(algorderlevel(A, O2, 1));
+U=algfdom(A, O2);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [52*y^2 - 316*y - 363, -y^2 + 3*y - 9]);\\Ramified at one prime above 3 and 5
@@ -207,7 +251,10 @@ print(length(P[1]));
 O1=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 2, 0, 0, 0, 0, 1, 1, 1, 0; 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 0, 1; 0, 0, 0, 0, 0, 2, 0, 1, 0, 1, 1, 0; 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];\\Ramified above 2
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 1));
-
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
 
 setrand(1);
 F=nfinit(y^4 - 2*y^3 - 3*y^2 + 4*y + 1);
@@ -221,4 +268,7 @@ print(length(P[1]));
 O1=[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 11, 9, 5, 1, 4, 2, 2, 1, 5, 9, 0, 1; 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0; 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];\\Ramified at prime of norm 11
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 1));
-
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
