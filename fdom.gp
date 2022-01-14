@@ -38,7 +38,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	install("algfdomminimalcycles","Gp","algfdomminimalcycles","./libfdom.so");
 	addhelp(algfdomminimalcycles,"Input U, a fundamental domain.\n Returns the set of minimal cycles of the side pairing. The format is [cycles, types], where an element of cycle is a vecsmall [i1,i2,...,in] so that the cycle is v_i1, v_i2, ..., v_in. cycle[i] has type types[i], where type 0=parabolic, 1=accidental, m>=2=elliptic of order m. The vecsmall types is sorted from small to large.");
 	install("algfdomorder","G","algfdomorder","./libfdom.so");
-	addhelp(algfdomorder,"Input U, a fundamental domain.\n Returns the order associated to the fundamental domain. If we took the maximal order stored in algfdomalg(U), then this returns 0.");
+	addhelp(algfdomorder,"Input U, a fundamental domain.\n Returns the order associated to the fundamental domain.");
 	install("algfdompresentation","Gp","algfdompresentation","./libfdom.so");
 	addhelp(algfdompresentation,"Inputs U, a fundamental domain.\n Returns the group presentation of the fundamental domain U. The return is a vector V, where V[1] is the vector of generators (a subset of U[1]), V[2] is the vector of relations, and V[3] is the representation of U[1][i] as a word in V[1]. A word/relation is listed as Vecsmall([i1, i2, ..., ik]), which corresponds to the equation V[1][|i1|]^{sign(i1)}*...*V[1][|ik|]^{sign(ik)} (i.e. g_1^2g_2^-1->[1, 1, -2]).");
 	install("algfdomrootgeodesic","GGp","algfdomrootgeodesic","./libfdom.so");

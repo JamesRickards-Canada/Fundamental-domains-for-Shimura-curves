@@ -3157,7 +3157,7 @@ GEN
 algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
 {
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, prec);
   GEN mats=psltopsu_transmats(p);
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
@@ -3169,8 +3169,8 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   pari_sp top=avma;
   GEN tol=deftol(prec);
   GEN Q, newA=A, U;
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
   if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
   
@@ -3185,12 +3185,12 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
     newprec++;
     precinc++;
     tol=deftol(newprec);
-    if(!O) Q=qalg_fdominitialize(newA, NULL, NULL, newprec);//Maximal order in A
-    else Q=qalg_fdominitialize(newA, gel(O, 1), gel(O, 2), newprec);//Supplied Eichler order
+    if(!O) Q=qalg_fdominitialize(newA, NULL, newprec);//Maximal order in A
+    else Q=qalg_fdominitialize(newA, O, newprec);//Supplied Eichler order
   }
   if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b)", newprec, precision00(U, NULL));
-  if(O) return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, O))));//Supplied Eichler order
-  return(gerepilecopy(top, shallowconcat(U, mkvec2(newA, gen_0))));//Maximal order
+  if(O) return(gerepilecopy(top, shallowconcat(U, mkvec(Q))));//Supplied Eichler order
+  return(gerepilecopy(top, shallowconcat(U, mkvec(Q))));//Maximal order
 }
 
 //Returns the area of the fundamental domain of the order stored in A.
@@ -3199,8 +3199,8 @@ algfdomarea(GEN A, GEN O, int lessprec, long prec)
 {
   pari_sp top=avma;
   GEN Q;
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   long lp = lessprec? 3:prec;
   return gerepileupto(top, qalg_fdomarea(Q, lp, prec));
 }
@@ -3211,8 +3211,8 @@ algfdom_bestC(GEN A, GEN O, long prec)
 {
   pari_sp top=avma;
   GEN Q;
-  if(O) Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);
-  else Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  if(O) Q=qalg_fdominitialize(A, O, prec);
+  else Q=qalg_fdominitialize(A, NULL, prec);
   return gerepileupto(top, qalg_fdombestC(Q, prec));
 }
 
@@ -3221,11 +3221,9 @@ GEN
 algfdomminimalcycles(GEN U, long prec)
 {
   pari_sp top=avma;
-  GEN A=algfdom_get_alg(U);
-  GEN O=algfdom_get_order(U);
-  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  GEN Q=algfdom_get_qalg(U);
+  GEN A=qalg_get_alg(Q);
+  GEN id=gel(alg_get_basis(A), 1);//The identity
   return gerepileupto(top, minimalcycles_bytype(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -3234,11 +3232,9 @@ GEN
 algfdompresentation(GEN U, long prec)
 {
   pari_sp top=avma;
-  GEN A=algfdom_get_alg(U);
-  GEN O=algfdom_get_order(U);
-  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  GEN Q=algfdom_get_qalg(U);
+  GEN A=qalg_get_alg(Q);
+  GEN id=gel(alg_get_basis(A), 1);//The identity
   return gerepileupto(top, presentation(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -3247,12 +3243,8 @@ GEN
 algfdomreduce(GEN g, GEN U, GEN z, long prec)
 {
   pari_sp top=avma;
-  GEN A=algfdom_get_alg(U);
-  GEN O=algfdom_get_order(U);
+  GEN Q=algfdom_get_qalg(U);
   GEN tol=deftol(prec);
-  GEN Q;
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, reduceelt_givennormbound(U, g, z, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
 }
 
@@ -3261,14 +3253,11 @@ GEN
 algfdomrootgeodesic(GEN g, GEN U, long prec)
 {
   pari_sp top=avma;
-  GEN A=algfdom_get_alg(U);
-  GEN O=algfdom_get_order(U);
+  GEN Q=algfdom_get_qalg(U);
   GEN tol=deftol(prec);
-  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  GEN A=qalg_get_alg(Q);
+  GEN id=gel(alg_get_basis(A), 1);//The identity
   return gerepileupto(top, rootgeodesic_fd(U, g, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, tol, prec));
-    
 }
 
 //Returns the signature of the quaternion algebra A with fundamental domain U.
@@ -3276,11 +3265,9 @@ GEN
 algfdomsignature(GEN U, long prec)
 {
   pari_sp top=avma;
-  GEN A=algfdom_get_alg(U);
-  GEN O=algfdom_get_order(U);
-  GEN Q, id=gel(alg_get_basis(A), 1);//The identity
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  GEN Q=algfdom_get_qalg(U);
+  GEN A=qalg_get_alg(Q);
+  GEN id=gel(alg_get_basis(A), 1);//The identity
   return gerepileupto(top, signature(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
 }
 
@@ -3288,12 +3275,8 @@ algfdomsignature(GEN U, long prec)
 GEN
 algfdomword(GEN g, GEN P, GEN U, long prec){
   pari_sp top=avma;
-  GEN A=algfdom_get_alg(U);
-  GEN O=algfdom_get_order(U);
+  GEN Q=algfdom_get_qalg(U);
   GEN tol=deftol(prec);
-  GEN Q;
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
   return gerepileupto(top, word(P, U, g, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
 
@@ -3304,8 +3287,8 @@ algnormalizedbasis(GEN A, GEN O, GEN G, GEN p, long prec)
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedbasis(G, gen_0, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec));
 }
@@ -3317,8 +3300,8 @@ algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec)
   pari_sp top=avma;
   GEN mats=psltopsu_transmats(p);//Transition matrices
   GEN Q, id=gel(alg_get_basis(A), 1);//The identity
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   GEN tol=deftol(prec);
   return gerepileupto(top, normalizedboundary(G, mats, id, Q, &qalg_fdomm2rembed, tol, prec));
 }
@@ -3329,8 +3312,8 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
 {
   pari_sp top=avma;
   GEN Q;
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   GEN nf=alg_get_center(A);
   long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
   GEN nformpart=qalg_normform(Q);
@@ -3364,6 +3347,9 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
 
 
 
+//Returns the qalg
+GEN algfdom_get_qalg(GEN U){return gel(U, 9);}
+
 //Returns the algebra of the fundamental domain
 GEN
 algfdomalg(GEN U)
@@ -3373,26 +3359,19 @@ algfdomalg(GEN U)
 }
 
 //Shallow version of algfdomalg
-GEN algfdom_get_alg(GEN U){return gel(U, 9);}
+GEN algfdom_get_alg(GEN U){return qalg_get_alg(algfdom_get_qalg(U));}
 
-//Returns the order of the fundamental domain. If NULL, returns 0, since NULL is not friendly to the GP interface.
+//Returns the order of the fundamental domain
 GEN
 algfdomorder(GEN U)
 {
   pari_sp top=avma;
-  GEN O=algfdom_get_order(U);
-  if(O) return gerepilecopy(top, O);
-  return gen_0;
+  return gerepilecopy(top, algfdom_get_order(U));
 }
 
-//Shallow version of algfdomalg
+//Shallow version of algfdomorder
 GEN
-algfdom_get_order(GEN U)
-{
-  GEN O=gel(U, 10);
-  if(gequal0(O)) return NULL;//If 0, we format it as NULL.
-  return O;
-}
+algfdom_get_order(GEN U){return qalg_get_order(algfdom_get_qalg(U));}
 
 
 
@@ -3695,9 +3674,9 @@ qalg_fdombestC(GEN Q, long prec)
   return best;
 }
 
-//Initializes the quaternion algebra Q split at one real place using the algebras framework, as well as the contained Eichler order O of level level. If O is not passed, we assume that A is input as a quaternion algebra with pre-computed maximal order, and we take this order. This is not suitable for gerepile.
+//Initializes the quaternion algebra Q split at one real place using the algebras framework, as well as the contained Eichler order O. If O is not passed, we assume that A is input as a quaternion algebra with pre-computed maximal order, and we take this order. This is not suitable for gerepile.
 GEN
-qalg_fdominitialize(GEN A, GEN O, GEN level, long prec)
+qalg_fdominitialize(GEN A, GEN O, long prec)
 {
   GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K)
   GEN L=alg_get_splittingfield(A);//L=K(sqrt(a)).
@@ -3709,7 +3688,9 @@ qalg_fdominitialize(GEN A, GEN O, GEN level, long prec)
   GEN aval=poleval(gneg(polcoef_i(rnf_get_pol(L), varnos[2], 0)), Kroot);//Find the defining eqn of L (x^2+u for u in K), find u, then take -u=a
   if(gsigne(aval)!=1) pari_err_TYPE("We require a>0 at the split real place. Please swap a, b.", A);
   GEN roots=mkvec2(Kroot, gsqrt(aval, prec));//The approximate values for the variables defining K and L.
+  GEN level;
   if(!O){O=matid(lg(alg_get_basis(A))-1);level=gen_1;}//Setting the order and level if not given
+  else level=algorderlevel(A, O, 0);//Computing the level
   return mkvecn(6, A, ramdat, varnos, roots, O, level);
 }
 

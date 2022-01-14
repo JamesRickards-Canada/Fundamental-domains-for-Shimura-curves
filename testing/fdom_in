@@ -68,7 +68,7 @@ testalgfdom(L)={
 	  printf("%Pd\n", algnormdisc(A));
 	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the defualt precision
 	  U=algfdom(A);
-	  if(algfdomorder(U)!=0,print("Order is wrong!"));
+	  if(algfdomorder(U)!=matid(4*F.r1),print("Order is wrong!"));
 	  A=algfdomalg(U);
 	  print(algfdomsignature(U));\\Invariant.
 	  P=algfdompresentation(U);

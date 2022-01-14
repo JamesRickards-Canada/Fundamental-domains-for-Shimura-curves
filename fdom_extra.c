@@ -560,8 +560,8 @@ algsmallelts(GEN A, GEN O, GEN nm, GEN p, GEN C, GEN z1, GEN z2, long prec)
 {
   pari_sp top=avma;
   GEN Q;
-  if(!O) Q=qalg_fdominitialize(A, NULL, NULL, prec);//Maximal order in A
-  else Q=qalg_fdominitialize(A, gel(O, 1), gel(O, 2), prec);//Supplied Eichler order
+  if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
+  else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   GEN nf=alg_get_center(A);
   long nfdeg=nf_get_degree(nf), fourn=4*nfdeg;
   GEN nformpart=qalg_normform(Q);
@@ -779,7 +779,7 @@ enum_successrate(GEN A, GEN p, GEN C, long Ntests, GEN R, long prec)
     GEN gamma=dbltor(2.1);
     R=hdiscradius(gpow(area, gamma, prec), prec);
   }
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, prec);
   GEN nf=alg_get_center(A);
   GEN nformpart=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nformpart);
@@ -804,7 +804,7 @@ enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntes
     GEN gamma=dbltor(2.1);
     R=hdiscradius(gpow(area, gamma, prec), prec);
   }
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, prec);
   GEN nf=alg_get_center(A);
   GEN nformpart=qalg_normform(Q);
   GEN normdecomp=mat_nfcholesky(nf, nformpart);
@@ -902,7 +902,7 @@ GEN
 enum_time(GEN A, GEN p, GEN Cset, long mintesttime, long prec)
 {
   pari_sp top=avma, mid;
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, prec);
   GEN nf=alg_get_center(A);
   GEN normformpart=qalg_normform(Q);
   GEN nfdecomp=mat_nfcholesky(nf, normformpart);
@@ -1008,7 +1008,7 @@ long
 enum_timeforNelts(GEN A, GEN p, GEN C, long nelts, GEN R, int type, long prec)
 {
   pari_sp top=avma;
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, prec);
   if(gequal0(R)){
     GEN area=algfdomarea(A, NULL, 1, prec);
     GEN gamma=dbltor(2.1);
@@ -1089,7 +1089,7 @@ enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long nel
     gel(Clist, i)=C;
     C=gadd(C, blen);
   }
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec);
+  GEN Q=qalg_fdominitialize(A, NULL, prec);
   GEN area=algfdomarea(A, NULL, 1, prec);
   GEN gamma=dbltor(2.1);
   GEN R=hdiscradius(gpow(area, gamma, prec), prec);
@@ -1162,7 +1162,7 @@ algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec)
 {
   pari_sp top=avma;
   GEN tol=deftol(prec);
-  GEN Q=qalg_fdominitialize(A, NULL, NULL, prec), newA=A, U;
+  GEN Q=qalg_fdominitialize(A, NULL, prec), newA=A, U;
   
   long newprec=prec;
   unsigned int precinc=0;
@@ -1175,7 +1175,7 @@ algfdom_nelts(GEN A, GEN p, GEN CNRdata, int type, long prec)
     newprec++;
     precinc++;
     tol=deftol(newprec);
-    Q=qalg_fdominitialize(newA, NULL, NULL, newprec);
+    Q=qalg_fdominitialize(newA, NULL, newprec);
   }
   if(precinc) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b)", newprec, precision00(U, NULL));
   return gerepileupto(top, U);
