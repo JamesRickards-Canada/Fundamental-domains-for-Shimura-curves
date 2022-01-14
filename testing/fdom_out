@@ -232,4 +232,37 @@ Passed word test
   ***   at top-level: algfdom(A)
   ***                 ^----------
   *** algfdom: incorrect type in Quaternion algebra has 0 or >=2 split real infinite places, not valid for fundamental domains. (t_VEC).
+[0, Vecsmall([2, 3]), 1]
+2
+Mat(4)
+Mat(13)
+Mat(80)
+[0, Vecsmall([2, 2, 3, 3]), 0]
+3
+Mat(5)
+Mat(77)
+[11, Vecsmall([]), 0]
+22
+Mat(10)
+Mat(24)
+[2, Vecsmall([3, 3, 3, 3]), 0]
+7
+[5, 1; 0, 1]
+[14, 5; 0, 1]
+[5, Vecsmall([3, 3]), 0]
+11
+[19, 12; 0, 1]
+[10, 9; 0, 1]
+[0, Vecsmall([2, 2, 2, 3, 3]), 0]
+4
+[[2, [2, 0, 0]~, 1, 3, 1], 1; [5, [-1, -1, 1]~, 1, 2, [1, 3, -1; 1, 1, 2; 0,
+ 1, 1]], 1]
+Mat([[11, [3, 1, 0]~, 2, 1, [-4, -10, 9; -3, -2, -7; 1, -3, -5]], 1])
+[3, Vecsmall([3, 3, 3, 3]), 0]
+9
+Mat([[2, [2, 0, 0]~, 1, 3, 1], 1])
+[4, Vecsmall([2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 6]), 0]
+21
+Mat([[11, [5, 1, 0, 0]~, 2, 1, [-4, -13, 20, 8; -4, -2, -2, 8; 5, -3, -3, 1;
+ 1, 6, -5, -13]], 1])
 Total time spent: 604

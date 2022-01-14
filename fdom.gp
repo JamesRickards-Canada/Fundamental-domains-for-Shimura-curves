@@ -25,7 +25,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 
 
 \\Quaternion methods
-	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algalgto1ijk, algbasisto1ijk, algeichler_conj, algelttype, algfdom, algfdomalg, algfdomarea, algfdomminimalcycles, algfdomorder, algfdompresentation, algfdomrootgeodesic, algfdomsignature, algfdomword, algmulvec, algnormdisc, algorderconj, algorderdisc, algorderlevel, algreduceddisc, algshimura, algshimura_ab, algswapab, smallalgebras, smallalgebras_area.");
+	addhelp(quat,"These methods allow for the computation of fundamental domains for Eichler orders in quaternion algebras split at one real place. Available methods:\n algalgto1ijk, algbasisto1ijk, algeichler1, algeichler2, algeichler_conj, algelttype, algfdom, algfdomalg, algfdomarea, algfdomminimalcycles, algfdomorder, algfdompresentation, algfdomrootgeodesic, algfdomsignature, algfdomword, algisorder, algmulvec, algnormdisc, algorderconj, algorderdisc, algorderlevel, algreduceddisc, algshimura, algshimura_ab, algswapab, smallalgebras, smallalgebras_area.");
 
 	install("algelttype","iGG",,"./libfdom.so");
 	addhelp(algelttype,"Inputs A, g: quaternion algebra A over a totally real number field and split at exactly one real place, and g, an element of norm 1 in A.\n Returns the type of g, i.e. -1 if g is elliptic (|trace|<2), 0 if g is parabolic (|trace|=2), and 1 if g is hyperbolic (|trace|>2). Does not check that g has norm 1.");
@@ -73,7 +73,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	install("alg1ijktoalg","GG","alg1ijktoalg","./libfdom.so");
 	addhelp(alg1ijktoalg,"Inputs: quaternion algebra A, element x=[e, f, g, h].\n Returns what e+fi+gj+hk is in the algebraic representation.");
 	install("alg1ijktobasis","GG","alg1ijktobasis","./libfdom.so");
-	addhelp( lg1ijktobasis,"Inputs: quaternion algebra A, element x=[e, f, g, h].\n Returns what e+fi+gj+hk is in the basis representation.");
+	addhelp(alg1ijktobasis,"Inputs: quaternion algebra A, element x=[e, f, g, h].\n Returns what e+fi+gj+hk is in the basis representation.");
 	install("algalgto1ijk","GG","algalgto1ijk","./libfdom.so");
 	addhelp(algalgto1ijk,"Inputs: quaternion algebra A, element x in algebraic form.\n Returns [e, f, g, h], where x=e+fi+gj+hk.");
 	install("algbasisto1ijk","GG","algbasisto1ijk","./libfdom.so");
