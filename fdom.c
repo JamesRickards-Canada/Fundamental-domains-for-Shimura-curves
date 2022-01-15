@@ -906,7 +906,7 @@ arc_int(GEN c1, GEN c2, GEN tol, long prec)
   if(i2==1) i2=onarc(c2, gel(ipts, 2), tol, prec);//Now i2==1 iff the ipts[2] is on both c1 and c2
   if(i1==1){
     if(i2==1) return gerepilecopy(top, ipts);//Both pts on the arcs
-	return gerepilecopy(top, mkvec(gel(ipts, 1)));//Just point 1
+    return gerepilecopy(top, mkvec(gel(ipts, 1)));//Just point 1
   }
   //Now i1=0
   if(i2==0) return gc_0vec(top);//Not on either arc
@@ -1010,7 +1010,7 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
     if(toleq(rtpart, gen_0, tol, prec)) return gerepilecopy(top, mkvec(mkcomplex(x1, y1)));
     //Two intersection points
     GEN y1py2=gmulgs(imag_i(gel(c, 1)), 2);//2*imag(c[1])
-	return gerepilecopy(top, mkvec2(mkcomplex(x1, y1), mkcomplex(x1, gsub(y1py2, y1))));
+    return gerepilecopy(top, mkvec2(mkcomplex(x1, y1), mkcomplex(x1, gsub(y1py2, y1))));
   }
   //Now y=mx+b with m finite
   GEN A=gaddgs(gsqr(gel(l, 1)), 1);//l[1]^2+1
@@ -1023,7 +1023,7 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
   if(rtpartsig==0){//One root, and rtpart=0
     GEN x1=gdiv(B, gmulgs(A, -2));//-B/(2A)
     GEN y1part=gmul(gel(l, 1), x1);//l[1]*x1
-	return gerepilecopy(top, mkvec(mkcomplex(x1, gadd(y1part, gel(l, 2)))));//y1=l[1]*x1+l[2];
+    return gerepilecopy(top, mkvec(mkcomplex(x1, gadd(y1part, gel(l, 2)))));//y1=l[1]*x1+l[2];
   }
   //Two roots
   GEN x1=gdiv(gsub(gsqrt(rtpart, prec), B), gmulgs(A, 2));//x1=(-B+sqrt(B^2-4*A*C))/(2*A);
@@ -1044,11 +1044,11 @@ line_int(GEN l1, GEN l2, GEN tol, long prec)
   pari_sp top=avma;
   if(typ(s1)==t_INFINITY){//l1 vertical
     GEN ypart=gmul(s2, gel(l1, 2));//s2*l1[2]
-	return gerepilecopy(top, mkcomplex(gel(l1, 2), gadd(ypart, gel(l2, 2))));//y=s2*l1[2]+l2[2]
+    return gerepilecopy(top, mkcomplex(gel(l1, 2), gadd(ypart, gel(l2, 2))));//y=s2*l1[2]+l2[2]
   }
   if(typ(s2)==t_INFINITY){//l2 vertical
     GEN ypart=gmul(s1, gel(l2, 2));//s1*l2[2]
-	return gerepilecopy(top, mkcomplex(gel(l2, 2), gadd(ypart, gel(l1, 2))));//y=s1*l2[2]+l1[2]
+    return gerepilecopy(top, mkcomplex(gel(l2, 2), gadd(ypart, gel(l1, 2))));//y=s1*l2[2]+l1[2]
   }
   GEN x=gdiv(gsub(gel(l2, 2), gel(l1, 2)), gsub(s1, s2));//(l2[2]-l1[2])/(s1-s2)
   GEN ypart=gmul(s1, x);//s1*x
@@ -2194,8 +2194,8 @@ psl_roots(GEN M, GEN tol, long prec)
   if(toleq(a, gen_0, tol, prec)){//a=0, roots are oo and -c/b (b!=0 else M=[+/-1, x;0;+/-1]), not hyperbolic.
     GEN rnum=gneg(c);
     int bsgn=tolcmp(b, gen_0, tol, prec);
-	if(bsgn==1) return gerepilecopy(top, mkvec2(gdiv(rnum, b), mkoo()));//b>0, first root is finite
-	else if(bsgn==-1) return gerepilecopy(top, mkvec2(mkoo(), gdiv(rnum, b)));//b<0, first root is oo
+    if(bsgn==1) return gerepilecopy(top, mkvec2(gdiv(rnum, b), mkoo()));//b>0, first root is finite
+    else if(bsgn==-1) return gerepilecopy(top, mkvec2(mkoo(), gdiv(rnum, b)));//b<0, first root is oo
     pari_err_TYPE("Please enter a hyperbolic matrix", M);
   }
   //Now both roots are finite.
@@ -3246,7 +3246,7 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
     GEN result=qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, nfdecomp, nformpart, prec);
     if(result) return gerepileupto(top, result);//Non-null
     pari_warn(warner, "Precision too low. Please increase the precision and try again");
-	return gc_const(top, gen_0);
+    return gc_const(top, gen_0);
   }
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, 0, nform, nformpart, prec)); 
 }
