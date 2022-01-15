@@ -98,11 +98,11 @@ GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
 
 //FUNDAMENTAL DOMAIN RETRIEVAL METHODS
-GEN algfdom_get_qalg(GEN U);
+INLINE GEN algfdom_get_qalg(GEN U);
 GEN algfdomalg(GEN U);
-GEN algfdom_get_alg(GEN U);
+INLINE GEN algfdom_get_alg(GEN U);
 GEN algfdomorder(GEN U);
-GEN algfdom_get_order(GEN U);
+INLINE GEN algfdom_get_order(GEN U);
 
 //HELPER METHODS
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
@@ -122,12 +122,12 @@ GEN qalg_fdomtrace(GEN data, GEN x);
 int qalg_istriv(GEN data, GEN x);
 
 //3: SHALLOW RETRIEVAL METHODS
-GEN qalg_get_alg(GEN Q);
-GEN qalg_get_rams(GEN Q);
-GEN qalg_get_varnos(GEN Q);
-GEN qalg_get_roots(GEN Q);
-GEN qalg_get_order(GEN Q);
-GEN qalg_get_level(GEN Q);
+INLINE GEN qalg_get_alg(GEN Q);
+INLINE GEN qalg_get_rams(GEN Q);
+INLINE GEN qalg_get_varnos(GEN Q);
+INLINE GEN qalg_get_roots(GEN Q);
+INLINE GEN qalg_get_order(GEN Q);
+INLINE GEN qalg_get_level(GEN Q);
 
 
 //FDOM_EXTRA METHODS

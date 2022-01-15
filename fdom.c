@@ -2057,18 +2057,13 @@ static GEN
 normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
 {
   pari_sp top=avma;
-  GEN v, ret, inter, d1, d2;
+  GEN v, inter, d1, d2;
   long ind;
   if(gequal1(gel(c, 8))){//Line segment; the index found from normalizedboundary_outside is correct guarenteed.
     if(start==1) v=gel(c, 3);
     else v=gel(c, 4);
     ind=normalizedboundary_outside(U, v, tol, prec);//This is the index
-    if(ind==-1){//Infinite side
-      ret=cgetg(3, t_VEC);
-      gel(ret, 1)=gcopy(v);
-      gel(ret, 2)=mkvecsmall(-1);
-      return gerepileupto(top, ret); 
-    }
+    if(ind==-1) return gerepilecopy(top, mkvec2(v, mkvecsmall(-1)));//Infinite side
     inter=arcseg_int(gmael(U, 2, ind), c, tol, prec);
     if(lg(inter)==2) v=gel(inter, 1);//1 intersection point, the most common
     else if(lg(inter)==3){
@@ -2078,15 +2073,12 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
       else v=gel(inter, 2);
     }
     else pari_err_TYPE("Should have been intersections, but there were none", inter);//This should never happen, but here in case.
-    ret=cgetg(3, t_VEC);
-    gel(ret, 1)=gcopy(v);
-    gel(ret, 2)=mkvecsmall(ind);
-    return gerepileupto(top, ret);
+    return gerepilecopy(top, mkvec2(v, mkvecsmall(ind)));
   }
   GEN v2;//The other point
   if(start==1){
     if(gequalm1(gel(c, 7))){v=gel(c, 4);v2=gel(c, 3);}//If directed backwards, need the terminal point as the start
-    else {v=gel(c, 3);v2=gel(c, 4);}//If undirected or directed forwards, the initial point is the start
+    else{v=gel(c, 3);v2=gel(c, 4);}//If undirected or directed forwards, the initial point is the start
   }
   else{
     if(gequalm1(gel(c, 7))){v=gel(c, 3);v2=gel(c, 4);}//If directed backwards, need the initial point.
@@ -2094,12 +2086,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
   }
   ind=normalizedboundary_outside(U, v, tol, prec);
   long lU=lg(gel(U, 1));//This is the index
-  if(ind==-1){//Infinite side
-    ret=cgetg(3, t_VEC);
-    gel(ret, 1)=gcopy(v);
-    gel(ret, 2)=mkvecsmall(-1);
-    return gerepileupto(top, ret); 
-  }
+  if(ind==-1) return gerepilecopy(top, mkvec2(v, mkvecsmall(-1)));//Infinite side
   //Circle arc (which should be the much more common case).
   GEN vang, ang, pi=mppi(prec);//Base angle+Pi
   int where, ind2;
@@ -2128,10 +2115,7 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
     if(where>=0) break;//Correct side!
     ind=ind2;//We must go backwards to the side ind2
   }
-  ret=cgetg(3, t_VEC);
-  gel(ret, 1)=gcopy(v);
-  gel(ret, 2)=mkvecsmall(ind);
-  return gerepileupto(top, ret);
+  return gerepilecopy(top, mkvec2(v, mkvecsmall(ind)));
 }
 
 //Returns -1 if z is in the interior of the normalized boundary or on the edge, and ind if in the exterior (i.e. between the boundary and the unit circle), where ind is the index of the side it is on (projecting from the origin to z). Does not behave well if z is a vertex of U that is on the unit disc.
@@ -2150,7 +2134,7 @@ normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
     long ind=gen_search(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
     if(ind==lg(gel(U, 1))) ind=1;//Insert at the end means the first circle.
     GEN circle=gmael(U, 2, ind);
-    if(gequal0(circle)){pari_CATCH_reset();set_avma(top);return -1;}//Intersects with the edge of the unit disc.
+    if(gequal0(circle)){pari_CATCH_reset();return gc_int(top, -1);}//Intersects with the edge of the unit disc.
     outside=tolcmp(gel(circle, 2), gabs(gsub(z, gel(circle, 1)), prec), tol, prec);//Are we outside?
     if(outside==0) outside=-1;
     else if(outside==1) outside=ind;
@@ -2185,11 +2169,7 @@ psltopsu_transmats(GEN p)
   GEN pneg=gneg(p), pconj=conj_i(p);
   GEN m1=gdiv(mkmat22(gen_1, pneg, gen_1, gneg(pconj)), gsub(p, pconj));//m1=1/(p-conj(p))[1,-p;1,-conj(p)]
   GEN m2=mkmat22(pconj, pneg, gen_1, gen_m1);//m2=[conj(p), -p;1, -1]
-  GEN ret=cgetg(4, t_VEC);
-  gel(ret, 1)=gcopy(m1);
-  gel(ret, 2)=gcopy(m2);
-  gel(ret, 3)=gcopy(p);
-  return gerepileupto(top, ret);
+  return gerepilecopy(top, mkvec3(m1, m2, p));
 }
 
 //Returns the roots of the hyperbolic matrix M in PSL(2, R) in order.
@@ -2214,17 +2194,9 @@ psl_roots(GEN M, GEN tol, long prec)
   if(toleq(a, gen_0, tol, prec)){//a=0, roots are oo and -c/b (b!=0 else M=[+/-1, x;0;+/-1]), not hyperbolic.
     GEN rnum=gneg(c);
     int bsgn=tolcmp(b, gen_0, tol, prec);
-    GEN ret=cgetg(3, t_VEC);
-    if(bsgn==1){//b>0, first root is finite
-      gel(ret, 1)=gdiv(rnum, b);
-      gel(ret, 2)=mkoo();
-    }
-    else if(bsgn==-1){//b<0, first root is oo
-      gel(ret, 1)=mkoo();
-      gel(ret, 2)=gdiv(rnum, b);
-    }
-    else pari_err_TYPE("Please enter a hyperbolic matrix", M);
-    return gerepileupto(top, ret);
+	if(bsgn==1) return gerepilecopy(top, mkvec2(gdiv(rnum, b), mkoo()));//b>0, first root is finite
+	else if(bsgn==-1) return gerepilecopy(top, mkvec2(mkoo(), gdiv(rnum, b)));//b<0, first root is oo
+    pari_err_TYPE("Please enter a hyperbolic matrix", M);
   }
   //Now both roots are finite.
   GEN twoa=gmulsg(2, a);//2a
@@ -2232,10 +2204,7 @@ psl_roots(GEN M, GEN tol, long prec)
   GEN mb=gneg(b);
   GEN r1num=gadd(mb, rtD);//first root is (-b+sqrt(D))/2a
   GEN r2num=gsub(mb, rtD);//Second root is (-b-sqrt(D))/2a
-  GEN ret=cgetg(3, t_VEC);
-  gel(ret, 1)=gdiv(r1num, twoa);
-  gel(ret, 2)=gdiv(r2num, twoa);
-  return gerepileupto(top, ret);
+  return gerepilecopy(top, mkvec2(gdiv(r1num, twoa), gdiv(r2num, twoa)));
 }
 
 //Reduces g with respect to z as in reduceelt_givenpsu, but does so much more efficiently using the normalized boundary provided.
@@ -2262,11 +2231,7 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN
     count++;
   }
   GEN ginv=eltinv(data, g);//g^-1
-  GEN ret=cgetg(4, t_VEC);
-  gel(ret, 1)=gcopy(gbar);
-  gel(ret, 2)=eltmul(data, gbar, ginv);//delta=gbar*g^(-1)
-  gel(ret, 3)=llist_tovecsmall(decomp, count, 1);
-  return gerepileupto(top, ret);
+  return gerepilecopy(top, mkvec3(gbar, eltmul(data, gbar, ginv), llist_tovecsmall(decomp, count, 1)));//delta=gbar*g^(-1)
 }
 
 //Reduces z to the interior of U (Almost identical to reduceelt_givennormbound). Returns [g, z'], where g is the transition element and z' is the new point.
@@ -2286,10 +2251,7 @@ reducepoint(GEN U, GEN z, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, long), 
     z=mat_eval(gmael(U, 5, outside), z);//Update z
     g=eltmul(data, gmael(U, 1, outside), g);//update g
   }
-  GEN ret=cgetg(3, t_VEC);
-  gel(ret, 1)=gcopy(g);
-  gel(ret, 2)=gcopy(z);
-  return gerepileupto(top, ret);
+  return gerepilecopy(top, mkvec2(g, z));
 }
 
 //Returns the root geodesic in the unit disc corresponding to M in PSL(2, R) and p the reference point to mapping the upper half plane to the unit disc (mats=[m1, m2, p], with m1 being the mapping).
@@ -2835,7 +2797,7 @@ geom_check(GEN c)
   return -1;//Not a circle/line
 }
 
-//Returns the default tolerance given the precision.
+//Returns the default tolerance given the precision. This may need to be updated to check for 32/64 bit systems? Not sure.
 GEN
 deftol(long prec)
 {
@@ -2860,14 +2822,9 @@ tolcmp(GEN x, GEN y, GEN tol, long prec)
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY) return gcmp(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
-  if(precision(d)==0){
-    long ret=gsigne(d);
-    set_avma(top);
-    return ret;
-  }//Exact objects
-  if(gcmp(gabs(d, prec), tol)<0){set_avma(top);return 0;}//Within tolerance
-  long ret=gsigne(d);
-  set_avma(top);return ret;
+  if(precision(d)==0) return gc_long(top, gsigne(d));//Exact objects
+  if(gcmp(gabs(d, prec), tol)<0) return gc_long(top, 0);//Within tolerance
+  return gc_long(top, gsigne(d));
 }
 
 //Data points to [tol, vecsmall(prec)]. Used to sort/search a list with tolerance.
@@ -2884,10 +2841,10 @@ toleq(GEN x, GEN y, GEN tol, long prec)
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY || gequal0(tol)) return gequal(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
-  if(gequal0(d)){set_avma(top);return 1;}//Deemed equal already
-  if(precision(d)==0){set_avma(top);return 0;}//Exact objects
-  if(gcmp(gabs(d, prec), tol)<0){set_avma(top);return 1;}//Within tolerance
-  set_avma(top);return 0;
+  if(gequal0(d)) return gc_int(top, 1);//Deemed equal already
+  if(precision(d)==0) return gc_int(top, 0);//Exact objects
+  if(gcmp(gabs(d, prec), tol)<0) return gc_int(top, 1);//Within tolerance
+  return gc_int(top, 0);
 }
 
 
@@ -3053,8 +3010,7 @@ algorderdisc(GEN A, GEN O, int reduced, int factored)
     }
   }
   pari_warn(warner, "We did not succeed in finding the discriminant.");
-  set_avma(top);
-  return gen_0;
+  return gc_const(top, gen_0);
 }
 
 //Returns the level of the order O.
@@ -3178,22 +3134,20 @@ algfdom_bestC(GEN A, GEN O, long prec)
 GEN
 algfdomminimalcycles(GEN U, long prec)
 {
-  pari_sp top=avma;
   GEN Q=algfdom_get_qalg(U);
   GEN A=qalg_get_alg(Q);
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  return gerepileupto(top, minimalcycles_bytype(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+  return minimalcycles_bytype(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv);//No garbage, all pointers
 }
 
 //Returns the presentation of the algebra A, obtained from the fundamental domain U.
 GEN
 algfdompresentation(GEN U, long prec)
 {
-  pari_sp top=avma;
   GEN Q=algfdom_get_qalg(U);
   GEN A=qalg_get_alg(Q);
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  return gerepileupto(top, presentation(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+  return presentation(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv);//No garbage, all pointers
 }
 
 //Reduces the norm 1 element g with respect to the normalized boundary U and the point z (default z=0)
@@ -3222,11 +3176,10 @@ algfdomrootgeodesic(GEN g, GEN U, long prec)
 GEN
 algfdomsignature(GEN U, long prec)
 {
-  pari_sp top=avma;
   GEN Q=algfdom_get_qalg(U);
   GEN A=qalg_get_alg(Q);
   GEN id=gel(alg_get_basis(A), 1);//The identity
-  return gerepileupto(top, signature(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv));
+  return signature(U, id, Q, &qalg_fdommul, &qalg_fdomtrace, &qalg_istriv);//No garbage, all pointers
 }
 
 //Writes g as a word in the presentation P.
@@ -3293,8 +3246,7 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
     GEN result=qalg_smallnorm1elts_qfminim(Q, p, C, z1, z2, 0, nfdecomp, nformpart, prec);
     if(result) return gerepileupto(top, result);//Non-null
     pari_warn(warner, "Precision too low. Please increase the precision and try again");
-    set_avma(top);
-    return gen_0;
+	return gc_const(top, gen_0);
   }
   return gerepileupto(top, qalg_smallnorm1elts_condition(Q, p, C, z1, z2, 0, nform, nformpart, prec)); 
 }
@@ -3306,29 +3258,21 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
 
 
 //Returns the qalg
-GEN algfdom_get_qalg(GEN U){return gel(U, 9);}
+INLINE GEN algfdom_get_qalg(GEN U){return gel(U, 9);}
 
 //Returns the algebra of the fundamental domain
 GEN
-algfdomalg(GEN U)
-{
-  pari_sp top=avma;
-  return gerepilecopy(top, algfdom_get_alg(U));
-}
+algfdomalg(GEN U){pari_sp top=avma;return gerepilecopy(top, algfdom_get_alg(U));}
 
 //Shallow version of algfdomalg
-GEN algfdom_get_alg(GEN U){return qalg_get_alg(algfdom_get_qalg(U));}
+INLINE GEN algfdom_get_alg(GEN U){return qalg_get_alg(algfdom_get_qalg(U));}
 
 //Returns the order of the fundamental domain
 GEN
-algfdomorder(GEN U)
-{
-  pari_sp top=avma;
-  return gerepilecopy(top, algfdom_get_order(U));
-}
+algfdomorder(GEN U){pari_sp top=avma;return gerepilecopy(top, algfdom_get_order(U));}
 
 //Shallow version of algfdomorder
-GEN
+INLINE GEN
 algfdom_get_order(GEN U){return qalg_get_order(algfdom_get_qalg(U));}
 
 
@@ -3740,10 +3684,7 @@ qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts,
 
 //Must pass data as a quaternion algebra. This just formats things correctly for the fundamental domain.
 GEN
-qalg_fdominv(GEN data, GEN x)
-{
-  return alginv(qalg_get_alg(data), x);
-}
+qalg_fdominv(GEN data, GEN x){return alginv(qalg_get_alg(data), x);}
 
 //Must pass data as a quaternion algebra. This embeds the element x into M_2(R), via l1+jl2->[l1, sigma(l2)b;l2, sigma(l1)].
 GEN
@@ -3770,17 +3711,11 @@ qalg_fdomm2rembed(GEN data, GEN x, long prec)
 
 //Must pass data as a quaternion algebra. This just formats things correctly for the fundamental domain.
 GEN
-qalg_fdommul(GEN data, GEN x, GEN y)
-{
-  return algmul(qalg_get_alg(data), x, y);
-}
+qalg_fdommul(GEN data, GEN x, GEN y){return algmul(qalg_get_alg(data), x, y);}
 
 //Must pass data as a quaternion algebra. Returns the trace of x.
 GEN
-qalg_fdomtrace(GEN data, GEN x)
-{
-  return algtrace(qalg_get_alg(data), x, 0);
-}
+qalg_fdomtrace(GEN data, GEN x){return algtrace(qalg_get_alg(data), x, 0);}
 
 //Returns 1 if x==+/-1. x must be in the basis representation (note that the first element of the basis is always 1).
 int
@@ -3798,25 +3733,25 @@ qalg_istriv(GEN data, GEN x)
 
 
 //Shallow method to return the algebra
-GEN
+INLINE GEN
 qalg_get_alg(GEN Q){return gel(Q, 1);}
 
 //Shallow method to get the ramification
-GEN
+INLINE GEN
 qalg_get_rams(GEN Q){return gel(Q, 2);}
 
 //Shallow method to return the variable numbers of K and L
-GEN
+INLINE GEN
 qalg_get_varnos(GEN Q){return gel(Q, 3);}
 
 //Shallow method to return the roots of K and L.
-GEN
+INLINE GEN
 qalg_get_roots(GEN Q){return gel(Q, 4);}
 
 //Shallow method to return the order
-GEN
+INLINE GEN
 qalg_get_order(GEN Q){return gel(Q, 5);}
 
 //Shallow method to return the level of the order
-GEN
+INLINE GEN
 qalg_get_level(GEN Q){return gel(Q, 6);}
