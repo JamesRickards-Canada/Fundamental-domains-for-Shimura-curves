@@ -94,7 +94,7 @@ static GEN atanoo(GEN x, long prec);
 static int gcmp_strict(void *data, GEN x, GEN y);
 static int geom_check(GEN c);
 static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec);
-static long tolcmp(GEN x, GEN y, GEN tol, long prec);
+static int tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 static int toleq0(GEN x, GEN tol, long prec);
@@ -2588,15 +2588,15 @@ shiftangle(GEN ang, GEN bot, GEN tol, long prec)
 }
 
 //Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact
-static long
+static int
 tolcmp(GEN x, GEN y, GEN tol, long prec)
 {
   if(typ(x)==t_INFINITY || typ(y)==t_INFINITY) return gcmp(x, y);//No precision concerns
   pari_sp top=avma;
   GEN d=gsub(x, y);
-  if(precision(d)==0) return gc_long(top, gsigne(d));//Exact objects
-  if(gcmp(gabs(d, prec), tol)<0) return gc_long(top, 0);//Within tolerance
-  return gc_long(top, gsigne(d));
+  if(precision(d)==0) return gc_int(top, gsigne(d));//Exact objects
+  if(gcmp(gabs(d, prec), tol)<0) return gc_int(top, 0);//Within tolerance
+  return gc_int(top, gsigne(d));
 }
 
 //Data points to [tol, vecsmall(prec)]. Used to sort/search a list with tolerance.
