@@ -117,6 +117,9 @@ qalg_get_order(GEN Q){return gel(Q, 5);}
 //Shallow method to return the level of the order
 INLINE GEN
 qalg_get_level(GEN Q){return gel(Q, 6);}
+//Shallow method to return the tolerance
+INLINE GEN
+qalg_get_tol(GEN Q){return gel(Q, 7);}
 //Returns the qalg
 INLINE GEN algfdom_get_qalg(GEN U){return gel(U, 9);}
 //Shallow version of algfdomalg
