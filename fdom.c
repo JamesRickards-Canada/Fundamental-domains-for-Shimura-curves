@@ -97,6 +97,7 @@ static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec);
 static long tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
+static int toleq0(GEN x, GEN tol, long prec);
 
 //3: QUATERNION ALGEBRA NON-FDOM METHODS
 static GEN algd(GEN A, GEN a);
@@ -704,8 +705,8 @@ slope(GEN p1, GEN p2, GEN tol, long prec)
   GEN p2mp1=gsub(p2, p1);
   GEN ftop=imag_i(p2mp1);
   GEN fbot=real_i(p2mp1);
-  if(toleq(fbot, gen_0, tol, prec)) fbot=gen_0;
-  if(toleq(ftop, gen_0, tol, prec)) ftop=gen_0;
+  if(toleq0(fbot, tol, prec)) fbot=gen_0;
+  if(toleq0(ftop, tol, prec)) ftop=gen_0;
   return gerepileupto(top, divoo(ftop, fbot));
 }
 
@@ -777,7 +778,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
   GEN a1ma2=gsub(a1, a2), b1mb2=gsub(b1, b2), x1, x2, y1, y2;
   int oneint=0;
   if(gcmp(gabs(a1ma2, prec), gabs(b1mb2, prec))>=0){//We want to divide by the larger of the two quantities to maximize precision and avoid errors when the centres are on the same line.
-    if(toleq(a1ma2, gen_0, tol, prec)==1) return gc_0vec(top);//Same centre, cannot intersect.
+    if(toleq0(a1ma2, tol, prec)==1) return gc_0vec(top);//Same centre, cannot intersect.
     //u=(r1^2-r2^2+b2^2-b1^2+a2^2-a1^2)/(2*a2-2*a1)-a1;
     GEN u=gsub(gdiv(gsub(gadd(gsub(gadd(gsub(gsqr(r1), gsqr(r2)), gsqr(b2)), gsqr(b1)), gsqr(a2)), gsqr(a1)), gmulgs(a1ma2, -2)), a1);
     GEN v=gneg(gdiv(b1mb2, a1ma2));//v=(b1-b2)/(a2-a1), and x=a1+u+vy
@@ -799,7 +800,7 @@ circle_int(GEN c1, GEN c2, GEN tol, long prec)
     }
   }
   else{
-    if(toleq(b1mb2, gen_0, tol, prec)==1) return gc_0vec(top);//Same centre, cannot intersect.
+    if(toleq0(b1mb2, tol, prec)==1) return gc_0vec(top);//Same centre, cannot intersect.
     //u=(r1^2-r2^2+b2^2-b1^2+a2^2-a1^2)/(2*b2-2*b1)-b1;
     GEN u=gsub(gdiv(gsub(gadd(gsub(gadd(gsub(gsqr(r1), gsqr(r2)), gsqr(b2)), gsqr(b1)), gsqr(a2)), gsqr(a1)), gmulgs(b1mb2, -2)), b1);
     GEN v=gneg(gdiv(a1ma2, b1mb2));//v=(a1-a2)/(b2-b1), and y=b1+u+vx
@@ -835,7 +836,7 @@ circleline_int(GEN c, GEN l, GEN tol, long prec)
     GEN rtpart=gsub(gsqr(gel(c, 2)), gsqr(gsub(x1, real_i(gel(c, 1)))));//c[2]^2-(x1-real(c[1]))^2
     if(gsigne(rtpart)==-1) return gc_0vec(top);//No intersections.
     GEN y1=gadd(imag_i(gel(c, 1)), gsqrt(rtpart, prec));//y1=imag(c[1])+sqrt(c[2]^2-(x1-real(c[1]))^2)
-    if(toleq(rtpart, gen_0, tol, prec)) return gerepilecopy(top, mkvec(mkcomplex(x1, y1)));
+    if(toleq0(rtpart, tol, prec)) return gerepilecopy(top, mkvec(mkcomplex(x1, y1)));
     //Two intersection points
     GEN y1py2=gmulgs(imag_i(gel(c, 1)), 2);//2*imag(c[1])
     return gerepilecopy(top, mkvec2(mkcomplex(x1, y1), mkcomplex(x1, gsub(y1py2, y1))));
@@ -1179,7 +1180,7 @@ GEN
 isometriccircle_psu(GEN g, GEN tol, long prec)
 {
   pari_sp top=avma;
-  if(toleq(gen_0, gcoeff(g, 2, 1), tol, prec)) return gen_0;//Isometric circle is everything, don't want to call it here.
+  if(toleq0(gcoeff(g, 2, 1), tol, prec)) return gen_0;//Isometric circle is everything, don't want to call it here.
   GEN geod=zerovec(8);
   gel(geod, 2)=gdivsg(1, gcoeff(g, 2, 1));//Need to take absolute value
   gel(geod, 1)=gneg(gmul(gcoeff(g, 2, 2), gel(geod, 2)));//-g[2,2]/g[2,1], the centre of the circle
@@ -1529,7 +1530,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
       //Now we have a proper "normal" intersection
       ang1=garg(inter, prec);
       ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);//Angle to the new vtx from the previous as a bases
-      if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
+      if(gcmp(ang, pi)>=0 || toleq0(ang, tol, prec)){//We must go backwards!
         while(ulen>1){
           ulen--;
           if(U[ulen]>0) L=gmael(Ubase, 2, U[ulen]);
@@ -1537,7 +1538,7 @@ normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec
           inter=gel(arc_int(L, sidecirc, tol, prec), 1);//They MUST intersect
           ang1=garg(inter, prec);
           ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);
-          if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
+          if(gcmp(ang, pi)>=0 || toleq0(ang, tol, prec)) continue;//Keep going back
           break;//At this point we have reached where we need to insert the new side.
         }
       }
@@ -1811,14 +1812,14 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
       if(toleq(inter, gmael3(G, ordering[side], 3, 3), tol, prec)){set_avma(mid);continue;}//The side lies entirely in the previous side
       ang1=garg(inter, prec);
       ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);//Angle to the new vtx from the previous as a bases
-      if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)){//We must go backwards!
+      if(gcmp(ang, pi)>=0 || toleq0(ang, tol, prec)){//We must go backwards!
         while(ulen>1){
           ulen--;
           L=gmael(G, U[ulen], 3);//The old side we look at
           inter=gel(arc_int(L, sidecirc, tol, prec), 1);//They MUST intersect
           ang1=garg(inter, prec);
           ang=anglediff(ang1, gmael(vertices, ulen, 2), tol, prec);
-          if(gcmp(ang, pi)>=0 || toleq(ang, gen_0, tol, prec)) continue;//Keep going back
+          if(gcmp(ang, pi)>=0 || toleq0(ang, tol, prec)) continue;//Keep going back
           break;//At this point we have reached where we need to insert the new side.
         }
       }
@@ -1952,7 +1953,7 @@ normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
 {
   long lgU1=lg(gel(U, 1));
   if(lgU1==1) return -1;//U is trivial
-  if(toleq(z, gen_0, tol, prec)) return -1;//z=0 up to tolerance, which is automatically inside the boundary.
+  if(toleq0(z, tol, prec)) return -1;//z=0 up to tolerance, which is automatically inside the boundary.
   pari_sp top=avma;
   int outside;
   GEN ang=shiftangle(garg(z, prec), gmael(U, 4, 1), tol, prec);//Shifting to base angle
@@ -2015,7 +2016,7 @@ psl_roots(GEN M, GEN tol, long prec)
     b=gsub(gcoeff(M, 1, 1), gcoeff(M, 2, 2));
     c=gcoeff(M, 1, 2);
   }//[a',b';c',d'] -> c'x^2+(d'-a')x-b'=0, but for the roots to be in proper order, we need the trace to be positive.
-  if(toleq(a, gen_0, tol, prec)){//a=0, roots are oo and -c/b (b!=0 else M=[+/-1, x;0;+/-1]), not hyperbolic.
+  if(toleq0(a, tol, prec)){//a=0, roots are oo and -c/b (b!=0 else M=[+/-1, x;0;+/-1]), not hyperbolic.
     GEN rnum=gneg(c);
     int bsgn=tolcmp(b, gen_0, tol, prec);
     if(bsgn==1) return gerepilecopy(top, mkvec2(gdiv(rnum, b), mkoo()));//b>0, first root is finite
@@ -2581,7 +2582,7 @@ anglediff(GEN ang, GEN bot, GEN tol, long prec)
   pari_sp top=avma;
   GEN twopi=Pi2n(1, prec);
   GEN angdiff=gmod(gsub(ang, bot), twopi);
-  if(toleq(angdiff, twopi, tol, prec) || toleq(angdiff, gen_0, tol, prec)){set_avma(top);return gen_0;}
+  if(toleq(angdiff, twopi, tol, prec) || toleq0(angdiff, tol, prec)){set_avma(top);return gen_0;}
   return gerepileupto(top, angdiff);
 }
 
@@ -2663,15 +2664,22 @@ tolcmp_sort(void *data, GEN x, GEN y)
 static int
 toleq(GEN x, GEN y, GEN tol, long prec)
 {
-  if(typ(x)==t_INFINITY || typ(y)==t_INFINITY || gequal0(tol)) return gequal(x, y);//No precision concerns
+  if(typ(x)==t_INFINITY || typ(y)==t_INFINITY) return gequal(x, y);//Do oo case separately.
   pari_sp top=avma;
   GEN d=gsub(x, y);
-  if(gequal0(d)) return gc_int(top, 1);//Deemed equal already
-  if(precision(d)==0) return gc_int(top, 0);//Exact objects
-  if(gcmp(gabs(d, prec), tol)<0) return gc_int(top, 1);//Within tolerance
-  return gc_int(top, 0);
+  return gc_int(top, toleq0(d, tol, prec));//Just compare d with 0.
 }
 
+//Returns 1 if x==0, and 0 if x!=y. If x or y is not a precise objects (e.g. t_REAL or t_COMPLEX), will return 1 if they are equal up to the tolerance tol.
+static int
+toleq0(GEN x, GEN tol, long prec)
+{
+  if(gequal0(x)) return 1;//Deemed equal already
+  if(precision(x)==0) return 0;//Exact object, and already checked if it's 0
+  pari_sp top=avma;
+  if(gcmp(gabs(x, prec), tol)<0) return gc_int(top, 1);//Within tolerance
+  return gc_int(top, 0);//Not within tolerance
+}
 
 
 //SECTION 3: QUATERNIONIC METHODS
