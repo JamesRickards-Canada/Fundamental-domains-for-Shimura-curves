@@ -1142,37 +1142,10 @@ isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long),
   GEN ret=cgetg(4, t_VEC);
   gel(ret, 1)=gcopy(g);
   gel(ret, 2)=psltopsu_mats(ginpsl, mats);
-  gel(ret, 3)=isometriccircle_psu(gel(ret, 2), tol, prec);
-  if(!gequalm1(gel(ret, 3))) return gerepileupto(top, ret);//Everything A-OK
-  //If we reach here, we did not have enough precision
-  long newprec=prec;
-  pari_CATCH(CATCH_ALL){
-    set_avma(top);
-    pari_CATCH_reset();
-    pari_err(e_MISC,"Could not increase precision enough. Please increase precision/memory");
-    return gen_0;
-  }
-  pari_TRY{
-    do{
-      if(newprec-prec==5) pari_err(e_MISC,"Throw");
-      set_avma(top);
-      newprec++;//Increase precision
-      tol=deftol(newprec);
-      if(precision(gel(mats, 3))>0){//p is inexact
-        GEN p=gtofp(gel(mats, 3), newprec);
-        mats=psltopsu_transmats(p);//Updating mats to more precision
-      }
-      ginpsl=gamtopsl(data, g, newprec);
-      ret=cgetg(4, t_VEC);
-      gel(ret, 1)=gcopy(g);
-      gel(ret, 2)=psltopsu_mats(ginpsl, mats);
-      gel(ret, 3)=isometriccircle_psu(gel(ret, 2), tol, newprec);
-    }
-    while(gequalm1(gel(ret, 3)));
-    pari_CATCH_reset();
-    return gerepileupto(top, ret);
-  }
-  pari_ENDCATCH
+  GEN circ=isometriccircle_psu(gel(ret, 2), tol, prec);
+  if(!circ) return gc_NULL(top);//Not enough precision.
+  gel(ret, 3)=circ;
+  return gerepileupto(top, ret);
 }
 
 //Given an element g of PSU(1, 1), this returns the isometric circle associated to it.
@@ -1186,28 +1159,20 @@ isometriccircle_psu(GEN g, GEN tol, long prec)
   gel(geod, 1)=gneg(gmul(gcoeff(g, 2, 2), gel(geod, 2)));//-g[2,2]/g[2,1], the centre of the circle
   gel(geod, 2)=gabs(gel(geod, 2), prec);//We do things in this order to save a division.
   gel(geod, 7)=gen_1;//Always oriented counterclockwise
-  pari_CATCH(CATCH_ALL){
-    set_avma(top);
-    pari_CATCH_reset();
-    return gen_m1;//We increase precision in g and retry.
-  }
-  pari_TRY{
-    GEN ipts=circle_int(geod, mkvec3s(0, 1, 0), tol, prec);//Intersect with x^2+y^2=1
-    GEN ang=anglediff(garg(gsub(gel(ipts, 2), gel(geod, 1)), prec), garg(gsub(gel(ipts, 1), gel(geod, 1)), prec), tol, prec);
-    if(gcmp(ang, mppi(prec))>0){//Properly orienting the start and endpoints
-      gel(geod, 3)=gel(ipts, 2);
+  GEN ipts=circle_int(geod, mkvec3s(0, 1, 0), tol, prec);//Intersect with x^2+y^2=1
+  if(lg(ipts)!=3) return gc_NULL(top);//Must be a lack of precision. Pass null back to the top, and recompile with more precision.
+  GEN ang=anglediff(garg(gsub(gel(ipts, 2), gel(geod, 1)), prec), garg(gsub(gel(ipts, 1), gel(geod, 1)), prec), tol, prec);
+  if(gcmp(ang, mppi(prec))>0){//Properly orienting the start and endpoints
+    gel(geod, 3)=gel(ipts, 2);
     gel(geod, 4)=gel(ipts, 1);
-    }
-    else{
-      gel(geod, 3)=gel(ipts, 1);
-      gel(geod, 4)=gel(ipts, 2);
-    }
-    gel(geod, 5)=radialangle(geod, gel(geod, 3), tol, prec);//Start angle
-    gel(geod, 6)=shiftangle(radialangle(geod, gel(geod, 4), tol, prec), gel(geod, 5), tol, prec);//End angle
-    pari_CATCH_reset();
-    return gerepilecopy(top, geod);
   }
-  pari_ENDCATCH
+  else{
+    gel(geod, 3)=gel(ipts, 1);
+    gel(geod, 4)=gel(ipts, 2);
+  }
+  gel(geod, 5)=radialangle(geod, gel(geod, 3), tol, prec);//Start angle
+  gel(geod, 6)=shiftangle(radialangle(geod, gel(geod, 4), tol, prec), gel(geod, 5), tol, prec);//End angle
+  return gerepilecopy(top, geod);
 }
 
 //Returns the normalized basis of G. Follows Algorithm 4.7 of Voight. Can pass in Ubase as a normalized boundary to append to, or Ubase=0 means we just start with G.
@@ -1225,6 +1190,7 @@ normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)
   GEN U;
   if(gequal0(Ubase)) U=normalizedboundary(Gwithinv, mats, gamid, data, gamtopsl, tol, prec);//Step 2 when Ubase=0
   else U=normalizedboundary_givenU(Ubase, Gwithinv, mats, gamid, data, gamtopsl, tol, prec);//Step 2
+  if(!U) return gc_NULL(top);//Must increase precision.
   if(lg(gel(U, 1))==1) return gerepileupto(top, U);//No iso circles, go back now.
   GEN Gadd=Gwithinv, gbardat, gbar, unpair, v, g, scale=gdivgs(stoi(9), 10), Gaddnew, Uold=gel(U, 1);//Uold will track if we need to go back to step 3 (from step 4) or increase the scale (in step 5)
   long lunp, gind, vind;
@@ -1248,6 +1214,7 @@ normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)
     if(lg(Gaddnew)!=1){//We add Gaddnew to G, compute the normalized boundary, and go back to step 3 if U is changed
       Gadd=Gaddnew;
       U=normalizedboundary_givenU(U, Gadd, mats, gamid, data, gamtopsl, tol, prec);//Adding Gaddnew to U, recomputing normalized boundary
+      if(!U) return gc_NULL(top);//Must increase precision.
       if(lg(Uold)==lg(gel(U, 1))){
         if(!gequal(Uold, gel(U, 1))){Uold=gel(U, 1);continue;}//Go back to step 3.
       }
@@ -1273,6 +1240,7 @@ normalizedbasis(GEN G, GEN Ubase, GEN mats, GEN gamid, GEN data, GEN (*gamtopsl)
     }
     Gadd=Gaddnew;
     U=normalizedboundary_givenU(U, Gadd, mats, gamid, data, gamtopsl, tol, prec);//Adding Gadd to U, recomputing normalized boundary.
+    if(!U) return gc_NULL(top);
     if(lg(gel(U, 1))==lg(Uold)){//They might be equal
       if(gequal(gel(U, 1), Uold)){//They are equal. There must be an error where we have an oo vertex which gets shifted to being in the INTERIOR, i.e. we scaled down too much. To fix, we increase scale
         scale=gdivgs(gaddgs(scale, 9), 10);
@@ -1681,21 +1649,10 @@ normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN data, GEN (*ga
   pari_sp top=avma;
   long lx;
   GEN Gnew=cgetg_copy(G, &lx);
-  int skipped=0;
   for(long i=1;i<lx;i++){
-    pari_CATCH(CATCH_ALL){
-      gel(Gnew, i)=mkvec3(gen_0, gen_0, gen_0);//The third entry being 0 means this gets ignored
-      skipped++;
-    }
-    pari_TRY{
-      gel(Gnew, i)=isometriccircle_mats(gel(G, i), mats, data, gamtopsl, tol, prec);
-    }
-    pari_ENDCATCH
-  }
-  if(skipped>0){
-    char *warningmsg=pari_sprintf("%d isometric circles were skipped due to insufficient precision", skipped);
-    pari_warn(warner, warningmsg);
-    pari_free(warningmsg);
+      GEN icirc=isometriccircle_mats(gel(G, i), mats, data, gamtopsl, tol, prec);
+      if(!icirc) return gc_NULL(top);//Not enough precision.
+      gel(Gnew, i)=icirc;
   }
   return gerepileupto(top, normalizedboundary_append(Ubase, Gnew, mats, id, tol, prec));
 }
@@ -1718,7 +1675,7 @@ normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec)
   GEN Hmin=gen_1;
   for(long i=1;i<np1;i++){//We start by finding intersections with L.
     sidecirc=gmael(G, i, 3);
-    if(gequal0(sidecirc)) continue;//Ignore elts of G giving no circle.
+    if(gequal0(sidecirc)) continue;//Ignore elts of G giving no circle, i.e. the trivial elements.
     inter=arcseg_int(sidecirc, L0, tol, prec);
     if(lg(inter)==1) continue;//No intersection
     inter=real_i(gel(inter, 1));//Take the real part since it is actually real, and need to get the type correct.
@@ -1862,21 +1819,10 @@ normalizedboundary(GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, GEN, 
   pari_sp top=avma;
   long lx;
   GEN Gnew=cgetg_copy(G, &lx);
-  int skipped=0;
   for(long i=1;i<lx;i++){
-    pari_CATCH(CATCH_ALL){
-      gel(Gnew, i)=mkvec3(gen_0, gen_0, gen_0);//The third entry being 0 means this gets ignored
-      skipped++;
-    }
-    pari_TRY{
-      gel(Gnew, i)=isometriccircle_mats(gel(G, i), mats, data, gamtopsl, tol, prec);
-    }
-    pari_ENDCATCH
-  }
-  if(skipped>0){
-    char *warningmsg=pari_sprintf("%d isometric circles were skipped due to insufficient precision", skipped);
-    pari_warn(warner, warningmsg);
-    pari_free(warningmsg);
+    GEN icirc=isometriccircle_mats(gel(G, i), mats, data, gamtopsl, tol, prec);
+    if(!icirc) return gc_NULL(top);//Not enough precision.
+    gel(Gnew, i)=icirc;
   }
   return gerepileupto(top, normalizedboundary_givencircles(Gnew, mats, id, tol, prec));
 }
@@ -3041,7 +2987,9 @@ algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec)
   if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
   GEN tol=qalg_get_tol(Q);
-  return gerepileupto(top, normalizedboundary(G, mats, id, Q, &qalg_fdomm2rembed, tol, prec));
+  GEN nbound=normalizedboundary(G, mats, id, Q, &qalg_fdomm2rembed, tol, prec);
+  if(!nbound) pari_err_PREC("Not enough precision; please increase it and re-run");
+  return gerepileupto(top, nbound);//It worked!
 }
 
 //Returns small norm 1 elements (Q_{z1,z2}(x)<=C) of the order O
@@ -3155,7 +3103,8 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
   }
   if(!partialset) return gc_NULL(top);//Precision too low
   U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
-
+  if(!U) return gc_NULL(top);//Must increase precision
+  
   FILE *f;
   if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
 
@@ -3193,6 +3142,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
       pari_printf("%d elements found\n", lg(points)-1);
     }
     U=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
+    if(!U) return gc_NULL(top);//Must increase precision
     if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
     if(gcmp(gel(U, 6), areabound)<0){
       if(dumppartial) fclose(f);
