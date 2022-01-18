@@ -1950,26 +1950,20 @@ normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec)
 static long
 normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
 {
+  long lgU1=lg(gel(U, 1));
+  if(lgU1==1) return -1;//U is trivial
+  if(toleq(z, gen_0, tol, prec)) return -1;//z=0 up to tolerance, which is automatically inside the boundary.
   pari_sp top=avma;
   int outside;
-  pari_CATCH(CATCH_ALL){//Catching if U is trivial OR z=0
-    set_avma(top);
-    pari_CATCH_reset();
-    return -1;
-  }
-  pari_TRY{
-    GEN ang=shiftangle(garg(z, prec), gmael(U, 4, 1), tol, prec);//Shifting to base angle
-    long ind=gen_search(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
-    if(ind==lg(gel(U, 1))) ind=1;//Insert at the end means the first circle.
-    GEN circle=gmael(U, 2, ind);
-    if(gequal0(circle)){pari_CATCH_reset();return gc_int(top, -1);}//Intersects with the edge of the unit disc.
-    outside=tolcmp(gel(circle, 2), gabs(gsub(z, gel(circle, 1)), prec), tol, prec);//Are we outside?
-    if(outside==0) outside=-1;
-    else if(outside==1) outside=ind;
-  }
-  pari_ENDCATCH
-  set_avma(top);
-  return outside;//There is no tolerance issues with our search for ind; they are taken care of by the tolerance check with inside (the only possible issues occur if z and v[ind] or v[ind-1] are equal up to tolerance, but of course that is solved by the one tolcmp).
+  GEN ang=shiftangle(garg(z, prec), gmael(U, 4, 1), tol, prec);//Shifting to base angle
+  long ind=gen_search(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
+  if(ind==lgU1) ind=1;//Insert at the end means the first circle.
+  GEN circle=gmael(U, 2, ind);
+  if(gequal0(circle)) return gc_int(top, -1);//Intersects with the edge of the unit disc.
+  outside=tolcmp(gel(circle, 2), gabs(gsub(z, gel(circle, 1)), prec), tol, prec);//Are we outside?
+  if(outside==0) outside=-1;
+  else if(outside==1) outside=ind;
+  return gc_long(top, outside);//There is no tolerance issues with our search for ind; they are taken care of by the tolerance check with inside (the only possible issues occur if z and v[ind] or v[ind-1] are equal up to tolerance, but of course that is solved by the one tolcmp).
 }
 
 //We need to transfer from the upper half plane to the unit disc. The following 4 methods help accomplish this. In general, we compute m1 and m2 such that g in PSL(2, R) -> m1*g*m2 in PSU(1, 1)/. We also store the point p.
