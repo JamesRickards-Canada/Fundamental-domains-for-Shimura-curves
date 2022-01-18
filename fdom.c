@@ -142,6 +142,31 @@ divoo(GEN a, GEN b)
 
 
 
+//Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. If this happens, the resulting vector is not suitable for gerepileupto; this must be done at the end (necessary anyway since it's likely we have to call vec_shorten at some point).
+INLINE GEN
+veclist_append(GEN v, long *vind, long *vlen, GEN x){
+  if(*vind==*vlen){//Need to lengthen!
+    *vlen=2**vlen;
+	v=vec_lengthen(v, *vlen);
+  }
+  *vind=*vind+1;
+  gel(v, *vind)=x;
+  return v;
+}
+
+//Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. Don't forget to call vec_shorten at the end, since some positions are uninitialized.
+INLINE GEN
+vecsmalllist_append(GEN v, long *vind, long *vlen, long x){
+  if(*vind==*vlen){//Need to lengthen!
+    *vlen=2**vlen;
+	v=vecsmall_lengthen(v, *vlen);
+  }
+  *vind=*vind+1;
+  v[*vind]=x;
+  return v;
+}
+
+
 //List of GENs
 
 //Frees the memory pari_malloc'ed by old_glist
@@ -154,17 +179,6 @@ old_glist_free(old_glist *l)
     l=l->next;
     pari_free(temp);
   }
-}
-
-//Removes the last element of the old_glist and returns it without copying
-GEN
-old_glist_pop(old_glist **head_ref)
-{
-  old_glist *temp=*head_ref;
-  GEN x=temp->data;
-  *head_ref=temp->next;
-  pari_free(temp);
-  return x;
 }
 
 //Put an element at the start of the old_glist
@@ -2652,26 +2666,30 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
   GEN vbaseinfo=normalizedboundary_sideint(U, geod, 1, tol, prec);//Find the vertex nearest the start of the geodesic.
   GEN vbase=gel(vbaseinfo, 1);
   GEN vstart=vbase, vend, startcentre=gel(geod, 1), starttype=gel(geod, 8);
-  old_glist *Gs=NULL;//Tracking the g's corresponding to the arcs
-  old_glist *circs=NULL;//Tracking the circle arcs.
-  old_llist *sides=NULL;//Tracking the sides hit.
-  old_llist *othersides=NULL;//Tracking the sides we are leaving from.
-  old_llist_putstart(&othersides, gel(vbaseinfo, 2)[1]);
-  long count=0;
+  
+  long Gsind=0, Gslen=6;
+  GEN Gs=cgetg(Gslen+1, t_VEC);//Tracking the g's corresponding to the arcs
+  long circsind=0, circslen=6;
+  GEN circs=cgetg(circslen+1, t_VEC);//Tracking the circle arcs.
+  long sidesind=0, sideslen=6;
+  GEN sides=cgetg(sideslen+1, t_VECSMALL);//Tracking the sides hit.
+  long othersidesind=0, othersideslen=6;
+  GEN othersides=cgetg(othersideslen+1, t_VECSMALL);//Tracking the sides we are leaving from.
+  
+  othersides=vecsmalllist_append(othersides, &othersidesind, &othersideslen, gel(vbaseinfo, 2)[1]);
   for(;;){
     vend=normalizedboundary_sideint(U, geod, 0, tol, prec);
-    old_glist_putstart(&Gs, g);
+	Gs=veclist_append(Gs, &Gsind, &Gslen, g);//Put g in our list.
     if(gequal0(gel(geod, 8))){//Arc
-      if(gequalm1(gel(geod, 7))) old_glist_putstart(&circs, arc_init(geod, gel(vend, 1), vstart, -1, prec));//geod travelling backwards
-      else old_glist_putstart(&circs, arc_init(geod, vstart, gel(vend, 1), 1, prec));//geod travelling normally
+      if(gequalm1(gel(geod, 7))) circs=veclist_append(circs, &circsind, &circslen, arc_init(geod, gel(vend, 1), vstart, -1, prec));//geod travelling backwards
+      else circs=veclist_append(circs, &circsind, &circslen, arc_init(geod, vstart, gel(vend, 1), 1, prec));//geod travelling normally
     }
     else{//Segment
       gel(geod, 3)=vstart;//Start
       gel(geod, 4)=gel(vend, 1);//End
-      old_glist_putstart(&circs, geod);
+	  circs=veclist_append(circs, &circsind, &circslen, geod);
     }
-    old_llist_putstart(&sides, gel(vend, 2)[1]);//Adding the side hit.
-    count++;
+	sides=vecsmalllist_append(sides, &sidesind, &sideslen, gel(vend, 2)[1]);//Adding the side hit.
     vstart=mat_eval(gmael(U, 5, gel(vend, 2)[1]), gel(vend, 1));//The new start vertex
     g=eltmul(data, eltmul(data, gmael(U, 1, gel(vend, 2)[1]), g), eltinv(data, gmael(U, 1, gel(vend, 2)[1])));//Conjugating g by the side hit
     gpsl=gamtopsl(data, g, prec);//The image in PSL of the new g
@@ -2679,14 +2697,14 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
     if(toleq(vbase, vstart, tol, prec)){
       if(gequal(starttype, gel(geod, 8)) && toleq(startcentre, gel(geod, 1), tol, prec)) break;//Done! We need this second check since an embedding CAN have a self-intersection on the boundary (e.g. [Q, order]=qa_init_2primes(2, 3), p=I/2, g=[3674890, -1623699, 463914, -1391742]). This is sufficient because the two arcs/segments share a point AND the centre/slope => unique.
     }
-    old_llist_putstart(&othersides, gel(U, 7)[gel(vend, 2)[1]]);//Hit it with the side pairing.
+	othersides=vecsmalllist_append(othersides, &othersidesind, &othersideslen, gel(U, 7)[gel(vend, 2)[1]]);//Hit it with the side pairing.
   }
   GEN ret=cgetg(5, t_VEC);
-  gel(ret, 1)=old_glist_togvec(Gs, count, -1);
-  gel(ret, 2)=old_glist_togvec(circs, count, -1);
-  gel(ret, 3)=old_llist_tovecsmall(sides, count, -1);
-  gel(ret, 4)=old_llist_tovecsmall(othersides, count, -1);
-  return gerepileupto(top, ret);
+  gel(ret, 1)=vec_shorten(Gs, Gsind);
+  gel(ret, 2)=vec_shorten(circs, circsind);
+  gel(ret, 3)=vecsmall_shorten(sides, sidesind);
+  gel(ret, 4)=vecsmall_shorten(othersides, sidesind);
+  return gerepilecopy(top, ret);
 }
 
 //Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).

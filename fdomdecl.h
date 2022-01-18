@@ -17,8 +17,10 @@ typedef struct listtype2{//A generic linked list of longs, stores data and next 
 //SECTION 1: BASE METHODS
 
 //LISTS
+INLINE GEN veclist_append(GEN v, long *vind, long *vlen, GEN x);
+INLINE GEN vecsmalllist_append(GEN v, long *vind, long *vlen, long x);
+
 void old_glist_free(old_glist *l);
-GEN old_glist_pop(old_glist **head_ref);
 void old_glist_putstart(old_glist **head_ref, GEN new_data);
 GEN old_glist_togvec(old_glist *l, long length, int dir);
 GEN old_glist_togvec_append(old_glist *l, GEN v, long length, int dir);
