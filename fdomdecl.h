@@ -3,12 +3,12 @@
 typedef struct listtype1{//A generic linked list of GENs, stores data and next term
   GEN data; 
   struct listtype1 *next;
-}glist;
+}old_glist;
 
 typedef struct listtype2{//A generic linked list of longs, stores data and next term
   long data; 
   struct listtype2 *next;
-}llist;
+}old_llist;
 
 
 //FDOM METHODS
@@ -17,16 +17,16 @@ typedef struct listtype2{//A generic linked list of longs, stores data and next 
 //SECTION 1: BASE METHODS
 
 //LISTS
-void glist_free(glist *l);
-GEN glist_pop(glist **head_ref);
-void glist_putstart(glist **head_ref, GEN new_data);
-GEN glist_togvec(glist *l, long length, int dir);
-GEN glist_togvec_append(glist *l, GEN v, long length, int dir);
-void llist_free(llist *l);
-long llist_pop(llist **head_ref);
-void llist_putstart(llist **head_ref, long new_data);
-GEN llist_togvec(llist *l, long length, int dir);
-GEN llist_tovecsmall(llist *l, long length, int dir);
+void old_glist_free(old_glist *l);
+GEN old_glist_pop(old_glist **head_ref);
+void old_glist_putstart(old_glist **head_ref, GEN new_data);
+GEN old_glist_togvec(old_glist *l, long length, int dir);
+GEN old_glist_togvec_append(old_glist *l, GEN v, long length, int dir);
+void old_llist_free(old_llist *l);
+long old_llist_pop(old_llist **head_ref);
+void old_llist_putstart(old_llist **head_ref, long new_data);
+GEN old_llist_togvec(old_llist *l, long length, int dir);
+GEN old_llist_tovecsmall(old_llist *l, long length, int dir);
 
 //SHORT VECTORS IN LATTICES
 GEN mat_nfcholesky(GEN nf, GEN A);
