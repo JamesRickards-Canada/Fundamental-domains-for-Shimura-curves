@@ -1,34 +1,11 @@
-//STRUCTURES
-
-typedef struct listtype1{//A generic linked list of GENs, stores data and next term
-  GEN data; 
-  struct listtype1 *next;
-}old_glist;
-
-typedef struct listtype2{//A generic linked list of longs, stores data and next term
-  long data; 
-  struct listtype2 *next;
-}old_llist;
-
-
 //FDOM METHODS
 
 
 //SECTION 1: BASE METHODS
 
 //LISTS
-INLINE GEN veclist_append(GEN v, long *vind, long *vlen, GEN x);
-INLINE GEN vecsmalllist_append(GEN v, long *vind, long *vlen, long x);
-
-void old_glist_free(old_glist *l);
-void old_glist_putstart(old_glist **head_ref, GEN new_data);
-GEN old_glist_togvec(old_glist *l, long length, int dir);
-GEN old_glist_togvec_append(old_glist *l, GEN v, long length, int dir);
-void old_llist_free(old_llist *l);
-long old_llist_pop(old_llist **head_ref);
-void old_llist_putstart(old_llist **head_ref, long new_data);
-GEN old_llist_togvec(old_llist *l, long length, int dir);
-GEN old_llist_tovecsmall(old_llist *l, long length, int dir);
+GEN veclist_append(GEN v, long *vind, long *vlen, GEN x);
+GEN vecsmalllist_append(GEN v, long *vind, long *vlen, long x);
 
 //SHORT VECTORS IN LATTICES
 GEN mat_nfcholesky(GEN nf, GEN A);
@@ -68,7 +45,8 @@ GEN word(GEN U, GEN P, GEN g, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*e
 
 //HELPER METHODS
 GEN deftol(long prec);
-INLINE GEN gc_0vec(pari_sp av);
+INLINE GEN
+gc_0vec(pari_sp av){set_avma(av);return cgetg(1, t_VEC);}//Resets avma and returns the vector []
 
 
 //SECTION 3: QUATERNIONIC METHODS
@@ -100,11 +78,8 @@ GEN algnormalizedboundary(GEN A, GEN O, GEN G, GEN p, long prec);
 GEN algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long prec);
 
 //FUNDAMENTAL DOMAIN RETRIEVAL METHODS
-INLINE GEN algfdom_get_qalg(GEN U);
 GEN algfdomalg(GEN U);
-INLINE GEN algfdom_get_alg(GEN U);
 GEN algfdomorder(GEN U);
-INLINE GEN algfdom_get_order(GEN U);
 
 //HELPER METHODS
 GEN algnorm_chol(GEN nf, GEN decomp, GEN x);
@@ -123,13 +98,33 @@ GEN qalg_fdommul(GEN data, GEN x, GEN y);
 GEN qalg_fdomtrace(GEN data, GEN x);
 int qalg_istriv(GEN data, GEN x);
 
-//3: SHALLOW RETRIEVAL METHODS
-INLINE GEN qalg_get_alg(GEN Q);
-INLINE GEN qalg_get_rams(GEN Q);
-INLINE GEN qalg_get_varnos(GEN Q);
-INLINE GEN qalg_get_roots(GEN Q);
-INLINE GEN qalg_get_order(GEN Q);
-INLINE GEN qalg_get_level(GEN Q);
+//3: INLINE SHALLOW RETRIEVAL METHODS
+//Shallow method to return the algebra
+INLINE GEN
+qalg_get_alg(GEN Q){return gel(Q, 1);}
+//Shallow method to get the ramification
+INLINE GEN
+qalg_get_rams(GEN Q){return gel(Q, 2);}
+//Shallow method to return the variable numbers of K and L
+INLINE GEN
+qalg_get_varnos(GEN Q){return gel(Q, 3);}
+//Shallow method to return the roots of K and L.
+INLINE GEN
+qalg_get_roots(GEN Q){return gel(Q, 4);}
+//Shallow method to return the order
+INLINE GEN
+qalg_get_order(GEN Q){return gel(Q, 5);}
+//Shallow method to return the level of the order
+INLINE GEN
+qalg_get_level(GEN Q){return gel(Q, 6);}
+//Returns the qalg
+INLINE GEN algfdom_get_qalg(GEN U){return gel(U, 9);}
+//Shallow version of algfdomalg
+INLINE GEN algfdom_get_alg(GEN U){return qalg_get_alg(algfdom_get_qalg(U));}
+//Shallow version of algfdomorder
+INLINE GEN
+algfdom_get_order(GEN U){return qalg_get_order(algfdom_get_qalg(U));}
+
 
 
 //FDOM_EXTRA METHODS

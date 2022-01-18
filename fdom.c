@@ -143,11 +143,11 @@ divoo(GEN a, GEN b)
 
 
 //Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. If this happens, the resulting vector is not suitable for gerepileupto; this must be done at the end (necessary anyway since it's likely we have to call vec_shorten at some point).
-INLINE GEN
+GEN
 veclist_append(GEN v, long *vind, long *vlen, GEN x){
   if(*vind==*vlen){//Need to lengthen!
     *vlen=2**vlen;
-	v=vec_lengthen(v, *vlen);
+    v=vec_lengthen(v, *vlen);
   }
   *vind=*vind+1;
   gel(v, *vind)=x;
@@ -155,205 +155,15 @@ veclist_append(GEN v, long *vind, long *vlen, GEN x){
 }
 
 //Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. Don't forget to call vec_shorten at the end, since some positions are uninitialized.
-INLINE GEN
+GEN
 vecsmalllist_append(GEN v, long *vind, long *vlen, long x){
   if(*vind==*vlen){//Need to lengthen!
     *vlen=2**vlen;
-	v=vecsmall_lengthen(v, *vlen);
+    v=vecsmall_lengthen(v, *vlen);
   }
   *vind=*vind+1;
   v[*vind]=x;
   return v;
-}
-
-
-//List of GENs
-
-//Frees the memory pari_malloc'ed by old_glist
-void
-old_glist_free(old_glist *l)
-{
-  old_glist *temp=l;
-  while(l!=NULL){
-    temp=l;
-    l=l->next;
-    pari_free(temp);
-  }
-}
-
-//Put an element at the start of the old_glist
-void
-old_glist_putstart(old_glist **head_ref, GEN new_data)
-{
-  old_glist *new_elt = (old_glist*)pari_malloc(sizeof(old_glist));
-  new_elt->data = new_data;
-  new_elt->next = *head_ref;
-  *head_ref = new_elt;
-}
-
-//dir=1 means forward, dir=-1 means backwards. Returns the list as a vector, makes a clean copy. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN
-old_glist_togvec(old_glist *l, long length, int dir)
-{
-    old_glist *lcopy=l;
-    GEN rvec=cgetg(length+1, t_VEC);
-    if(dir==1){
-      long lind=1;
-      while(l!=NULL && lind<=length){
-          gel(rvec,lind)=gcopy(l->data);
-          l=l->next;
-          lind++;
-      }
-      if(lind<=length){//Couldn't finish.
-        pari_err(e_MISC,"List length is too long");
-      }
-    }
-    else{
-      long lind=length;
-      while(l!=NULL && lind>0){
-        gel(rvec,lind)=gcopy(l->data);
-        l=l->next;
-        lind--;
-      }
-      if(lind>0){//Couldn't finish.
-        pari_err(e_MISC,"List length is too long");
-      }
-    }
-    old_glist_free(lcopy);
-    return rvec;
-}
-
-//Appends l to the end of v, returning a clean copy. dir=-1 means forward, dir=-1 backward. This also frees the list, but we also need to clean up the list data at the list creation location. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN
-old_glist_togvec_append(old_glist *l, GEN v, long length, int dir)
-{
-    old_glist *lcopy=l;
-    long vlen=lg(v), rveclen=length+vlen;
-    GEN rvec=cgetg(rveclen, t_VEC);
-    for(long i=1;i<vlen;i++) gel(rvec, i)=gcopy(gel(v, i));//Copying v
-    if(dir==1){
-      long lind=vlen;
-      while(l!=NULL && lind<rveclen){
-          gel(rvec,lind)=gcopy(l->data);
-          l=l->next;
-          lind++;
-      }
-      if(lind<rveclen){//Couldn't finish.
-        pari_err(e_MISC,"List length is too long");
-      }
-    }
-    else{
-      long lind=rveclen-1;
-      while(l!=NULL && lind>=vlen){
-        gel(rvec,lind)=gcopy(l->data);
-        l=l->next;
-        lind--;
-      }
-      if(lind>=vlen){//Couldn't finish.
-        pari_err(e_MISC,"List length is too long");
-      }
-    }
-    old_glist_free(lcopy);
-    return rvec;
-}
-
-//List of longs
-
-//Frees the memory pari_malloc'ed by old_llist
-void
-old_llist_free(old_llist *l)
-{
-  old_llist *temp=l;
-  while(l!=NULL){
-    temp=l;
-    l=l->next;
-    pari_free(temp);
-  }
-}
-
-//Removes the last element of the old_llist and returns it
-long
-old_llist_pop(old_llist **head_ref)
-{
-  old_llist *temp=*head_ref;
-  long x=temp->data;
-  *head_ref=temp->next;
-  pari_free(temp);
-  return x;
-}
-
-//Put an element at the start of the old_llist
-void
-old_llist_putstart(old_llist **head_ref, long new_data)
-{
-  old_llist *new_elt = (old_llist*)pari_malloc(sizeof(old_llist)); 
-  new_elt->data = new_data; 
-  new_elt->next = *head_ref; 
-  *head_ref = new_elt; 
-}
-
-//dir=1 means forward, dir=-1 means backwards. Returns the list as a vector. This also frees the list. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN
-old_llist_togvec(old_llist *l, long length, int dir)
-{//No garbage collection necessary with longs!
-  old_llist *lcopy=l;
-  GEN rvec=cgetg(length+1, t_VEC);
-  if(dir==1){
-    long lind=1;
-    while(l!=NULL && lind<=length){
-      gel(rvec,lind)=stoi(l->data);
-      l=l->next;
-      lind++;
-    }
-    if(lind<=length){//Couldn't finish.
-      pari_err(e_MISC,"List length is too long");
-    }
-  }
-  else{
-    long lind=length;
-    while(l!=NULL && lind>0){
-      gel(rvec,lind)=stoi(l->data);
-      l=l->next;
-      lind--;
-    }
-    if(lind>0){//Couldn't finish.
-      pari_err(e_MISC,"List length is too long");
-    }
-  }
-  old_llist_free(lcopy);
-  return(rvec);
-}
-
-//dir=1 means forward, dir=-1 means backwards. Returns the list as a VECSMALL. This also frees the list. The passed in pointer to l should NOT be used as it no longer points to a valid address.
-GEN
-old_llist_tovecsmall(old_llist *l, long length, int dir)
-{//No garbage collection necessary with longs!
-  old_llist *lcopy=l;
-  GEN rvec=cgetg(length+1, t_VECSMALL);
-  if(dir==1){
-    long lind=1;
-    while(l!=NULL && lind<=length){
-      rvec[lind]=l->data;
-      l=l->next;
-      lind++;
-    }
-    if(lind<=length){//Couldn't finish.
-      pari_err(e_MISC,"List length is too long");
-    }
-  }
-  else{
-    long lind=length;
-    while(l!=NULL && lind>0){
-      rvec[lind]=l->data;
-      l=l->next;
-      lind--;
-    }
-    if(lind>0){//Couldn't finish.
-      pari_err(e_MISC,"List length is too long");
-    }
-  }
-  old_llist_free(lcopy);
-  return(rvec);
 }
 
 
@@ -509,7 +319,7 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
   GEN Ucond=zerovec(n);//U, but for the condition
   
   GEN x=zerocol(n), Z;//x represents the solution
-  long i=np1-1, count=0, totcount=0;//i represents the current index, initially set to n. count=the number of solutions
+  long i=np1-1, count=0;//i represents the current index, initially set to n. count=the number of solutions
   gel(T, n)=gcopy(C);//initialize T[n]=C
   gel(U, n)=gen_0;//Clearly U[n]=0. U[i]=sum(j=i+1,n,q[i,j]*x[j]);
   
@@ -519,21 +329,26 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
   int step=2;//Represents the current step of algorithm 2.8
   int xpass0=0;
   GEN x1sols;
-  old_glist *S=NULL;//Pointer to the list start
-  GEN v=cgetg(1, t_VEC);//The list, is used for garbage collection partway through
+  
+  long Sind=0, Slen;
+  if(maxelts!=0) Slen=maxelts;
+  else Slen=6;
+  GEN S=cgetg(Slen+1, t_VEC), Sold=cgetg(1, t_VEC);;//Sold is used for garbage collection partway through
   while(step>0){
     if(gc_needed(top, 1)){
+      Sold=shallowconcat(Sold, vec_shorten(S, Sind));//Updating Sold to be the partial list.
       mid=avma;
-      v=old_glist_togvec_append(S, v, count, 1);
-      count=0;
-      S=NULL;
+      Sold=gcopy(Sold);
       T=gcopy(T);
       U=gcopy(U);
       UB=gcopy(UB);
       x=gcopy(x);
       Tcond=gcopy(Tcond);
       Ucond=gcopy(Ucond);
-      gerepileallsp(top, mid, 7, &v, &T, &U, &UB, &x, &Tcond, &Ucond);
+      gerepileallsp(top, mid, 7, &Sold, &T, &U, &UB, &x, &Tcond, &Ucond);
+      Sind=0;//Resetting S
+      Slen=6;
+      S=cgetg(Slen+1, t_VEC);
     }
     if(step==2){
       Z=gsqrt(gabs(gdiv(gel(T, i), gcoeff(Q, i, i)), prec), prec);//The inner square root should be positive always, but could run into issue if T=0 and rounding puts it <0. Z=sqrt(T[i]/Q[i,i])
@@ -585,19 +400,18 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
       for(long j=1;j<lg(x1sols);j++){//We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.
         if(xpass0 && signe(gel(x1sols, j))!=-1) continue;//x is 0 (except the first coefficient), so the first coefficent has to be negative.
         gel(x, 1)=gel(x1sols, j);//Now we are good, all checks out.
-        old_glist_putstart(&S, gcopy(x));
-        count++;
+        S=veclist_append(S, &Sind, &Slen, gcopy(x));
         if(maxelts!=0){
-          totcount++;//We can't use count, since this resets if we garbage collect
-          if(totcount<maxelts) continue;
-          return gerepileupto(tiptop, old_glist_togvec_append(S, v, count, -1));//We hit the maximal number of return elements
+          count++;
+          if(count<maxelts) continue;
+          return gerepilecopy(tiptop, shallowconcat(Sold, vec_shorten(S, Sind)));//We hit the maximal number of return elements
         }
       }
       if(xpass0){step=0;continue;}//Game over, we are done!
       continue;
     }
   }
-  return gerepileupto(tiptop, old_glist_togvec_append(S, v, count, -1));
+  return gerepilecopy(tiptop, shallowconcat(Sold, vec_shorten(S, Sind)));
 }
 
 
@@ -2226,12 +2040,13 @@ GEN
 reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), GEN tol, long prec)
 {
   pari_sp top=avma;
-  old_llist *decomp=NULL;
+  long decompind=0, decomplen=6;
+  GEN decomp=cgetg(decomplen+1, t_VECSMALL);
   GEN gmat=psltopsu_mats(gamtopsl(data, g, prec), gel(U, 8));//The PSU version of g
   GEN gbar=g;//gmat=delta*g; we start with delta=1, but keep track of gbar.
   GEN zorig=z;//The original z.
   z=mat_eval(gmat, z);//gz, the real start point
-  long count=0, outside;
+  long outside;
   for(;;){
     outside=normalizedboundary_outside(U, z, tol, prec);
     if(outside==-1){//Done:Either reached inside or the boundary. We do recompile z here, to make sure we didn't lose too much precision.
@@ -2241,11 +2056,11 @@ reduceelt_givennormbound(GEN U, GEN g, GEN z, GEN data, GEN (*gamtopsl)(GEN, GEN
     }
     z=mat_eval(gmael(U, 5, outside), z);//Update z
     gbar=eltmul(data, gmael(U, 1, outside), gbar);//update gbar
-    old_llist_putstart(&decomp, outside);//add outside to the list
-    count++;
+    decomp=vecsmalllist_append(decomp, &decompind, &decomplen, outside);//add outside to the list
   }
   GEN ginv=eltinv(data, g);//g^-1
-  return gerepilecopy(top, mkvec3(gbar, eltmul(data, gbar, ginv), old_llist_tovecsmall(decomp, count, 1)));//delta=gbar*g^(-1)
+  decomp=vecsmall_shorten(decomp, decompind);//Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.
+  return gerepilecopy(top, mkvec3(gbar, eltmul(data, gbar, ginv), vecsmall_reverse(decomp)));//delta=gbar*g^(-1)
 }
 
 //Reduces z to the interior of U (Almost identical to reduceelt_givennormbound). Returns [g, z'], where g is the transition element and z' is the new point.
@@ -2679,7 +2494,7 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
   othersides=vecsmalllist_append(othersides, &othersidesind, &othersideslen, gel(vbaseinfo, 2)[1]);
   for(;;){
     vend=normalizedboundary_sideint(U, geod, 0, tol, prec);
-	Gs=veclist_append(Gs, &Gsind, &Gslen, g);//Put g in our list.
+    Gs=veclist_append(Gs, &Gsind, &Gslen, g);//Put g in our list.
     if(gequal0(gel(geod, 8))){//Arc
       if(gequalm1(gel(geod, 7))) circs=veclist_append(circs, &circsind, &circslen, arc_init(geod, gel(vend, 1), vstart, -1, prec));//geod travelling backwards
       else circs=veclist_append(circs, &circsind, &circslen, arc_init(geod, vstart, gel(vend, 1), 1, prec));//geod travelling normally
@@ -2687,9 +2502,9 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
     else{//Segment
       gel(geod, 3)=vstart;//Start
       gel(geod, 4)=gel(vend, 1);//End
-	  circs=veclist_append(circs, &circsind, &circslen, geod);
+      circs=veclist_append(circs, &circsind, &circslen, geod);
     }
-	sides=vecsmalllist_append(sides, &sidesind, &sideslen, gel(vend, 2)[1]);//Adding the side hit.
+    sides=vecsmalllist_append(sides, &sidesind, &sideslen, gel(vend, 2)[1]);//Adding the side hit.
     vstart=mat_eval(gmael(U, 5, gel(vend, 2)[1]), gel(vend, 1));//The new start vertex
     g=eltmul(data, eltmul(data, gmael(U, 1, gel(vend, 2)[1]), g), eltinv(data, gmael(U, 1, gel(vend, 2)[1])));//Conjugating g by the side hit
     gpsl=gamtopsl(data, g, prec);//The image in PSL of the new g
@@ -2697,7 +2512,7 @@ rootgeodesic_fd(GEN U, GEN g, GEN gamid, GEN data, GEN (*gamtopsl)(GEN, GEN, lon
     if(toleq(vbase, vstart, tol, prec)){
       if(gequal(starttype, gel(geod, 8)) && toleq(startcentre, gel(geod, 1), tol, prec)) break;//Done! We need this second check since an embedding CAN have a self-intersection on the boundary (e.g. [Q, order]=qa_init_2primes(2, 3), p=I/2, g=[3674890, -1623699, 463914, -1391742]). This is sufficient because the two arcs/segments share a point AND the centre/slope => unique.
     }
-	othersides=vecsmalllist_append(othersides, &othersidesind, &othersideslen, gel(U, 7)[gel(vend, 2)[1]]);//Hit it with the side pairing.
+    othersides=vecsmalllist_append(othersides, &othersidesind, &othersideslen, gel(U, 7)[gel(vend, 2)[1]]);//Hit it with the side pairing.
   }
   GEN ret=cgetg(5, t_VEC);
   gel(ret, 1)=vec_shorten(Gs, Gsind);
@@ -2782,10 +2597,6 @@ atanoo(GEN x, long prec)
   if(typ(x)==t_INFINITY) return gerepileupto(top, gdivgs(mppi(prec), 2));
   return gatan(x, prec);
 }
-
-//Resets avma and returns the vector []
-INLINE GEN
-gc_0vec(pari_sp av){set_avma(av);return cgetg(1, t_VEC);}
 
 //Returns gcmp(x, y), except if x==y, returns -1. Useful for gen_search when you ALWAYS want to return the index where it should be inserted/is
 static int
@@ -3275,23 +3086,13 @@ algsmallnorm1elts(GEN A, GEN O, GEN p, GEN C, GEN z1, GEN z2, int type, long pre
 
 
 
-//Returns the qalg
-INLINE GEN algfdom_get_qalg(GEN U){return gel(U, 9);}
-
 //Returns the algebra of the fundamental domain
 GEN
 algfdomalg(GEN U){pari_sp top=avma;return gerepilecopy(top, algfdom_get_alg(U));}
 
-//Shallow version of algfdomalg
-INLINE GEN algfdom_get_alg(GEN U){return qalg_get_alg(algfdom_get_qalg(U));}
-
 //Returns the order of the fundamental domain
 GEN
 algfdomorder(GEN U){pari_sp top=avma;return gerepilecopy(top, algfdom_get_order(U));}
-
-//Shallow version of algfdomorder
-INLINE GEN
-algfdom_get_order(GEN U){return qalg_get_order(algfdom_get_qalg(U));}
 
 
 
@@ -3744,32 +3545,3 @@ qalg_istriv(GEN data, GEN x)
   return 1;
 }
 
-
-
-//SHALLOW RETRIEVAL METHODS
-
-
-
-//Shallow method to return the algebra
-INLINE GEN
-qalg_get_alg(GEN Q){return gel(Q, 1);}
-
-//Shallow method to get the ramification
-INLINE GEN
-qalg_get_rams(GEN Q){return gel(Q, 2);}
-
-//Shallow method to return the variable numbers of K and L
-INLINE GEN
-qalg_get_varnos(GEN Q){return gel(Q, 3);}
-
-//Shallow method to return the roots of K and L.
-INLINE GEN
-qalg_get_roots(GEN Q){return gel(Q, 4);}
-
-//Shallow method to return the order
-INLINE GEN
-qalg_get_order(GEN Q){return gel(Q, 5);}
-
-//Shallow method to return the level of the order
-INLINE GEN
-qalg_get_level(GEN Q){return gel(Q, 6);}

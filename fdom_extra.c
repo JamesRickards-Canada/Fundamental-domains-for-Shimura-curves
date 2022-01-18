@@ -473,10 +473,10 @@ smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int al
     pro=mulii(pro, gel(pposs_nm, ind));
   }
   if(ind%2!=par) ind--;//Make it line up with parity.
-  old_glist *Ds=NULL;
-  long count=0;
+  long Dsind=0, Dslen=6;
+  GEN Ds=cgetg(Dslen+1, t_VEC);
   if(par==0){
-    if(cmpis(pDmin, 1)<=0) old_glist_putstart(&Ds, gen_1);//Disc 1
+    if(cmpis(pDmin, 1)<=0) Ds=veclist_append(Ds, &Dsind, &Dslen, gen_1);//Disc 1
     par=2;
   }
   long lpm1=lp-1;//Number of prime powers we are looping over
@@ -502,14 +502,13 @@ smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int al
         else{
           prod=gen_1;
           for(long i=1;i<lg(sub);i++) prod=mulii(prod, gel(pposs, sub[i]));//Computing the D
-          old_glist_putstart(&Ds, prod);
-          count++;
+          Ds=veclist_append(Ds, &Dsind, &Dslen, prod);
         }
       }
       cont=subset_lexincrem(sub, lpm1);//Increment the subset
     }
   }
-  GEN Discs=gerepileupto(top, sort(old_glist_togvec(Ds, count, -1)));//The discriminants.
+  GEN Discs=gerepileupto(top, sort(vec_shorten(Ds, Dsind)));//The discriminants.
   if(retD) return Discs;
   long lD=lg(Discs), sind=1;
   GEN Alist=vectrunc_init(lD), Dlist=vectrunc_init(lD);
