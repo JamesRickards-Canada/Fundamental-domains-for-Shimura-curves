@@ -2709,10 +2709,10 @@ algmoreprec(GEN A, long increment, long prec)
   
   if(!isint1(bden)){//b has a denominator. We use alg_complete, but this MAY change the value of b, so we run it until it does not.
     do{
-      Anew=alg_complete(newrnf, aut, hf, hi, 1);//Remake the algebra.
+      Anew=alg_complete(newrnf, aut, hf, hi, 0);//Remake the algebra.
     }while(!gequal(alg_get_b(Anew), b));//Sometimes this changes b, so we loop until it doesn't.
   }
-  else Anew=alg_cyclic(newrnf, aut, b, 1);//Initialize with alg_cyclic
+  else Anew=alg_cyclic(newrnf, aut, b, 0);//Initialize with alg_cyclic
   
   GEN basis_want=alg_get_basis(A);
   GEN basis_dontwant=alg_get_invbasis(Anew);
