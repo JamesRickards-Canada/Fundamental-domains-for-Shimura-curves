@@ -104,7 +104,7 @@ static GEN algd(GEN A, GEN a);
 static GEN voidalgmul(void *A, GEN x, GEN y);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, long prec);
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN partialset, GEN C, GEN R, GEN passes, int type, long prec);
 
 //3: HELPER METHODS
 static long algsplitoo(GEN A);
@@ -2857,7 +2857,7 @@ algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
 
 //Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as [Ord, level].
 GEN
-algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN constants, long prec)
+algfdom(GEN A, GEN O, GEN p, int dispprogress, GEN partialset, GEN constants, long prec)
 {
   pari_sp top=avma;
   GEN Q, newA=A, U;
@@ -2869,7 +2869,7 @@ algfdom(GEN A, GEN O, GEN p, int dispprogress, int dumppartial, GEN partialset, 
   long newprec=prec;
   unsigned int precinc=0;
   for(;;){
-    U=qalg_fdom(Q, p, dispprogress, dumppartial, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), newprec);
+    U=qalg_fdom(Q, p, dispprogress, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), newprec);
     if(U) break;//Success, we have enough precision!
     //If we reach here, we need more precision.
     pari_warn(warner, "Increasing precision");
@@ -3048,7 +3048,7 @@ algfdomorder(GEN U){pari_sp top=avma;return gerepilecopy(top, algfdom_get_order(
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit. We can pass C, R, type, and they will be auto-set if passed as 0.
 static GEN
-qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C, GEN R, GEN passes, int type, long prec)
+qalg_fdom(GEN Q, GEN p, int dispprogress, GEN partialset, GEN C, GEN R, GEN passes, int type, long prec)
 {
   pari_sp top=avma, mid;
   GEN tol=qalg_get_tol(Q);
@@ -3104,9 +3104,6 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
   if(!partialset) return gc_NULL(top);//Precision too low
   U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   if(!U) return gc_NULL(top);//Must increase precision
-  
-  FILE *f;
-  if(dumppartial) f=fopen("algfdom_partialdata_log.txt", "w");
 
   mid=avma;
   long pass=0, ooend=0, nsidesp1=lg(gel(U, 1));//How many sides+1; pass tracks which pass we are on
@@ -3144,14 +3141,10 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, int dumppartial, GEN partialset, GEN C
     U=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
     if(!U) return gc_NULL(top);//Must increase precision
     if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
-    if(gcmp(gel(U, 6), areabound)<0){
-      if(dumppartial) fclose(f);
-      return U;
-    }
+    if(gcmp(gel(U, 6), areabound)<0) return U;
     if(pass>1 && (ooend==0 || nsidesp1==lg(gel(U, 1)))) R=gadd(R, epsilon);//Updating R_n
     nsidesp1=lg(gel(U, 1));//How many sides+1
     if(gc_needed(top, 2)) gerepileall(mid, 3, &U, &N, &R);
-    if(dumppartial) pari_fprintf(f, "%Ps\n", gel(U, 1));
   }
 }
 
