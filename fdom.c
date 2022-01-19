@@ -104,7 +104,7 @@ static GEN algd(GEN A, GEN a);
 static GEN voidalgmul(void *A, GEN x, GEN y);
 
 //3: FUNDAMENTAL DOMAIN COMPUTATION
-static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN partialset, GEN C, GEN R, GEN passes, int type, long prec);
+static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, long prec);
 
 //3: HELPER METHODS
 static long algsplitoo(GEN A);
@@ -2855,21 +2855,22 @@ algabsrednorm(GEN A, GEN p, GEN z1, GEN z2, long prec)
   return gerepileupto(top, qalg_absrednormqf(Q, mats, z1, z2, gen_0, prec));
 }
 
-//Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as [Ord, level].
+//Initializes and checks the inputs, and computes the fundamental domain. Can supply constants as 0 or [p, C, R, passes, type]. Any entry that is 0 is auto-set. To use the maximal order in A, pass O as NULL; else pass as a Z-basis of the order.
 GEN
-algfdom(GEN A, GEN O, GEN p, int dispprogress, GEN partialset, GEN constants, long prec)
+algfdom(GEN A, GEN O, int dispprogress, GEN constants, long prec)
 {
   pari_sp top=avma;
   GEN Q, newA=A, U;
   if(!O) Q=qalg_fdominitialize(A, NULL, prec);//Maximal order in A
   else Q=qalg_fdominitialize(A, O, prec);//Supplied Eichler order
-  if(typ(constants)!=t_VEC || lg(constants)<5) constants=zerovec(4);
-  if(gequal0(p)){p=cgetg(3, t_COMPLEX);gel(p, 1)=gen_0;gel(p, 2)=ghalf;}
+  if(typ(constants)!=t_VEC || lg(constants)<6) constants=zerovec(5);
+  GEN p=gel(constants, 1);
+  if(gequal0(p)) p=mkcomplex(gen_0, ghalf);//I/2 is auto-set.
   
   long newprec=prec;
   unsigned int precinc=0;
   for(;;){
-    U=qalg_fdom(Q, p, dispprogress, partialset, gel(constants, 1), gel(constants, 2), gel(constants, 3), itos(gel(constants, 4)), newprec);
+    U=qalg_fdom(Q, p, dispprogress, gel(constants, 2), gel(constants, 3), gel(constants, 4), itos(gel(constants, 5)), newprec);
     if(U) break;//Success, we have enough precision!
     //If we reach here, we need more precision.
     pari_warn(warner, "Increasing precision");
@@ -3048,7 +3049,7 @@ algfdomorder(GEN U){pari_sp top=avma;return gerepilecopy(top, algfdom_get_order(
 
 //Generate the fundamental domain for a quaternion algebra initialized with alginit. We can pass C, R, type, and they will be auto-set if passed as 0.
 static GEN
-qalg_fdom(GEN Q, GEN p, int dispprogress, GEN partialset, GEN C, GEN R, GEN passes, int type, long prec)
+qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, long prec)
 {
   pari_sp top=avma, mid;
   GEN tol=qalg_get_tol(Q);
@@ -3095,12 +3096,10 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, GEN partialset, GEN C, GEN R, GEN pass
     }
   }//Tr_{nf/Q}(nrd(elt));
   
-  GEN U=cgetg(2, t_VEC);
+  GEN U=cgetg(2, t_VEC), partialset;
   gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
-  if(gequal0(partialset)){
-    if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
-    else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);
-  }
+  if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
+  else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);//This may find some elements with large radius, a good start.
   if(!partialset) return gc_NULL(top);//Precision too low
   U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   if(!U) return gc_NULL(top);//Must increase precision

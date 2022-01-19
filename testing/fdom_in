@@ -130,7 +130,7 @@ print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [3, -1]);\\Ramified at 2, 3
-U=algfdom(A, , I/3+5/2);
+U=algfdom(A, , , [I/3+5/2, 0, 0, 0, 0]);
 print(algfdomsignature(U));
 P=algfdompresentation(U);
 print(length(P[1]));
@@ -153,7 +153,7 @@ print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [21, 715]);\\Ramified at 11, 13
-U=algfdom(A, , 3*I-1/4);
+U=algfdom(A, , ,[3*I-1/4, 0, 0, 0, 0]);
 print(algfdomsignature(U));
 P=algfdompresentation(U);
 print(length(P[1]));
@@ -171,7 +171,7 @@ setrand(1);
 F=nfinit(y^2-11);
 setrand(1);
 A=alginit(F, [-2*y + 4, -y - 4]);\\Ramified at one prime above 5
-U=algfdom(A, , I/4+1/3);
+U=algfdom(A, , , [I/4+1/3, 0, 0, 0, 0]);
 print(algfdomsignature(U));
 P=algfdompresentation(U);
 print(length(P[1]));
@@ -194,7 +194,7 @@ print(length(P[1]));
 
 setrand(1);
 A=alginit(F, [-y + 1, -48*y - 111]);\\Ramified above 2
-U=algfdom(A, , I/2);
+U=algfdom(A, , , [I/2, 0, 0, 0, 0]);
 print(algfdomsignature(U));
 P=algfdompresentation(U);
 print(length(P[1]));
