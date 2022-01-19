@@ -55,11 +55,30 @@ if(rpointpass==1, print("Pass random points test"), print("Fail random points te
 
 \\Quaternion algebras
 
+\\For testing if two quaternion algebras were initialized in the same way (precision may differ, but must have same fields, a and b, and maximal ideal. Probably only need to test the splitting field, algb, and the basis, but will do more tests just to be sure.
+equalalg(A, B)={
+  my(LA, LB, KA, KB);
+  if(alghassei(A)!=alghassei(B),print("oo ramification differs");return(0));\\infinite ramification
+  if(algbasis(A)!=algbasis(B),print("Basis differs");return(0));\\Basis
+  if(A[11]!=B[11],print("Traces of basis elements differ");return(0));\\Traces of the basis
+  if(algb(A)!=algb(B),print("b differs");return(0));\\b
+  LA=algsplittingfield(A);
+  LB=algsplittingfield(B);
+  if(LA.pol!=LB.pol,print("a differs");return(0));\\a, from L=K(x^2-a)
+  if(LA.zk!=LB.zk,print("L pseudobasis differs");return(0));\\L pseudobasis
+  KA=LA.nf;
+  KB=LB.nf;
+  if(KA.pol!=KB.pol,print("Centre pol differs");return(0));
+  if(KA.zk!=KB.zk,print("Centre different Z-basis");return(0));
+  print("Equal algebras");
+  return(1);
+}
+
 \\This function tests the following methods:
-\\algelttype, algfdom, algfdomalg, algfdomarea, algfdomsignature, algfdompresentation, algfdomrootgeodesic algfdomword, algmulvec
+\\algelttype, algfdom, algfdomalg, algfdomarea, algfdomsignature, algfdompresentation, algfdomrootgeodesic algfdomword, algmoreprec algmulvec
 \\algfdomminimalcycles is implicitly checked via both algfdompresentation and algfdomsignature.
 testalgfdom(L)={
-  my(errrtol, F, A, U, P, g, word, newg, geod);
+  my(errrtol, F, A, U, Aold, iseq, P, g, word, newg, geod);
   errtol=10^-19;
   for(i=1,#L,
     for(j=1,#L[i][1],
@@ -69,7 +88,9 @@ testalgfdom(L)={
 	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the defualt precision
 	  U=algfdom(A);
 	  if(algfdomorder(U)!=matid(4*F.r1),print("Order is wrong!"));
+	  Aold=A;
 	  A=algfdomalg(U);
+	  iseq=equalalg(A, Aold);
 	  print(algfdomsignature(U));\\Invariant.
 	  P=algfdompresentation(U);
 	  g=algmulvec(A, U[1], vector(5+random(15), k, (2*random(2)-1)*(random(#U[1])+1)));\\Random norm 1 element.
@@ -272,3 +293,60 @@ U=algfdom(A, O1);
 print(algfdomsignature(U));
 P=algfdompresentation(U);
 print(length(P[1]));
+
+\\Some algmoreprec testing
+install("algmoreprec","GLp",,"./libfdom.so");
+
+setrand(1);
+F=nfinit(y^2-33);\\Some fractional a, some both a and b
+setrand(2);
+A=alginit(F, [2, [[idealprimedec(F, 5)[1]], [1]], [0, 1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(2);
+A=alginit(F, [2, [[idealprimedec(F, 7)[1]], [1]], [0, 1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(4);
+A=alginit(F, [2, [[idealprimedec(F, 73)[1]], [1]], [0, 1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 97)[1]], [1]], [0, 1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+
+setrand(1);
+F=nfinit(y^3 - y^2 - 10*y + 8);
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 2)[1], idealprimedec(F, 13)[1]], [1, 1]], [0, 1, 1]]);\\Fractional a
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 2)[1], idealprimedec(F, 17)[1]], [1, 1]], [0, 1, 1]]);\\Fractional b
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+
+setrand(1);
+F=nfinit(y^3 - y^2 - 20*y + 9);
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 2)[1], idealprimedec(F, 5)[1]], [1, 1]], [0, 1, 1]]);\\Fractional b, 3 in denominator
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 2)[1], idealprimedec(F, 7)[1]], [1, 1]], [0, 1, 1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+
+setrand(1);
+F=nfinit(y^4 - 6*y^2 + 4);\\Fractional a
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 11)[1]], [1]], [1,0,1,1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 37)[1]], [1]], [1,0,1,1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+
+setrand(1);
+F=nfinit(y^4 - y^3 - 5*y^2 + 2*y + 4);\\Fractional a and b
+setrand(1);
+A=alginit(F, [2, [[idealprimedec(F, 7)[1]], [1]], [1,0,1,1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(2);
+A=alginit(F, [2, [[idealprimedec(F, 11)[1]], [1]], [1,0,1,1]]);
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision
+setrand(2);
+A=alginit(F, [2, [[idealprimedec(F, 47)[1]], [1]], [1,0,1,1]]);\\Fractional b only
+for(i=1,8,B=algmoreprec(A, i%4);equalalg(A, B));\\Adding 0, 1, 2, 3 precision

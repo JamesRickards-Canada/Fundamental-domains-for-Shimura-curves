@@ -2689,37 +2689,35 @@ algisorder(GEN A, GEN O){
   return gc_int(top, 1);
 }
 
-//Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment=0).
+//Returns the same quaternion algebra, just with more precision. Assumes it currently has prec precision, then adds increment to the precision (or 1 if increment<0. We allow 0 for the purposes of testing).
 GEN
 algmoreprec(GEN A, long increment, long prec)
-{
+{/* TODO When alg_hilbert is updated to allow for denominators, this method can be simplified. */
   pari_sp top=avma;
-  if(increment<=0) increment=1;
+  if(increment<0) increment=1;
   GEN nf=alg_get_center(A);
-  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=nf(sqrt(a))
-  long varn=rnf_get_varn(L);
-  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
-  GEN b=lift(alg_get_b(A));
-  GEN aden=Q_denom(a), bden=Q_denom(b);//When initializing the algebra, PARI insists that a, b have no denominators
-  int nodenom=1;
-  if(!isint1(aden)){
-    nodenom=0;
-    a=gmul(a, gsqr(aden));//We need to get rid of the denominator of a
-    pari_warn(warner,"Changed the value of a, since it had a denominator.");
+  GEN rnf=alg_get_splittingfield(A);
+  GEN aut=alg_get_aut(A);
+  GEN hi=alg_get_hasse_i(A);
+  GEN hf=alg_get_hasse_f(A);
+  GEN b=alg_get_b(A);//The basic data
+  long newprec=prec+increment;//The new precision
+  GEN newnf=nfinit(nf_get_pol(nf), newprec);//Recompile the number field
+  GEN newrnf=rnfinit(newnf, rnf_get_pol(rnf));//Recompile the rnf
+  GEN bden=Q_denom(lift(b));
+  GEN Anew;//The new algebra.
+  
+  if(!isint1(bden)){//b has a denominator. We use alg_complete, but this MAY change the value of b, so we run it until it does not.
+    do{
+      Anew=alg_complete(newrnf, aut, hf, hi, 1);//Remake the algebra.
+    }while(!gequal(alg_get_b(Anew), b));//Sometimes this changes b, so we loop until it doesn't.
   }
-  if(!isint1(bden)){
-    nodenom=0;
-    b=gmul(b, gsqr(bden));//We need to get rid of the denominator of b
-    pari_warn(warner,"Changed the value of a, since it had a denominator.");
-  }
-  long newprec=prec+increment;
-  GEN newnf=nfinit(nf_get_pol(nf), newprec);
-  GEN Anew=alginit(newnf, mkvec2(a, b), -1, 1);//The new algebra. 
-  if(!nodenom) return gerepileupto(top, Anew);//We updated a and b, so nothing more to do.
+  else Anew=alg_cyclic(newrnf, aut, b, 1);//Initialize with alg_cyclic
+  
   GEN basis_want=alg_get_basis(A);
   GEN basis_dontwant=alg_get_invbasis(Anew);
   GEN basis_change=RgM_mul(basis_dontwant, basis_want);
-  Anew=alg_changeorder(Anew, basis_change);
+  Anew=alg_changeorder(Anew, basis_change);//Correct the basis to the old one
   return gerepileupto(top, Anew);
 }
 
