@@ -2144,12 +2144,12 @@ minimalcycles_bytype(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), G
     trd=elttrace(data, g);//The trace
     if(gequal(trd, gen_2) || gequal(trd, gen_m2)){types[i]=0;continue;}//Parabolic cycle.
     long ord=1;
-    GEN gpow=g;
+    GEN gpower=g;
     do{//Finding the order of g
       ord++;
-      gpow=eltmul(data, g, gpow);
+      gpower=eltmul(data, g, gpower);
     }
-    while(!istriv(data, gpow));
+    while(!istriv(data, gpower));
     types[i]=ord;
   }
   GEN ordering=vecsmall_indexsort(types);
@@ -2660,16 +2660,16 @@ algd(GEN A, GEN a)
 int
 algelttype(GEN A, GEN g){
   pari_sp top=avma;
-  GEN gtrace=lift(algtrace(A, g, 0));//The trace of g. g is only parabolic if g==+/-2
-  if(gequal(gtrace, gen_2) || gequal(gtrace, gen_m2)) return gc_int(top, 0);//Parabolic
-  if(gequal0(gtrace)) return gc_int(top, -1);//Elliptic
+  GEN gtr=lift(algtrace(A, g, 0));//The trace of g. g is only parabolic if g==+/-2
+  if(gequal(gtr, gen_2) || gequal(gtr, gen_m2)) return gc_int(top, 0);//Parabolic
+  if(gequal0(gtr)) return gc_int(top, -1);//Elliptic
   
   //Now we have to find the trace with respect to the unramified location;
   long split=algsplitoo(A);//oo split place
-  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K). gtrace lives in K.
+  GEN K=alg_get_center(A);//The centre, i.e K where A=(a,b/K). gtr lives in K.
   long Kvar=nf_get_varn(K);//Variable number for K
   GEN Kroot=gel(nf_get_roots(K), split);
-  GEN greal=gsubst(gtrace, Kvar, Kroot);
+  GEN greal=gsubst(gtr, Kvar, Kroot);
   if(gcmp(greal, gen_2)<0 && gcmp(greal, gen_m2)>0) return gc_int(top, -1);//Elliptic. No need for tolerance here, will not equal 2 unless exactly.
   return gc_int(top, 1);//Hyperbolic
 }
