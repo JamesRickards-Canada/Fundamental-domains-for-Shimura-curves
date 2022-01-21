@@ -541,7 +541,7 @@ smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int al
   for(long i=1;i<lp;i++) gel(pposs_nm, i)=subis(gel(pposs, i), 1);//The norms
   long par=(n-1)%2, ind=0;//The parity of the number of prime divisors we need.
   GEN pro=gen_1;
-  while(cmpii(pro, pDmax)==-1 && ind<lp){//ind keeps track of the maximal number of prime divisors we can take
+  while(cmpii(pro, pDmax)<0 && ind<lp-1){//ind keeps track of the maximal number of prime divisors we can take
     ind++;
     pro=mulii(pro, gel(pposs_nm, ind));
   }
