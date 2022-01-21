@@ -14,8 +14,10 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	\\addhelp(mobius,"Inputs M, c: a 2x2 matrix M, and a circle/line/arc/segment c.\n This returns M(c), where M acts as a Mobius map.");
 
 \\Visualization
-	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods:\n python_plotviewer, python_printarcs, python_printfdom.");
-	
+	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods:\n fdom_latex, python_plotviewer, python_printarcs, python_printfdom.");
+
+	install("fdom_latex","vGrD1,L,D1,L,D1,L,p", ,"./libfdom.so");
+	addhelp(fdom_latex,"Inputs: U, filename, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain U to a LaTeX document in plots/build/filename.tex. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only).");
 	install("python_plotviewer","vr","python_plotviewer","./libfdom.so");
 	addhelp(python_plotviewer,"Input S: string denoting the file names of data fundamental domains/geodesics.\n Launches the python file fdviewer.py to view the domain/geodesics. Enter the files separated by spaces (they must be stored in the sub-folder 'fdoms').");
 	install("python_printarcs","vGrD0,L,Drp","python_printarcs","./libfdom.so");

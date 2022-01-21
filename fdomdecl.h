@@ -134,6 +134,7 @@ algfdom_get_order(GEN U){return qalg_get_order(algfdom_get_qalg(U));}
 
 
 //SECTION 1: GEOMETRY METHODS
+void fdom_latex(GEN U, char *filename, int boundcircle, int compile, int open, long prec);
 void python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec);
 void python_plotviewer(char *input);
 void python_printfdom(GEN U, char *filename, long prec);

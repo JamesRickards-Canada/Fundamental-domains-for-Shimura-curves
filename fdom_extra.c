@@ -114,6 +114,79 @@ python_printfdom(GEN U, char *filename, long prec)
 }
 
 
+//Prints the fundamental domain to a latex file.
+void
+fdom_latex(GEN U, char *filename, int boundcircle, int compile, int open, long prec){
+  pari_sp top=avma;
+  GEN width=dbltor(6.0);//Width of the picture in inches.
+  GEN radius=gdivgs(width, 2);//Circle radius
+  if(!pari_is_dir("plots/build")){//Checking the directory
+      int s=system("mkdir -p plots/build");
+      if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *plotmake=pari_sprintf("plots/build/%s.tex", filename);
+  FILE *f=fopen(plotmake, "w");
+  pari_free(plotmake);
+  pari_fprintf(f, "\\documentclass{standalone}\n\\usepackage{pgf}\n\\standaloneenv{pgfpicture}\n");//Initial things
+  pari_fprintf(f, "%%Constants: update these to your liking\n%%Colours\n\\definecolor{background}{rgb}{1,1,1}%%White\n");//Some constants
+  pari_fprintf(f, "\\definecolor{circle_edge}{rgb}{0,0,1}%%Blue\n\\definecolor{fdom_edge}{rgb}{0,0.5,0}%%Green\n");
+  pari_fprintf(f, "\\definecolor{fdom_fill}{rgb}{0.85,0.85,0.85}%%Grey\n%%Lengths\n");
+  pari_fprintf(f, "\\def\\circlewidth{0.02in}\n\\def\\fdomwidth{0.02in}\n\n\\begin{document}\n\\begin{pgfpicture}\n");
+  //Start with the background
+  pari_fprintf(f, "%%Background\n\\pgfsetfillcolor{background}\n\\pgfpathrectangle{\\pgfpoint{-%P.8fin-0.5*\\circlewidth}{-%P.8fin-0.5*\\circlewidth}}{\\pgfpoint{%P.8fin+\\circlewidth}{%P.8fin+\\circlewidth}}\n\\pgfusepath{fill}\n\n", radius, radius, width, width);
+  
+  //The circle
+  if(!boundcircle) pari_fprintf(f,"\\iffalse\n");
+  pari_fprintf(f, "%%Circle\n\\begin{pgfscope}\n\\pgfsetlinewidth{\\circlewidth}\n\\pgfsetstrokecolor{circle_edge}\n");//Starting it
+  pari_fprintf(f, "\\pgfpathmoveto{\\pgfpoint{%P.8fin}{0}}\n\\pgfpatharc{0}{360}{%P.8fin}\n", radius, radius);//The circle
+  pari_fprintf(f, "\\pgfpathclose\n\\pgfusepath{stroke}\n\\end{pgfscope}\n");
+  if(!boundcircle) pari_fprintf(f,"\\fi\n");
+  
+  //Fundamental domain
+  pari_fprintf(f, "\n%%Fundamental domain\n\\begin{pgfscope}\n\\pgfsetroundjoin %%Rounded intersections\n");
+  pari_fprintf(f, "\\pgfsetlinewidth{\\fdomwidth}\n\\pgfsetstrokecolor{fdom_edge}\n\\pgfsetfillcolor{fdom_fill}\n");
+  GEN circles=gel(U, 2);
+  GEN vertices=gel(U, 3);
+  long nsides=lg(circles)-1;
+  GEN first=gel(gel(U, 3), nsides);//The lower point on the first arc.
+  pari_fprintf(f, "\\pgfpathmoveto{\\pgfqpoint{%P.8fin}{%P.8fin}}\n", gmul(greal(first), radius), gmul(gimag(first), radius));//First point
+  GEN ascale=gdivsg(180, mppi(prec));//Radian to degrees
+  GEN lastv=first;
+  for(long i=1;i<=nsides;i++){//Each arc
+    GEN arc=gel(circles, i);
+	GEN nextv=gel(vertices, i);
+	GEN centre=gel(arc, 1);
+	GEN ang1=garg(gsub(lastv, centre), prec);
+	GEN ang2=garg(gsub(nextv, centre), prec);
+	if(gcmp(ang1, ang2)<0) ang1=gadd(ang1,Pi2n(1, prec));
+    pari_fprintf(f, "\\pgfpatharc{%P.8f}{%P.8f}{%P.8fin}\n", gmul(ang1, ascale), gmul(ang2, ascale), gmul(gel(arc, 2), radius));
+    lastv=nextv;//Updating the previous vertex.
+  }
+  pari_fprintf(f, "\\pgfpathclose\n\\pgfusepath{stroke, fill}\n\\end{pgfscope}\n");
+  
+  //End
+  pari_fprintf(f, "\\end{pgfpicture}\n\\end{document}");
+  fclose(f);
+  if(!compile){set_avma(top);return;}
+  
+  //Compile and open
+  char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s.tex)", filename);//Build
+  int s=system(line);
+  if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  pari_free(line);
+  line=pari_sprintf("mv -f ./plots/build/%s.pdf ./plots/", filename);//Move the file
+  s=system(line);
+  if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  pari_free(line);
+  if(open){
+    line=pari_sprintf("cmd.exe /C start plots/%s.pdf", filename);//Open the file
+    s=system(line);
+    if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+    pari_free(line);
+  }
+  set_avma(top);
+}
+
 
 //SECTION 2: QUATERNIONIC METHODS
 
@@ -511,6 +584,7 @@ smallalgebras_area(GEN nf, GEN Amin, GEN Amax, int retD, int maxcomptime, int al
   GEN Discs=gerepileupto(top, sort(vec_shorten(Ds, Dsind)));//The discriminants.
   if(retD) return Discs;
   long lD=lg(Discs), sind=1;
+  if(lD==1) return gerepilecopy(top, mkvec2(cgetg(1, t_VEC), cgetg(1, t_VEC)));
   GEN Alist=vectrunc_init(lD), Dlist=vectrunc_init(lD);
   if(equali1(gel(Discs, 1))) sind=2;//We don't allow D=1, since this does not work with algshimura_ab.
   for(long i=sind;i<lD;i++){
