@@ -44,9 +44,8 @@ python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec
     int s=system("mkdir -p fdoms");
     if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY fdoms");
   }
-  char *fullfile=pari_sprintf("fdoms/%s.dat", filename);
-  FILE *f=fopen(fullfile, "w");
-  pari_free(fullfile);//Now we have created the output file f.
+  char *fullfile=stack_sprintf("fdoms/%s.dat", filename);
+  FILE *f=fopen(fullfile, "w");//Now we have created the output file f.
   GEN arc, fact=gdiv(stoi(180), mppi(prec));//fact=180/Pi
   for(long i=1;i<lg(arcs);i++){
     arc=gel(arcs, i);
@@ -61,10 +60,9 @@ python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec
   fclose(f);
   if(view==1){
     char *line;
-    if(extrainput==NULL) line=pari_sprintf("%s", filename);
-    else line=pari_sprintf("%s %s", extrainput, filename);
+    if(extrainput==NULL) line=stack_sprintf("%s", filename);
+    else line=stack_sprintf("%s %s", extrainput, filename);
     python_plotviewer(line);
-    pari_free(line);
   }
   set_avma(top);
 }
@@ -73,11 +71,12 @@ python_printarcs(GEN arcs, char *filename, int view, char *extrainput, long prec
 void
 python_plotviewer(char *input)
 {
+  pari_sp top=avma;
   char *command;
-  command=pari_sprintf("cmd.exe /C start py fdviewer.py %s", input);
+  command=stack_sprintf("cmd.exe /C start py fdviewer.py %s", input);
   int s=system(command);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-  pari_free(command);
+  set_avma(top);
 }
 
 //Writes the fundamental domain corresponding to U
@@ -89,9 +88,8 @@ python_printfdom(GEN U, char *filename, long prec)
     int s=system("mkdir -p fdoms");
     if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY fdoms");
   }
-  char *fullfile=pari_sprintf("fdoms/%s.dat", filename);
-  FILE *f=fopen(fullfile, "w");
-  pari_free(fullfile);//Now we have created the output file f.
+  char *fullfile=stack_sprintf("fdoms/%s.dat", filename);
+  FILE *f=fopen(fullfile, "w");//Now we have created the output file f.
   GEN pair=gel(U, 7);
   pari_fprintf(f, "%d", pair[1]);
   for(long i=2;i<lg(pair);i++) pari_fprintf(f, " %d", pair[i]);//Print side pairing.
@@ -124,9 +122,8 @@ fdom_latex(GEN U, char *filename, int boundcircle, int compile, int open, long p
       int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
   }
-  char *plotmake=pari_sprintf("plots/build/%s.tex", filename);
+  char *plotmake=stack_sprintf("plots/build/%s.tex", filename);
   FILE *f=fopen(plotmake, "w");
-  pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{standalone}\n\\usepackage{pgf}\n\\standaloneenv{pgfpicture}\n");//Initial things
   pari_fprintf(f, "%%Constants: update these to your liking\n%%Colours\n\\definecolor{background}{rgb}{1,1,1}%%White\n");//Some constants
   pari_fprintf(f, "\\definecolor{circle_edge}{rgb}{0,0,1}%%Blue\n\\definecolor{fdom_edge}{rgb}{0,0.5,0}%%Green\n");
@@ -170,19 +167,16 @@ fdom_latex(GEN U, char *filename, int boundcircle, int compile, int open, long p
   if(!compile){set_avma(top);return;}
   
   //Compile and open
-  char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s.tex)", filename);//Build
+  char *line=stack_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s.tex)", filename);//Build
   int s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-  pari_free(line);
-  line=pari_sprintf("mv -f ./plots/build/%s.pdf ./plots/", filename);//Move the file
+  line=stack_sprintf("mv -f ./plots/build/%s.pdf ./plots/", filename);//Move the file
   s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-  pari_free(line);
   if(open){
-    line=pari_sprintf("cmd.exe /C start plots/%s.pdf", filename);//Open the file
+    line=stack_sprintf("cmd.exe /C start plots/%s.pdf", filename);//Open the file
     s=system(line);
     if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-    pari_free(line);
   }
   set_avma(top);
 }
@@ -735,9 +729,8 @@ enum_bestC_range(GEN Aset, GEN p, GEN scale, long ntrials, long mintesttime, cha
     int s=system("mkdir -p plots/build");
     if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
   }
-  char *fname_full=pari_sprintf("plots/build/%s.dat", fname);
+  char *fname_full=stack_sprintf("plots/build/%s.dat", fname);
   FILE *f=fopen(fname_full, "w");
-  pari_free(fname_full);
   pari_fprintf(f, "x y rsqr\n");
 
   GEN nf=alg_get_center(gel(Aset, 1));
@@ -799,9 +792,8 @@ enum_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata, int isArange)
       int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
   }
-  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fdata);
+  char *plotmake=stack_sprintf("plots/build/%s_plotter.tex", fdata);
   FILE *f=fopen(plotmake, "w");
-  pari_free(plotmake);
   long invpower;
   if(isArange) invpower=2*n;
   else invpower=n;
@@ -895,9 +887,8 @@ enum_successrate_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long Ntes
       int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
     }
-    char *fname_full=pari_sprintf("plots/build/%s.dat", fname);
+    char *fname_full=stack_sprintf("plots/build/%s.dat", fname);
     FILE *f=fopen(fname_full, "w");
-    pari_free(fname_full);
     pari_fprintf(f, "x y\n");
     for(long i=1;i<=ntrials;i++) pari_fprintf(f, "%Pf %Pd\n", gcoeff(Cmat, 2, i), gel(found, i));
     fclose(f);
@@ -943,9 +934,8 @@ enum_successrate_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata, int WSL)
       int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
   }
-  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fdata);
+  char *plotmake=stack_sprintf("plots/build/%s_plotter.tex", fdata);
   FILE *f=fopen(plotmake, "w");
-  pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
   pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
   pari_fprintf(f, "[xlabel=C, ylabel=Elements found,\n");
@@ -1018,9 +1008,8 @@ enum_time_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long mintesttime
       int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
     }
-    char *fdata_full=pari_sprintf("plots/build/%s.dat", fdata);
+    char *fdata_full=stack_sprintf("plots/build/%s.dat", fdata);
     FILE *f=fopen(fdata_full, "w");
-    pari_free(fdata_full);
     pari_fprintf(f, "x y\n");
     for(long i=1;i<=ntrials;i++) pari_fprintf(f, "%Pf %Pf\n", gel(Clist, i), gel(times, i));
     fclose(f);
@@ -1048,9 +1037,8 @@ enum_time_plot(GEN A, GEN reg, GEN Cmin, GEN Cmax, char *fdata)
   }
   GEN nf=alg_get_center(A);
   long n=nf_get_degree(nf);
-  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fdata);
+  char *plotmake=stack_sprintf("plots/build/%s_plotter.tex", fdata);
   FILE *f=fopen(plotmake, "w");
-  pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
   pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
   pari_fprintf(f, "[xlabel=C, ylabel=Time,\n");
@@ -1139,9 +1127,8 @@ enum_timeforNelts_range(GEN A, GEN p, GEN Cmin, GEN Cmax, long ntrials, long nel
     int s=system("mkdir -p plots/build");
     if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
   }
-  char *fname_full=pari_sprintf("plots/build/%s.dat", fname);
+  char *fname_full=stack_sprintf("plots/build/%s.dat", fname);
   FILE *f=fopen(fname_full, "w");
-  pari_free(fname_full);
   if(ntrials<=1) ntrials=2;
   GEN Clist=cgetg(ntrials+1, t_VEC);
   GEN C=Cmin;
@@ -1198,9 +1185,8 @@ enum_timeforNelts_plot(GEN A, GEN bestC, double bestC_val, char *fname)
       int s=system("mkdir -p plots/build");
       if(s==-1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
   }
-  char *plotmake=pari_sprintf("plots/build/%s_plotter.tex", fname);
+  char *plotmake=stack_sprintf("plots/build/%s_plotter.tex", fname);
   FILE *f=fopen(plotmake, "w");
-  pari_free(plotmake);
   pari_fprintf(f, "\\documentclass{article}\n\\usepackage{pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
   pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fname);
   pari_fprintf(f, "[xlabel=C, ylabel=t (s),\n");
@@ -1426,19 +1412,16 @@ void
 plot_compile(char *fname, int WSL)
 {
   pari_sp top=avma;
-  char *line=pari_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter.tex)", fname);//Build
+  char *line=stack_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter.tex)", fname);//Build
   int s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-  pari_free(line);
-  line=pari_sprintf("mv -f ./plots/build/%s.pdf ./plots/", fname);//Move the file
+  line=stack_sprintf("mv -f ./plots/build/%s.pdf ./plots/", fname);//Move the file
   s=system(line);
   if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-  pari_free(line);
   if(WSL){
-    line=pari_sprintf("cmd.exe /C start plots/%s.pdf", fname);//Open the file
+    line=stack_sprintf("cmd.exe /C start plots/%s.pdf", fname);//Open the file
     s=system(line);
     if(s==-1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
-    pari_free(line);
   }
   set_avma(top);
 }
