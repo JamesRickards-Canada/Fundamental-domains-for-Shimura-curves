@@ -33,8 +33,11 @@ POSSIBLE FUTURE ADDITIONS:
 
 //STATIC DECLARATIONS
 
-//INFINITY 
+//1: INFINITY 
 static GEN divoo(GEN a, GEN b);
+
+//1: LISTS
+static long gen_search_old(GEN T, GEN x, long flag, void *data, int (*cmp)(void*, GEN, GEN));
 
 //1: SHORT VECTORS IN LATTICES
 static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
@@ -165,6 +168,24 @@ vecsmalllist_append(GEN v, long *vind, long *vlen, long x){
   *vind=*vind+1;
   v[*vind]=x;
   return v;
+}
+
+//The old version of gen_search, with the flag.
+static long
+gen_search_old(GEN T, GEN x, long flag, void *data, int (*cmp)(void*, GEN, GEN))
+{
+  long u = lg(T)-1, i, l, s;
+
+  if (!u) return flag? 1: 0;
+  l = 1;
+  do
+  {
+    i = (l+u)>>1; s = cmp(data, x, gel(T,i));
+    if (!s) return flag? 0: i;
+    if (s<0) u=i-1; else l=i+1;
+  } while (u>=l);
+  if (!flag) return 0;
+  return (s<0)? i: i+1;
 }
 
 
@@ -1099,7 +1120,7 @@ edgepairing(GEN U, GEN tol, int rboth, long prec)
     ind1=i;
     vim=mat_eval(gmael(U, 5, i), gmael(U, 3, ind1));//The new vertex
     vimang=shiftangle(garg(vim, prec), baseangle, tol, prec);//The new angle
-    i1=gen_search(vangles, vimang, 0, &toldata, &tolcmp_sort);
+    i1=gen_search_old(vangles, vimang, 0, &toldata, &tolcmp_sort);
     if(i1!=0) if(!toleq(vim, gmael(U, 3, i1), tol, prec)) i1=0;//Just because the angles are equal, the points don't have to be (though this occurence is expected to be extremely rare).
     if(i==1) ind2=lU-1;
     else ind2=i-1;//The two vertices of the side, this is the second one
@@ -1115,7 +1136,7 @@ edgepairing(GEN U, GEN tol, int rboth, long prec)
     }
     else{//ind1 not paired
       vimang=shiftangle(garg(vim, prec), baseangle, tol, prec);//The second new angle
-      i2=gen_search(vangles, vimang, 0, &toldata, &tolcmp_sort);
+      i2=gen_search_old(vangles, vimang, 0, &toldata, &tolcmp_sort);
       if(i2!=0) if(!toleq(vim, gmael(U, 3, i2), tol, prec)) i2=0;//Just because the angles are equal, the points don't have to be (though this occurence is expected to be extremely rare).
       if(i2!=0) vectrunc_append(unpair, mkvecsmall2(i, ind1));//First vtx not paired
        else vectrunc_append(unpair, mkvecsmall3(i, ind1, ind2));//Neither vtx paired
@@ -1903,7 +1924,7 @@ normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec)
   pari_sp top=avma;
   int outside;
   GEN ang=shiftangle(garg(z, prec), gmael(U, 4, 1), tol, prec);//Shifting to base angle
-  long ind=gen_search(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
+  long ind=gen_search_old(gel(U, 4), ang, 1, NULL, &gcmp_strict);//Index to put z. We ONLY need to search for this cicle.
   if(ind==lgU1) ind=1;//Insert at the end means the first circle.
   GEN circle=gmael(U, 2, ind);
   if(gequal0(circle)) return gc_int(top, -1);//Intersects with the edge of the unit disc.
@@ -2541,7 +2562,7 @@ atanoo(GEN x, long prec)
   return gatan(x, prec);
 }
 
-//Returns gcmp(x, y), except if x==y, returns -1. Useful for gen_search when you ALWAYS want to return the index where it should be inserted/is
+//Returns gcmp(x, y), except if x==y, returns -1. Useful for gen_search_old when you ALWAYS want to return the index where it should be inserted/is
 static int
 gcmp_strict(void *data, GEN x, GEN y)
 {
@@ -3093,7 +3114,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, lo
       gcoeff(nformpart, i, j)=nftrace(nf, gcoeff(nformpart, i, j));//Taking the trace to Q
     }
   }//Tr_{nf/Q}(nrd(elt));
-  
+
   GEN U=cgetg(2, t_VEC), partialset;
   gel(U, 1)=cgetg(1, t_VEC);//Setting U=[[]], so that the first time normalizedbasis is called, it works
   if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
