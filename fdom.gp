@@ -17,9 +17,9 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Shimu
 	addhelp(vfd,"These methods allow one to save fundamental domains and geodesics, and view them with a Python program. Available methods:\n fdom_latex, python_plotviewer, python_printarcs, python_printfdom.");
 
 	install("fdom_latex","vGrD1,L,D1,L,D1,L,p", ,"./libfdom.so");
-	addhelp(fdom_latex,"Inputs: U, filename, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain U to a LaTeX document in plots/build/filename.tex. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only).");
+	addhelp(fdom_latex,"Inputs: U, filename, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain U to a LaTeX document in plots/build/filename.tex. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra.");
 	install("python_plotviewer","vr","python_plotviewer","./libfdom.so");
-	addhelp(python_plotviewer,"Input S: string denoting the file names of data fundamental domains/geodesics.\n Launches the python file fdviewer.py to view the domain/geodesics. Enter the files separated by spaces (they must be stored in the sub-folder 'fdoms').");
+	addhelp(python_plotviewer,"Input S: string denoting the file names of data fundamental domains/geodesics.\n Launches the python file fdviewer.py to view the domain/geodesics. Enter the files separated by spaces (they must be stored in the sub-folder 'fdoms'). matplotlib and numpy must be installed.");
 	install("python_printarcs","vGrD0,L,Drp","python_printarcs","./libfdom.so");
 	addhelp(python_printarcs,"Inputs arcs, filename, {view=0}, {extrainput=NULL}: a set of arcs arcs, string filename, view=0, 1, and extrainput=NULL or a string.\n Prints the arcs specified by arcs to the file fdoms/filename.dat, ready for plotviewer. If view=1, calls plotviewer with the additional input of extrainput if you want to include other arcs/fundamental domains.");
 	install("python_printfdom","vGrp","python_printfdom","./libfdom.so");
