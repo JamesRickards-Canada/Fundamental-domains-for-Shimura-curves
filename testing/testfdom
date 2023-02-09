@@ -1,7 +1,7 @@
 #Call ./testing/testfdom from one directory up to test the fundamental domain methods. fdom_in is the tests, fdom_out is the results
 
 #Update this to where your pari is installed.
-paridir=/mnt/c/ProgrammingLanguages/Linux/pari/
+paridir=/mnt/c/Users/JAMES/Documents/ProgrammingLanguages/pari
 
 trap exit 2
 testlist=fdom
