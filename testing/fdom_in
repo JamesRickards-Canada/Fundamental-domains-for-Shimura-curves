@@ -85,7 +85,7 @@ testalgfdom(L)={
       F=nfinit(L[i][1][j]);
 	  A=alginit(F, L[i][2][j]);
 	  printf("%Pd\n", algnormdisc(A));
-	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the defualt precision
+	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the default precision
 	  U=algfdom(A);
 	  if(algfdomorder(U)!=matid(4*F.r1),print("Order is wrong!"));
 	  Aold=A;

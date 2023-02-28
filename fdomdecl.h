@@ -128,7 +128,8 @@ INLINE GEN algfdom_get_alg(GEN U){return qalg_get_alg(algfdom_get_qalg(U));}
 INLINE GEN
 algfdom_get_order(GEN U){return qalg_get_order(algfdom_get_qalg(U));}
 
-
+//EXTRA
+GEN alg_changeorder(GEN al, GEN ord);
 
 //FDOM_EXTRA METHODS
 

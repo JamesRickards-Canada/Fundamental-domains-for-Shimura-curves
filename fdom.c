@@ -115,6 +115,14 @@ static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
 static GEN qalg_basis_conj(GEN Q, GEN x);
 
 
+//EXTRA
+static GEN elementabsmultable(GEN mt, GEN x);
+static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
+static GEN algbasismultable(GEN al, GEN x);
+static GEN algtracebasis(GEN al);
+static GEN elementabsmultable_Z(GEN mt, GEN x);
+static GEN FpM_trace(GEN x, GEN p);
+static GEN ZM_trace(GEN x);
 
 //SECTION 1: BASE METHODS
 
@@ -3504,5 +3512,123 @@ qalg_istriv(GEN data, GEN x)
   if(!gequal1(gel(x, 1)) && !gequalm1(gel(x, 1))) return 0;
   for(long i=2;i<lg(x);i++) if(!gequal0(gel(x, i))) return 0;
   return 1;
+}
+
+
+
+//EXTRA STUFF
+
+static GEN elementabsmultable(GEN mt, GEN x);
+static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
+static GEN algbasismultable(GEN al, GEN x);
+static GEN algtracebasis(GEN al);
+
+//Here because it was deleted from libpari
+GEN
+alg_changeorder(GEN al, GEN ord)
+{
+  GEN al2, mt, iord, mtx;
+  long i, n;
+  pari_sp av = avma;
+
+  if (!gequal0(gel(al,10)))
+    pari_err_DOMAIN("alg_changeorder","characteristic","!=",gen_0,gel(al,10));
+  n = alg_get_absdim(al);
+
+  iord = QM_inv(ord);
+  al2 = shallowcopy(al);
+
+  gel(al2,7) = RgM_mul(gel(al2,7), ord);
+
+  gel(al2,8) = RgM_mul(iord, gel(al,8));
+
+  mt = cgetg(n+1,t_VEC);
+  gel(mt,1) = matid(n);
+  for (i=2; i<=n; i++) {
+    mtx = algbasismultable(al,gel(ord,i));
+    gel(mt,i) = RgM_mul(iord, RgM_mul(mtx, ord));
+  }
+  gel(al2,9) = mt;
+
+  gel(al2,11) = algtracebasis(al2);
+
+  return gerepilecopy(av,al2);
+}
+
+static GEN
+elementabsmultable(GEN mt, GEN x)
+{
+  GEN d, z = elementabsmultable_Z(mt, Q_remove_denom(x,&d));
+  return (z && d)? ZM_Z_div(z, d): z;
+}
+static GEN
+elementabsmultable_Fp(GEN mt, GEN x, GEN p)
+{
+  GEN z = elementabsmultable_Z(mt, x);
+  return z? FpM_red(z, p): z;
+}
+static GEN
+algbasismultable(GEN al, GEN x)
+{
+  pari_sp av = avma;
+  GEN z, p = alg_get_char(al), mt = alg_get_multable(al);
+  z = signe(p)? elementabsmultable_Fp(mt, x, p): elementabsmultable(mt, x);
+  if (!z)
+  {
+    long D = lg(mt)-1;
+    set_avma(av); return zeromat(D,D);
+  }
+  return gerepileupto(av, z);
+}
+
+static GEN
+algtracebasis(GEN al)
+{
+  pari_sp av = avma;
+  GEN mt = alg_get_multable(al), p = alg_get_char(al);
+  long i, l = lg(mt);
+  GEN v = cgetg(l, t_VEC);
+  if (signe(p)) for (i=1; i < l; i++) gel(v,i) = FpM_trace(gel(mt,i), p);
+  else          for (i=1; i < l; i++) gel(v,i) = ZM_trace(gel(mt,i));
+  return gerepileupto(av,v);
+}
+
+static GEN
+elementabsmultable_Z(GEN mt, GEN x)
+{
+  long i, l = lg(x);
+  GEN z = NULL;
+  for (i = 1; i < l; i++)
+  {
+    GEN c = gel(x,i);
+    if (signe(c))
+    {
+      GEN M = ZM_Z_mul(gel(mt,i),c);
+      z = z? ZM_add(z, M): M;
+    }
+  }
+  return z;
+}
+
+static GEN
+FpM_trace(GEN x, GEN p)
+{
+  long i, lx = lg(x);
+  GEN t;
+  if (lx < 3) return lx == 1? gen_0: gcopy(gcoeff(x,1,1));
+  t = gcoeff(x,1,1);
+  for (i = 2; i < lx; i++) t = Fp_add(t, gcoeff(x,i,i), p);
+  return t;
+}
+
+static GEN
+ZM_trace(GEN x)
+{
+  long i, lx = lg(x);
+  GEN t;
+  if (lx < 3) return lx == 1? gen_0: gcopy(gcoeff(x,1,1));
+  t = gcoeff(x,1,1);
+  for (i = 2; i < lx; i++) t = addii(t, gcoeff(x,i,i));
+  return t;
 }
 
