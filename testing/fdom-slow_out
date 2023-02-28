@@ -94,4 +94,22 @@ Passed word test
 Equal algebras
 [2, Vecsmall([3, 3, 5, 5]), 0]
 Passed word test
+Mat(5)
+[0, Vecsmall([2, 2]), 2]
+3
+Mat(97)
+[7, Vecsmall([2, 2, 3, 3]), 2]
+19
+Mat(120)
+[17, Vecsmall([]), 16]
+50
+Mat(2)
+[31, Vecsmall([]), 0]
+62
+[5, 1; 0, 1]
+[15, Vecsmall([]), 0]
+30
+[33, 14, 5; 0, 1, 0; 0, 0, 1]
+[21, Vecsmall([]), 0]
+42
 Total time spent: 7397
