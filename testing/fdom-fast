@@ -1,11 +1,11 @@
-#Call ./testing/fdom-slow from one directory up to test the fundamental domain methods. fdom-slow_in is the tests, fdom-slow_out is the results
+#Call ./testing/fdom-fast from one directory up to test the fundamental domain methods. fdom-fast_in is the tests, fdom-fast_out is the results
 #Do not add _ to the testing method name, it will mess things up.
 
 #Update this to where your pari is installed.
 paridir=/mnt/c/Users/JAMES/Documents/ProgrammingLanguages/pari
 
 trap exit 2
-testlist=fdom-slow
+testlist=fdom-fast
 testdir=./testing
 
 if (tail -n 1 $0 >/dev/null 2>&1); then

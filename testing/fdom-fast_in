@@ -1,0 +1,133 @@
+\r fdom;
+
+\\For testing if two quaternion algebras were initialized in the same way (precision may differ, but must have same fields, a and b, and maximal ideal. Probably only need to test the splitting field, algb, and the basis, but will do more tests just to be sure.
+equalalg(A, B)={
+  my(LA, LB, KA, KB);
+  if(alghassei(A)!=alghassei(B),print("oo ramification differs");return(0));\\infinite ramification
+  if(algbasis(A)!=algbasis(B),print("Basis differs");return(0));\\Basis
+  if(A[11]!=B[11],print("Traces of basis elements differ");return(0));\\Traces of the basis
+  if(algb(A)!=algb(B),print("b differs");return(0));\\b
+  LA=algsplittingfield(A);
+  LB=algsplittingfield(B);
+  if(LA.pol!=LB.pol,print("a differs");return(0));\\a, from L=K(x^2-a)
+  if(LA.zk!=LB.zk,print("L pseudobasis differs");return(0));\\L pseudobasis
+  KA=LA.nf;
+  KB=LB.nf;
+  if(KA.pol!=KB.pol,print("Centre pol differs");return(0));
+  if(KA.zk!=KB.zk,print("Centre different Z-basis");return(0));
+  print("Equal algebras");
+  return(1);
+}
+
+testalgfdom(L)={
+  my(errrtol, F, A, U, Aold, iseq, P, g, word, newg, geod);
+  errtol=10^-19;
+  for(i=1,#L,
+    for(j=1,#L[i][1],
+      F=nfinit(L[i][1][j]);
+	  A=alginit(F, L[i][2][j]);
+	  printf("%Pd\n", algnormdisc(A));
+	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the default precision
+	  U=algfdom(A);
+	  if(algfdomorder(U)!=matid(4*F.r1),print("Order is wrong!"));
+	  Aold=A;
+	  A=algfdomalg(U);
+	  iseq=equalalg(A, Aold);
+	  print(algfdomsignature(U));\\Invariant.
+	  P=algfdompresentation(U);
+	  g=algmulvec(A, U[1], vector(5+random(15), k, (2*random(2)-1)*(random(#U[1])+1)));\\Random norm 1 element.
+	  word=algfdomword(g, P, U);
+	  newg=algmulvec(A, P[1], word);
+	  if(newg==g || newg==-g,print("Passed word test"),print("Failed word test"));
+	  if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));\\No error should be raised if this works.
+    );
+  );
+}
+
+As=vector(3);\\Various algebras
+As[1]=[[y, y, y, y], [[3, 1], [11, -21], [2627, -117], [923, -4476549]]];
+As[2]=[[y^2 - 10, y^2 - y - 17], [[-y + 1, -8*y + 9], [-2*y + 6, 8*y - 111]]];
+As[3]=[[y^3 - 3*y - 1, y^3 - 4*y - 1], [[3*y^2 - 5*y - 8, 84*y^2 - 140*y - 223], [5*y^2 - 11*y - 20, -38*y^2 + 124*y - 93]]];
+testalgfdom(As);
+
+\\Time for some Eichler orders.
+
+\\We store an order as a vector of basis elements, written in the algebraic representation. This converts it to a matrix, whose columns express each basis element in terms of the natural order of A.
+algorderalgtomatrix(A, algelts)={
+  my(n, M);
+  n=#algelts;\\Number of elements
+  M=matrix(n, n);
+  for(i=1,n,M[, i]=algalgtobasis(A, algelts[i]));
+  return(M);
+}
+/*
+Code to make the algebraic reps for the bases:
+algmakeorderalg(A, ord)={
+  my(n=4*A[1].nf.r1);
+  if(ord==0,ord=matid(n));
+  return(liftall(vector(n, i, algbasistoalg(A, ord[, i]))))
+}
+*/
+
+
+setrand(1);
+F=nfinit(y);
+setrand(1);\\Issue is the Eichler orders contained within need to correspond to the precomputed maximal order.
+A=alginit(F, [2, 1]);\\Unramified
+
+O1bas=[[1, 0]~, [5*x, 0]~, [4*x + 1/2, 1/2]~, [17/4*x, 1/4*x]~];\\Level 5
+O1=algorderalgtomatrix(A, O1bas);
+if(!algisorder(A, O1),print("Not an order"));
+print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
+
+O1bas=[[1, 0]~, [97*x, 0]~, [57*x + 1/2, 1/2]~, [265/4*x, 1/4*x]~];\\Level 97
+O1=algorderalgtomatrix(A, O1bas);
+if(!algisorder(A, O1),print("Not an order"));
+print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
+
+setrand(1);
+A=alginit(F, [3, -1]);\\Ramified at 2, 3
+
+O1bas=[[1, 0]~, [37*x, 0]~, [18*x, 1]~, [21/2*x + 1/2, 1/2*x + 1/2]~];\\Level 37
+O1=algorderalgtomatrix(A, O1bas);
+if(!algisorder(A, O1),print("Not an order"));
+print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
+
+setrand(1);
+A=alginit(F, [105, -8]);\\Ramified at 5, 7
+
+O1bas=[[1, 0]~, [1/2*x - 1/2, 0]~, [0, 2]~, [1/3*x, 1/24*x + 15/8]~];\\Level 4
+O1=algorderalgtomatrix(A, O1bas);
+if(!algisorder(A, O1),print("Not an order"));
+print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
+
+
+setrand(1);
+F=nfinit(y^2-2);
+setrand(1);
+A=alginit(F,  [-7*y + 1, -15*y + 17]);\\Ramified at the prime above 2
+
+O1bas=[[1, 0]~, [-y, 0]~, [9*x, 0]~, [-9*y*x, 0]~, [(-6*y + 5)*x, 1]~, [(-5/2*y + 6)*x, -1/2*y]~, [(-1/2*y + 7/2)*x + 1/2, 1/2*x + 1/2]~, [(-1311/194*y + 949/194)*x + (-1/2*y + 1/2), (-1/31234*y + 5709/31234)*x + (-73/161*y + 339/322)]~];\\Level 9
+O1=algorderalgtomatrix(A, O1bas);
+if(!algisorder(A, O1),print("Not an order"));
+print(algorderlevel(A, O1, 0));
+U=algfdom(A, O1);
+print(algfdomsignature(U));
+P=algfdompresentation(U);
+print(length(P[1]));
