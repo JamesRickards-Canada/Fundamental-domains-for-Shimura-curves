@@ -2,7 +2,8 @@
 PARI_LOC = /usr/local
 
 #The files we want to include
-SRCS = fdom.o fdom_extra.o
+SRCS = fdom.o 
+#fdom_extra.o Removing for now.
 
 #Name of the output library
 TARGET = fdom
