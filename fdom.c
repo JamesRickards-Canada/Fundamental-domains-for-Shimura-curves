@@ -150,7 +150,22 @@ GEN tol -> The tolerance, which MUST be of type t_REAL.*/
 
 /*BASIC LINE, CIRCLE, AND POINT OPERATIONS*/
 
+/*Given ab=[a, b], gives the action on x. We take x to be an element of unit disc in the Klein model, and the action is given by the corresponding action of [a, b;conj(b), conj(a)] on the disc model (with |a|^2-|b|^2=1). The action is via K(x)=(a^2x+b^2xconj+2ab)/(|a|^2+|b|^2+a*x*bconj+aconj*xconj*b.*/
+GEN klein_act(GEN ab, GEN x){
+  pari_sp av=avma;
+  GEN a=gel(ab, 1), b=gel(ab, 2);
+  GEN ac=conj_i(a), bc=conj_i(b), xc=conj_i(x);
+  GEN num=gadd(gadd(gmul(gsqr(a), x), gmul(gsqr(b), xc)), gmulsg(2, gmul(a, b)));/*a^2x+b^2xc+2ab*/
+  GEN axbbar_real=real_i(gmul(a, gmul(x, bc)));/*real part of a*x*bc */
+  GEN anorm=real_i(gmul(a, ac));/*real part of a*ac=|a|^2*/
+  GEN den=gsubgs(gmulsg(2, gadd(anorm, axbbar_real)), 1);/*|a|^2+|b|^2+a*x*bc+ac*xc*b=2|a|^2+2*real(a*q*bc)-1*/
+  return gerepileupto(av, gdiv(num, den));
+}
+
+
+
 /*INTERSECTION OF LINES/CIRCLES*/
+
 
 /*Returns the intersection of two lines. If parallel/concurrent, returns NULL*/
 static GEN
