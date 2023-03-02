@@ -44,7 +44,7 @@ static int onseg(GEN l, GEN p, GEN tol);
 static GEN seg_int(GEN l1, GEN l2, GEN tol);
 
 /*2: DISTANCES*/
-//static GEN hdist_ud(GEN z1, GEN z2, long prec);
+static GEN hdist_ud(GEN z1, GEN z2, long prec);
 //static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 
 /*2: FUNDAMENTAL DOMAIN COMPUTATION*/
@@ -208,7 +208,8 @@ onseg(GEN l, GEN p, GEN tol)
 }
 
 /*Returns the intersection of two segments. If parallel/concurrent/do not intersect, returns NULL*/
-static GEN seg_int(GEN l1, GEN l2, GEN tol){
+static GEN 
+seg_int(GEN l1, GEN l2, GEN tol){
   pari_sp av=avma;
   GEN ipt=line_int(l1, l2, tol);/*Intersect the lines*/
   if(!onseg(l1, ipt, tol)) return gc_NULL(av);
@@ -216,7 +217,78 @@ static GEN seg_int(GEN l1, GEN l2, GEN tol){
   return ipt;
 }
 
+
 /*DISTANCES/AREAS*/
+
+
+/*Given the area of a hyperbolic disc, this returns the radius. The formula is area=4*Pi*sinh(R/2)^2, or R=2arcsinh(sqrt(area/4Pi))*/
+GEN
+hdiscradius(GEN area, long prec)
+{
+  pari_sp av=avma;
+  return gerepileupto(av, gtofp(gmulgs(gasinh(gsqrt(gdiv(area, Pi2n(2, prec)), prec), prec), 2), prec));
+}
+
+/*Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).*/
+GEN
+hdiscrandom(GEN R, long prec)
+{
+  pari_sp av=avma;
+  GEN arg=gmul(randomr(prec), Pi2n(1, prec));/*Random angle*/
+  GEN zbound=expIr(arg);/*The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]*/
+  /*a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).*/
+  GEN r=gmulsg(2, gasinh(gmul(gsinh(gdivgs(R, 2), prec), gsqrt(randomr(prec), prec)), prec));
+  GEN e2r=gexp(r, prec);
+  return gerepileupto(av, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
+}
+
+/*Returns a random point z in the unit disc, uniform inside the ball of radius R, with argument uniform in [ang1, ang2]. See page 19 of Page (before section 2.5).*/
+GEN
+hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec)
+{
+  pari_sp av=avma;
+  GEN arg=gadd(ang1, gmul(randomr(prec), gsub(ang2, ang1)));/*Random angle in [ang1, ang2]*/
+  GEN zbound=expIr(arg);/*The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]*/
+  /*a(r)=Area of hyperbolic disc radius r=4*Pi*sinh^2(r/2).
+  dist=gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec)); A random element in [0, a(R)/4Pi].
+  r=gmulsg(2, gasinh(gsqrt(dist, prec), prec)); The radius
+  */
+  GEN r=gmulsg(2, gasinh(gmul(gsinh(gdivgs(R, 2), prec), gsqrt(randomr(prec), prec)), prec));
+  GEN e2r=gexp(r, prec);
+  return gerepileupto(av, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
+}
+
+/*z1 and z2 are complex numbers, this computes the hyperbolic distance between them. If flag=0, assumes upper half plane model; if flag=1, assumes unit disc model.*/
+GEN
+hdist(GEN z1, GEN z2, long flag, long prec)
+{
+  pari_sp av=avma;
+  if(flag) return hdist_ud(z1, z2, prec);
+  GEN x1=real_i(z1), y1=imag_i(z1);
+  GEN x2=real_i(z2), y2=imag_i(z2);
+  GEN x=gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)), gsqr(gsub(y2, y1))), gmul(gmulsg(2, y1), y2)));
+  GEN expd=gadd(x, gsqrt(gsubgs(gsqr(x), 1), prec));
+  return gerepileupto(av, glog(expd, prec));  
+}
+
+/*The hyperbolic distance between z1 and z2 in the unit disc model*/
+static GEN
+hdist_ud(GEN z1, GEN z2, long prec)
+{
+  pari_sp av=avma;
+  GEN a=gabs(gsubsg(1, gmul(z1, conj_i(z2))), prec);/*|1-z1*conj(z2)|*/
+  GEN b=gabs(gsub(z1, z2), prec);/*|z1-z2|*/
+  GEN num=gadd(a, b);
+  GEN denom=gsub(a, b);
+  if(gequal0(denom))
+  {
+    pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance");
+    set_avma(av);
+    return mkoo();
+  }
+  return gerepileupto(av, glog(gdiv(num, denom), prec));/*log((a+b)/(a-b))*/
+}
+
 
 /*FUNDAMENTAL DOMAIN COMPUTATION*/
 

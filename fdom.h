@@ -27,6 +27,10 @@ seg_get_end(GEN L){return gel(L, 5);}
 /*BASIC LINE, CIRCLE, AND POINT OPERATIONS*/
 
 /*DISTANCES/AREAS*/
+GEN hdiscradius(GEN area, long prec);
+GEN hdiscrandom(GEN R, long prec);
+GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
+GEN hdist(GEN z1, GEN z2, long flag, long prec);
 
 /*FUNDAMENTAL DOMAIN COMPUTATION*/
 

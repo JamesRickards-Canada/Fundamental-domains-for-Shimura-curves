@@ -15,10 +15,6 @@ GEN mat_eval(GEN M, GEN x);
 GEN mobius_gp(GEN M, GEN c, long prec);
 
 /*DISTANCES/AREAS*/
-GEN hdiscradius(GEN area, long prec);
-GEN hdiscrandom(GEN R, long prec);
-GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
-GEN hdist(GEN z1, GEN z2, long flag, long prec);
 
 /*FUNDAMENTAL DOMAIN COMPUTATION*/
 GEN isometriccircle_mats(GEN g, GEN mats, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec);
