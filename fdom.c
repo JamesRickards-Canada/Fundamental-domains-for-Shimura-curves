@@ -5,6 +5,7 @@ POSSIBLE FUTURE ADDITIONS:
 3) Computation of cohomology groups.
 */
 
+/*CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS*/
 
 /*INCLUSIONS*/
 
@@ -26,8 +27,6 @@ POSSIBLE FUTURE ADDITIONS:
 /*VARIABLES*/
 
 /*The length (lg, so technically length+1) of a circle/line and arc/segment, and a normalized boundary*/
-static long fdom_prec=0;//Not for use in multithread for now.
-static GEN fdom_tol=NULL;
 #define CIRCLEN 4/*TODO: DELETE THESE*/
 #define ARCLEN 9
 #define NORMBOUND 9
@@ -102,8 +101,6 @@ static int tolcmp(GEN x, GEN y, GEN tol, long prec);
 static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol, long prec);
 static int toleq0(GEN x, GEN tol, long prec);
-static void swap_clone(GEN *old, GEN c);
-static void set_prectol(long prec);
 
 /*3: QUATERNION ALGEBRA NON-FDOM METHODS*/
 static GEN algd(GEN A, GEN a);
@@ -2659,22 +2656,6 @@ toleq0(GEN x, GEN tol, long prec)
   return gc_int(top, 0);/*Not within tolerance*/
 }
 
-/*Copied from trans1.c. replace *old clone by c. Protect against SIGINT */
-static void swap_clone(GEN *old, GEN c){
-  GEN tmp = *old;
-  *old = c;
-  guncloneNULL(tmp);
-}
-
-/*Updates the precision and tolerance*/
-static void set_prectol(long prec){
-  if(fdom_prec==prec) return;/*Precision/tolerance already set*/
-  pari_sp top=avma;
-  fdom_prec=prec;/*Set the precision*/
-  GEN tmp=gclone(deftol(fdom_prec));/*Default tolerance*/
-  swap_clone(&fdom_tol, tmp);/*Set fdom_tol*/
-  set_avma(top);/*Reset avma*/
-}
 
 
 /*SECTION 3: QUATERNIONIC METHODS*/
@@ -3099,7 +3080,7 @@ static GEN
 qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, long prec)
 {
   pari_sp top=avma, mid;
-  set_prectol(prec);//Set the default precision and tolerance
+  GEN tol=deftol(prec);
   GEN mats=psltopsu_transmats(p);
   GEN A=qalg_get_alg(Q);
   GEN nf=alg_get_center(A);
@@ -3148,7 +3129,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, lo
   if(type==1) partialset=qalg_smallnorm1elts_qfminim(Q, p, C, gen_0, gen_0, 0, nfdecomp, nformpart, prec);
   else partialset=qalg_smallnorm1elts_condition(Q, p, C, gen_0, gen_0, 0, nform, nformpart, prec);/*This may find some elements with large radius, a good start.*/
   if(!partialset) return gc_NULL(top);/*Precision too low*/
-  U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, fdom_tol, prec);
+  U=normalizedbasis(partialset, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
   if(!U) return gc_NULL(top);/*Must increase precision*/
 
   mid=avma;
@@ -3184,7 +3165,7 @@ qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, lo
     if(dispprogress){
       pari_printf("%d elements found\n", lg(points)-1);
     }
-    U=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, fdom_tol, prec);
+    U=normalizedbasis(points, U, mats, id, Q, &qalg_fdomm2rembed, &qalg_fdommul, &qalg_fdominv, &qalg_istriv, tol, prec);
     if(!U) return gc_NULL(top);/*Must increase precision*/
     if(dispprogress) pari_printf("Current normalized basis has %d sides\n\n", lg(gel(U, 1))-1);
     if(gcmp(gel(U, 6), areabound)<0) return U;
