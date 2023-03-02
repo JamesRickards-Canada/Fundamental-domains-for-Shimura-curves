@@ -207,29 +207,29 @@ GEN
 mat_nfcholesky(GEN nf, GEN A)
 {
   pari_sp top=avma;
-  long n=lg(A)-1;/*A is nxn*/
+  long n=lg(A)-1, i, j, k;/*A is nxn*/
   GEN M=gcopy(A);/*Will be manipulating the entries, so need to copy A.*/
-  for(long i=1;i<n;i++){
+  for(i=1;i<n;i++){
     if(gequal0(gcoeff(M, i, i))){
-      for(long j=i+1;j<=n;j++){
+      for(j=i+1;j<=n;j++){
         gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));/*M[j,i]=M[i,j]*/
       }
     }
     else{
-      for(long j=i+1;j<=n;j++){
+      for(j=i+1;j<=n;j++){
         gcoeff(M, j, i)=gcopy(gcoeff(M, i, j));/*M[j,i]=M[i,j]*/
         gcoeff(M, i, j)=nfdiv(nf, gcoeff(M, i, j), gcoeff(M, i, i));/*M[i,j]=M[i,j]/M[i,i]*/
       }
     }
-    for(long j=i+1;j<=n;j++){
-      for(long k=j;k<=n;k++) gcoeff(M, j, k)=nfsub(nf, gcoeff(M, j, k), nfmul(nf, gcoeff(M, j, i), gcoeff(M, i, k)));/*M[j,k]=M[j,k]-M[j,i]*M[i,k];*/
+    for(j=i+1;j<=n;j++){
+      for(k=j;k<=n;k++) gcoeff(M, j, k)=nfsub(nf, gcoeff(M, j, k), nfmul(nf, gcoeff(M, j, i), gcoeff(M, i, k)));/*M[j,k]=M[j,k]-M[j,i]*M[i,k];*/
     }
   }
   GEN ret=cgetg_copy(M, &n);/*M stores the coeff, but we should delete the lower diagonal*/
-  for(long i=1;i<n;i++){/*Column i*/
+  for(i=1;i<n;i++){/*Column i*/
     gel(ret, i)=cgetg(n, t_COL);
-    for(long j=1;j<=i;j++) gcoeff(ret, j, i)=gcopy(gcoeff(M, j, i));
-    for(long j=i+1;j<n;j++) gcoeff(ret, j, i)=gen_0;
+    for(j=1;j<=i;j++) gcoeff(ret, j, i)=gcopy(gcoeff(M, j, i));
+    for(j=i+1;j<n;j++) gcoeff(ret, j, i)=gen_0;
   }
   return gerepileupto(top, ret);
 }
@@ -262,7 +262,8 @@ quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec)
   else rposs=mkvec2(r1, r2);
   /*Now we plug back in and check.*/
   GEN rts=vectrunc_init(3), res, r;/*At most 2 roots*/
-  for(long i=1;i<lg(rposs);i++){
+  long i;
+  for(i=1;i<lg(rposs);i++){
     r=gel(rposs, i);
     res=nfadd(nf, nfmul(nf, nfadd(nf, nfmul(nf, A, r), B), r), C);/*Plug it in*/
     if(gequal0(res)) vectrunc_append(rts, r);/*gequal0(res)=1 no matter what representation it is in.*/
@@ -289,10 +290,11 @@ smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec)
   }
   R=qfgaussred_positive(R);
   if (!R) return NULL;/*In case there was an issue with R.*/
-  for(long i=1; i<l; i++){
+  long i, j;
+  for(i=1; i<l; i++){
     GEN s = gsqrt(gcoeff(R, i, i), newprec);
     gcoeff(R, i, i) = s;
-    for(long j=i+1;j<l;j++) gcoeff(R, i, j) = gmul(s, gcoeff(R, i, j));
+    for(j=i+1;j<l;j++) gcoeff(R, i, j) = gmul(s, gcoeff(R, i, j));
   }
   /* now R~*R = A in LLL basis */
   GEN Rinv = RgM_inv_upper(R);
@@ -307,11 +309,11 @@ smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec)
 
   l = lg(R);
   GEN vnorm = cgetg(l, t_VEC);
-  for(long j=1; j<l; j++) gel(vnorm, j) = gnorml2(gel(Rinvtrans, j));
+  for(j=1; j<l; j++) gel(vnorm, j) = gnorml2(gel(Rinvtrans, j));
   GEN rperm = cgetg(l, t_MAT);
   GEN uperm = cgetg(l, t_MAT);
   GEN perm = indexsort(vnorm);
-  for(long i=1; i<l; i++) {uperm[l-i] = U[perm[i]]; rperm[l-i] = R[perm[i]]; }
+  for(i=1; i<l; i++) {uperm[l-i] = U[perm[i]]; rperm[l-i] = R[perm[i]]; }
   U = uperm;
   R = rperm;
   GEN res=cgetg(1, t_VEC);
@@ -327,7 +329,7 @@ smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec)
     res = smallvectors_cholesky(q, C, maxelts, newcond, prec);/*The small entries*/
   } pari_ENDCATCH;
   GEN ret=cgetg_copy(res, &l);
-  for(long i=1;i<l;i++) gel(ret, i)=ZM_ZC_mul(U, gel(res, i));
+  for(i=1;i<l;i++) gel(ret, i)=ZM_ZC_mul(U, gel(res, i));
   return gerepilecopy(top, ret);
 }
 
@@ -360,7 +362,7 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
   int xpass0=0;
   GEN x1sols;
   
-  long Sind=0, Slen;
+  long Sind=0, Slen, j;
   if(maxelts!=0) Slen=maxelts;
   else Slen=6;
   GEN S=cgetg(Slen+1, t_VEC), Sold=cgetg(1, t_VEC);;/*Sold is used for garbage collection partway through*/
@@ -399,10 +401,10 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
     if(step==5){
       i--;
       gel(U, i)=gen_0;
-      for(long j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));/*U[i]=sum(j=i+1,n,q[i,j]*x[j]);*/
+      for(j=i+1;j<np1;j++) gel(U, i)=gadd(gel(U, i), gmul(gcoeff(Q, i, j), gel(x, j)));/*U[i]=sum(j=i+1,n,q[i,j]*x[j]);*/
       gel(Ucond, i)=gen_0;
       if(!gequal0(gcoeff(condchol, i, i))){/*ith row of condchol is non-zero, so something to add to Ucond*/
-        for(long j=i+1;j<np1;j++) gel(Ucond, i)=nfadd(nf, gel(Ucond, i), nfmul(nf, gcoeff(condchol, i, j), gel(x, j)));
+        for(j=i+1;j<np1;j++) gel(Ucond, i)=nfadd(nf, gel(Ucond, i), nfmul(nf, gcoeff(condchol, i, j), gel(x, j)));
       }
       if(!gequal0(gcoeff(condchol, i+1, i+1))){/*i+1th row of condchol is non-zero, so something to add to Tcond*/
         gel(Tcond, i)=nfadd(nf, gel(Tcond, i+1), nfmul(nf, gcoeff(condchol, i+1, i+1), nfsqr(nf, nfadd(nf, gel(x, i+1), gel(Ucond, i+1)))));
@@ -427,7 +429,7 @@ smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec)
       gel(x, 1)=gen_0;
       x1sols=quadraticintegernf(nf, Aco, Bco, Cco, prec);/*Tcond_1+q_11(x_1+Ucond_1)^2*/
       if(gequal0(x)) xpass0=1;/*This is the last check*/
-      for(long j=1;j<lg(x1sols);j++){/*We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.*/
+      for(j=1;j<lg(x1sols);j++){/*We don't actually check that Q(x)<=C, as what we really care about are norm 1 vectors, and if we happen to discover one slightly outside of the range, there is no issue.*/
         if(xpass0 && signe(gel(x1sols, j))!=-1) continue;/*x is 0 (except the first coefficient), so the first coefficent has to be negative.*/
         gel(x, 1)=gel(x1sols, j);/*Now we are good, all checks out.*/
         S=veclist_append(S, &Sind, &Slen, gcopy(x));
