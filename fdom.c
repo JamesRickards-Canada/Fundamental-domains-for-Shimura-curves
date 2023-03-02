@@ -2706,6 +2706,17 @@ algelttype(GEN A, GEN g){
   return gc_int(top, 1);/*Hyperbolic*/
 }
 
+//Returns the pair [a, b].
+GEN
+alg_get_ab(GEN A){
+  pari_sp top=avma;
+  GEN L=alg_get_splittingfield(A), pol=rnf_get_pol(L);//L=K(sqrt(a))
+  long varn=rnf_get_varn(L);
+  GEN a=gneg(gsubst(pol, varn, gen_0));//Polynomial is of the form x^2-a, so plug in 0 and negate to get a
+  GEN b=lift(alg_get_b(A));
+  return gerepilecopy(top, mkvec2(a, b));
+}
+
 /*Given a supposed order O, this returns 1 if it is indeed an order. O is input as a Z-matrix, i.e. as a suborder of the given maximal order.*/
 int
 algisorder(GEN A, GEN O){
@@ -3205,8 +3216,8 @@ static long
 algsplitoo(GEN A)
 {
   GEN infram=alg_get_hasse_i(A);/*shallow*/
-  long split=0;
-  for(long i=1;i<lg(infram);i++){/*Finding the split place*/
+  long split=0, i;
+  for(i=1;i<lg(infram);i++){/*Finding the split place*/
     if(infram[i]==0){/*Split place*/
       if(split>0) return 0;
       split=i;
@@ -3309,13 +3320,13 @@ GEN
 qalg_fdomarea(GEN Q, long computeprec, long prec)
 {
   pari_sp top=avma;
-  long bits=bit_accuracy(computeprec);
+  long bits=bit_accuracy(computeprec), i;
   GEN A=qalg_get_alg(Q);
   GEN F=alg_get_center(A), pol=nf_get_pol(F);
   GEN zetaval=lfun(pol, gen_2, bits);/*Zeta_F(2)*/
   GEN rams=qalg_get_rams(Q);
   GEN norm=gen_1;
-  for(long i=1;i<lg(rams);i++){
+  for(i=1;i<lg(rams);i++){
     if(typ(gel(rams, i))==t_INT) continue;/*We don't want to count the infinite places*/
     norm=mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));/*Product of N(p)-1 over finite p ramifying in A*/
   }
@@ -3323,7 +3334,7 @@ qalg_fdomarea(GEN Q, long computeprec, long prec)
   if(!gequal1(ell)){/*We have an Eichler part*/
     GEN ifact=idealfactor(F, ell);
     if(!gequal0(ifact)){/*If this does not trigger we are done; the level got passed in as an ideal of norm 1 by accident.*/
-      for(long i=1;i<lg(gel(ifact, 1));i++){
+      for(i=1;i<lg(gel(ifact, 1));i++){
         GEN Np=idealnorm(F, gcoeff(ifact, i, 1));/*Norm of the prime*/
         GEN Npexp=gcoeff(ifact, i, 2);/*Exponent*/
         if(equali1(Npexp)) elevpart=mulii(elevpart, addis(Np, 1));/*Times N(p)+1*/
@@ -3397,14 +3408,14 @@ qalg_normform_givenbasis(GEN Q, GEN basis)
 {
   pari_sp top=avma;
   GEN A=qalg_get_alg(Q);
-  long n;
+  long n, i, j;
   GEN basisconj=cgetg_copy(basis, &n);
-  for(long i=1;i<n;i++) gel(basisconj, i)=qalg_basis_conj(Q, gel(basis, i));/*The conjugate of the basis element.*/
+  for(i=1;i<n;i++) gel(basisconj, i)=qalg_basis_conj(Q, gel(basis, i));/*The conjugate of the basis element.*/
   GEN M=cgetg_copy(basis, &n);/*Initialize the matrix*/
-  for(long i=1;i<n;i++) gel(M, i)=cgetg(n, t_COL);
-  for(long i=1;i<n;i++) gcoeff(M, i, i)=lift0(algnorm(A, gel(basis, i), 0), -1);
-  for(long i=1;i<n;i++){
-    for(long j=i+1;j<n;j++){
+  for(i=1;i<n;i++) gel(M, i)=cgetg(n, t_COL);
+  for(i=1;i<n;i++) gcoeff(M, i, i)=lift0(algnorm(A, gel(basis, i), 0), -1);
+  for(i=1;i<n;i++){
+    for(j=i+1;j<n;j++){
       GEN prod=algmul(A, gel(basis, i), gel(basisconj, j));
       GEN tr=gdivgs(algtrace(A, prod, 0), 2);
       gcoeff(M, i, j)=tr;
@@ -3430,11 +3441,11 @@ qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, G
   GEN O=qalg_get_order(Q);
   int nonmax=0;
   if(!gequal1(qalg_get_level(Q))) nonmax=1;
-  long nvposs=lg(vposs), mret;
+  long nvposs=lg(vposs), mret, i;
   if(maxelts) mret=maxelts+1;
   else mret=nvposs;
   GEN ret=vectrunc_init(mret), norm;
-  for(long i=1;i<nvposs;i++){
+  for(i=1;i<nvposs;i++){
     mid=avma;
     norm=algnorm_chol(nf, nfdecomp, gel(vposs, i));
     if(gequal1(norm)){
@@ -3461,9 +3472,9 @@ qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts,
   if(gequal1(qalg_get_level(Q))) return gerepileupto(top, vs);
   /*Now, non-maximal, change of basis back*/
   GEN O=qalg_get_order(Q);
-  long l;
+  long l, i;
   GEN v=cgetg_copy(vs, &l);
-  for(long i=1;i<l;i++) gel(v, i)=QM_QC_mul(O, gel(vs, i));/*Can't use QM_mul since this is a vector of columns and not a matrix*/
+  for(i=1;i<l;i++) gel(v, i)=QM_QC_mul(O, gel(vs, i));/*Can't use QM_mul since this is a vector of columns and not a matrix*/
   return gerepilecopy(top, v);
 }
 
