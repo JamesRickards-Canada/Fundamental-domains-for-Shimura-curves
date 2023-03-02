@@ -42,7 +42,6 @@ GEN signature(GEN U, GEN gamid, GEN data, GEN (*eltmul)(GEN, GEN, GEN), GEN (*el
 GEN word(GEN U, GEN P, GEN g, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN (*eltmul)(GEN, GEN, GEN), GEN (*eltinv)(GEN, GEN), int (*istriv)(GEN, GEN), GEN tol, long prec);
 
 /*HELPER METHODS*/
-GEN deftol(long prec);
 INLINE GEN
 gc_0vec(pari_sp av){set_avma(av);return cgetg(1, t_VEC);}/*Resets avma and returns the vector []*/
 

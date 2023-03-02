@@ -27,34 +27,10 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*STATIC DECLARATIONS*/
 
-/*1: INFINITY */
-static GEN divoo(GEN a, GEN b);
-
-/*1: LISTS*/
-//static long gen_search_old(GEN T, GEN x, long flag, void *data, int (*cmp)(void*, GEN, GEN));
-
 /*1: SHORT VECTORS IN LATTICES*/
 //static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
 //static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec);
 //static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec);
-
-/*2: BASIC LINE, CIRCLE, AND POINT OPERATIONS*/
-//static GEN arc_init(GEN c, GEN p1, GEN p2, int dir, long prec);
-//static GEN arc_midpoint(GEN c, GEN p1, GEN p2, GEN tol, long prec);
-//static GEN circle_angle(GEN c1, GEN c2, GEN p, GEN tol, long prec);
-//static GEN circle_fromcp(GEN cent, GEN p, long prec);
-//static GEN circle_fromppp(GEN p1, GEN p2, GEN p3, GEN tol, long prec);
-//static GEN circle_tangentslope(GEN c, GEN p, long prec);
-//static GEN line_fromsp(GEN s, GEN p);
-//static GEN line_frompp(GEN p1, GEN p2, GEN tol, long prec);
-//static GEN midpoint(GEN p1, GEN p2);
-//static GEN mobius(GEN M, GEN c, GEN tol, long prec);
-//static GEN mobius_arcseg(GEN M, GEN c, int isarc, GEN tol, long prec);
-//static GEN mobius_circle(GEN M, GEN c, GEN tol, long prec);
-//static GEN mobius_line(GEN M, GEN l, GEN tol, long prec);
-//static GEN perpbis(GEN p1, GEN p2, GEN tol, long prec);
-//static GEN radialangle(GEN c, GEN p, GEN tol, long prec);
-//static GEN slope(GEN p1, GEN p2, GEN tol, long prec);
 
 /*2: INTERSECTION OF LINES/CIRCLES*/
 //static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec);
@@ -91,10 +67,10 @@ static GEN divoo(GEN a, GEN b);
 //static int gcmp_strict(void *data, GEN x, GEN y);
 //static int geom_check(GEN c);
 //static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec);
-//static int tolcmp(GEN x, GEN y, GEN tol, long prec);
-//static int tolcmp_sort(void *data, GEN x, GEN y);
-//static int toleq(GEN x, GEN y, GEN tol, long prec);
-//static int toleq0(GEN x, GEN tol, long prec);
+static int tolcmp(GEN x, GEN y, GEN tol);
+static int tolcmp_sort(void *data, GEN x, GEN y);
+static int toleq(GEN x, GEN y, GEN tol);
+static int toleq0(GEN x, GEN tol);
 
 /*3: QUATERNION ALGEBRA NON-FDOM METHODS*/
 //static GEN algd(GEN A, GEN a);
@@ -124,33 +100,14 @@ static GEN divoo(GEN a, GEN b);
 
 /*INFINITY */
 
-
-
-/*Divides a and b, and allows for oo and division by 0. Returns oo for 0/0.*/
-static GEN 
-divoo(GEN a, GEN b)
-{
-  if(gequal0(b)){/*b=0*/
-    if(gcmpgs(a, 0)>=0) return mkoo();
-    return mkmoo();
-  }
-  if(typ(a)==t_INFINITY){/*a=+/-oo*/
-    if(gsigne(a)==gsigne(b)) return mkoo();
-    return mkmoo();
-  }
-  if(typ(b)==t_INFINITY) return gen_0;
-  return gdiv(a, b);
-}
-
-
-
 /*LISTS*/
 
 /*TARGET REMOVAL OF THIS SECTION? MAYBE*/
 
 /*Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. If this happens, the resulting vector is not suitable for gerepileupto; this must be done at the end (necessary anyway since it's likely we have to call vec_shorten at some point).*/
 GEN
-veclist_append(GEN v, long *vind, long *vlen, GEN x){
+veclist_append(GEN v, long *vind, long *vlen, GEN x)
+{
   if(*vind==*vlen){/*Need to lengthen!*/
     *vlen=2**vlen;
     v=vec_lengthen(v, *vlen);
@@ -162,7 +119,8 @@ veclist_append(GEN v, long *vind, long *vlen, GEN x){
 
 /*Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. Don't forget to call vec_shorten at the end, since some positions are uninitialized.*/
 GEN
-vecsmalllist_append(GEN v, long *vind, long *vlen, long x){
+vecsmalllist_append(GEN v, long *vind, long *vlen, long x)
+{
   if(*vind==*vlen){/*Need to lengthen!*/
     *vlen=2**vlen;
     v=vecsmall_lengthen(v, *vlen);
@@ -171,4 +129,109 @@ vecsmalllist_append(GEN v, long *vind, long *vlen, long x){
   v[*vind]=x;
   return v;
 }
+
+
+
+/*SHORT VECTORS IN LATTICES*/
+
+
+/*SECTION 2: GEOMETRY METHODS*/
+
+
+
+/*A line is stored as [a, b, c], representing ax+by=c. We will normalize so that c=1 or 0. It is assumed that at least one of a, b is non-zero
+A segment is stored as [a, b, c, x0, x1]. [a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going through oo
+GEN tol -> The tolerance, which MUST be of type t_REAL.*/
+
+
+/*BASIC LINE, CIRCLE, AND POINT OPERATIONS*/
+
+/*INTERSECTION OF LINES/CIRCLES*/
+
+
+/*DISTANCES/AREAS*/
+
+/*FUNDAMENTAL DOMAIN COMPUTATION*/
+
+/*FUNDAMENTAL DOMAIN OTHER COMPUTATIONS*/
+
+/*GEOMETRIC HELPER METHODS*/
+
+/*Returns the default tolerance given the precision.*/
+GEN
+deftol(long prec)
+{
+  pari_sp av=avma;
+  return gerepileupto(av, shiftr(gtofp(gen_1, prec), BITS_IN_LONG/2*(2-prec)));
+}
+
+/*Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact*/
+static int
+tolcmp(GEN x, GEN y, GEN tol)
+{
+  pari_sp av=avma;
+  GEN d=gsub(x, y);
+  switch(typ(d)){
+    case t_FRAC:/*t_FRAC cannot be 0*/
+	  return gc_int(av, signe(gel(d, 1)));
+	case t_INT:/*Given exactly*/
+	  return gc_int(av, signe(d));
+	case t_REAL:
+	  if(abscmprr(d, tol)<0) return 0;/*|d|<tol*/
+	  return gc_int(av, signe(d));
+  }
+  pari_err_TYPE("Tolerance comparison only valid for type t_INT, t_FRAC, t_REAL", d);
+  return 0;/*So that there is no warning*/
+}
+
+/*Data points to tol. Used to sort/search a list with tolerance.*/
+static int
+tolcmp_sort(void *data, GEN x, GEN y){return tolcmp(x, y, *(GEN*)data);}
+
+/*Returns 1 if x==y up to tolerance tol. If x and y are both t_INT/t_FRAC, will only return 1 if they are exactly equal.*/
+static int
+toleq(GEN x, GEN y, GEN tol)
+{
+  pari_sp av=avma;
+  GEN d=gsub(x, y);
+  return gc_int(av, toleq0(d, tol));/*Just compare d with 0.*/
+}
+
+/*If x is of type t_INT or t_FRAC, returns 1 iff x==0. Otherwise, x must be of type t_REAL or t_COMPLEX, and returns 1 iff x=0 up to tolerance tol.*/
+static int
+toleq0(GEN x, GEN tol)
+{
+  switch(typ(x)){
+    case t_FRAC:/*t_FRAC cannot be 0*/
+	  return 0;
+	case t_INT:/*Given exactly*/
+	  return !signe(x);
+	case t_REAL:
+	  if(abscmprr(x, tol)<0) return 1;/*|x|<tol*/
+	  return 0;
+	case t_COMPLEX:;
+	  long i;
+	  for(i=1;i<=2;i++){
+		switch(typ(gel(x, i))){
+		  case t_FRAC:/*Fraction component, cannot be 0*/
+		    return 0;
+		  case t_INT:
+		    if(signe(gel(x, i))) return 0;
+			break;
+		  case t_REAL:
+		    if(abscmprr(gel(x, i), tol)>=0) return 0;/*Too large*/
+			break;
+		  default:/*Illegal input*/
+		    pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
+		}
+	  }
+	  return 1;/*We passed*/
+  }
+  pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
+  return 0;/*So that there is no warning*/
+}
+
+
+
+
 
