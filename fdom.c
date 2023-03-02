@@ -24,6 +24,11 @@ POSSIBLE FUTURE ADDITIONS:
 #include "fdom.h"
 #endif
 
+/*DEFINITIONS*/
+
+/*The length (lg, so technically length+1) of a circle/line and arc/segment, and a normalized boundary*/
+#define LINE_LG 4
+#define SEG_LG 6
 
 /*STATIC DECLARATIONS*/
 
@@ -33,13 +38,10 @@ POSSIBLE FUTURE ADDITIONS:
 //static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec);
 
 /*2: INTERSECTION OF LINES/CIRCLES*/
-//static GEN arc_int(GEN c1, GEN c2, GEN tol, long prec);
-//static GEN arcseg_int(GEN c, GEN l, GEN tol, long prec);
-//static GEN circle_int(GEN c1, GEN c2, GEN tol, long prec);
-//static GEN circleline_int(GEN c, GEN l, GEN tol, long prec);
-//static GEN line_int(GEN l1, GEN l2, GEN tol, long prec);
-//static int onarc(GEN c, GEN p, GEN tol, long prec);
-//static int onseg(GEN l, GEN p, GEN tol, long prec);
+static GEN line_int(GEN l1, GEN l2, GEN tol);
+static GEN line_line_detNULL(GEN l1, GEN l2, GEN tol);
+static int onseg(GEN l, GEN p, GEN tol);
+static GEN seg_int(GEN l1, GEN l2, GEN tol);
 
 /*2: DISTANCES*/
 //static GEN hdist_ud(GEN z1, GEN z2, long prec);
@@ -108,7 +110,8 @@ static int toleq0(GEN x, GEN tol);
 GEN
 veclist_append(GEN v, long *vind, long *vlen, GEN x)
 {
-  if(*vind==*vlen){/*Need to lengthen!*/
+  if(*vind==*vlen)
+  {/*Need to lengthen!*/
     *vlen=2**vlen;
     v=vec_lengthen(v, *vlen);
   }
@@ -121,7 +124,8 @@ veclist_append(GEN v, long *vind, long *vlen, GEN x)
 GEN
 vecsmalllist_append(GEN v, long *vind, long *vlen, long x)
 {
-  if(*vind==*vlen){/*Need to lengthen!*/
+  if(*vind==*vlen)
+  {/*Need to lengthen!*/
     *vlen=2**vlen;
     v=vecsmall_lengthen(v, *vlen);
   }
@@ -148,6 +152,69 @@ GEN tol -> The tolerance, which MUST be of type t_REAL.*/
 
 /*INTERSECTION OF LINES/CIRCLES*/
 
+/*Returns the intersection of two lines. If parallel/concurrent, returns NULL*/
+static GEN
+line_int(GEN l1, GEN l2, GEN tol)
+{
+  pari_sp av=avma;
+  GEN c1=seg_get_c(l1), c2=seg_get_c(l2);/*Get c values*/
+  GEN det=line_line_detNULL(l1, l2, tol);/*ad-bc*/
+  if(!det) return gc_NULL(av);/*Lines are parallel*/
+  if(!signe(c1))
+  {/*ax+by=0*/
+    if(gequal0(c2)) return gc_const(av, gen_0);/*Both must pass through 0*/
+	return gerepilecopy(av, mkcomplex(gdiv(gneg(seg_get_b(l1)), det), gdiv(seg_get_a(l1), det)));/*-b/det, a/det*/
+  }
+  /*Next, cx+dy=0*/
+  if(!signe(c2)) return gerepilecopy(av, mkcomplex(gdiv(seg_get_b(l2), det), gdiv(gneg(seg_get_a(l2)), det)));/*d/det, -c/det*/
+  /*Now ax+by=cx+dy=1*/
+  GEN x=gdiv(gsub(seg_get_b(l2), seg_get_b(l1)), det);/*(d-b)/det*/
+  GEN y=gdiv(gsub(seg_get_a(l1), seg_get_a(l2)), det);/*(a-c)/det*/
+  return gerepilecopy(av, mkcomplex(x, y));
+}
+
+/*Given two lines given by a1x+b1y=c1 and a2x+b2y=c2, returns a1b2-a2b1, unless this is within tolerance of 0, when we return NULL. Not stack clean.*/
+static GEN
+line_line_detNULL(GEN l1, GEN l2, GEN tol){
+  pari_sp av=avma;
+  GEN d=gsub(gmul(seg_get_a(l1), seg_get_b(l2)), gmul(seg_get_b(l1), seg_get_a(l2)));
+  if(toleq0(d, tol)) return gc_NULL(av);/*d=0 up to tolerance*/
+  return d;
+}
+
+/*p is assumed to be on the line defined by l; this checks if it is actually on the segment l. Returns 0 if not, 1 if p is in the interior, 2 if p is the start point, and 3 if p is the end point (all up to tolerance tol).*/
+static int
+onseg(GEN l, GEN p, GEN tol)
+{
+  if(lg(l)==LINE_LG) return 1;/*Lines contain all points*/
+  pari_sp av=avma;
+  GEN pstart=seg_get_start(l), px=real_i(p);
+  int xcmp1=tolcmp(real_i(pstart), px, tol);/*Compare x coeff of starting point and x*/
+  if(!xcmp1)
+  {/*Same x-value*/
+	GEN py=imag_i(p);
+	int ycmp1=tolcmp(imag_i(pstart), py, tol);
+	if(!ycmp1) return gc_int(av, 2);/*We must be the starting point.*/
+	GEN pend=seg_get_end(l);/*At this point, the slope must be oo*/
+	int ycmp2=tolcmp(py, imag_i(pend), tol);
+	if(!ycmp2) return gc_int(av, 3);/*Since we assume that p is on the line, we must be at endpoint 2 now.*/
+	if(ycmp1==ycmp2) return gc_int(av, 1);/*Must be between*/
+	return gc_int(av, 0);/*Above or below*/
+  }/*Now we have distinct x-values*/
+  int xcmp2=tolcmp(px, real_i(seg_get_end(l)), tol);
+  if(xcmp2==0) return gc_int(av, 3);/*End point, as the slope cannot be oo as pstartx!=pendx*/
+  if(xcmp1==xcmp2) return gc_int(av, 1);
+  return gc_int(av, 0);
+}
+
+/*Returns the intersection of two segments. If parallel/concurrent/do not intersect, returns NULL*/
+static GEN seg_int(GEN l1, GEN l2, GEN tol){
+  pari_sp av=avma;
+  GEN ipt=line_int(l1, l2, tol);/*Intersect the lines*/
+  if(!onseg(l1, ipt, tol)) return gc_NULL(av);
+  if(!onseg(l2, ipt, tol)) return gc_NULL(av);
+  return ipt;
+}
 
 /*DISTANCES/AREAS*/
 
@@ -171,7 +238,8 @@ tolcmp(GEN x, GEN y, GEN tol)
 {
   pari_sp av=avma;
   GEN d=gsub(x, y);
-  switch(typ(d)){
+  switch(typ(d))
+  {
     case t_FRAC:/*t_FRAC cannot be 0*/
 	  return gc_int(av, signe(gel(d, 1)));
 	case t_INT:/*Given exactly*/
@@ -201,7 +269,8 @@ toleq(GEN x, GEN y, GEN tol)
 static int
 toleq0(GEN x, GEN tol)
 {
-  switch(typ(x)){
+  switch(typ(x))
+  {
     case t_FRAC:/*t_FRAC cannot be 0*/
 	  return 0;
 	case t_INT:/*Given exactly*/
@@ -211,8 +280,10 @@ toleq0(GEN x, GEN tol)
 	  return 0;
 	case t_COMPLEX:;
 	  long i;
-	  for(i=1;i<=2;i++){
-		switch(typ(gel(x, i))){
+	  for(i=1;i<=2;i++)
+	  {
+		switch(typ(gel(x, i)))
+		{
 		  case t_FRAC:/*Fraction component, cannot be 0*/
 		    return 0;
 		  case t_INT:
