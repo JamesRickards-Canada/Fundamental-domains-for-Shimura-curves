@@ -25,7 +25,8 @@ INLINE GEN
 seg_get_end(GEN L){return gel(L, 5);}
 
 /*BASIC LINE, CIRCLE, AND POINT OPERATIONS*/
-GEN klein_act(GEN ab, GEN x);
+GEN klein_act(GEN M, GEN x);
+GEN mat_act(GEN M, GEN x);
 
 /*DISTANCES/AREAS*/
 GEN hdiscradius(GEN area, long prec);
