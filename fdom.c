@@ -1,5 +1,4 @@
 /*TO DO
-1. Is it more efficient to convert to unit ball, act there, and convert back? OR ALSO SHOULD I STORE MUCH MORE DATA WITH IT?
 2. Do I remove lists section? Should I use hash tables?
 3. CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS
 */
@@ -49,6 +48,15 @@ static int onseg(GEN l, GEN p, GEN tol);
 static GEN seg_int(GEN l1, GEN l2, GEN tol);
 
 /*1: MATRIX ACTION ON GEOMETRY*/
+static GEN gdat_initialize(GEN p, long prec);
+
+/*1: TRANSFER BETWEEN MODELS*/
+static GEN disc_to_klein(GEN z);
+static GEN disc_to_plane(GEN z, GEN p);
+static GEN klein_to_disc(GEN z, GEN tol, long prec);
+static GEN klein_to_plane(GEN z, GEN p, GEN tol, long prec);
+static GEN plane_to_disc(GEN z, GEN p);
+static GEN plane_to_klein(GEN z, GEN p);
 static GEN psl_to_klein(GEN M, GEN gdat);
 
 /*1: DISTANCES/AREA*/
@@ -276,6 +284,18 @@ KLEIN			->	M=[A, B] corresponding to the same (A, B) as for the unit disc action
 					=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
 */
 
+/*Initializes gdat for a given p and precision.*/
+static GEN
+gdat_initialize(GEN p, long prec)
+{
+  pari_sp av=avma;
+  GEN tol=deftol(prec);
+  GEN pc=conj_i(p);
+  GEN pmpc=gsub(p, pc);
+  GEN pscale=ginv(pmpc);
+  return gerepilecopy(av, mkvec5(stoi(prec), tol, p, pc, pscale));
+}
+
 /*This gives the action in the Klein model, as described above.*/
 GEN
 klein_act(GEN M, GEN z)
@@ -298,6 +318,72 @@ pgl_act(GEN M, GEN z){
   return gerepileupto(av, gdiv(numer, denom));
 }
 
+
+
+/*1: TRANSFER BETWEEN MODELS*/
+
+
+/*Given a point z in the unit disc model, this transfers it to the Klein model.*/
+static GEN
+disc_to_klein(GEN z)
+{
+  pari_sp av=avma;
+  GEN znorm=gnorm(z);
+  GEN scale=gdivsg(2, gaddsg(1, znorm));//2/(1+|z|^2)
+  return gerepileupto(av, gmul(scale, z));/*2z/(1+|z|^2)*/
+}
+
+/*Given a point z in the unit disc model, this transfers it to the upper half plane model.*/
+static GEN
+disc_to_plane(GEN z, GEN p)
+{
+  pari_sp av=avma;
+  GEN num=gsub(gmul(conj_i(p), z), p);/*conj(p)*z-p*/
+  GEN denom=gsubgs(z, 1);/*z-1*/
+  return gerepileupto(av, gdiv(num, denom));
+}
+
+/*Given a point z in the Klein model, this transfers it to the unit disc model.*/
+static GEN
+klein_to_disc(GEN z, GEN tol, long prec)
+{
+  pari_sp av=avma;
+  if(!tol) tol=deftol(prec);
+  GEN znm1=gsubsg(1, gnorm(z)), rt;/*1-|z|^2*/
+  if(toleq0(znm1, tol)) rt=gen_0;/*sqrt(0) can cause great precision loss, so we check for equality with 0 before square rooting.*/
+  else rt=gsqrt(znm1, prec);/*sqrt(1-|z|^2)*/
+  GEN scale=invr(gaddsg(1, rt));//1/(1+sqrt(1-|z|^2))
+  return gerepileupto(av, gmul(scale, z));/*z/(1+sqrt(1-|z|^2))*/
+}
+
+/*Given a point z in the Klein model, this transfers it to the upper half plane model.*/
+static GEN
+klein_to_plane(GEN z, GEN p, GEN tol, long prec)
+{
+  pari_sp av=avma;
+  GEN zdisc=klein_to_disc(z, tol, prec);
+  return gerepileupto(av, disc_to_plane(zdisc, p));//Klein -> disc -> plane
+}
+
+/*Given a point z in the upper half plane model, this transfers it to the unit disc model.*/
+static GEN
+plane_to_disc(GEN z, GEN p)
+{
+  pari_sp av=avma;
+  GEN num=gsub(z, p);/*z-p*/
+  GEN denom=gsub(z, conj_i(p));/*z-conj(p)*/
+  return gerepileupto(av, gdiv(num, denom));
+}
+
+/*Given a point z in the upper half plane model, this transfers it to the Klein model.*/
+static GEN
+plane_to_klein(GEN z, GEN p)
+{
+  pari_sp av=avma;
+  GEN zdisc=plane_to_disc(z, p);
+  return gerepileupto(av, disc_to_klein(zdisc));/*Plane -> disc -> Klein*/
+}
+
 /*Coverts M in PSL(2, R) to [A, B] which acts on the Klein model. If M1=1/(p-conj(p))[1,-p;1,-conj(p)] and M2=[conj(p), -p;1, -1], then this is via M1*M*M2=[A, B;conj(B), conj(A)]. If M=[a, b;c, d], the explicit formula are A=(a*conj(p)-|p|^2*c+b-pd)/(p-conj(p)), and B=(-ap+p^2c-b+pd)/(p-conj(p)).*/
 static GEN
 psl_to_klein(GEN M, GEN gdat)
@@ -315,7 +401,6 @@ psl_to_klein(GEN M, GEN gdat)
   gel(AB, 2)=gmul(Bpre, pscale);
   return gerepileupto(av, AB);
 }
-
 
 
 /*1: DISTANCES/AREAS*/
@@ -577,4 +662,12 @@ icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
 
 
 
+
+
+/*Used to suppress warnings as build the package.*/
+void warningholder()
+{
+  klein_to_plane(gen_0, gen_0, gen_0, 3);
+  plane_to_klein(gen_0, gen_0);
+}
 
