@@ -39,6 +39,7 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*2: INTERSECTION OF LINES/CIRCLES*/
 static GEN line_int(GEN l1, GEN l2, GEN tol);
+static GEN line_int11(GEN l1, GEN l2, GEN tol);
 static GEN line_line_detNULL(GEN l1, GEN l2, GEN tol);
 static int onseg(GEN l, GEN p, GEN tol);
 static GEN seg_int(GEN l1, GEN l2, GEN tol);
@@ -48,6 +49,8 @@ static GEN hdist_ud(GEN z1, GEN z2, long prec);
 //static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 
 /*2: FUNDAMENTAL DOMAIN COMPUTATION*/
+static GEN isometriccircle_psu(GEN M, GEN tol, long prec);
+
 //static GEN edgepairing(GEN U, GEN tol, int rboth, long prec);
 //static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
 //static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec);
@@ -199,6 +202,17 @@ line_int(GEN l1, GEN l2, GEN tol)
   return gerepilecopy(av, mkcomplex(x, y));
 }
 
+/*Line intersection where c1=c2=1, the typical case. l1 and l2 do not need the c part in this case.*/
+static GEN
+line_int11(GEN l1, GEN l2, GEN tol)
+{
+  pari_sp av=avma;
+  GEN det=line_line_detNULL(l1, l2, tol);/*ad-bc*/
+  GEN x=gdiv(gsub(seg_get_b(l2), seg_get_b(l1)), det);/*(d-b)/det*/
+  GEN y=gdiv(gsub(seg_get_a(l1), seg_get_a(l2)), det);/*(a-c)/det*/
+  return gerepilecopy(av, mkcomplex(x, y));
+}
+
 /*Given two lines given by a1x+b1y=c1 and a2x+b2y=c2, returns a1b2-a2b1, unless this is within tolerance of 0, when we return NULL. Not stack clean.*/
 static GEN
 line_line_detNULL(GEN l1, GEN l2, GEN tol){
@@ -318,6 +332,76 @@ hdist_ud(GEN z1, GEN z2, long prec)
 
 /*FUNDAMENTAL DOMAIN COMPUTATION*/
 
+
+/* DEALING WITH GENERAL STRUCTURES
+Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma, namely:
+	i) Multiply elements of Gamma: format as GEN eltmul(GEN X, GEN x, GEN y).
+	ii) Invert elements of Gamma: format as GEN eltinv(GEN X, GEN x).
+	iii) Embed elements of Gamma in PSL(2, R): format as GEN gamtopsl(GEN X, GEN x, long prec). We REQUIRE all elements to be t_REAL, so you should convert them if they are not.
+	iv) Identify if an element is trivial in Gamma: format as int istriv(GEN X, GEN x). Since we are working in PSL, we need to be careful that -x==x, since most representations of elements in X would be for SL.
+	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
+We do all of our computations in the Klein model.
+*/
+
+
+/* ISOMETRIC CIRCLE FORMATTING
+An an isometric circle is formatted as [[a, b], r, ang], where the circle is ax+by=1, r^2=a^2+b^2-1 (in the unit disc model, the isometric circle is (x-a)^2+(y-b)^2=r^2), and ang is argument of one of the intersections of the circle with the unit disc, the "first one" (by which we mean the ang'-ang mod 2Pi is in (0, Pi)). We also normalize so that ang is between 0 and 2Pi.
+*/
+
+/*Given an element M=[a, b;c, d] of PSU(1, 1), this returns the isometric circle associated to it. This has centre -d/c, radius 1/|c|. In the Klein model, the centre being u+iv -> xu+yv=1, and this intersects the unit disc at (a+/-br/(a^2+b^2), (b+/-ar)/(a^2+b^2)). If we pass in an element giving everything (i.e. c=0), we return NULL.*/
+static GEN
+isometriccircle_psu(GEN M, GEN tol, long prec)
+{
+  if(toleq0(gcoeff(M, 2, 1), tol)) return NULL;/*Isometric circle is everything, don't want to call it here.*/
+  pari_sp av=avma;
+  GEN centre=gneg(gdiv(gcoeff(M, 2, 2), gcoeff(M, 2, 1)));/*-d/c, the centre. If this is u+iv, then ux+vy=1 is the Klein version.*/
+  GEN r=invr(gabs(gcoeff(M, 2, 1), prec));/*1/|c| is the centre.*/
+  GEN a=real_i(centre), b=imag_i(centre);/*The coords of the centre.*/
+  GEN ar=mulrr(a, r), br=mulrr(b, r);
+  GEN apbr=addrr(a, br), ambr=subrr(a, br);/*a+/-br*/
+  GEN bpar=addrr(b, ar), bmar=subrr(b, ar);/*b+/-ar*/
+  GEN pi=mppi(prec);
+  GEN theta1, theta2;/*The intersection point angles are tan^-1((b+ar)/(a-br)) and tan^-1((b-ar)/(a+br)). We normalize so they are between 0 and 2Pi*/
+  if(toleq0(apbr, tol))
+  {
+	theta1=Pi2n(-1, prec);/*Pi/2*/
+	if(signe(bmar)==-1) theta1=addrr(theta1, pi);/*3Pi/2*/
+  }
+  else
+  {
+	theta1=gatan(divrr(bmar, apbr), prec);
+	if(signe(apbr)==-1) theta1=addrr(theta1, pi);/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct, as x=(a+br)/(a^2+b^2).*/
+	else if(signe(bmar)==-1) theta1=addrr(theta1, Pi2n(1, prec));/*Add 2Pi to get in the right interval*/
+  }
+  if(toleq0(ambr, tol))
+  {
+	theta2=Pi2n(-1, prec);/*Pi/2*/
+	if(signe(bpar)==-1) theta2=addrr(theta2, pi);/*3Pi/2*/
+  }
+  else
+  {
+	theta2=gatan(divrr(bpar, ambr), prec);
+	if(signe(ambr)==-1) theta2=addrr(theta2, pi);/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct, as x=(a-br)/(a^2+b^2).*/
+	else if(signe(bpar)==-1) theta2=addrr(theta2, Pi2n(1, prec));/*Add 2Pi to get in the right interval*/
+  }
+  GEN thetadiff=subrr(theta2, theta1);
+  if(signe(thetadiff)==1)
+  {
+	if(cmprr(thetadiff, pi)>0) theta1=theta2;/*theta2 is actually the "first" angle, so we swap it in.*/
+  }
+  else
+  {
+	if(cmprr(thetadiff, negr(pi))>0) theta1=theta2;/*theta2 is actually the "first" angle, so we swap it in.*/  
+  }
+  return gerepilecopy(av, mkvec3(mkvec2(a, b), r, theta1));/*Return the output!*/
+}
+
+GEN isom_test(GEN M, long prec){
+  pari_sp av=avma;
+  GEN tol=deftol(prec);
+  return gerepileupto(av, isometriccircle_psu(M, tol, prec));
+}
+
 /*FUNDAMENTAL DOMAIN OTHER COMPUTATIONS*/
 
 /*GEOMETRIC HELPER METHODS*/
@@ -338,13 +422,13 @@ tolcmp(GEN x, GEN y, GEN tol)
   GEN d=gsub(x, y);
   switch(typ(d))
   {
-    case t_FRAC:/*t_FRAC cannot be 0*/
-	  return gc_int(av, signe(gel(d, 1)));
-	case t_INT:/*Given exactly*/
-	  return gc_int(av, signe(d));
 	case t_REAL:
 	  if(abscmprr(d, tol)<0) return 0;/*|d|<tol*/
 	  return gc_int(av, signe(d));
+	case t_INT:/*Given exactly*/
+	  return gc_int(av, signe(d));
+	case t_FRAC:/*t_FRAC cannot be 0*/
+	  return gc_int(av, signe(gel(d, 1)));
   }
   pari_err_TYPE("Tolerance comparison only valid for type t_INT, t_FRAC, t_REAL", d);
   return 0;/*So that there is no warning*/
@@ -369,10 +453,6 @@ toleq0(GEN x, GEN tol)
 {
   switch(typ(x))
   {
-    case t_FRAC:/*t_FRAC cannot be 0*/
-	  return 0;
-	case t_INT:/*Given exactly*/
-	  return !signe(x);
 	case t_REAL:
 	  if(abscmprr(x, tol)<0) return 1;/*|x|<tol*/
 	  return 0;
@@ -395,6 +475,10 @@ toleq0(GEN x, GEN tol)
 		}
 	  }
 	  return 1;/*We passed*/
+	case t_INT:/*Given exactly*/
+	  return !signe(x);
+	case t_FRAC:/*t_FRAC cannot be 0*/
+	  return 0;
   }
   pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
   return 0;/*So that there is no warning*/
