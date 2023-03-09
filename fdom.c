@@ -1,3 +1,9 @@
+/*TO DO
+1. Is it more efficient to convert to unit ball, act there, and convert back? OR ALSO SHOULD I STORE MUCH MORE DATA WITH IT?
+2. Do I remove lists section? Should I use hash tables?
+3. CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS
+*/
+
 /*
 POSSIBLE FUTURE ADDITIONS:
 1) Parallelization of element enumeration along with partial domain computations.
@@ -5,7 +11,6 @@ POSSIBLE FUTURE ADDITIONS:
 3) Computation of cohomology groups.
 */
 
-/*CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS*/
 
 /*INCLUSIONS*/
 
@@ -32,24 +37,42 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*STATIC DECLARATIONS*/
 
-/*1: SHORT VECTORS IN LATTICES*/
-//static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
-//static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec);
-//static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec);
+/*SECTION 0: MISCELLANEOUS METHODS*/
 
-/*2: INTERSECTION OF LINES/CIRCLES*/
+/*SECTION 1: GEOMETRIC METHODS*/
+
+/*1: INTERSECTION OF LINES/CIRCLES*/
 static GEN line_int(GEN l1, GEN l2, GEN tol);
 static GEN line_int11(GEN l1, GEN l2, GEN tol);
 static GEN line_line_detNULL(GEN l1, GEN l2, GEN tol);
 static int onseg(GEN l, GEN p, GEN tol);
 static GEN seg_int(GEN l1, GEN l2, GEN tol);
 
-/*2: DISTANCES*/
-static GEN hdist_ud(GEN z1, GEN z2, long prec);
-//static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
+/*1: MATRIX ACTION ON GEOMETRY*/
+static GEN psl_to_klein(GEN M, GEN gdat);
 
-/*2: FUNDAMENTAL DOMAIN COMPUTATION*/
-static GEN isometriccircle_psu(GEN M, GEN tol, long prec);
+/*1: DISTANCES/AREA*/
+static GEN hdist_ud(GEN z1, GEN z2, long prec);
+
+/*1: TOLERANCE*/
+static int tolcmp(GEN x, GEN y, GEN tol);
+static int tolcmp_sort(void *data, GEN x, GEN y);
+static int toleq(GEN x, GEN y, GEN tol);
+static int toleq0(GEN x, GEN tol);
+
+/*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
+
+/*2: ISOMETRIC CIRCLES*/
+static GEN icirc_psu(GEN M, GEN gdat);
+static GEN icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat);
+
+
+/*1: SHORT VECTORS IN LATTICES*/
+//static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
+//static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec);
+//static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec);
+
+//static GEN hpolygon_area(GEN circles, GEN vertices, GEN tol, long prec);
 
 //static GEN edgepairing(GEN U, GEN tol, int rboth, long prec);
 //static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
@@ -72,10 +95,6 @@ static GEN isometriccircle_psu(GEN M, GEN tol, long prec);
 //static int gcmp_strict(void *data, GEN x, GEN y);
 //static int geom_check(GEN c);
 //static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec);
-static int tolcmp(GEN x, GEN y, GEN tol);
-static int tolcmp_sort(void *data, GEN x, GEN y);
-static int toleq(GEN x, GEN y, GEN tol);
-static int toleq0(GEN x, GEN tol);
 
 /*3: QUATERNION ALGEBRA NON-FDOM METHODS*/
 //static GEN algd(GEN A, GEN a);
@@ -99,15 +118,13 @@ static int toleq0(GEN x, GEN tol);
 //static GEN FpM_trace(GEN x, GEN p);
 //static GEN ZM_trace(GEN x);
 
-/*SECTION 1: BASE METHODS*/
 
 
+/*SECTION 0: MISCELLANEOUS METHODS*/
 
-/*INFINITY */
+/*1: INFINITY */
 
-/*LISTS*/
-
-/*TARGET REMOVAL OF THIS SECTION? MAYBE*/
+/*1: LISTS*/
 
 /*Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. If this happens, the resulting vector is not suitable for gerepileupto; this must be done at the end (necessary anyway since it's likely we have to call vec_shorten at some point).*/
 GEN
@@ -139,46 +156,35 @@ vecsmalllist_append(GEN v, long *vind, long *vlen, long x)
 
 
 
-/*SHORT VECTORS IN LATTICES*/
-
-
-/*SECTION 2: GEOMETRY METHODS*/
+/*0: SHORT VECTORS IN LATTICES*/
 
 
 
-/*A line is stored as [a, b, c], representing ax+by=c. We will normalize so that c=1 or 0. It is assumed that at least one of a, b is non-zero
-A segment is stored as [a, b, c, x0, x1]. [a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going through oo
-GEN tol -> The tolerance, which MUST be of type t_REAL.*/
+
+/*SECTION 1: GEOMETRIC METHODS*/
 
 
-/*BASIC LINE, CIRCLE, AND POINT OPERATIONS*/
+/*LINES, SEGMENTS, TOLERANCE
+Line   ->	[a, b, c]			Representing ax+by=c. We will normalize so that c=1 or 0. It is assumed that at least one of a, b is non-zero.
+Segment->	[a, b, c, x0, x1]	[a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going
+								through oo.
+GEN tol->	The tolerance, which MUST be of type t_REAL. The default choice is tol=deftol(prec). Two points are declared as equal if they are equal up
+			to tolerance.
+*/
 
+/* GEOMETRIC DATA
+We will need to deal with passing from the upper half plane model -> unit ball model -> Klein model, as well as doing computations with tolerance. For this, we will fix a "geometric data" argument:
+gdat = 	[prec, tol, p, pc, pscale]
+prec  ->	The precision we are working with everywhere, stored as a GEN. We normally want it to be a long, which can be done with prec[2] (as we 
+			assume prec>0 and it does not overflow.
+tol   ->	The tolerance, which should be initially set with tol=deftol(prec).
+p     ->	The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, 
+			otherwise issues may arise. We convert it to type t_REAL.
+pc    ->	The conjugate of p.
+pscale->	1/(p-pc), which is required when we convert from the upper half plane to the Klein model.
+*/
 
-/*Given M=[a, b;conj(b), conj(a)] (with |a|^2-|b|^2=1), gives the action on x. We take x to be an element of unit disc in the Klein model, and the action is given by the corresponding action of M on the disc model. The equation is K(x)=(a^2x+b^2xconj+2ab)/(|a|^2+|b|^2+a*x*bconj+aconj*xconj*b.*/
-GEN
-klein_act(GEN M, GEN x)
-{
-  pari_sp av=avma;
-  GEN a=gcoeff(M, 1, 1), b=gcoeff(M, 1, 2), bc=gcoeff(M, 2, 1), ac=gcoeff(M, 2, 2), xc=conj_i(x);
-  GEN num=gadd(gadd(gmul(gsqr(a), x), gmul(gsqr(b), xc)), gmulsg(2, gmul(a, b)));/*a^2x+b^2xc+2ab*/
-  GEN axbbar_real=real_i(gmul(a, gmul(x, bc)));/*real part of a*x*bc */
-  GEN anorm=real_i(gmul(a, ac));/*real part of a*ac=|a|^2*/
-  GEN den=gsubgs(gmulsg(2, gadd(anorm, axbbar_real)), 1);/*|a|^2+|b|^2+a*x*bc+ac*xc*b=2|a|^2+2*real(a*q*bc)-1*/
-  return gerepileupto(av, gdiv(num, den));
-}
-
-/*Given M=[a, b;c, d] in PGL(2, R), gives the action on x. We take x to be an element of unit disc in the Poincare disc model, and the action is given by the normal Mobius action on C. We assume that we do NOT go to oo.*/
-GEN
-mat_act(GEN M, GEN x){
-  pari_sp av=avma;
-  GEN numer=gadd(gmul(gcoeff(M, 1, 1), x), gcoeff(M, 1, 2));
-  GEN denom=gadd(gmul(gcoeff(M, 2, 1), x), gcoeff(M, 2, 2));
-  return gerepileupto(av, gdiv(numer, denom));
-}
-
-
-
-/*INTERSECTION OF LINES/CIRCLES*/
+/*1: INTERSECTION OF LINES/CIRCLES*/
 
 
 /*Returns the intersection of two lines. If parallel/concurrent, returns NULL*/
@@ -202,7 +208,7 @@ line_int(GEN l1, GEN l2, GEN tol)
   return gerepilecopy(av, mkcomplex(x, y));
 }
 
-/*Line intersection where c1=c2=1, the typical case. l1 and l2 do not need the c part in this case.*/
+/*Line intersection where c1=c2=1, the typical case. l1 and l2 can have length 2 in this case.*/
 static GEN
 line_int11(GEN l1, GEN l2, GEN tol)
 {
@@ -258,7 +264,61 @@ seg_int(GEN l1, GEN l2, GEN tol){
 }
 
 
-/*DISTANCES/AREAS*/
+
+/*1: MATRIX ACTION ON GEOMETRY*/
+
+
+/*EQUATIONS FOR ACTION
+UPPER HALF PLANE->	M=[a, b;c, d] in (P)GL(2, R)^+ acts on z via (az+b)/(cz+d). In this program, we normally normalize so that det(M)=1.
+UNIT DISC		->	M=[A, B;conj(B), conj(A)] in (P)SU(1, 1) acts on z in the same way as PGL. Note that |A|^2-|B|^2=1 as det(M)=1
+KLEIN			->	M=[A, B] corresponding to the same (A, B) as for the unit disc action. The corresponding equation on a point in the Klein model is
+					via Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B.
+					=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
+*/
+
+/*This gives the action in the Klein model, as described above.*/
+GEN
+klein_act(GEN M, GEN z)
+{
+  pari_sp av=avma;
+  GEN A=gel(M, 1), B=gel(M, 2);
+  GEN AzpB=gadd(gmul(A, z), B);/*Az+B*/
+  GEN BzcpA=gadd(gmul(B, conj_i(z)), A);/*B*conj(z)+A*/
+  GEN num=gadd(gmul(A, AzpB), gmul(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
+  GEN denom=gadd(gmul(conj_i(B), AzpB), gmul(conj_i(A), BzcpA));/*conj(B)(Az+B)+conj(A)(B*conj(z)+A)*/
+  return gerepileupto(av, gdiv(num, denom));
+}
+
+/*Gives the action of a matrix in the upper half plane/unit disc model. We assume that the input/output are not infinity, which could happen with the upper half plane model.*/
+GEN
+pgl_act(GEN M, GEN z){
+  pari_sp av=avma;
+  GEN numer=gadd(gmul(gcoeff(M, 1, 1), z), gcoeff(M, 1, 2));
+  GEN denom=gadd(gmul(gcoeff(M, 2, 1), z), gcoeff(M, 2, 2));
+  return gerepileupto(av, gdiv(numer, denom));
+}
+
+/*Coverts M in PSL(2, R) to [A, B] which acts on the Klein model. If M1=1/(p-conj(p))[1,-p;1,-conj(p)] and M2=[conj(p), -p;1, -1], then this is via M1*M*M2=[A, B;conj(B), conj(A)]. If M=[a, b;c, d], the explicit formula are A=(a*conj(p)-|p|^2*c+b-pd)/(p-conj(p)), and B=(-ap+p^2c-b+pd)/(p-conj(p)).*/
+static GEN
+psl_to_klein(GEN M, GEN gdat)
+{
+  pari_sp av=avma;
+  GEN p=gdat_get_p(gdat), pc=gdat_get_pc(gdat), pscale=gdat_get_pscale(gdat);
+  GEN ampc=gsub(gcoeff(M, 1, 1), gmul(p, gcoeff(M, 2, 1)));/*a-pc*/
+  GEN bmpd=gsub(gcoeff(M, 1, 2), gmul(p, gcoeff(M, 2, 2)));/*b-pd*/
+  GEN ampc_pconj=gmul(ampc, pc);/*(a-pc)*conj(p)*/
+  GEN Apre=gadd(ampc_pconj, bmpd);/*(a-pc)*conj(p)+b-pd*/
+  GEN ampc_p=gmul(ampc, p);/*(a-pc)*p*/
+  GEN Bpre=gneg(gadd(ampc_p, bmpd));/*(-a+pc)p-b+pd*/
+  GEN AB=cgetg(3, t_VEC);
+  gel(AB, 1)=gmul(Apre, pscale);
+  gel(AB, 2)=gmul(Bpre, pscale);
+  return gerepileupto(av, AB);
+}
+
+
+
+/*1: DISTANCES/AREAS*/
 
 
 /*Given the area of a hyperbolic disc, this returns the radius. The formula is area=4*Pi*sinh(R/2)^2, or R=2arcsinh(sqrt(area/4Pi))*/
@@ -330,81 +390,9 @@ hdist_ud(GEN z1, GEN z2, long prec)
 }
 
 
-/*FUNDAMENTAL DOMAIN COMPUTATION*/
 
+/*1: TOLERANCE*/
 
-/* DEALING WITH GENERAL STRUCTURES
-Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma, namely:
-	i) Multiply elements of Gamma: format as GEN eltmul(GEN X, GEN x, GEN y).
-	ii) Invert elements of Gamma: format as GEN eltinv(GEN X, GEN x).
-	iii) Embed elements of Gamma in PSL(2, R): format as GEN gamtopsl(GEN X, GEN x, long prec). We REQUIRE all elements to be t_REAL, so you should convert them if they are not.
-	iv) Identify if an element is trivial in Gamma: format as int istriv(GEN X, GEN x). Since we are working in PSL, we need to be careful that -x==x, since most representations of elements in X would be for SL.
-	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
-We do all of our computations in the Klein model.
-*/
-
-
-/* ISOMETRIC CIRCLE FORMATTING
-An an isometric circle is formatted as [[a, b], r, ang], where the circle is ax+by=1, r^2=a^2+b^2-1 (in the unit disc model, the isometric circle is (x-a)^2+(y-b)^2=r^2), and ang is argument of one of the intersections of the circle with the unit disc, the "first one" (by which we mean the ang'-ang mod 2Pi is in (0, Pi)). We also normalize so that ang is between 0 and 2Pi.
-*/
-
-/*Given an element M=[a, b;c, d] of PSU(1, 1), this returns the isometric circle associated to it. This has centre -d/c, radius 1/|c|. In the Klein model, the centre being u+iv -> xu+yv=1, and this intersects the unit disc at (a+/-br/(a^2+b^2), (b+/-ar)/(a^2+b^2)). If we pass in an element giving everything (i.e. c=0), we return NULL.*/
-static GEN
-isometriccircle_psu(GEN M, GEN tol, long prec)
-{
-  if(toleq0(gcoeff(M, 2, 1), tol)) return NULL;/*Isometric circle is everything, don't want to call it here.*/
-  pari_sp av=avma;
-  GEN centre=gneg(gdiv(gcoeff(M, 2, 2), gcoeff(M, 2, 1)));/*-d/c, the centre. If this is u+iv, then ux+vy=1 is the Klein version.*/
-  GEN r=invr(gabs(gcoeff(M, 2, 1), prec));/*1/|c| is the centre.*/
-  GEN a=real_i(centre), b=imag_i(centre);/*The coords of the centre.*/
-  GEN ar=mulrr(a, r), br=mulrr(b, r);
-  GEN apbr=addrr(a, br), ambr=subrr(a, br);/*a+/-br*/
-  GEN bpar=addrr(b, ar), bmar=subrr(b, ar);/*b+/-ar*/
-  GEN pi=mppi(prec);
-  GEN theta1, theta2;/*The intersection point angles are tan^-1((b+ar)/(a-br)) and tan^-1((b-ar)/(a+br)). We normalize so they are between 0 and 2Pi*/
-  if(toleq0(apbr, tol))
-  {
-	theta1=Pi2n(-1, prec);/*Pi/2*/
-	if(signe(bmar)==-1) theta1=addrr(theta1, pi);/*3Pi/2*/
-  }
-  else
-  {
-	theta1=gatan(divrr(bmar, apbr), prec);
-	if(signe(apbr)==-1) theta1=addrr(theta1, pi);/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct, as x=(a+br)/(a^2+b^2).*/
-	else if(signe(bmar)==-1) theta1=addrr(theta1, Pi2n(1, prec));/*Add 2Pi to get in the right interval*/
-  }
-  if(toleq0(ambr, tol))
-  {
-	theta2=Pi2n(-1, prec);/*Pi/2*/
-	if(signe(bpar)==-1) theta2=addrr(theta2, pi);/*3Pi/2*/
-  }
-  else
-  {
-	theta2=gatan(divrr(bpar, ambr), prec);
-	if(signe(ambr)==-1) theta2=addrr(theta2, pi);/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct, as x=(a-br)/(a^2+b^2).*/
-	else if(signe(bpar)==-1) theta2=addrr(theta2, Pi2n(1, prec));/*Add 2Pi to get in the right interval*/
-  }
-  GEN thetadiff=subrr(theta2, theta1);
-  if(signe(thetadiff)==1)
-  {
-	if(cmprr(thetadiff, pi)>0) theta1=theta2;/*theta2 is actually the "first" angle, so we swap it in.*/
-  }
-  else
-  {
-	if(cmprr(thetadiff, negr(pi))>0) theta1=theta2;/*theta2 is actually the "first" angle, so we swap it in.*/  
-  }
-  return gerepilecopy(av, mkvec3(mkvec2(a, b), r, theta1));/*Return the output!*/
-}
-
-GEN isom_test(GEN M, long prec){
-  pari_sp av=avma;
-  GEN tol=deftol(prec);
-  return gerepileupto(av, isometriccircle_psu(M, tol, prec));
-}
-
-/*FUNDAMENTAL DOMAIN OTHER COMPUTATIONS*/
-
-/*GEOMETRIC HELPER METHODS*/
 
 /*Returns the default tolerance given the precision.*/
 GEN
@@ -483,6 +471,108 @@ toleq0(GEN x, GEN tol)
   pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
   return 0;/*So that there is no warning*/
 }
+
+
+
+/*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
+
+
+
+/* DEALING WITH GENERAL STRUCTURES
+Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma, namely:
+	i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
+	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g).
+	iii) Embed elements of Gamma in PSL(2, R): format as GEN Xtopsl(GEN X, GEN g, long prec). We REQUIRE t_REAL entries in various places, so you should ensure that the coefficients of the output are converted to t_REAL.
+	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL.
+	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
+We do all of our computations in the Klein model.
+*/
+
+/*2: ISOMETRIC CIRCLES*/
+
+
+/* ISOMETRIC CIRCLE FORMATTING
+icirc ->	[[a, b], r, ang]
+[a, b]->	ax+by=1 is the Klein model equation of the boundary
+			(x-a)^2+(y-b)^2=r^2 is the unit disc model equation of the boundary
+r     ->	r^2+1=a^2+b^2 as it is orthogonal to the unit disc
+ang   ->	icirc intersects the unit disc in P1 and P2, and assume that the angle from P1 to P2 is <pi (which uniquely determines them). Then ang is
+			the argument of P1, in the range [0, 2*pi).
+*/
+
+
+/*Given an element M=[a, b;c, d] of PSU(1, 1), this returns the isometric circle associated to it. This has centre -d/c, radius 1/|c|. In the Klein model, the centre being u+iv -> xu+yv=1, and this intersects the unit disc at (a+/-br/(a^2+b^2), (b+/-ar)/(a^2+b^2)). If we pass in an element giving everything (i.e. c=0), we return 0.*/
+static GEN
+icirc_psu(GEN M, GEN gdat)
+{
+  GEN tol=gdat_get_tol(gdat);
+  long prec=gdat_get_prec(gdat);
+  if(toleq0(gcoeff(M, 2, 1), tol)) return gen_0;/*Isometric circle is everything, don't want to call it here.*/
+  pari_sp av=avma;
+  GEN centre=gneg(gdiv(gcoeff(M, 2, 2), gcoeff(M, 2, 1)));/*-d/c, the centre. If this is u+iv, then ux+vy=1 is the Klein version.*/
+  GEN r=invr(gabs(gcoeff(M, 2, 1), prec));/*1/|c| is the centre.*/
+  GEN a=real_i(centre), b=imag_i(centre);/*The coords of the centre.*/
+  GEN ar=mulrr(a, r), br=mulrr(b, r);
+  GEN apbr=addrr(a, br), ambr=subrr(a, br);/*a+/-br*/
+  GEN bpar=addrr(b, ar), bmar=subrr(b, ar);/*b+/-ar*/
+  GEN pi=mppi(prec);
+  GEN theta1, theta2;/*The intersection point angles are tan^-1((b+ar)/(a-br)) and tan^-1((b-ar)/(a+br)). We normalize so they are between 0 and 2Pi*/
+  if(toleq0(apbr, tol))
+  {
+	theta1=Pi2n(-1, prec);/*Pi/2*/
+	if(signe(bmar)==-1) theta1=addrr(theta1, pi);/*3Pi/2*/
+  }
+  else
+  {
+	theta1=gatan(divrr(bmar, apbr), prec);
+	if(signe(apbr)==-1) theta1=addrr(theta1, pi);/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct, as x=(a+br)/(a^2+b^2).*/
+	else if(signe(bmar)==-1) theta1=addrr(theta1, Pi2n(1, prec));/*Add 2Pi to get in the right interval*/
+  }
+  if(toleq0(ambr, tol))
+  {
+	theta2=Pi2n(-1, prec);/*Pi/2*/
+	if(signe(bpar)==-1) theta2=addrr(theta2, pi);/*3Pi/2*/
+  }
+  else
+  {
+	theta2=gatan(divrr(bpar, ambr), prec);
+	if(signe(ambr)==-1) theta2=addrr(theta2, pi);/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct, as x=(a-br)/(a^2+b^2).*/
+	else if(signe(bpar)==-1) theta2=addrr(theta2, Pi2n(1, prec));/*Add 2Pi to get in the right interval*/
+  }
+  GEN thetadiff=subrr(theta2, theta1);
+  if(signe(thetadiff)==1)
+  {
+	if(cmprr(thetadiff, pi)>0) theta1=theta2;/*theta2 is actually the "first" angle, so we swap it in.*/
+  }
+  else
+  {
+	if(cmprr(thetadiff, negr(pi))>0) theta1=theta2;/*theta2 is actually the "first" angle, so we swap it in.*/  
+  }
+  return gerepilecopy(av, mkvec3(mkvec2(a, b), r, theta1));/*Return the output!*/
+}
+
+/*Computes the isometric circle for g in Gamma, returning [g, M, icirc], where M gives the action of g on the Klein model.*/
+static GEN
+icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
+{
+  pari_sp av=avma;
+  GEN psl=Xtopsl(X, g, gdat_get_prec(gdat));
+  GEN ret=cgetg(4, t_VEC);
+  gel(ret, 1)=gcopy(g);
+  gel(ret, 2)=psl_to_klein(psl, gdat);
+  gel(ret, 3)=icirc_psu(gel(ret, 2), gdat);
+  return gerepileupto(av, ret);
+}
+
+
+
+
+
+/*FUNDAMENTAL DOMAIN OTHER COMPUTATIONS*/
+
+/*GEOMETRIC HELPER METHODS*/
+
+
 
 
 
