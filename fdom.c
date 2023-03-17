@@ -74,6 +74,7 @@ static int tolsigne(GEN x, GEN tol);
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
 
 /*2: ISOMETRIC CIRCLES*/
+static GEN icirc_angle(GEN c1, GEN c2, long prec);
 static GEN icirc_klein(GEN M, GEN gdat);
 static GEN icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat);
 static GEN argmod(GEN x, GEN y, GEN tol, long prec);
@@ -85,6 +86,7 @@ static long normbound_icircs_bigr(GEN C, GEN order);
 static void normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long *found);
 static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toins, long *found);
 static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstab, GEN tol, long prec, long toins, long *found);
+static GEN normbound_area(GEN C, long prec);
 
 /*1: SHORT VECTORS IN LATTICES*/
 //static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
@@ -615,12 +617,28 @@ r      ->	r^2+1=a^2+b^2 as it is orthogonal to the unit disc
 p1/p2  ->	Intersection points with the unit disc; see below for the ordering.  
 ang1   ->	Assume that the angle from p1 to p2 is <pi (which uniquely determines them). Then ang1 is the argument of p1, in the range [0, 2*pi).
 ang2   ->	The argument of p2, in the range [0, 2*pi).
+a, b, r, ang1, ang2 must be t_REAL.
+p1 and p2 must be t_COMPLEX with t_REAL components.
 */
 
 
+/*Given two isometric circles c1 and c2, assumed to intersect, this computes the angle they form (counterclockwise from the tangent to c1 to the tangent to c2 at the intersection point).
+If c1 is given by (x-a)^2+(y-b)^2=r^2 and c2 by (x-c)^2+(y-d)^2=s^2 (in the unit ball model) and theta is the angled formed, then a long computation shows that cos(theta)=(1-ac-bd)/rs.
+This method is not stack clean.
+*/
+static GEN
+icirc_angle(GEN c1, GEN c2, long prec)
+{
+  GEN ac = mulrr(gmael(c1, 1, 1), gmael(c2, 1, 1));
+  GEN bd = mulrr(gmael(c1, 1, 2), gmael(c2, 1, 2));
+  GEN omacmbd = subsr(1, addrr(ac, bd));/*1-ac-bd*/
+  GEN cost = divrr(omacmbd, mulrr(gel(c1, 2), gel(c2, 2)));/*cos(theta)*/
+  return gacos(cost, prec);/*acos is in the interval [0, Pi], which is what we want.*/
+}
+
 /*Given M=[A, B] acting on the Klein model, this returns the isometric circle associated to it. This has centre -conj(A/B), radius 1/|B|. In the Klein model, the centre being a+bi -> xa+yb=1, and this intersects the unit disc at (a+/-br/(a^2+b^2), (b-/+ar)/(a^2+b^2)). Assumptions:
 	If we pass in an element giving everything (i.e. B=0), we return 0.
-	A and B are t_REAL/t_COMPLEX with t_REAL components
+	A and B are t_REAL OR t_COMPLEX with t_REAL components
 */
 static GEN
 icirc_klein(GEN M, GEN gdat)
@@ -689,7 +707,8 @@ argmod(GEN x, GEN y, GEN tol, long prec)
 A normalized boundary is represented by U, where
 U=[elts, sides, vcors, vargs, kact, area, spair, gdat]
 elts     ->	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
-sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored only as [a, b] representing ax+by=1. Infinite side -> 0
+sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored as [[a, b], r] representing ax+by=1 and a^2+b^2=r^2+1. Infinite
+			side -> 0
 vcors    ->	Vertex coordinates, stored as a t_COMPLEX. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this order going 
 			counterclockwise about the origin.
 vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi). We will also shift the elements so that this set is sorted, i.e. 
@@ -722,7 +741,7 @@ normbound_icircs(GEN C, GEN gdat)
   gel(vcors, 1) = gel(firstcirc, 4);/*The terminal vertex of the side is the first vertex.*/
   gel(vargs, 1) = gel(firstcirc, 6);
   long found = 1, lenc = lc-1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
-  int phase2 = 0;/*Which phase we are in.*/
+  int phase2 = 0, infinitesides = 0;/*Which phase we are in, and if there are infinite sides or not.*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
 	elts, vcors, vargs, found, absind
 	PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
@@ -737,6 +756,7 @@ normbound_icircs(GEN C, GEN gdat)
 	    if (angle_onarc(gel(lastcirc, 5), gel(lastcirc, 6), gel(curcirc, 5), tol)) continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
 	  case 1:
 	    phase2 = 1;/*We have looped back around and are intersecting from the right.*/
+		infinitesides = 1;
 		normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side*/
 		normbound_icircs_phase2(elts, vcors, vargs, curcirc, gel(firstcirc, 1), tol, prec, toins, &found);/*Phase 2 insertion.*/
 		continue;
@@ -753,6 +773,7 @@ normbound_icircs(GEN C, GEN gdat)
 		found--;
 		continue;
 	  case 0:
+	    infinitesides = 1;
 	    normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
 	  case 2:
 	    if (phase2 || angle_onarc(gel(lastcirc, 5), gel(lastcirc, 6), gel(firstcirc, 5), tol)) {/*Phase2 has started*/
@@ -805,6 +826,7 @@ normbound_icircs(GEN C, GEN gdat)
 	}
   }
   if (!phase2) {/*We never hit phase 2, so there is one final infinite edge to worry about.*/
+    infinitesides = 1;
 	normbound_icircs_insinfinite(elts, vcors, vargs, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
@@ -815,7 +837,7 @@ normbound_icircs(GEN C, GEN gdat)
   GEN rv_kact = cgetg(found+1, t_VEC);
   for (i=1; i<=found; i++) {/*Make sure we treat infinite sides correctly!*/
 	gel(rv_elts, i) = elts[i] ? gmael(C, elts[i], 1) : gen_0;
-	gel(rv_sides, i) = elts[i] ? gmael3(C, elts[i], 3, 1) : gen_0;
+	gel(rv_sides, i) = elts[i] ? vec_shorten(gmael(C, elts[i], 3), 2) : gen_0;
 	gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
   }
   gel(rv, 1) = rv_elts;/*The elements*/
@@ -823,13 +845,12 @@ normbound_icircs(GEN C, GEN gdat)
   gel(rv, 3) = vec_shorten(vcors, found);/*Vertex coords*/
   gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
   gel(rv, 5) = rv_kact;/*Kleinian action*/
-  gel(rv, 6) = gen_0;/*Area*/
+  if(infinitesides) gel(rv, 6)=mkoo();/*Infinite side means infinite area.*/
+  else gel(rv, 6) = normbound_area(rv_sides, prec);
   gel(rv, 7) = gen_0;/*Side pairing*/
   gel(rv, 8) = gdat;/*Geometric data*/
   return rv;
 }
-
-/*COMPUTE THE AREA NEXT AND CHANGE METHOD!!!*/
 
 
 /*Used for sorting C by initial angles.*/
@@ -871,6 +892,7 @@ normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toin
   gel(vargs, *found) = gel(curcirc, 6);
 }
 
+/*We are performing an insertion in phase 2, i.e. we are intersecting back with the initial side.*/
 static void
 normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstab, GEN tol, long prec, long toins, long *found)
 {
@@ -880,7 +902,16 @@ normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstab
   gel(vargs, *found) = argmod(real_i(gel(vcors, *found)), imag_i(gel(vcors, *found)), tol, prec);/*Argument*/
 }
 
-
+/*Returns the hyperbolic area of the normalized boundary, which is assumed to not have any infinite sides (we keep track if they exist, and do not call this method if they do). C should be the list of [[a, b], r] in order. The area is (n-2)*Pi-sum(angles), where there are n sides.*/
+static GEN
+normbound_area(GEN C, long prec){
+  pari_sp av = avma;
+  long n = lg(C)-1, i;
+  GEN area = mulsr(n-2, mppi(prec));/*(n-2)*Pi*/
+  for (i=1; i<n; i++) area = subrr(area, icirc_angle(gel(C, i), gel(C, i+1), prec));
+  area = subrr(area, icirc_angle(gel(C, n), gel(C, 1), prec));
+  return gerepileupto(av, area);
+}
 
 
 /*Used to suppress warnings as build the package.*/
