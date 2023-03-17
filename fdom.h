@@ -3,16 +3,12 @@
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
 /*1: GEOMETRIC DATA*/
-INLINE long
-gdat_get_prec(GEN gd){return gel(gd, 1)[2];}
 INLINE GEN
-gdat_get_tol(GEN gd){return gel(gd, 2);}
+gdat_get_tol(GEN gd){return gel(gd, 1);}
 INLINE GEN
-gdat_get_p(GEN gd){return gel(gd, 3);}
+gdat_get_p(GEN gd){return gel(gd, 2);}
 INLINE GEN
-gdat_get_pc(GEN gd){return gel(gd, 4);}
-INLINE GEN
-gdat_get_pscale(GEN gd){return gel(gd, 5);}
+gdat_get_pscale(GEN gd){return gel(gd, 3);}
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN
