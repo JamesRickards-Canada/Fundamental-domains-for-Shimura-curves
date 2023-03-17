@@ -1,7 +1,7 @@
 /*TO DO
-2. Do I remove lists section? Should I use hash tables?
 3. CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS
 4. Make the insertion methods in normbound inline? Not sure if this does anything or not.
+5. klein_act: Write mulcc and addcc methods, and assume we have t_COMPLEX with t_REAL entries.
 */
 
 /*
@@ -37,17 +37,15 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*STATIC DECLARATIONS*/
 
-/*SECTION 0: MISCELLANEOUS METHODS*/
-
 /*SECTION 1: GEOMETRIC METHODS*/
 
-/*1: INTERSECTION OF LINES/CIRCLES*/
+/*1: LINES AND ARCS*/
+static int angle_onarc(GEN a1, GEN a2, GEN a, GEN tol);
 static GEN line_int(GEN l1, GEN l2, GEN tol);
 static GEN line_int11(GEN l1, GEN l2, GEN tol);
 static GEN line_line_detNULL(GEN l1, GEN l2, GEN tol);
 static int onseg(GEN l, GEN p, GEN tol);
 static GEN seg_int(GEN l1, GEN l2, GEN tol);
-static int angle_onarc(GEN a1, GEN a2, GEN a, GEN tol);
 
 /*1: MATRIX ACTION ON GEOMETRY*/
 static GEN gdat_initialize(GEN p, long prec);
@@ -63,6 +61,14 @@ static GEN psl_to_klein(GEN M, GEN gdat);
 
 /*1: DISTANCES/AREA*/
 static GEN hdist_ud(GEN z1, GEN z2, long prec);
+
+/*1: OPERATIONS ON COMPLEX REALS*/
+static GEN addccr(GEN z1, GEN z2);
+static GEN divccr_conj(GEN z1, GEN z2);
+static GEN mulccr(GEN z1, GEN z2);
+static GEN mulccr_conj(GEN z1, GEN z2);
+static GEN normcr(GEN z);
+static GEN subccr(GEN z1, GEN z2);
 
 /*1: TOLERANCE*/
 static int tolcmp(GEN x, GEN y, GEN tol);
@@ -141,146 +147,33 @@ static GEN normbound_area(GEN C, long prec);
 
 
 
-/*SECTION 0: MISCELLANEOUS METHODS*/
-
-/*1: INFINITY */
-
-/*1: LISTS*/
-
-/*Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. If this happens, the resulting vector is not suitable for gerepileupto; this must be done at the end (necessary anyway since it's likely we have to call vec_shorten at some point).*/
-GEN
-veclist_append(GEN v, long *vind, long *vlen, GEN x)
-{
-  if (*vind == *vlen) {/*Need to lengthen!*/
-    *vlen = 2**vlen;
-    v = vec_lengthen(v, *vlen);
-  }
-  *vind = *vind+1;
-  gel(v, *vind) = x;
-  return v;
-}
-
-/*Appends x to v, returning v, and updating vind to vind++. If vind++>vlen, then we double the length of v as well. Don't forget to call vec_shorten at the end, since some positions are uninitialized.*/
-GEN
-vecsmalllist_append(GEN v, long *vind, long *vlen, long x)
-{
-  if (*vind == *vlen) {/*Need to lengthen!*/
-    *vlen = 2**vlen;
-    v = vecsmall_lengthen(v, *vlen);
-  }
-  *vind = *vind+1;
-  v[*vind] = x;
-  return v;
-}
-
-
-
-/*0: SHORT VECTORS IN LATTICES*/
-
-
-
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
 
-/*LINES, SEGMENTS, TOLERANCE
-Line   ->	[a, b, c]			Representing ax+by=c. We will normalize so that c=1 or 0. It is assumed that at least one of a, b is non-zero.
+/*LINES, SEGMENTS, TOLERANCE, POINTS
+Line   ->	[a, b, c]			Representing ax+by=c. We will normalize so that c=1 or 0. It is assumed that at least one of a, b is non-zero. We also
+								assume that a and b are of type t_REAL.
 Segment->	[a, b, c, x0, x1]	[a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going
-								through oo.
+								through oo. We also require x0 and x1 to have type t_COMPLEX with t_REAL components.
 GEN tol->	The tolerance, which MUST be of type t_REAL. The default choice is tol=deftol(prec). Two points are declared as equal if they are equal up
 			to tolerance.
+Points ->	Stored as t_COMPLEX with t_REAL entries.
 */
 
 /* GEOMETRIC DATA
 We will need to deal with passing from the upper half plane model -> unit ball model -> Klein model, as well as doing computations with tolerance. For this, we will fix a "geometric data" argument:
-gdat = 	[prec, tol, p, pc, pscale]
-prec  ->	The precision we are working with everywhere, stored as a GEN. We normally want it to be a long, which can be done with prec[2] (as we 
-			assume prec>0 and it does not overflow.
+gdat = 	[tol, p, pc, pscale]
+prec  ->	The precision we are working with everywhere: we do not store it, since it can be retrieved with lg(tol).
 tol   ->	The tolerance, which should be initially set with tol=deftol(prec).
 p     ->	The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, 
-			otherwise issues may arise. We convert it to type t_REAL.
+			otherwise issues may arise. We convert it to have components that are t_REAL.
 pc    ->	The conjugate of p.
-pscale->	1/(p-pc), which is required when we convert from the upper half plane to the Klein model.
+pscale->	1/(p-pc), which is required when we convert from the upper half plane to the Klein model. Stored as a t_COMPLEX with first entry gen_0.
 */
 
-/*1: INTERSECTION OF LINES/CIRCLES*/
 
-
-/*Returns the intersection of two lines. If parallel/concurrent, returns NULL*/
-static GEN
-line_int(GEN l1, GEN l2, GEN tol)
-{
-  pari_sp av = avma;
-  GEN c1 = seg_get_c(l1), c2 = seg_get_c(l2);/*Get c values*/
-  GEN det = line_line_detNULL(l1, l2, tol);/*ad-bc*/
-  if (!det) return gc_NULL(av);/*Lines are parallel*/
-  if (!signe(c1)) {/*ax+by = 0*/
-    if (gequal0(c2)) return gc_const(av, gen_0);/*Both must pass through 0*/
-	return gerepilecopy(av, mkcomplex(gdiv(gneg(seg_get_b(l1)), det), gdiv(seg_get_a(l1), det)));/*-b/det, a/det*/
-  }
-  /*Next, cx+dy = 0*/
-  if (!signe(c2)) return gerepilecopy(av, mkcomplex(gdiv(seg_get_b(l2), det), gdiv(gneg(seg_get_a(l2)), det)));/*d/det, -c/det*/
-  /*Now ax+by = cx+dy = 1*/
-  GEN x = gdiv(gsub(seg_get_b(l2), seg_get_b(l1)), det);/*(d-b)/det*/
-  GEN y = gdiv(gsub(seg_get_a(l1), seg_get_a(l2)), det);/*(a-c)/det*/
-  return gerepilecopy(av, mkcomplex(x, y));
-}
-
-/*Line intersection where c1=c2=1, the typical case. l1 and l2 can have length 2 in this case.*/
-static GEN
-line_int11(GEN l1, GEN l2, GEN tol)
-{
-  pari_sp av = avma;
-  GEN det = line_line_detNULL(l1, l2, tol);/*ad-bc*/
-  if(!det) return gc_NULL(av);/*Lines are concurrent*/
-  GEN x = gdiv(gsub(seg_get_b(l2), seg_get_b(l1)), det);/*(d-b)/det*/
-  GEN y = gdiv(gsub(seg_get_a(l1), seg_get_a(l2)), det);/*(a-c)/det*/
-  return gerepilecopy(av, mkcomplex(x, y));
-}
-
-/*Given two lines given by a1x+b1y=c1 and a2x+b2y=c2, returns a1b2-a2b1, unless this is within tolerance of 0, when we return NULL. Not stack clean.*/
-static GEN
-line_line_detNULL(GEN l1, GEN l2, GEN tol){
-  pari_sp av = avma;
-  GEN d = gsub(gmul(seg_get_a(l1), seg_get_b(l2)), gmul(seg_get_b(l1), seg_get_a(l2)));
-  if (toleq0(d, tol)) return gc_NULL(av);/*d = 0 up to tolerance*/
-  return d;
-}
-
-/*p is assumed to be on the line defined by l; this checks if it is actually on the segment l. Returns 0 if not, 1 if p is in the interior, 2 if p is the start point, and 3 if p is the end point (all up to tolerance tol).*/
-static int
-onseg(GEN l, GEN p, GEN tol)
-{
-  if (lg(l) == LINE_LG) return 1;/*Lines contain all points*/
-  pari_sp av = avma;
-  GEN pstart = seg_get_start(l), px = real_i(p);
-  int xcmp1 = tolcmp(real_i(pstart), px, tol);/*Compare x coeff of starting point and x*/
-  if (!xcmp1) {/*Same x-value*/
-	GEN py = imag_i(p);
-	int ycmp1 = tolcmp(imag_i(pstart), py, tol);
-	if (!ycmp1) return gc_int(av, 2);/*We must be the starting point.*/
-	GEN pend = seg_get_end(l);/*At this point, the slope must be oo*/
-	int ycmp2 = tolcmp(py, imag_i(pend), tol);
-	if (!ycmp2) return gc_int(av, 3);/*Since we assume that p is on the line, we must be at endpoint 2 now.*/
-	if (ycmp1 == ycmp2) return gc_int(av, 1);/*Must be between*/
-	return gc_int(av, 0);/*Above or below*/
-  }/*Now we have distinct x-values*/
-  int xcmp2 = tolcmp(px, real_i(seg_get_end(l)), tol);
-  if (xcmp2 == 0) return gc_int(av, 3);/*End point, as the slope cannot be oo as pstartx! = pendx*/
-  if (xcmp1 == xcmp2) return gc_int(av, 1);
-  return gc_int(av, 0);
-}
-
-/*Returns the intersection of two segments. If parallel/concurrent/do not intersect, returns NULL*/
-static GEN 
-seg_int(GEN l1, GEN l2, GEN tol)
-{
-  pari_sp av = avma;
-  GEN ipt = line_int(l1, l2, tol);/*Intersect the lines*/
-  if (!onseg(l1, ipt, tol)) return gc_NULL(av);
-  if (!onseg(l2, ipt, tol)) return gc_NULL(av);
-  return ipt;
-}
+/*1: LINES AND ARCS*/
 
 /*A is the arc on the unit disc from angle a1 to a2, where a1 and a2 are in [0, 2Pi). For another ange a in [0, 2Pi), this returns 1 if a==a1, 2 if a==a2, 3 if a in in the interior of the counterclockwise arc from a1 to a2, and 0 if it is outside of this arc. All angles must be t_REAL, even if they are 0.*/
 static int
@@ -303,6 +196,84 @@ angle_onarc(GEN a1, GEN a2, GEN a, GEN tol)
   return 3;/*Inside*/
 }
 
+/*Returns the intersection of two lines. If parallel/concurrent, returns NULL. We will ensure that all output numbers are COMPLEX with REAL components. This means that 0 is stored as a real number with precision.*/
+static GEN
+line_int(GEN l1, GEN l2, GEN tol)
+{
+  pari_sp av = avma;
+  GEN c1 = gel(l1, 3), c2 = gel(l2, 3);/*Get c values*/
+  GEN det = line_line_detNULL(l1, l2, tol);/*ad-bc*/
+  if (!det) return gc_NULL(av);/*Lines are parallel*/
+  if (!signe(c1)) {/*ax+by = 0*/
+    if (!signe(c2)) {/*Both must pass through 0*/
+	  GEN zeror = real_0(lg(tol));/*prec=lg(tol)*/
+	  return gerepilecopy(av, mkcomplex(zeror, zeror));
+	}
+	return gerepilecopy(av, mkcomplex(divrr(negr(gel(l1, 2)), det), divrr(gel(l1, 1), det)));/*-b/det, a/det*/
+  }
+  /*Next, cx+dy = 0*/
+  if (!signe(c2)) return gerepilecopy(av, mkcomplex(divrr(gel(l2, 2), det), divrr(negr(gel(l2, 1)), det)));/*d/det, -c/det*/
+  /*Now ax+by = cx+dy = 1*/
+  GEN x = divrr(subrr(gel(l2, 2), gel(l1, 2)), det);/*(d-b)/det*/
+  GEN y = divrr(subrr(gel(l1, 1), gel(l2, 1)), det);/*(a-c)/det*/
+  return gerepilecopy(av, mkcomplex(x, y));
+}
+
+/*Line intersection where c1=c2=1, the typical case. l1 and l2 can have length 2 in this case.*/
+static GEN
+line_int11(GEN l1, GEN l2, GEN tol)
+{
+  pari_sp av = avma;
+  GEN det = line_line_detNULL(l1, l2, tol);/*ad-bc*/
+  if(!det) return gc_NULL(av);/*Lines are concurrent*/
+  GEN x = divrr(subrr(gel(l2, 2), gel(l1, 2)), det);/*(d-b)/det*/
+  GEN y = divrr(subrr(gel(l1, 1), gel(l2, 1)), det);/*(a-c)/det*/
+  return gerepilecopy(av, mkcomplex(x, y));
+}
+
+/*Given two lines given by a1x+b1y=c1 and a2x+b2y=c2, returns a1b2-a2b1, unless this is within tolerance of 0, when we return NULL. Not stack clean.*/
+static GEN
+line_line_detNULL(GEN l1, GEN l2, GEN tol)
+{
+  GEN d = subrr(mulrr(gel(l1, 1), gel(l2, 2)), mulrr(gel(l1, 2), gel(l2, 1)));/*ad-bc*/
+  if (toleq0(d, tol)) return NULL;/*d=0 up to tolerance*/
+  return d;
+}
+
+/*p is assumed to be on the line segment defined by l; this checks if it is actually on the segment l. Returns 0 if not, 1 if p is in the interior, 2 if p is the start point, and 3 if p is the end point (all up to tolerance tol).*/
+static int
+onseg(GEN l, GEN p, GEN tol)
+{
+  pari_sp av = avma;
+  GEN pstart = gel(l, 4), px = gel(p, 1);
+  int xcmp1 = tolcmp(gel(pstart, 1), px, tol);/*Compare x coeff of starting point and x*/
+  if (!xcmp1) {/*Same x-value*/
+	GEN py = gel(p, 2);
+	int ycmp1 = tolcmp(gel(pstart, 2), py, tol);
+	if (!ycmp1) return gc_int(av, 2);/*We must be the starting point.*/
+	GEN pend = gel(l, 5);/*At this point, the slope must be oo*/
+	int ycmp2 = tolcmp(py, gel(pend, 2), tol);
+	if (!ycmp2) return gc_int(av, 3);/*Since we assume that p is on the line, we must be at endpoint 2 now.*/
+	if (ycmp1 == ycmp2) return gc_int(av, 1);/*Must be between*/
+	return gc_int(av, 0);/*Above or below*/
+  }/*Now we have distinct x-values*/
+  int xcmp2 = tolcmp(px, gel(gel(l, 5), 1), tol);
+  if (xcmp2 == 0) return gc_int(av, 3);/*End point, as the slope cannot be oo as pstartx! = pendx*/
+  if (xcmp1 == xcmp2) return gc_int(av, 1);
+  return gc_int(av, 0);
+}
+
+/*Returns the intersection of two segments. If parallel/concurrent/do not intersect, returns NULL*/
+static GEN 
+seg_int(GEN l1, GEN l2, GEN tol)
+{
+  pari_sp av = avma;
+  GEN ipt = line_int(l1, l2, tol);/*Intersect the lines*/
+  if (!onseg(l1, ipt, tol)) return gc_NULL(av);
+  if (!onseg(l2, ipt, tol)) return gc_NULL(av);
+  return ipt;
+}
+
 
 
 /*1: MATRIX ACTION ON GEOMETRY*/
@@ -316,16 +287,17 @@ KLEIN			->	M=[A, B] corresponding to the same (A, B) as for the unit disc action
 					=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
 */
 
-/*Initializes gdat for a given p and precision.*/
+/*Initializes gdat for a given p and precision. */
 static GEN
 gdat_initialize(GEN p, long prec)
 {
   pari_sp av = avma;
   GEN tol = deftol(prec);
-  GEN pc = conj_i(p);
-  GEN pmpc = gsub(p, pc);
-  GEN pscale = ginv(pmpc);
-  return gerepilecopy(av, mkvec5(stoi(prec), tol, p, pc, pscale));
+  GEN pprec = mkcomplex(gtofp(gel(p, 1), prec), gtofp(gel(p, 2), prec));/*Convert p to have real components.*/
+  GEN pconj = mkcomplex(gel(pprec, 1), negr(gel(pprec, 2)));
+  GEN m2y = negr(shiftr(gel(pprec, 2), 1));/*pprec=x+iy, then m2y=-2y*/
+  GEN pscale = mkcomplex(gen_0, invr(m2y));/*1/(pprec-pconj)=1/(-2y)i*/
+  return gerepilecopy(av, mkvec4(tol, pprec, pconj, pscale));
 }
 
 /*This gives the action in the Klein model, as described above.*/
@@ -334,16 +306,17 @@ klein_act(GEN M, GEN z)
 {
   pari_sp av = avma;
   GEN A = gel(M, 1), B = gel(M, 2);
-  GEN AzpB = gadd(gmul(A, z), B);/*Az+B*/
-  GEN BzcpA = gadd(gmul(B, conj_i(z)), A);/*B*conj(z)+A*/
-  GEN num = gadd(gmul(A, AzpB), gmul(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
-  GEN denom = gadd(gmul(conj_i(B), AzpB), gmul(conj_i(A), BzcpA));/*conj(B)(Az+B)+conj(A)(B*conj(z)+A)*/
-  return gerepileupto(av, gdiv(num, denom));
+  GEN AzpB = addccr(mulccr(A, z), B);/*Az+B*/
+  GEN BzcpA = addccr(mulccr_conj(B, z), A);/*B*conj(z)+A*/
+  GEN num = addccr(mulccr(A, AzpB), mulccr(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
+  GEN denom = addccr(mulccr_conj(AzpB, B), mulccr_conj(BzcpA, A));/*(Az+B)conj(B)+(B*conj(z)+A)conj(A)*/
+  return gerepilecopy(av, divccr(num, denom));
 }
 
 /*Gives the action of a matrix in the upper half plane/unit disc model. We assume that the input/output are not infinity, which could happen with the upper half plane model.*/
 GEN
-pgl_act(GEN M, GEN z){
+pgl_act(GEN M, GEN z)
+{
   pari_sp av = avma;
   GEN numer = gadd(gmul(gcoeff(M, 1, 1), z), gcoeff(M, 1, 2));
   GEN denom = gadd(gmul(gcoeff(M, 2, 1), z), gcoeff(M, 2, 2));
@@ -360,9 +333,11 @@ static GEN
 disc_to_klein(GEN z)
 {
   pari_sp av = avma;
-  GEN znorm = gnorm(z);
-  GEN scale = gdivsg(2, gaddsg(1, znorm));//2/(1+|z|^2)
-  return gerepileupto(av, gmul(scale, z));/*2z/(1+|z|^2)*/
+  GEN znorm = normcr(z);
+  GEN scale = divsr(2, addsr(1, znorm));//2/(1+|z|^2)
+  GEN x = mulrr(scale, gel(z, 1));
+  GEN y = mulrr(scale, gel(z, 2));
+  return gerepilecopy(av, mkcomplex(x, y));/*2z/(1+|z|^2)*/
 }
 
 /*Given a point z in the unit disc model, this transfers it to the upper half plane model.*/
@@ -370,10 +345,16 @@ static GEN
 disc_to_plane(GEN z, GEN p)
 {
   pari_sp av = avma;
-  GEN num = gsub(gmul(conj_i(p), z), p);/*conj(p)*z-p*/
-  GEN denom = gsubgs(z, 1);/*z-1*/
-  return gerepileupto(av, gdiv(num, denom));
+  GEN num = subccr(mulccr_conj(z, p), p);/*z*conj(p)-p*/
+  GEN denom = mkcomplex(subrs(gel(z, 1), 1), gel(z, 2));/*z-1*/
+  return gerepilecopy(av, divccr(num, denom));
 }
+
+
+/*
+GO THROUGH, CONVERTING TO MY NEW FORMAT. I AM USING THE CCR METHODS, and CAN DELETE prec IN FAVOUR OF lg(tol). CAN ALSO GET TOL BY deftol(lg(prec)).
+*/
+
 
 /*Given a point z in the Klein model, this transfers it to the unit disc model.*/
 static GEN
@@ -381,7 +362,7 @@ klein_to_disc(GEN z, GEN tol, long prec)
 {
   pari_sp av = avma;
   if (!tol) tol = deftol(prec);
-  GEN znm1 = gsubsg(1, gnorm(z)), rt;/*1-|z|^2*/
+  GEN znm1 = subsr(1, normcr(z)), rt;/*1-|z|^2*/
   if (toleq0(znm1, tol)) rt = gen_0;/*sqrt(0) can cause great precision loss, so we check for equality with 0 before square rooting.*/
   else rt = gsqrt(znm1, prec);/*sqrt(1-|z|^2)*/
   GEN scale = invr(gaddsg(1, rt));//1/(1+sqrt(1-|z|^2))
@@ -507,8 +488,74 @@ hdist_ud(GEN z1, GEN z2, long prec)
 
 
 
-/*1: TOLERANCE*/
+/*1: OPERATIONS ON COMPLEX REALS*/
 
+/*Adds two complex numbers with real components, giving a complex output. NOT gerepileupto suitable, and leaves garbage.*/
+static GEN
+addccr(GEN z1, GEN z2)
+{
+  GEN x = addrr(gel(z1, 1), gel(z2, 1));
+  GEN y = addrr(gel(z1, 2), gel(z2, 2));
+  return mkcomplex(x, y);
+}
+
+/*Divides two complex numbers with real components, giving a complex output. NOT gerepileupto suitable, and leaves garbage.*/
+static GEN
+divccr(GEN z1, GEN z2)
+{
+  GEN num = mulccr_conj(z1, z2);
+  GEN den = normcr(z2);
+  GEN x = divrr(gel(num, 1), den);
+  GEN y = divrr(gel(num, 2), den);
+  return mkcomplex(x, y);
+}
+
+/*Multiplies two complex numbers with real components, giving a complex output. NOT gerepileupto suitable, and leaves garbage.*/
+static GEN
+mulccr(GEN z1, GEN z2)
+{
+  GEN ac = mulrr(gel(z1, 1), gel(z2, 1));
+  GEN ad = mulrr(gel(z1, 1), gel(z2, 2));
+  GEN bc = mulrr(gel(z1, 2), gel(z2, 1));
+  GEN bd = mulrr(gel(z1, 2), gel(z2, 2));
+  GEN x = subrr(ac, bd);
+  GEN y = addrr(ad, bc);
+  return mkcomplex(x, y);
+}
+
+/*mulccr, except we do z1*conj(z2)*/
+static GEN
+mulccr_conj(GEN z1, GEN z2)
+{
+  GEN ac = mulrr(gel(z1, 1), gel(z2, 1));
+  GEN ad = mulrr(gel(z1, 1), gel(z2, 2));
+  GEN bc = mulrr(gel(z1, 2), gel(z2, 1));
+  GEN bd = mulrr(gel(z1, 2), gel(z2, 2));
+  GEN x = addrr(ac, bd);
+  GEN y = subrr(bc, ad);
+  return mkcomplex(x, y);
+}
+
+/*Norm of a complex number with real components, giving a real output. NOT gerepileupto suitable, and leaves garbage.*/
+static GEN
+normcr(GEN z)
+{
+  GEN x = sqrr(gel(z, 1));
+  GEN y = sqrr(gel(z, 2));
+  return addrr(x, y);
+}
+
+/*Subtracts two complex numbers with real components, giving a complex output. NOT gerepileupto suitable, and leaves garbage.*/
+static GEN
+subccr(GEN z1, GEN z2)
+{
+  GEN x = subrr(gel(z1, 1), gel(z2, 1));
+  GEN y = subrr(gel(z1, 2), gel(z2, 2));
+  return mkcomplex(x, y);
+}
+
+
+/*1: TOLERANCE*/
 
 /*Returns the default tolerance given the precision.*/
 GEN
@@ -552,14 +599,14 @@ toleq0(GEN x, GEN tol)
 	  long i;
 	  for (i = 1; i <= 2; i++) {
 		switch (typ(gel(x, i))) {
-		  case t_FRAC:/*Fraction component, cannot be 0*/
-		    return 0;
-		  case t_INT:
-		    if (signe(gel(x, i))) return 0;
-			break;
 		  case t_REAL:
 		    if (abscmprr(gel(x, i), tol) >= 0) return 0;/*Too large*/
 			break;
+		  case t_INT:
+		    if (signe(gel(x, i))) return 0;
+			break;
+		  case t_FRAC:/*Fraction component, cannot be 0*/
+		    return 0;
 		  default:/*Illegal input*/
 		    pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
 		}
