@@ -2,6 +2,8 @@
 3. CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS
 4. Make the insertion methods in normbound inline? Not sure if this does anything or not.
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
+6. How to input groups between O^1 and the full positive normalizer group?
+7. Remove gdat from normbound output?
 */
 
 /*
@@ -48,6 +50,7 @@ static int onseg(GEN l, GEN p, GEN tol);
 static GEN seg_int(GEN l1, GEN l2, GEN tol);
 
 /*1: MATRIX ACTION ON GEOMETRY*/
+static GEN defp(long prec);
 static GEN gdat_initialize(GEN p, long prec);
 
 /*1: TRANSFER BETWEEN MODELS*/
@@ -91,6 +94,7 @@ static GEN icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat);
 static GEN argmod(GEN x, GEN y, GEN tol, long prec);
 
 /*2: NORMALIZED BOUNDARY*/
+static GEN normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat);
 static GEN normbound_icircs(GEN C, GEN gdat);
 static int cmp_icircangle(void *nul, GEN c1, GEN c2);
 static long normbound_icircs_bigr(GEN C, GEN order);
@@ -99,54 +103,21 @@ static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcir
 static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long prec, long toins, long *found);
 static GEN normbound_area(GEN C, long prec);
 
-/*1: SHORT VECTORS IN LATTICES*/
-//static GEN quadraticintegernf(GEN nf, GEN A, GEN B, GEN C, long prec);
-//static GEN smallvectors_cholesky(GEN Q, GEN C, long maxelts, GEN condition, long prec);
-//static GEN smallvectors_nfcondition(GEN A, GEN C, long maxelts, GEN condition, long prec);
 
-//static GEN edgepairing(GEN U, GEN tol, int rboth, long prec);
-//static GEN normalizedbasis_shiftpoint(GEN c, GEN r, int initial, long prec);
-//static GEN normalizedboundary_append(GEN Ubase, GEN G, GEN mats, GEN id, GEN tol, long prec);
-//static GEN normalizedboundary_givenU(GEN Ubase, GEN G, GEN mats, GEN id, GEN data, GEN (*gamtopsl)(GEN, GEN, long), GEN tol, long prec);
-//static GEN normalizedboundary_givencircles(GEN G, GEN mats, GEN id, GEN tol, long prec);
-//static long normalizedboundary_outside(GEN U, GEN z, GEN tol, long prec);
-//static GEN normalizedboundary_sideint(GEN U, GEN c, int start, GEN tol, long prec);
-//static GEN psl_roots(GEN M, GEN tol, long prec);
+/*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
-/*2: FUNDAMENTAL DOMAIN OTHER COMPUTATIONS*/
-//static GEN minimalcycles(GEN pair);
-//static void presentation_updatewords(GEN words, long ind, GEN repl);
-//static GEN word_collapse(GEN word);
-//static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl);
+/*3: INITIALIZE SYMMETRIC SPACE*/
+static GEN algsymminit_i(GEN A, GEN O, GEN type, GEN p, long prec)
+static GEN alg_make_m2rmats(GEN A, GEN O, long prec);
 
-/*2: GEOMETRIC HELPER METHODS*/
-//static GEN anglediff(GEN ang, GEN bot, GEN tol, long prec);
-//static GEN atanoo(GEN x, long prec);
-//static int gcmp_strict(void *data, GEN x, GEN y);
-//static int geom_check(GEN c);
-//static GEN shiftangle(GEN ang, GEN bot, GEN tol, long prec);
+/*3: ALGEBRA METHODS FOR GEOMETRY*/
 
-/*3: QUATERNION ALGEBRA NON-FDOM METHODS*/
-//static GEN algd(GEN A, GEN a);
-//static GEN voidalgmul(void *A, GEN x, GEN y);
-
-/*3: FUNDAMENTAL DOMAIN COMPUTATION*/
-//static GEN qalg_fdom(GEN Q, GEN p, int dispprogress, GEN C, GEN R, GEN passes, int type, long prec);
-
-/*3: HELPER METHODS*/
-//static long algsplitoo(GEN A);
-//static GEN qalg_normform_givenbasis(GEN Q, GEN basis);
-//static GEN qalg_basis_conj(GEN Q, GEN x);
+/*3: ALGEBRA HELPER METHODS*/
+static GEN alggeta(GEN A);
+static long algsplitoo(GEN A);
 
 
-/*EXTRA*/
-//static GEN elementabsmultable(GEN mt, GEN x);
-//static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
-//static GEN algbasismultable(GEN al, GEN x);
-//static GEN algtracebasis(GEN al);
-//static GEN elementabsmultable_Z(GEN mt, GEN x);
-//static GEN FpM_trace(GEN x, GEN p);
-//static GEN ZM_trace(GEN x);
+
 
 
 
@@ -288,6 +259,16 @@ KLEIN			->	M=[A, B] corresponding to the same (A, B) as for the unit disc action
 					via Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B.
 					=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
 */
+
+/*Returns the default value of p, which is 0+Pi/8*I*/
+static GEN
+defp(long prec)
+{
+  GEN p = cgetg(3, t_COMPLEX);
+  gel(p, 1) = real_0(prec);
+  gel(p, 2) = Pi2n(-3, prec);
+  return p;/*Can't use PiI2n since we need real(p) to be real_0(prec), not exactly 0.*/
+}
 
 /*Initializes gdat for a given p and precision. */
 static GEN
@@ -814,6 +795,22 @@ spair    ->	Stores the side pairing of U, if it exists/has been computed. When c
 gdat	 ->	Stores the geometric data associated to the computations.
 */
 
+/*WARNING!!!! I DO NOT HAVE vargs[1] BEING THE MINIMAL ARGUMENT YET*/
+
+/*Initializes the inputs for normalizedboundary_givencircles. G is the set of elements we are forming the normalized boundary for. Returns 0 if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
+static GEN
+normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
+{
+  long lG = lg(G), i;
+  GEN C = vectrunc_init(lG);
+  for (i = 1; i < lG; i++) {
+	GEN circ = icirc_elt(X, gel(G, i), Xtopsl, gdat);
+	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
+	vectrunc_append(C, circ);
+  }
+  if(lg(C) == 1) return gen_0;
+  return normbound_icircs(C, gdat);
+}
 
 /*Given C, the output of icirc_elt for each of our elements, this computes and returns the normalized boundary. Assumptions:
 	C[i]=[g, M, icirc], where g=elt, M=Kleinian action, and icirc=[a, b, r, p1, p2, ang1, ang2].
@@ -957,7 +954,6 @@ normbound_icircs(GEN C, GEN gdat)
   return rv;
 }
 
-
 /*Used for sorting C by initial angles.*/
 static int
 cmp_icircangle(void *nul, GEN c1, GEN c2){return cmprr(gmael(c1, 3, 6), gmael(c2, 3, 6));}
@@ -1021,10 +1017,216 @@ normbound_area(GEN C, long prec)
 }
 
 
-/*Used to suppress warnings as build the package.*/
-void warningholder()
+
+
+
+
+
+
+/*SECTION 3: QUATERNION ALGEBRA METHODS*/
+
+
+/*ALGEBRA REQUIREMENTS: UPDATE THIS!
+Let
+	F be a totally real number field
+	A a quaternion algebra over F split at a unique real place
+	O be an order in A
+We can compute the fundamental domain of groups that live between O^1 and N{B^{\times}}(O)^+, i.e. berween the units of norm 1, and the elements of the normalizer with positive norm at the unique split real place.
+Inputs to most methods are named "AX", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with algsymminit.
+*/
+
+
+/*3: INITIALIZE SYMMETRIC SPACE*/
+
+
+/*SYMMETRIC SPACE FORMATTING
+A symmetric space initialization is represented by AX, where
+	AX=[A, O, chol, embmats, type, gdat, fdom, pres, sig]
+A     	-> The algebra
+O		-> The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
+chol	-> Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
+embmats	-> O[,i] is sent to embmats[i] under the embedding into M(2, R).
+type	-> Which symmetric space we want to compute.
+gdat	-> Geometric data
+fdom	-> Fundamental domain, if computed
+pres	-> Presentation, if computed
+sig		-> Signature, if computed
+*/
+
+/*
+TO DO: CHOL, TYPE
+type=0 means O^1, the default.*/
+
+/*Initializes the symmetric space of the given inputs, ready to compute a fundamental domain. Not gerepileupto suitable, and leaves garbage.*/
+static GEN
+algsymminit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 {
-  klein_to_plane(gen_0, gen_0, gen_0);
-  plane_to_klein(gen_0, gen_0);
+  if(!O) O = matid(lg(alg_get_basis(A))-1);
+  GEN AX = cgetg(10, t_VEC);
+  gel(AX, 1) = A;
+  gel(AX, 2) = O;
+  gel(AX, 3) = gen_0;/*TO DO*/
+  gel(AX, 4) = alg_make_m2rmats(A, O, prec);
+  gel(AX, 5) = type;/*TO DO*/
+  gel(AX, 6) = gdat_initialize(p, prec);
+  gel(AX, 7) = gen_0;
+  gel(AX, 8) = gen_0;
+  gel(AX, 9) = gen_0;
+  return AX;
 }
+
+/*Clean initialization of the symmetric space. Can pass p as NULL and will set it to the default.*/
+GEN
+algsymminit(GEN A, GEN O, GEN type, GEN p, long prec)
+{
+  pari_sp av = avma;
+  if(!p) p = defp(prec);
+  return gerepilecopy(algsymminit_i(A, O, type, p, prec));
+}
+
+/*Returns a vector v of matrices in M(2, R) such that O[,i] is sent to v[i].*/
+static GEN
+alg_make_m2rmats(GEN A, GEN O, long prec)
+{
+  pari_sp av = avma;
+  long split = algsplitoo(A);/*The split real place*/
+  if (split == 0) pari_err_TYPE("Quaternion algebra has 0 or >=2 split real infinite places, not valid for fundamental domains.", A);
+  GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
+  GEN Kroot = gel(nf_get_roots(K), split);/*The split root*/
+  long Kvar = nf_get_varn(K);
+  GEN L = alg_get_splittingfield(A);/*L=K(sqrt(a)).*/
+  long Lvar = rnf_get_varn(L);
+  GEN a = alggeta(A), b=alg_get_b(A);/*A=(a, B/K).*/
+  GEN aval = poleval(a, Kroot);
+  GEN bval = poleval(b, Kroot), rt;
+  int apos;/*Tracks if a>0 at the split place or not, as this determines which embedding we will take.*/
+  if (signe(aval) == 1) {apos = 1; rt = gsqrt(aval, prec);}
+  else {apos = 0; rt = gsqrt(bval, prec);}
+  long lO = lg(O), i, j;
+  GEN mats = cgetg(lO, t_VEC);/*To store the 2x2 matrices.*/
+  for (i = 1; i < lO; i++) {
+	GEN x = algbasisto1ijk(A, gel(O, i));/*ith basis element in the form e+fi+gj+hk*/
+	for (i=1; j<=4; j++) gel(x, i) = gsubst(gel(x, i), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
+	if (apos) {/*e+fi+gj+hk -> [e+fsqrt(a), b(g+hsqrt(a));g-hsqrt(a), e-fsqrt(a)*/
+	  GEN frta = gmul(gel(x, 2), rt);/*f*sqrt(a)*/
+	  GEN hrta = gmul(gel(x, 4), rt);/*h*sqrt(a)*/
+	  GEN topl = gtofp(gadd(gel(x, 1), frta), prec);/*e+f*sqrt(a)*/
+	  GEN topr = gtofp(gmul(gadd(gel(x, 3), hrta), bval), prec);/*b(g+h*sqrt(a))*/
+	  GEN botl = gtofp(gsub(gel(x, 3), hrta), prec);/*g-h*sqrt(a)*/
+	  GEN botr = gtofp(gsub(gel(x, 1), frta), prec);/*e-f*sqrt(a)*/
+	  gel(mats, i) = mkmat22(topl, topr, botl, botr);
+	  continue;
+	}
+	/*e+fi+gj+hk -> [e+g*sqrt(b), a(f-h*sqrt(b));f+h*sqrt(b), e-g*sqrt(b)]*/
+	GEN grtb = gmul(gel(x, 3), rt);/*g*sqrt(b)*/
+	GEN hrtb = gmul(gel(x, 4), rt);/*h*sqrt(b)*/
+	GEN topl = gtofp(gadd(gel(x, 1), grtb), prec);/*e+g*sqrt(b)*/
+	GEN topr = gtofp(gmul(gsub(gel(x, 2), hrtb), aval), prec);/*a(f-h*sqrt(b))*/
+	GEN botl = gtofp(gadd(gel(x, 2), hrtb), prec);/*f+h*sqrt(b)*/
+	GEN botr = gtofp(gsub(gel(x, 1), grtb), prec);/*e-g*sqrt(b)*/
+	gel(mats, i) = mkmat22(topl, topr, botl, botr);
+  }
+  return gerepilecopy(av, mats);
+}
+
+
+/*3: FUNDAMENTAL DOMAIN METHODS*/
+
+/*Returns the normalized boundary of the set of elements G in A.*/
+GEN
+algnormbound(GEN AX, GEN G, long prec)
+{
+  pari_sp av = avma;
+  GEN gdat = gel(AX, 6);/*TO DO: Make inline retrieval methods*/
+  
+  return gerepilecopy(av, normbound(AX, G, &algtopsl, gdat));
+}
+
+
+
+/*3: ALGEBRA METHODS FOR GEOMETRY*/
+
+
+/*DO I SUPPLY THE SQUARE ROOT OF THE NORM TO THIS METHOD?????*/
+
+/*Stuff*/
+static GEN
+algtopsl(GEN QA, GEN g, long prec)
+{
+  return ghalf;
+}
+
+/*
+static GEN
+normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
+*/
+
+
+/*3: ALGEBRA HELPER METHODS*/
+
+/*Given an element in the algebra representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.*/
+GEN
+algalgto1ijk(GEN A, GEN x)
+{
+  pari_sp av = avma;
+  x = liftall(x);/*Make sure there are no mods.*/
+  GEN L = alg_get_splittingfield(A);/*L=F(i)*/
+  long Lvar = rnf_get_varn(L);
+  GEN e = polcoef_i(gel(x, 1), 0, Lvar);
+  GEN f = polcoef_i(gel(x, 1), 1, Lvar);
+  GEN g = polcoef_i(gel(x, 2), 0, Lvar);
+  GEN mh = polcoef_i(gel(x, 2), 1, Lvar);
+  return gerepilecopy(top, mkvec4(e, f, g, gneg(mh)));
+}
+
+/*Given an element in the basis representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.*/
+GEN
+algbasisto1ijk(GEN A, GEN x)
+{
+  pari_sp av = avma;
+  GEN xalg = algbasistoalg(A, x);
+  return gerepileupto(av, algalgto1ijk(A, xalg));
+}
+
+/*Given a quaternion algebra, return a,*/
+static GEN
+alggeta(GEN A)
+{
+  pari_sp av=avma;
+  GEN L = alg_get_splittingfield(A);/*L=K(sqrt(a)).*/
+  long Lvar = rnf_get_varn(L);/*Variable number for L*/
+  return gerepileupto(av, gneg(polcoef_i(rnf_get_pol(L), Lvar, 0)));/*Defining polynomial is x^2-a, so retrieve a.*/
+}
+
+/*Returns the vector of finite ramified places of the algebra A.*/
+GEN
+algramifiedplacesf(GEN A)
+{
+  pari_sp av = avma;
+  GEN hass = alg_get_hasse_f(A);/*Shallow*/
+  long nhass = lg(gel(hass, 2)), i;
+  GEN rp = vectrunc_init(nhass);
+  for (i = 1; i < nhass; i++) {
+    if (gel(hass, 2)[i] == 0) continue;/*Unramified*/
+    vectrunc_append(rp, gmael(hass, 1, i));/*Ramified*/
+  }
+  return gerepilecopy(top, rp);
+}
+
+/*If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.*/
+static long
+algsplitoo(GEN A)
+{
+  GEN infram = alg_get_hasse_i(A);/*shallow*/
+  long split=0, linf = lg(infram), i;
+  for (i = 1; i < linf; i++){/*Finding the split place*/
+    if (infram[i] == 0){/*Split place*/
+      if(split > 0) return 0;
+      split = i;
+    }
+  }
+  return split;/*No garbage!!*/
+}
+
+
 

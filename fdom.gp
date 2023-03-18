@@ -3,7 +3,7 @@ addhelp(fdom, "This package can be used to compute fundamental domains for Arith
 parigp_version=version();
 fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2]);
 
-\\GEOMETRY
+\\SECTION 1: GEOMETRIC METHODS
 	\\addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscrandom, hdist, mat_eval");
 
 	install("hdiscrandom","Gp",,fdom_library);
@@ -11,4 +11,17 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	install("hdist","GGD1,L,p",,fdom_library);
 	addhelp(hdist,"Inputs z1, z2, {flag=1}: complex numbers in the upper half plane z1 and z2, and flag=0, 1.\n Returns the hyperbolic distance between z1 and z2. If flag=0 we use the upper half plane model, and if flag=1 we use the unit disc model.");
 
+
+\\SECTION 3: QUATERNION ALGEBRA METHODS
+	
+	\\3: INITIALIZE SYMMETRIC SPACE
+	install("algsymminit","GGGDGp",,fdom_library);
+	addhelp(algsymminit,"algsymminit(al, O, type, {p}): initializes the symmetric space in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default value of p is Pi/8*I.");
+
+	\\3: ALGEBRA HELPER METHODS
+	install("algramifiedplacesf","G",,fdom_library);
+	addhelp(algramifiedplacesf,"algramifiedplacesf(al): vector of the finite places of the center of al that ramify in al. Each place is described as a prime ideal.");
+
 default(parisize, "4096M");\\Must come at the end
+
+

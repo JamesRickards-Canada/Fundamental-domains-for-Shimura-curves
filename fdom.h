@@ -52,3 +52,17 @@ GEN deftol(long prec);
 
 /*2: NORMALIZED BOUNDARY*/
 
+/*SECTION 3: QUATERNION ALGEBRA METHODS*/
+
+/*3: INITIALIZE SYMMETRIC SPACE*/
+GEN algsymminit(GEN A, GEN O, GEN type, GEN p, long prec);
+
+/*3: ALGEBRA METHODS FOR GEOMETRY*/
+
+/*3: ALGEBRA HELPER METHODS*/
+GEN algalgto1ijk(GEN A, GEN x);
+GEN algbasisto1ijk(GEN A, GEN x);
+GEN algramifiedplacesf(GEN A);
+
+
+
