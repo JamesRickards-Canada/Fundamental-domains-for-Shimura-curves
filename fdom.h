@@ -28,6 +28,26 @@ normbound_get_spair(GEN U){return gel(U, 7);}
 INLINE GEN
 normbound_get_gdat(GEN U){return gel(U, 8);}
 
+/*3: ARITHMETIC FUCHSIAN GROUPS*/
+INLINE GEN
+afuch_get_alg(GEN X){return gel(X, 1);}
+INLINE GEN
+afuch_get_order(GEN X){return gel(X, 2);}
+INLINE GEN
+afuch_get_chol(GEN X){return gel(X, 3);}
+INLINE GEN
+afuch_get_embmats(GEN X){return gel(X, 4);}
+INLINE GEN
+afuch_get_type(GEN X){return gel(X, 5);}
+INLINE GEN
+afuch_get_gdat(GEN X){return gel(X, 6);}
+INLINE GEN
+afuch_get_fdom(GEN X){return gel(X, 7);}
+INLINE GEN
+afuch_get_pres(GEN X){return gel(X, 8);}
+INLINE GEN
+afuch_get_sig(GEN X){return gel(X, 9);}
+
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
@@ -55,7 +75,10 @@ GEN deftol(long prec);
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
-GEN algsymminit(GEN A, GEN O, GEN type, GEN p, long prec);
+GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
+
+/*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+GEN afuchnormbound(GEN X, GEN G, long prec);
 
 /*3: ALGEBRA METHODS FOR GEOMETRY*/
 

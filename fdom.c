@@ -33,9 +33,6 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*DEFINITIONS*/
 
-/*The length (lg, so technically length+1) of a circle/line and arc/segment, and a normalized boundary*/
-#define LINE_LG 4
-#define SEG_LG 6
 
 /*STATIC DECLARATIONS*/
 
@@ -90,11 +87,11 @@ static int tolsigne(GEN x, GEN tol);
 /*2: ISOMETRIC CIRCLES*/
 static GEN icirc_angle(GEN c1, GEN c2, long prec);
 static GEN icirc_klein(GEN M, GEN tol);
-static GEN icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat);
+static GEN icirc_elt(GEN X, GEN g, GEN rootnorminv, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN gdat);
 static GEN argmod(GEN x, GEN y, GEN tol, long prec);
 
 /*2: NORMALIZED BOUNDARY*/
-static GEN normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat);
+static GEN normbound(GEN X, GEN G, GEN rootnorminvs, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN gdat);
 static GEN normbound_icircs(GEN C, GEN gdat);
 static int cmp_icircangle(void *nul, GEN c1, GEN c2);
 static long normbound_icircs_bigr(GEN C, GEN order);
@@ -107,10 +104,13 @@ static GEN normbound_area(GEN C, long prec);
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
-static GEN algsymminit_i(GEN A, GEN O, GEN type, GEN p, long prec)
-static GEN alg_make_m2rmats(GEN A, GEN O, long prec);
+static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
+static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
+
+/*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
 /*3: ALGEBRA METHODS FOR GEOMETRY*/
+static GEN afuchtopsl(GEN X, GEN g, GEN rootnorminv, long prec);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN alggeta(GEN A);
@@ -260,14 +260,14 @@ KLEIN			->	M=[A, B] corresponding to the same (A, B) as for the unit disc action
 					=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
 */
 
-/*Returns the default value of p, which is 0+Pi/8*I*/
+/*Returns the default value of p, which is 0.5+Pi/8*I*/
 static GEN
 defp(long prec)
 {
   GEN p = cgetg(3, t_COMPLEX);
-  gel(p, 1) = real_0(prec);
+  gel(p, 1) = real2n(-1, prec);
   gel(p, 2) = Pi2n(-3, prec);
-  return p;/*Can't use PiI2n since we need real(p) to be real_0(prec), not exactly 0.*/
+  return p;
 }
 
 /*Initializes gdat for a given p and precision. */
@@ -675,7 +675,7 @@ tolsigne(GEN x, GEN tol)
 Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma, namely:
 	i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
 	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g).
-	iii) Embed elements of Gamma in PSL(2, R): format as GEN Xtopsl(GEN X, GEN g, long prec). We REQUIRE t_REAL entries in various places, so you should ensure that the coefficients of the output are converted to t_REAL.
+	iii) Embed elements of Gamma in PSL(2, R): format as GEN Xtopsl(GEN X, GEN g, GEN rootnorminv, long prec). We REQUIRE t_REAL entries in various places, so you should ensure that the coefficients of the output are converted to t_REAL. We also supply the rootnorminv=1/sqrt(nrd(g)), since often this is computed when you find g in the first place (and recomputing it could be wasteful).
 	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL.
 	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
 We do all of our computations in the Klein model.
@@ -745,11 +745,11 @@ icirc_klein(GEN M, GEN tol)
 
 /*Computes the isometric circle for g in Gamma, returning [g, M, icirc], where M gives the action of g on the Klein model.*/
 static GEN
-icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
+icirc_elt(GEN X, GEN g, GEN rootnorminv, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN gdat)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
-  GEN psl = Xtopsl(X, g, lg(tol));
+  GEN psl = Xtopsl(X, g, rootnorminv, lg(tol));
   GEN ret = cgetg(4, t_VEC);
   gel(ret, 1) = gcopy(g);
   gel(ret, 2) = psl_to_klein(psl, gdat);
@@ -797,14 +797,14 @@ gdat	 ->	Stores the geometric data associated to the computations.
 
 /*WARNING!!!! I DO NOT HAVE vargs[1] BEING THE MINIMAL ARGUMENT YET*/
 
-/*Initializes the inputs for normalizedboundary_givencircles. G is the set of elements we are forming the normalized boundary for. Returns 0 if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
+/*Initializes the inputs for normalizedboundary_givencircles. G is the set of elements we are forming the normalized boundary for. rootnorms tracks sqrt(nrd(G[i])), for passing into Xtopsl. Returns 0 if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
 static GEN
-normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
+normbound(GEN X, GEN G, GEN rootnorminvs, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN gdat)
 {
   long lG = lg(G), i;
   GEN C = vectrunc_init(lG);
   for (i = 1; i < lG; i++) {
-	GEN circ = icirc_elt(X, gel(G, i), Xtopsl, gdat);
+	GEN circ = icirc_elt(X, gel(G, i), gel(rootnorminvs, i), Xtopsl, gdat);
 	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
 	vectrunc_append(C, circ);
   }
@@ -1032,20 +1032,20 @@ Let
 	A a quaternion algebra over F split at a unique real place
 	O be an order in A
 We can compute the fundamental domain of groups that live between O^1 and N{B^{\times}}(O)^+, i.e. berween the units of norm 1, and the elements of the normalizer with positive norm at the unique split real place.
-Inputs to most methods are named "AX", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with algsymminit.
+Inputs to most methods are named "X", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with algsymminit.
 */
 
 
-/*3: INITIALIZE SYMMETRIC SPACE*/
+/*3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS*/
 
 
-/*SYMMETRIC SPACE FORMATTING
-A symmetric space initialization is represented by AX, where
-	AX=[A, O, chol, embmats, type, gdat, fdom, pres, sig]
+/*ARITHMETIC FUCHSIAN GROUPS FORMATTING
+An arithmetic Fuchsian group initialization is represented by X, where
+	X=[A, O, chol, embmats, type, splitdat, gdat, fdom, pres, sig]
 A     	-> The algebra
 O		-> The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
 chol	-> Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
-embmats	-> O[,i] is sent to embmats[i] under the embedding into M(2, R).
+embmats	-> O[,i] is sent to embmats[i] under the embedding into M(2, R) at the unique split infinite place.
 type	-> Which symmetric space we want to compute.
 gdat	-> Geometric data
 fdom	-> Fundamental domain, if computed
@@ -1057,16 +1057,16 @@ sig		-> Signature, if computed
 TO DO: CHOL, TYPE
 type=0 means O^1, the default.*/
 
-/*Initializes the symmetric space of the given inputs, ready to compute a fundamental domain. Not gerepileupto suitable, and leaves garbage.*/
+/*Initializes the arithmetic Fuchsian group of the given inputs, ready to compute a fundamental domain. Not gerepileupto suitable, and leaves garbage.*/
 static GEN
-algsymminit_i(GEN A, GEN O, GEN type, GEN p, long prec)
+afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   if(!O) O = matid(lg(alg_get_basis(A))-1);
   GEN AX = cgetg(10, t_VEC);
   gel(AX, 1) = A;
   gel(AX, 2) = O;
   gel(AX, 3) = gen_0;/*TO DO*/
-  gel(AX, 4) = alg_make_m2rmats(A, O, prec);
+  gel(AX, 4) = afuch_make_m2rmats(A, O, prec);
   gel(AX, 5) = type;/*TO DO*/
   gel(AX, 6) = gdat_initialize(p, prec);
   gel(AX, 7) = gen_0;
@@ -1077,16 +1077,16 @@ algsymminit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 
 /*Clean initialization of the symmetric space. Can pass p as NULL and will set it to the default.*/
 GEN
-algsymminit(GEN A, GEN O, GEN type, GEN p, long prec)
+afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   pari_sp av = avma;
   if(!p) p = defp(prec);
-  return gerepilecopy(algsymminit_i(A, O, type, p, prec));
+  return gerepilecopy(av, afuchinit_i(A, O, type, p, prec));
 }
 
 /*Returns a vector v of matrices in M(2, R) such that O[,i] is sent to v[i].*/
 static GEN
-alg_make_m2rmats(GEN A, GEN O, long prec)
+afuch_make_m2rmats(GEN A, GEN O, long prec)
 {
   pari_sp av = avma;
   long split = algsplitoo(A);/*The split real place*/
@@ -1094,8 +1094,6 @@ alg_make_m2rmats(GEN A, GEN O, long prec)
   GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
   GEN Kroot = gel(nf_get_roots(K), split);/*The split root*/
   long Kvar = nf_get_varn(K);
-  GEN L = alg_get_splittingfield(A);/*L=K(sqrt(a)).*/
-  long Lvar = rnf_get_varn(L);
   GEN a = alggeta(A), b=alg_get_b(A);/*A=(a, B/K).*/
   GEN aval = poleval(a, Kroot);
   GEN bval = poleval(b, Kroot), rt;
@@ -1130,16 +1128,31 @@ alg_make_m2rmats(GEN A, GEN O, long prec)
 }
 
 
-/*3: FUNDAMENTAL DOMAIN METHODS*/
+/*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+
+
+/*UPDATE TO USE CHOLESKY NORM THING*/
 
 /*Returns the normalized boundary of the set of elements G in A.*/
 GEN
-algnormbound(GEN AX, GEN G, long prec)
+afuchnormbound(GEN X, GEN G, long prec)
 {
   pari_sp av = avma;
-  GEN gdat = gel(AX, 6);/*TO DO: Make inline retrieval methods*/
-  
-  return gerepilecopy(av, normbound(AX, G, &algtopsl, gdat));
+  GEN gdat = afuch_get_gdat(X);
+  GEN A = afuch_get_alg(X);
+  long split = algsplitoo(A);/*The split real place*/
+  GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
+  GEN Kroot = gel(nf_get_roots(K), split);/*Kroot and split could be stored in X, but this method will be called in isolation so recomputing this is practically irrelevant.*/
+  long lG, i;
+  GEN Gscale = cgetg_copy(G, &lG);
+  for (i = 1; i<lG; i++) {
+	GEN nm = algnorm(A, gel(G, i), 0);
+	if (gequal1(nm)) {gel(Gscale, i) = gen_1;continue;}/*Norm 1, no scaling.*/
+	nm = poleval(nm, Kroot);/*Embedding into R*/
+	GEN rtnm = gsqrt(nm, prec);
+	gel(Gscale, i) = invr(rtnm);/*Necessarily a real number.*/
+  }
+  return gerepilecopy(av, normbound(X, G, Gscale, &afuchtopsl, gdat));
 }
 
 
@@ -1147,22 +1160,26 @@ algnormbound(GEN AX, GEN G, long prec)
 /*3: ALGEBRA METHODS FOR GEOMETRY*/
 
 
-/*DO I SUPPLY THE SQUARE ROOT OF THE NORM TO THIS METHOD?????*/
 
-/*Stuff*/
+/*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PSL(2, R). rootnorminv is supplied as the image of 1/sqrt(nrd(g)) in R at the unique split infinite place, either as a t_REAL or a t_INT.*/
 static GEN
-algtopsl(GEN QA, GEN g, long prec)
+afuchtopsl(GEN X, GEN g, GEN rootnorminv, long prec)
 {
-  return ghalf;
+  pari_sp av = avma;
+  GEN mats = afuch_get_embmats(X);
+  GEN emb = RgM_Rg_mul(gel(mats, 1), gel(g, 1));
+  long lg = lg(g), i;
+  for (i = 2; i<lg; i++) {
+	emb = RgM_add(emb, RgM_Rg_mul(gel(mats, i), gel(g, i)));
+  }
+  if(!gequal1(rootnorminv)) emb = RgM_Rg_mul(emb, rootnorminv);/*The norm is often 1, so this simplifies this case.*/
+  return gerepileupto(av, emb);
 }
 
-/*
-static GEN
-normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, long), GEN gdat)
-*/
 
 
 /*3: ALGEBRA HELPER METHODS*/
+
 
 /*Given an element in the algebra representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.*/
 GEN
@@ -1176,7 +1193,7 @@ algalgto1ijk(GEN A, GEN x)
   GEN f = polcoef_i(gel(x, 1), 1, Lvar);
   GEN g = polcoef_i(gel(x, 2), 0, Lvar);
   GEN mh = polcoef_i(gel(x, 2), 1, Lvar);
-  return gerepilecopy(top, mkvec4(e, f, g, gneg(mh)));
+  return gerepilecopy(av, mkvec4(e, f, g, gneg(mh)));
 }
 
 /*Given an element in the basis representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.*/
@@ -1210,7 +1227,7 @@ algramifiedplacesf(GEN A)
     if (gel(hass, 2)[i] == 0) continue;/*Unramified*/
     vectrunc_append(rp, gmael(hass, 1, i));/*Ramified*/
   }
-  return gerepilecopy(top, rp);
+  return gerepilecopy(av, rp);
 }
 
 /*If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.*/
