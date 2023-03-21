@@ -804,7 +804,7 @@ normbound(GEN X, GEN G, GEN rootnorminvs, GEN (*Xtopsl)(GEN, GEN, GEN, long), GE
   long lG = lg(G), i;
   GEN C = vectrunc_init(lG);
   for (i = 1; i < lG; i++) {
-	GEN circ = icirc_elt(X, gel(G, i), gel(rootnorminvs, i), Xtopsl, gdat);
+	GEN circ = icirc_elt(X, gel(G, i), rootnorminvs ? gel(rootnorminvs, i): NULL, Xtopsl, gdat);
 	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
 	vectrunc_append(C, circ);
   }
@@ -1165,21 +1165,21 @@ afuchnormbound(GEN X, GEN G)
   GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
   GEN Kroot = gel(nf_get_roots(K), split);/*Kroot and split could be stored in X, but this method will be called in isolation so recomputing this is practically irrelevant.*/
   long lG, i;
-  GEN Gscale = cgetg_copy(G, &lG);
-  for (i = 1; i<lG; i++) {
-	GEN nm = algnorm(A, gel(G, i), 0);
-	if (gequal1(nm)) {gel(Gscale, i) = gen_1;continue;}/*Norm 1, no scaling.*/
-	nm = poleval(nm, Kroot);/*Embedding into R*/
-	GEN rtnm = gsqrt(nm, prec);
-	gel(Gscale, i) = invr(rtnm);/*Necessarily a real number.*/
-  }
-  return gerepilecopy(av, normbound(X, G, Gscale, &afuchtopsl, gdat));
+  //GEN Gscale = cgetg_copy(G, &lG);
+  //for (i = 1; i<lG; i++) {
+	//GEN nm = algnorm(A, gel(G, i), 0);
+	//if (gequal1(nm)) {gel(Gscale, i) = gen_1;continue;}/*Norm 1, no scaling.*/
+	//nm = poleval(nm, Kroot);/*Embedding into R*/
+	//GEN rtnm = gsqrt(nm, prec);
+	//gel(Gscale, i) = invr(rtnm);/*Necessarily a real number.*/
+  //}
+  return gerepilecopy(av, normbound(X, G, NULL, &afuchtopsl, gdat));
 }
 
 /*3: ALGEBRA METHODS FOR GEOMETRY*/
 
 
-/*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PSL(2, R). rootnorminv is supplied as the image of 1/sqrt(nrd(g)) in R at the unique split infinite place, either as a t_REAL or a t_INT.*/
+/*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PSL(2, R). rootnorminv is supplied as the image of 1/sqrt(nrd(g)) in R at the unique split infinite place, either as a t_REAL or a t_INT. Can be passed as NULL as well.*/
 static GEN
 afuchtopsl(GEN X, GEN g, GEN rootnorminv, long prec)
 {
@@ -1190,7 +1190,11 @@ afuchtopsl(GEN X, GEN g, GEN rootnorminv, long prec)
   for (i = 2; i<lg; i++) {
 	emb = RgM_add(emb, RgM_Rg_mul(gel(mats, i), gel(g, i)));
   }
-  if(!gequal1(rootnorminv)) emb = RgM_Rg_mul(emb, rootnorminv);/*The norm is often 1, so this simplifies this case.*/
+  if (!rootnorminv) {/*Passed as NULL.*/
+	GEN det = subrr(mulrr(gcoeff(emb, 1, 1), gcoeff(emb, 2, 2)), mulrr(gcoeff(emb, 1, 2), gcoeff(emb, 2, 1)));
+	emb = RgM_Rg_div(emb, sqrtr(det));
+  }
+  else if(!gequal1(rootnorminv)) emb = RgM_Rg_mul(emb, rootnorminv);/*The norm is often 1, so this simplifies this case.*/
   return gerepileupto(av, emb);
 }
 
