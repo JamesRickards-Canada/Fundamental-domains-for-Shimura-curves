@@ -86,6 +86,7 @@ GEN afuchnormbound(GEN X, GEN G);
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);
 GEN algbasisto1ijk(GEN A, GEN x);
+GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algramifiedplacesf(GEN A);
 
 

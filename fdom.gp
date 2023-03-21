@@ -25,6 +25,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchnormbound,"afuchnormbound(X, G): computes the normalized boundary of the set of elements in G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
 
 	\\3: ALGEBRA HELPER METHODS
+	install(algmulvec,"GGG",,fdom_library);
+	addhelp(algmulvec,"algmulvec(A, G, L): Returns G[L[1]]*G[L[2]]*...*G[L[n]]. If an index is negative, we take the inverse of that element.");
 	install(algramifiedplacesf,"G",,fdom_library);
 	addhelp(algramifiedplacesf,"algramifiedplacesf(al): vector of the finite places of the center of al that ramify in al. Each place is described as a prime ideal.");
 

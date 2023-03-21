@@ -114,6 +114,7 @@ static GEN afuchtopsl(GEN X, GEN g, GEN rootnorminv, long prec);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN alggeta(GEN A);
+static GEN voidalgmul(void *A, GEN x, GEN y);
 static long algsplitoo(GEN A);
 
 
@@ -1159,20 +1160,6 @@ afuchnormbound(GEN X, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  long prec = lg(gdat_get_tol(gdat));
-  GEN A = afuch_get_alg(X);
-  long split = algsplitoo(A);/*The split real place*/
-  GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
-  GEN Kroot = gel(nf_get_roots(K), split);/*Kroot and split could be stored in X, but this method will be called in isolation so recomputing this is practically irrelevant.*/
-  long lG, i;
-  //GEN Gscale = cgetg_copy(G, &lG);
-  //for (i = 1; i<lG; i++) {
-	//GEN nm = algnorm(A, gel(G, i), 0);
-	//if (gequal1(nm)) {gel(Gscale, i) = gen_1;continue;}/*Norm 1, no scaling.*/
-	//nm = poleval(nm, Kroot);/*Embedding into R*/
-	//GEN rtnm = gsqrt(nm, prec);
-	//gel(Gscale, i) = invr(rtnm);/*Necessarily a real number.*/
-  //}
   return gerepilecopy(av, normbound(X, G, NULL, &afuchtopsl, gdat));
 }
 
@@ -1237,6 +1224,36 @@ alggeta(GEN A)
   return gerepileupto(av, gneg(polcoef_i(rnf_get_pol(L), Lvar, 0)));/*Defining polynomial is x^2-a, so retrieve a.*/
 }
 
+/*Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall or vec*/
+GEN
+algmulvec(GEN A, GEN G, GEN L)
+{
+  pari_sp av = avma;
+  long n = lg(L), i;
+  if (n == 1) return gerepilecopy(av, gel(alg_get_basis(A), 1));/*The identity*/
+  GEN elts = cgetg(n, t_VEC);
+  if (typ(L) == t_VECSMALL) {
+    for (i = 1; i < n; i++) {
+      long ind = L[i];
+      if (ind > 0) gel(elts, i) = gel(G, ind);
+      else gel(elts, i) = alginv(A, gel(G, -ind));
+    }
+  }
+  else if (typ(L) == t_VEC) {
+    for (i = 1; i < n; i++) {
+      long ind = itos(gel(L, i));
+      if (ind > 0) gel(elts, i) = gel(G, ind);
+      else gel(elts, i) = alginv(A, gel(G, -ind));
+    }
+  }
+  else pari_err_TYPE("L needs to be a vector or vecsmall of indices", L);
+  return gerepileupto(av, gen_product(elts, &A, &voidalgmul));
+}
+
+/*Formats algmul for use in gen_product*/
+static GEN
+voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
+
 /*Returns the vector of finite ramified places of the algebra A.*/
 GEN
 algramifiedplacesf(GEN A)
@@ -1266,6 +1283,5 @@ algsplitoo(GEN A)
   }
   return split;/*No garbage!!*/
 }
-
 
 
