@@ -20,7 +20,7 @@ normbound_get_vcors(GEN U){return gel(U, 3);}
 INLINE GEN
 normbound_get_vargs(GEN U){return gel(U, 4);}
 INLINE long
-normbound_get_cross(GEN U){return gel(U, 5)[1];}
+normbound_get_cross(GEN U){return itos(gel(U, 5));}
 INLINE GEN
 normbound_get_kact(GEN U){return gel(U, 6);}
 INLINE GEN

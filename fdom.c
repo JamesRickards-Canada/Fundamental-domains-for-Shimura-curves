@@ -88,6 +88,7 @@ static GEN icirc_angle(GEN c1, GEN c2, long prec);
 static GEN icirc_klein(GEN M, GEN tol);
 static GEN icirc_elt(GEN X, GEN g, GEN rootnorminv, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN gdat);
 static GEN argmod(GEN x, GEN y, GEN tol, long prec);
+static GEN argmod_complex(GEN c, GEN tol, long prec);
 
 /*2: NORMALIZED BOUNDARY*/
 static GEN normbound(GEN X, GEN G, GEN rootnorminvs, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN gdat);
@@ -102,6 +103,7 @@ static GEN normbound_area(GEN C, long prec);
 /*2: REDUCTION*/
 static long args_find_cross(GEN args);
 static long args_search(GEN args, long ind, GEN arg, GEN tol);
+static long normbound_outside(GEN U, GEN z, GEN tol, long prec);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -756,7 +758,7 @@ icirc_elt(GEN X, GEN g, GEN rootnorminv, GEN (*Xtopsl)(GEN, GEN, GEN, long), GEN
   return gerepileupto(av, ret);
 }
 
-/*Returns the argument of x+iy in the range [0, 2*pi). Assumes x and y are not both 0 and are t_REAL. Not stack clean.*/
+/*Returns the argument of x+iy in the range [0, 2*pi). Assumes x and y are not both 0 and are t_REAL. Gerepileupto safe, leaves garbage.*/
 static GEN
 argmod(GEN x, GEN y, GEN tol, long prec)
 {
@@ -774,6 +776,9 @@ argmod(GEN x, GEN y, GEN tol, long prec)
   return theta;
 }
 
+/*argmod, except we take c=x+iy. Gerepileupto safe, leaves garbage.*/
+static GEN
+argmod_complex(GEN c, GEN tol, long prec) {return argmod(gel(c, 1), gel(c, 2), tol, prec);}
 
 /*2: NORMALIZED BOUNDARY*/
 
@@ -782,13 +787,12 @@ argmod(GEN x, GEN y, GEN tol, long prec)
 A normalized boundary is represented by U, where
 U=[elts, sides, vcors, vargs, crossind, kact, area, spair, gdat]
 elts     ->	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
-sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored as [a, b, r] representing ax+by=1 and a^2+b^2=r^2+1. Infinite
-			side -> 0. a, b, r are of type t_REAL
+sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0.
 vcors    ->	Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this 
 			order going counterclockwise about the origin.
 vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, BUT 
 			vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
-crossind ->	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS the point 1, then crossind+1 is that vertex.	
+crossind ->	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that vertex.	
 			Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
 kact     ->	The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
 area     ->	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
@@ -878,7 +882,7 @@ normbound_icircs(GEN C, GEN gdat)
 	}
 	/*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
 	GEN ipt = line_int11(curcirc, lastcirc, tol);/*Find the intersection point, guaranteed to be in the unit disc.*/
-	GEN iptarg = argmod(gel(ipt, 1), gel(ipt, 2), tol, prec);/*Argument*/
+	GEN iptarg = argmod_complex(ipt, tol, prec);/*Argument*/
 	if (found == 1) {/*Straight up insert it; no phase 2 guaranteed.*/
 	   gel(vcors, found) = ipt;/*Fix the last vertex*/
 	   gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
@@ -923,7 +927,7 @@ normbound_icircs(GEN C, GEN gdat)
 	    elts[found]=toins;
 		if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  gel(vcors, found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-          gel(vargs, found) = argmod(gmael(vcors, found, 1), gmael(vcors, found, 2), tol, prec);/*Argument*/
+          gel(vargs, found) = argmod_complex(gel(vcors, found), tol, prec);/*Argument*/
 		}
 	}
   }
@@ -939,7 +943,7 @@ normbound_icircs(GEN C, GEN gdat)
   GEN rv_kact = cgetg(fp1, t_VEC);
   for (i = 1; i <= found; i++) {/*Make sure we treat infinite sides correctly!*/
 	gel(rv_elts, i) = elts[i] ? gmael(C, elts[i], 1) : gen_0;
-	gel(rv_sides, i) = elts[i] ? vec_shorten(gmael(C, elts[i], 3), 3) : gen_0;
+	gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
 	gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
   }
   gel(rv, 1) = rv_elts;/*The elements*/
@@ -1002,7 +1006,7 @@ normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstci
   (*found)++;
   elts[*found] = toins;
   gel(vcors, *found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-  gel(vargs, *found) = argmod(gmael(vcors, *found, 1), gmael(vcors, *found, 2), tol, prec);/*Argument*/
+  gel(vargs, *found) = argmod_complex(gel(vcors, *found), tol, prec);/*Argument*/
 }
 
 /*Returns the hyperbolic area of the normalized boundary, which is assumed to not have any infinite sides (we keep track if they exist, and do not call this method if they do). C should be the list of [a, b, r] in order. The area is (n-2)*Pi-sum(angles), where there are n sides.*/
@@ -1069,6 +1073,26 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 	l1 = l;
   }
   return l2;
+}
+
+/*Let ind be the index of the edge that z is on when projected from the origin to the boundary (2 possibilities if it is a vertex). Returns 0 if z is in the interior of U, -ind if z is on the boundary, and ind if z is outside the boundary. Assume that the normalized boundary is non-trivial.*/
+static long
+normbound_outside(GEN U, GEN z, GEN tol, long prec)
+{
+  pari_sp av = avma;
+  GEN arg = argmod_complex(z, tol, prec);
+  long sideind = args_search(normbound_get_vargs(U), normbound_get_cross(U), arg, tol);/*Find the side*/
+  if (sideind < 0) sideind = -sideind;/*We line up with a vertex.*/
+  GEN side = gel(normbound_get_sides(U), sideind);/*The side!*/
+  if (gequal0(side)) {
+	if (toleq(normcr(z), gen_1, tol)) return gc_long(av, -sideind);/*We are on the unit circle at an infinite side.*/
+	return gc_long(av, 0);/*Infinite side, and we are inside.*/
+  }
+  GEN where = subrs(addrr(mulrr(gel(z, 1), gel(side, 1)), mulrr(gel(z, 2), gel(side, 2))), 1);/*sign(where)==-1 iff where is inside, 0 iff where is on.*/
+  int s = tolsigne(where, tol);
+  if (s < 0) return gc_long(av, 0);/*Same side as 0, so inside*/
+  if (s == 0) return gc_long(av, -sideind);/*On the side*/
+  return gc_long(av, sideind);/*Outside*/
 }
 
 
