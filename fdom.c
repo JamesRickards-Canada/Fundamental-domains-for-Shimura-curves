@@ -1094,7 +1094,7 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
   GEN Kroot = gel(nf_get_roots(K), split);/*The split root*/
   long Kvar = nf_get_varn(K);
-  GEN a = alggeta(A), b=alg_get_b(A);/*A=(a, B/K).*/
+  GEN a = alggeta(A), b = lift(alg_get_b(A));/*A=(a, B/K).*/
   GEN aval = poleval(a, Kroot);
   GEN bval = poleval(b, Kroot), rt;
   int apos;/*Tracks if a>0 at the split place or not, as this determines which embedding we will take.*/
@@ -1104,7 +1104,7 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   GEN mats = cgetg(lO, t_VEC);/*To store the 2x2 matrices.*/
   for (i = 1; i < lO; i++) {
 	GEN x = algbasisto1ijk(A, gel(O, i));/*ith basis element in the form e+fi+gj+hk*/
-	for (i=1; j<=4; j++) gel(x, i) = gsubst(gel(x, i), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
+	for (j=1; j<=4; j++) gel(x, j) = gsubst(gel(x, j), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
 	if (apos) {/*e+fi+gj+hk -> [e+fsqrt(a), b(g+hsqrt(a));g-hsqrt(a), e-fsqrt(a)*/
 	  GEN frta = gmul(gel(x, 2), rt);/*f*sqrt(a)*/
 	  GEN hrta = gmul(gel(x, 4), rt);/*h*sqrt(a)*/
@@ -1133,12 +1133,33 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
 
 /*UPDATE TO USE CHOLESKY NORM THING*/
 
-/*Returns the normalized boundary of the set of elements G in A.*/
+/*Returns the isometric circle of an element of A.*/
 GEN
-afuchnormbound(GEN X, GEN G, long prec)
+afuchicirc(GEN X, GEN g)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
+  long prec = lg(gdat_get_tol(gdat));
+  GEN A = afuch_get_alg(X);
+  long split = algsplitoo(A);/*The split real place*/
+  GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
+  GEN Kroot = gel(nf_get_roots(K), split);/*Kroot and split could be stored in X, but this method will be called in isolation so recomputing this is practically irrelevant.*/
+  GEN nm = algnorm(A, g, 0), rt;
+  if (gequal1(nm)) rt = gen_1;/*Norm 1, no scaling.*/
+  else rt = invr(gsqrt(poleval(nm, Kroot), prec));
+  GEN icirc_all = icirc_elt(X, g, rt, &afuchtopsl, gdat);
+  return gerepilecopy(av, gel(icirc_all, 3));
+}
+
+/*UPDATE TO USE CHOLESKY NORM THING*/
+
+/*Returns the normalized boundary of the set of elements G in A.*/
+GEN
+afuchnormbound(GEN X, GEN G)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  long prec = lg(gdat_get_tol(gdat));
   GEN A = afuch_get_alg(X);
   long split = algsplitoo(A);/*The split real place*/
   GEN K = alg_get_center(A);/*The centre, i.e K where A=(a,b/K)*/
@@ -1155,10 +1176,7 @@ afuchnormbound(GEN X, GEN G, long prec)
   return gerepilecopy(av, normbound(X, G, Gscale, &afuchtopsl, gdat));
 }
 
-
-
 /*3: ALGEBRA METHODS FOR GEOMETRY*/
-
 
 
 /*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PSL(2, R). rootnorminv is supplied as the image of 1/sqrt(nrd(g)) in R at the unique split infinite place, either as a t_REAL or a t_INT.*/

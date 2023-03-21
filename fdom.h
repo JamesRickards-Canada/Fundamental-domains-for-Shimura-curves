@@ -78,7 +78,8 @@ GEN deftol(long prec);
 GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
-GEN afuchnormbound(GEN X, GEN G, long prec);
+GEN afuchicirc(GEN X, GEN g);
+GEN afuchnormbound(GEN X, GEN G);
 
 /*3: ALGEBRA METHODS FOR GEOMETRY*/
 
