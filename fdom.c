@@ -77,7 +77,6 @@ static GEN subrcr(GEN r, GEN z);
 
 /*1: TOLERANCE*/
 static int tolcmp(GEN x, GEN y, GEN tol);
-static int tolcmp_sort(void *data, GEN x, GEN y);
 static int toleq(GEN x, GEN y, GEN tol);
 static int toleq0(GEN x, GEN tol);
 static int tolsigne(GEN x, GEN tol);
@@ -100,6 +99,9 @@ static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcir
 static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long prec, long toins, long *found);
 static GEN normbound_area(GEN C, long prec);
 
+/*2: REDUCTION*/
+static long args_find_cross(GEN args);
+static long args_search(GEN args, long ind, GEN arg, GEN tol);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -603,10 +605,6 @@ tolcmp(GEN x, GEN y, GEN tol)
   return gc_int(av, tolsigne(d, tol));/*Return sign(x-y)*/
 }
 
-/*Data points to tol. Used to sort/search a list with tolerance.*/
-static int
-tolcmp_sort(void *data, GEN x, GEN y){return tolcmp(x, y, *(GEN*)data);}
-
 /*Returns 1 if x==y up to tolerance tol. If x and y are both t_INT/t_FRAC, will only return 1 if they are exactly equal.*/
 static int
 toleq(GEN x, GEN y, GEN tol)
@@ -782,21 +780,22 @@ argmod(GEN x, GEN y, GEN tol, long prec)
 
 /*NORMALIZED BOUNDARY FORMATTING
 A normalized boundary is represented by U, where
-U=[elts, sides, vcors, vargs, kact, area, spair, gdat]
+U=[elts, sides, vcors, vargs, crossind, kact, area, spair, gdat]
 elts     ->	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
 sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored as [a, b, r] representing ax+by=1 and a^2+b^2=r^2+1. Infinite
 			side -> 0. a, b, r are of type t_REAL
 vcors    ->	Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this 
 			order going counterclockwise about the origin.
-vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. We will also shift the elements so that this
-			set is sorted, i.e. vargs[1] is the vertex with minimal argument.
+vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, BUT 
+			vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
+crossind ->	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS the point 1, then crossind+1 is that vertex.	
+			Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
 kact     ->	The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
 area     ->	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
 spair    ->	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will be stored as 0.
 gdat	 ->	Stores the geometric data associated to the computations.
 */
 
-/*WARNING!!!! I DO NOT HAVE vargs[1] BEING THE MINIMAL ARGUMENT YET*/
 
 /*Initializes the inputs for normalizedboundary_givencircles. G is the set of elements we are forming the normalized boundary for. rootnorms tracks sqrt(nrd(G[i])), for passing into Xtopsl. Returns 0 if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
 static GEN
@@ -934,7 +933,7 @@ normbound_icircs(GEN C, GEN gdat)
   }
   /*Now we can compile everything into the return vector.*/
   long i, fp1 = found+1;
-  GEN rv = cgetg(9, t_VEC);
+  GEN rv = cgetg(10, t_VEC);
   GEN rv_elts = cgetg(fp1, t_VEC);
   GEN rv_sides = cgetg(fp1, t_VEC);
   GEN rv_kact = cgetg(fp1, t_VEC);
@@ -947,11 +946,12 @@ normbound_icircs(GEN C, GEN gdat)
   gel(rv, 2) = rv_sides;/*The sides*/
   gel(rv, 3) = vec_shorten(vcors, found);/*Vertex coords*/
   gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
-  gel(rv, 5) = rv_kact;/*Kleinian action*/
-  if(infinitesides) gel(rv, 6)=mkoo();/*Infinite side means infinite area.*/
-  else gel(rv, 6) = normbound_area(rv_sides, prec);
-  gel(rv, 7) = gen_0;/*Side pairing*/
-  gel(rv, 8) = gdat;/*Geometric data*/
+  gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
+  gel(rv, 6) = rv_kact;/*Kleinian action*/
+  if(infinitesides) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
+  else gel(rv, 7) = normbound_area(rv_sides, prec);
+  gel(rv, 8) = gen_0;/*Side pairing*/
+  gel(rv, 9) = gdat;/*Geometric data*/
   return rv;
 }
 
@@ -1018,9 +1018,58 @@ normbound_area(GEN C, long prec)
 }
 
 
+/*2: REDUCTION*/
 
+/*Assuming there is a unique index i such that args[i]>args[i+1], we return i. No need for tolerance. We assume that #args>=2.*/
+static long
+args_find_cross(GEN args)
+{
+  long l1 = 1, l2 = lg(args)-1;
+  int c = cmprr(gel(args, l1), gel(args, l2));
+  if (c < 0) return l2;/*Sorted already, so it only loops back at the end.*/
+  while (l2-l1 > 1) {
+	long l = (l1+l2)>>1;/*floor((l1+l2)/2)*/
+	int c = cmprr(gel(args, l1), gel(args, l));
+	if (c < 0) l1 = l;
+	else l2 = l;
+  }
+  return l1;
+}
 
-
+/*args is a partially sorted list of angles in [0, 2*Pi): ind is the unique index with args[ind]>args[ind+1]. If arg==args[i] up to tolerance, we return -i. Otherwise, we return the index where it should be inserted. If this is at the end, we return 1, since it could be inserted there equally well. We assume that #args>=2.*/
+static long
+args_search(GEN args, long ind, GEN arg, GEN tol)
+{
+  long na = lg(args)-1, l1, l2;/*l1 and l2 track the min and max indices possible.*/
+  int c1 = tolcmp(gel(args, 1), arg, tol);/*Compare to entry 1.*/
+  if (c1 == 0) return -1;/*Equal*/
+  if (c1 < 0) {/*In block from 1 to ind*/
+    l1 = 1;
+	int cind = tolcmp(gel(args, ind), arg, tol);
+    if (cind < 0) return (ind%na)+1;/*Make sure we overflow back to 1 if ind=na. This also covers if ind=1.*/
+    if (cind == 0) return -ind;
+	l2 = ind;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
+  }
+  else {/*In block from ind+1 to na.*/
+	if (ind == na) return 1;/*Strictly increasing, so we can insert at the start.*/
+	l1 = ind+1;
+	int cind = tolcmp(gel(args, l1), arg, tol);
+	if (cind > 0) return l1;
+	if (cind == 0) return -l1;
+	int cend = tolcmp(gel(args, na), arg, tol);
+	if (cend < 0) return 1;/*We can insert it at the start. This also covers if l1=na.*/
+	if (cend == 0) return -na;
+	l2 = na;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
+  }
+  while (l2-l1 > 1) {
+	long l = (l1+l2)>>1;/*floor((l1+l2)/2)*/
+	int c = tolcmp(gel(args, l), arg, tol);
+	if (c > 0) {l2 = l;continue;}
+	if (c == 0) return -l;
+	l1 = l;
+  }
+  return l2;
+}
 
 
 
@@ -1163,8 +1212,8 @@ afuchnormbound(GEN X, GEN G)
   return gerepilecopy(av, normbound(X, G, NULL, &afuchtopsl, gdat));
 }
 
-/*3: ALGEBRA METHODS FOR GEOMETRY*/
 
+/*3: ALGEBRA METHODS FOR GEOMETRY*/
 
 /*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PSL(2, R). rootnorminv is supplied as the image of 1/sqrt(nrd(g)) in R at the unique split infinite place, either as a t_REAL or a t_INT. Can be passed as NULL as well.*/
 static GEN

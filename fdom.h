@@ -19,14 +19,16 @@ INLINE GEN
 normbound_get_vcors(GEN U){return gel(U, 3);}
 INLINE GEN
 normbound_get_vargs(GEN U){return gel(U, 4);}
+INLINE long
+normbound_get_cross(GEN U){return gel(U, 5)[1];}
 INLINE GEN
-normbound_get_kact(GEN U){return gel(U, 5);}
+normbound_get_kact(GEN U){return gel(U, 6);}
 INLINE GEN
-normbound_get_area(GEN U){return gel(U, 6);}
+normbound_get_area(GEN U){return gel(U, 7);}
 INLINE GEN
-normbound_get_spair(GEN U){return gel(U, 7);}
+normbound_get_spair(GEN U){return gel(U, 8);}
 INLINE GEN
-normbound_get_gdat(GEN U){return gel(U, 8);}
+normbound_get_gdat(GEN U){return gel(U, 9);}
 
 /*3: ARITHMETIC FUCHSIAN GROUPS*/
 INLINE GEN
@@ -71,6 +73,8 @@ GEN deftol(long prec);
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
 
 /*2: NORMALIZED BOUNDARY*/
+/*2: REDUCTION*/
+
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
