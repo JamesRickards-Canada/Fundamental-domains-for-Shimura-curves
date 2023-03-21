@@ -85,7 +85,7 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
 GEN afuchicirc(GEN X, GEN g);
 GEN afuchnormbound(GEN X, GEN G);
 
-/*3: ALGEBRA METHODS FOR GEOMETRY*/
+/*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);
