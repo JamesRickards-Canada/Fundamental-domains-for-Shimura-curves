@@ -88,8 +88,8 @@ static int tolsigne(GEN x, GEN tol);
 static GEN icirc_angle(GEN c1, GEN c2, long prec);
 static GEN icirc_klein(GEN M, GEN tol);
 static GEN icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, GEN), GEN gdat);
-static GEN argmod(GEN x, GEN y, GEN tol, long prec);
-static GEN argmod_complex(GEN c, GEN tol, long prec);
+static GEN argmod(GEN x, GEN y, GEN tol);
+static GEN argmod_complex(GEN c, GEN tol);
 
 /*2: NORMALIZED BOUNDARY*/
 static GEN normbound(GEN X, GEN G, GEN (*Xtopsl)(GEN, GEN, GEN), GEN gdat);
@@ -98,15 +98,15 @@ static int cmp_icircangle(void *nul, GEN c1, GEN c2);
 static long normbound_icircs_bigr(GEN C, GEN order);
 static void normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long *found);
 static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toins, long *found);
-static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long prec, long toins, long *found);
+static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long toins, long *found);
 static GEN normbound_area(GEN C, long prec);
 
 /*2: REDUCTION*/
 static long args_find_cross(GEN args);
 static long args_search(GEN args, long ind, GEN arg, GEN tol);
-static long normbound_outside(GEN U, GEN z, GEN tol, long prec);
-static GEN reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol, long prec);
-static GEN reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol, long prec);
+static long normbound_outside(GEN U, GEN z, GEN tol);
+static GEN reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol);
+static GEN reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -734,8 +734,8 @@ icirc_klein(GEN M, GEN tol)
   GEN ar = mulrr(a, r), br = mulrr(b, r);
   GEN apbr = addrr(a, br), ambr = subrr(a, br);/*a+/-br*/
   GEN bpar = addrr(b, ar), bmar = subrr(b, ar);/*b+/-ar*/
-  GEN theta1 = argmod(apbr, bmar, tol, prec);/*First point angle in [0, 2pi)*/
-  GEN theta2 = argmod(ambr, bpar, tol, prec);/*Second point angle in [0, 2pi)*/
+  GEN theta1 = argmod(apbr, bmar, tol);/*First point angle in [0, 2pi)*/
+  GEN theta2 = argmod(ambr, bpar, tol);/*Second point angle in [0, 2pi)*/
   GEN asqbsq = addrs(sqrr(r), 1);/*a^2+b^2 = r^2+1*/
   GEN p1 = mkcomplex(divrr(apbr, asqbsq), divrr(bmar, asqbsq));/*First intersection point.*/
   GEN p2 = mkcomplex(divrr(ambr, asqbsq), divrr(bpar, asqbsq));/*Second intersection point.*/
@@ -765,8 +765,9 @@ icirc_elt(GEN X, GEN g, GEN (*Xtopsl)(GEN, GEN, GEN), GEN gdat)
 
 /*Returns the argument of x+iy in the range [0, 2*pi). Assumes x and y are not both 0 and are t_REAL. Gerepileupto safe, leaves garbage.*/
 static GEN
-argmod(GEN x, GEN y, GEN tol, long prec)
+argmod(GEN x, GEN y, GEN tol)
 {
+  long prec = lg(tol);
   int xsign = tolsigne(x, tol);/*Sign of x up to tolerance.*/
   if (xsign == 0) {/*Fixing theta when x == 0, so the line is vertical.*/
 	GEN theta = Pi2n(-1, prec);/*Pi/2*/
@@ -783,7 +784,7 @@ argmod(GEN x, GEN y, GEN tol, long prec)
 
 /*argmod, except we take c=x+iy. Gerepileupto safe, leaves garbage.*/
 static GEN
-argmod_complex(GEN c, GEN tol, long prec) {return argmod(gel(c, 1), gel(c, 2), tol, prec);}
+argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
 
 /*2: NORMALIZED BOUNDARY*/
 
@@ -859,7 +860,7 @@ normbound_icircs(GEN C, GEN gdat)
 	    phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
 		infinitesides = 1;/*The last side might not be the first, but since we looped all the way around there MUST be an oo side.*/
 		normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
-		normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, prec, toins, &found);/*Phase 2 insertion.*/
+		normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
 		continue;
 	  case 2:
 	    continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
@@ -879,7 +880,7 @@ normbound_icircs(GEN C, GEN gdat)
 	  case 2:
 	    if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, prec, toins, &found);/*Phase 2 insertion.*/
+		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
 		  continue;
 		}
 	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*New(initial)=Old(terminal), so there is no infinite side coming first (or we are coming from case=0 when we have already inserted it)*/
@@ -887,7 +888,7 @@ normbound_icircs(GEN C, GEN gdat)
 	}
 	/*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
 	GEN ipt = line_int11(curcirc, lastcirc, tol);/*Find the intersection point, guaranteed to be in the unit disc.*/
-	GEN iptarg = argmod_complex(ipt, tol, prec);/*Argument*/
+	GEN iptarg = argmod_complex(ipt, tol);/*Argument*/
 	if (found == 1) {/*Straight up insert it; no phase 2 guaranteed.*/
 	   gel(vcors, found) = ipt;/*Fix the last vertex*/
 	   gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
@@ -901,7 +902,7 @@ normbound_icircs(GEN C, GEN gdat)
 	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
 		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, prec, toins, &found);/*Phase 2 insertion.*/
+		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
 		  continue;
 		}
 	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
@@ -911,7 +912,7 @@ normbound_icircs(GEN C, GEN gdat)
 	    /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
 		if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
 		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, prec, toins, &found);/*Phase 2 insertion.*/
+		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
 		  continue;
 		}
 		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
@@ -932,7 +933,7 @@ normbound_icircs(GEN C, GEN gdat)
 	    elts[found]=toins;
 		if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  gel(vcors, found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-          gel(vargs, found) = argmod_complex(gel(vcors, found), tol, prec);/*Argument*/
+          gel(vargs, found) = argmod_complex(gel(vcors, found), tol);/*Argument*/
 		}
 	}
   }
@@ -1006,12 +1007,12 @@ normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toin
 
 /*We are performing an insertion in phase 2, i.e. we are intersecting back with the initial side. Assume we have already dealt with updating the previous vertex, if applicable.*/
 static void
-normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long prec, long toins, long *found)
+normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long toins, long *found)
 {
   (*found)++;
   elts[*found] = toins;
   gel(vcors, *found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-  gel(vargs, *found) = argmod_complex(gel(vcors, *found), tol, prec);/*Argument*/
+  gel(vargs, *found) = argmod_complex(gel(vcors, *found), tol);/*Argument*/
 }
 
 /*Returns the hyperbolic area of the normalized boundary, which is assumed to not have any infinite sides (we keep track if they exist, and do not call this method if they do). C should be the list of [a, b, r] in order. The area is (n-2)*Pi-sum(angles), where there are n sides.*/
@@ -1082,10 +1083,10 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 
 /*Let ind be the index of the edge that z is on when projected from the origin to the boundary (2 possibilities if it is a vertex). Returns 0 if z is in the interior of U, -ind if z is on the boundary, and ind if z is outside the boundary. Assume that the normalized boundary is non-trivial.*/
 static long
-normbound_outside(GEN U, GEN z, GEN tol, long prec)
+normbound_outside(GEN U, GEN z, GEN tol)
 {
   pari_sp av = avma;
-  GEN arg = argmod_complex(z, tol, prec);
+  GEN arg = argmod_complex(z, tol);
   long sideind = args_search(normbound_get_vargs(U), normbound_get_cross(U), arg, tol);/*Find the side*/
   if (sideind < 0) sideind = -sideind;/*We line up with a vertex.*/
   GEN side = gel(normbound_get_sides(U), sideind);/*The side!*/
@@ -1102,14 +1103,14 @@ normbound_outside(GEN U, GEN z, GEN tol, long prec)
 
 /*Reduces z to the closure of the interior of the normalized boundary U. Returns [g, z'], where g is the transition element and z' is the new point.*/
 static GEN
-reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol, long prec)
+reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol)
 {
   pari_sp av = avma;
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   GEN g = gamid;
   for (;;) {
-	long outside = normbound_outside(U, z, tol, prec);
+	long outside = normbound_outside(U, z, tol);
 	if (outside <= 0) break;/*We are inside or on the boundary.*/
     z = klein_act(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
@@ -1119,12 +1120,12 @@ reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol
 
 /*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns g'g. If flag=1, then we return [g', decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
 static GEN
-reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol, long prec)
+reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol)
 {
   pari_sp av = avma;
   z = klein_act(Xtopsl(X, g, tol), z);/*Starting point*/
   if (!flag) {/*Just call reduce_point*/
-	GEN red = reduce_point(X, U, z, g, Xmul, tol, prec);/*We can supply g as gamid.*/
+	GEN red = reduce_point(X, U, z, g, Xmul, tol);/*We can supply g as gamid.*/
 	return gerepileupto(av, gel(red, 1));
   }
   GEN elts = normbound_get_elts(U);
@@ -1132,7 +1133,7 @@ reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind+1, t_VECSMALL);
   for (;;) {
-	long outside = normbound_outside(U, z, tol, prec);
+	long outside = normbound_outside(U, z, tol);
 	if (outside <= 0) break;/*We are inside or on the boundary.*/
     z = klein_act(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
