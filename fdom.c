@@ -106,6 +106,7 @@ static long args_find_cross(GEN args);
 static long args_search(GEN args, long ind, GEN arg, GEN tol);
 static long normbound_outside(GEN U, GEN z, GEN tol, long prec);
 static GEN reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol, long prec);
+static GEN reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol, long prec);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -116,6 +117,7 @@ static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
+static GEN afuchinv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchtopsl(GEN X, GEN g, GEN tol);
 
@@ -1106,9 +1108,8 @@ reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   GEN g = gamid;
-  long outside;
   for (;;) {
-	outside = normbound_outside(U, z, tol, prec);
+	long outside = normbound_outside(U, z, tol, prec);
 	if (outside <= 0) break;/*We are inside or on the boundary.*/
     z = klein_act(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
@@ -1116,7 +1117,35 @@ reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol
   return gerepilecopy(av, mkvec2(g, z));
 }
 
-
+/*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns g'g. If flag=1, then we return [g', decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
+static GEN
+reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol, long prec)
+{
+  pari_sp av = avma;
+  z = klein_act(Xtopsl(X, g, tol), z);/*Starting point*/
+  if (!flag) {/*Just call reduce_point*/
+	GEN red = reduce_point(X, U, z, g, Xmul, tol, prec);/*We can supply g as gamid.*/
+	return gerepileupto(av, gel(red, 1));
+  }
+  GEN elts = normbound_get_elts(U);
+  GEN kact = normbound_get_kact(U);
+  long ind = 1, maxind = 32;
+  GEN decomp = cgetg(maxind+1, t_VECSMALL);
+  for (;;) {
+	long outside = normbound_outside(U, z, tol, prec);
+	if (outside <= 0) break;/*We are inside or on the boundary.*/
+    z = klein_act(gel(kact, outside), z);/*Act on z.*/
+    g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
+	if (ind > maxind) {/*Make decomp longer*/
+	  maxind = maxind<<1;/*Double it.*/
+	  decomp = vecsmall_lengthen(decomp, maxind);
+	}
+	ind++;
+	decomp[ind] = outside;
+  }
+  decomp = vecsmall_shorten(decomp, ind);/*Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.*/
+  return gerepilecopy(av, mkvec2(g, vecsmall_reverse(decomp)));
+}
 
 
 
@@ -1250,6 +1279,11 @@ afuchnormbound(GEN X, GEN G)
 
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
+
+
+/*alginv formatted for the input of an afuch, for use in the geometry section.*/
+static GEN
+afuchinv(GEN X, GEN g){return alginv(afuch_get_alg(X), g);}
 
 /*algmul formatted for the input of an afuch, for use in the geometry section.*/
 static GEN
