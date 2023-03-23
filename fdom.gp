@@ -4,8 +4,11 @@ parigp_version=version();
 fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2]);
 
 \\SECTION 1: GEOMETRIC METHODS
-	\\addhelp(geo,"These methods deal with geometry. Available methods:\n hdiscrandom, hdist, mat_eval");
+	\\1: MATRIX ACTION ON GEOMETRY
+	install(klein_act,"GGp",,fdom_library);
+	addhelp(klein_act,"klein_act(M, z): returns the action of M on z, where we are working in the Klein model. M=[A, B] with |A|^2-|B|^2=1 acts on the unit disc model via the normal Mobius action of [A, B;conj(B), conj(A)].");
 
+	\\1: DISTANCES/AREAS
 	install(hdiscrandom,"Gp",,fdom_library);
 	addhelp(hdiscrandom,"Input R, a positive real number.\n Returns a random point in the ball of radius R centred at 0 in the unit disc model of the hyperbolic plane.");
 	install(hdist,"GGD1,L,p",,fdom_library);
@@ -20,9 +23,13 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
 	install(afuchicirc,"GG",,fdom_library);
-	addhelp(afuchicirc,"afuchicirc(X, g): Returns the isometric circle of g, an element of non-zero norm.");
+	addhelp(afuchicirc,"afuchicirc(X, g): returns the isometric circle of g, an element of non-zero norm.");
+	install(afuchklein,"GG",,fdom_library);
+	addhelp(afuchklein,"afuchklein(X, g): returns the vector giving the action of g on the Klein model, which can be supplied to klein_act.");
 	install(afuchnormbound,"GG",,fdom_library);
 	addhelp(afuchnormbound,"afuchnormbound(X, G): computes the normalized boundary of the set of elements in G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
+	install(afuchredelt,"GGDGD0,G,",,fdom_library);
+	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
 
 	\\3: ALGEBRA HELPER METHODS
 	install(algmulvec,"GGG",,fdom_library);

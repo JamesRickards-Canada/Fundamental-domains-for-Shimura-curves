@@ -50,6 +50,8 @@ static GEN seg_int(GEN l1, GEN l2, GEN tol);
 /*1: MATRIX ACTION ON GEOMETRY*/
 static GEN defp(long prec);
 static GEN gdat_initialize(GEN p, long prec);
+static GEN klein_safe(GEN M, long prec);
+static GEN uhp_safe(GEN p, long prec);
 
 /*1: TRANSFER BETWEEN MODELS*/
 static GEN disc_to_klein(GEN z);
@@ -64,6 +66,7 @@ static GEN psl_to_klein(GEN M, GEN gdat);
 static GEN hdist_ud(GEN z1, GEN z2, long prec);
 
 /*1: OPERATIONS ON COMPLEX REALS*/
+static GEN gtocr(GEN z, long prec);
 static GEN abscr(GEN z);
 static GEN addccr(GEN z1, GEN z2);
 static GEN divccr(GEN z1, GEN z2);
@@ -105,8 +108,8 @@ static GEN normbound_area(GEN C, long prec);
 static long args_find_cross(GEN args);
 static long args_search(GEN args, long ind, GEN arg, GEN tol);
 static long normbound_outside(GEN U, GEN z, GEN tol);
-static GEN reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol);
-static GEN reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol);
+static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
+static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -117,6 +120,7 @@ static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
+static GEN afuchid(GEN X);
 static GEN afuchinv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchtopsl(GEN X, GEN g, GEN tol);
@@ -286,18 +290,16 @@ gdat_initialize(GEN p, long prec)
 {
   pari_sp av = avma;
   GEN tol = deftol(prec);
-  GEN x = gtofp(gel(p, 1), prec);
-  GEN y = gtofp(gel(p, 2), prec);
-  GEN pprec = mkcomplex(x, y);/*Convert p to have real components.*/
-  GEN m2y = shiftr(y, 1);
+  GEN pprec = uhp_safe(p, prec);/*Convert p to have real components, and check that it was a valid input.*/
+  GEN m2y = shiftr(gel(pprec, 2), 1);
   togglesign(m2y);/*pprec=x+iy, then m2y=-2y*/
-  GEN pscale = invr(m2y);/*1/(pprec-conj(pprec))=1/(-2y)i*/
+  GEN pscale = invr(m2y);/*1/(pprec-conj(pprec))=(1/(-2y))i*/
   return gerepilecopy(av, mkvec3(tol, pprec, pscale));
 }
 
 /*This gives the action in the Klein model, as described above.*/
 GEN
-klein_act(GEN M, GEN z)
+klein_act_i(GEN M, GEN z)
 {
   pari_sp av = avma;
   GEN A = gel(M, 1), B = gel(M, 2);
@@ -306,6 +308,27 @@ klein_act(GEN M, GEN z)
   GEN num = addccr(mulccr(A, AzpB), mulccr(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
   GEN denom = addccr(mulccr_conj(AzpB, B), mulccr_conj(BzcpA, A));/*(Az+B)conj(B)+(B*conj(z)+A)conj(A)*/
   return gerepilecopy(av, divccr(num, denom));
+}
+
+/*The safe version of klein_act_i, where we ensure z and M have the correct format.*/
+GEN
+klein_act(GEN M, GEN z, long prec)
+{
+  pari_sp av = avma;
+  GEN Msafe = klein_safe(M, prec);
+  GEN zsafe = gtocr(z, prec);
+  return gerepileupto(av, klein_act_i(Msafe, zsafe));
+}
+
+/*Returns M=[A, B] converted to having complex entries with real components of precision prec.*/
+static GEN
+klein_safe(GEN M, long prec)
+{
+  if (typ(M) != t_VEC || lg(M) != 3) pari_err_TYPE("M must be a length 2 vector with complex entries.", M);
+  GEN Msafe = cgetg(3, t_VEC);
+  gel(Msafe, 1) = gtocr(gel(M, 1), prec);
+  gel(Msafe, 2) = gtocr(gel(M, 2), prec);
+  return Msafe;
 }
 
 /*Gives the action of a matrix in the upper half plane/unit disc model. We assume that the input/output are not infinity, which could happen with the upper half plane model.*/
@@ -317,6 +340,17 @@ pgl_act(GEN M, GEN z)
   GEN denom = gadd(gmul(gcoeff(M, 2, 1), z), gcoeff(M, 2, 2));
   return gerepileupto(av, gdiv(numer, denom));
 }
+
+/*p should be a point in the upper half plane, stored as a t_COMPLEX with t_REAL components. This converts p to this format, or raises an error if it is not convertible.*/
+static GEN
+uhp_safe(GEN p, long prec)
+{
+  if (typ(p) != t_COMPLEX) pari_err_TYPE("The point p must be a complex number with positive imaginary part.", p);
+  GEN psafe = gtocr(p, prec);
+  if (signe(gel(psafe, 2)) != 1) pari_err_TYPE("The point p must have positive imaginary part.", p);
+  return psafe;
+}
+
 
 
 
@@ -472,8 +506,22 @@ hdist_ud(GEN z1, GEN z2, long prec)
 }
 
 
-
 /*1: OPERATIONS ON COMPLEX REALS*/
+
+/*z should be a complex number with real components of type prec. This converts it to one.*/
+static GEN
+gtocr(GEN z, long prec)
+{
+  GEN zsafe = cgetg(3, t_COMPLEX);
+  if (typ(z) == t_COMPLEX) {
+    gel(zsafe, 1) = gtofp(gel(z, 1), prec);
+    gel(zsafe, 2) = gtofp(gel(z, 2), prec);
+	return zsafe;
+  }
+  gel(zsafe, 1) = gtofp(z, prec);
+  gel(zsafe, 2) = real_0(prec);
+  return zsafe;
+}
 
 /*Returns abs(z) for a complex number z with real components. Gerepileupto safe, leaves garbage.*/
 static GEN
@@ -796,10 +844,10 @@ elts     ->	Elements of Gamma whose isometric circles give the sides of the norm
 sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0.
 vcors    ->	Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this 
 			order going counterclockwise about the origin.
-vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, BUT 
-			vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
-crossind ->	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that vertex.	
-			Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
+vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, 
+			BUT vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
+crossind ->	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that 
+			vertex.	Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
 kact     ->	The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
 area     ->	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
 spair    ->	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will be stored as 0.
@@ -1101,53 +1149,64 @@ normbound_outside(GEN U, GEN z, GEN tol)
   return gc_long(av, sideind);/*Outside*/
 }
 
-/*Reduces z to the closure of the interior of the normalized boundary U. Returns [g, z'], where g is the transition element and z' is the new point.*/
+/*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns [g'g, decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
 static GEN
-reduce_point(GEN X, GEN U, GEN z, GEN gamid, GEN (*Xmul)(GEN, GEN, GEN), GEN tol)
+red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat)
 {
   pari_sp av = avma;
-  GEN elts = normbound_get_elts(U);
-  GEN kact = normbound_get_kact(U);
-  GEN g = gamid;
-  for (;;) {
-	long outside = normbound_outside(U, z, tol);
-	if (outside <= 0) break;/*We are inside or on the boundary.*/
-    z = klein_act(gel(kact, outside), z);/*Act on z.*/
-    g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
-  }
-  return gerepilecopy(av, mkvec2(g, z));
-}
-
-/*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns g'g. If flag=1, then we return [g', decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
-static GEN
-reduce_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN tol)
-{
-  pari_sp av = avma;
-  z = klein_act(Xtopsl(X, g, tol), z);/*Starting point*/
-  if (!flag) {/*Just call reduce_point*/
-	GEN red = reduce_point(X, U, z, g, Xmul, tol);/*We can supply g as gamid.*/
-	return gerepileupto(av, gel(red, 1));
-  }
+  GEN tol = gdat_get_tol(gdat);
+  GEN zorig = z;
+  z = klein_act_i(psl_to_klein(Xtopsl(X, g, tol), gdat), z);/*Starting point*/
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind+1, t_VECSMALL);
   for (;;) {
 	long outside = normbound_outside(U, z, tol);
-	if (outside <= 0) break;/*We are inside or on the boundary.*/
-    z = klein_act(gel(kact, outside), z);/*Act on z.*/
+	if (outside <= 0) {/*We are inside or on the boundary.*/
+	  GEN gact = psl_to_klein(Xtopsl(X, g, tol), gdat);
+	  z = klein_act_i(gact, zorig);
+	  outside = normbound_outside(U, z, tol);
+	  if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
+	}
+    z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
 	if (ind > maxind) {/*Make decomp longer*/
 	  maxind = maxind<<1;/*Double it.*/
 	  decomp = vecsmall_lengthen(decomp, maxind);
 	}
-	ind++;
 	decomp[ind] = outside;
+	ind++;
   }
-  decomp = vecsmall_shorten(decomp, ind);/*Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.*/
+  decomp = vecsmall_shorten(decomp, ind-1);/*Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.*/
   return gerepilecopy(av, mkvec2(g, vecsmall_reverse(decomp)));
 }
 
+/*red_elt_decomp, except we return g'g if flag=0, g'gz if flag=1, and [g'g,g'gz] if flag=2.*/
+static GEN
+red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat)
+{
+  pari_sp av = avma;
+  GEN tol = gdat_get_tol(gdat);
+  GEN zorig = z;
+  z = klein_act_i(psl_to_klein(Xtopsl(X, g, tol), gdat), z);/*Starting point*/
+  GEN elts = normbound_get_elts(U);
+  GEN kact = normbound_get_kact(U);
+  for (;;) {
+	long outside = normbound_outside(U, z, tol);
+	if (outside <= 0) {/*We are inside or on the boundary.*/
+	  GEN gact = psl_to_klein(Xtopsl(X, g, tol), gdat);
+	  z = klein_act_i(gact, zorig);
+	  outside = normbound_outside(U, z, tol);
+	  if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
+	}
+    z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
+    g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
+  }
+  if (flag == 0) return gerepilecopy(av, g);
+  if (flag == 1) return gerepilecopy(av, z);
+  return gerepilecopy(av, mkvec2(g, z));
+}
 
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
@@ -1269,6 +1328,17 @@ afuchicirc(GEN X, GEN g)
   return gerepileupto(av, gel(icirc_all, 3));
 }
 
+/*Returns the element representing the action of g on the Klein model.*/
+GEN
+afuchklein(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  GEN tol = gdat_get_tol(gdat);
+  GEN psl = afuchtopsl(X, g, tol);
+  return gerepileupto(av, psl_to_klein(psl, gdat));
+}
+
 /*Returns the normalized boundary of the set of elements G in A.*/
 GEN
 afuchnormbound(GEN X, GEN G)
@@ -1278,9 +1348,38 @@ afuchnormbound(GEN X, GEN G)
   return gerepilecopy(av, normbound(X, G, &afuchtopsl, gdat));
 }
 
+/*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element.*/
+GEN
+afuchredelt(GEN X, GEN U, GEN g, GEN z)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  GEN tol = gdat_get_tol(gdat);
+  GEN zsafe = gtocr(z, lg(tol));/*Make sure z has the appropriate formatting.*/
+  if(!g) g = afuchid(X);
+  GEN r = red_elt_decomp(X, U, g, zsafe, &afuchtopsl, &afuchmul, gdat);/*[g'g, decomp].*/
+  GEN gact = psl_to_klein(afuchtopsl(X, gel(r, 1), tol), gdat);
+  GEN zimg = klein_act_i(gact, zsafe);
+  return gerepilecopy(av, mkvec3(gel(r, 1), zimg, gel(r, 2)));
+}
+
+GEN
+afuchredelt2(GEN X, GEN U, GEN g, GEN z, int flag)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  GEN tol = gdat_get_tol(gdat);
+  GEN zsafe = gtocr(z, lg(tol));/*Make sure z has the appropriate formatting.*/
+  if(!g) g = afuchid(X);
+  return gerepileupto(av, red_elt(X, U, g, zsafe, &afuchtopsl, &afuchmul, flag, gdat));
+}
+
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
+/*Returns the identity element*/
+static GEN
+afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
 
 /*alginv formatted for the input of an afuch, for use in the geometry section.*/
 static GEN

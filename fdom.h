@@ -55,7 +55,8 @@ afuch_get_sig(GEN X){return gel(X, 9);}
 
 /*1: LINES AND ARCS*/
 /*1: MATRIX ACTION ON GEOMETRY*/
-GEN klein_act(GEN M, GEN z);
+GEN klein_act_i(GEN M, GEN z);
+GEN klein_act(GEN M, GEN z, long prec);
 GEN pgl_act(GEN M, GEN z);
 
 /*1: TRANSFER BETWEEN MODELS*/
@@ -83,7 +84,9 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchicirc(GEN X, GEN g);
+GEN afuchklein(GEN X, GEN g);
 GEN afuchnormbound(GEN X, GEN G);
+GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
