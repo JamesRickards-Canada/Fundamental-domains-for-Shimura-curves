@@ -19,7 +19,7 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	
 	\\3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS
 	install(afuchinit,"GGGDGp",,fdom_library);
-	addhelp(afuchinit,"afuchinit(al, O, type, {p}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default value of p is 0.5+Pi/8*I.");
+	addhelp(afuchinit,"afuchinit(al, O, type, {p}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default value of p is Pi/8+0.5*I.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
 	install(afuchicirc,"GG",,fdom_library);

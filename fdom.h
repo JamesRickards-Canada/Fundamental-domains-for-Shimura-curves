@@ -7,8 +7,6 @@ INLINE GEN
 gdat_get_tol(GEN gd){return gel(gd, 1);}
 INLINE GEN
 gdat_get_p(GEN gd){return gel(gd, 2);}
-INLINE GEN
-gdat_get_pscale(GEN gd){return gel(gd, 3);}
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN
