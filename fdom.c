@@ -1162,6 +1162,10 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*X
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind+1, t_VECSMALL);
   for (;;) {
+	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
+	  GEN gact = psl_to_klein(Xtopsl(X, g, tol), gdat);
+	  z = klein_act_i(gact, zorig);
+	}
 	long outside = normbound_outside(U, z, tol);
 	if (outside <= 0) {/*We are inside or on the boundary.*/
 	  GEN gact = psl_to_klein(Xtopsl(X, g, tol), gdat);
@@ -1192,7 +1196,12 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GE
   z = klein_act_i(psl_to_klein(Xtopsl(X, g, tol), gdat), z);/*Starting point*/
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
+  long ind = 1;
   for (;;) {
+	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
+	  GEN gact = psl_to_klein(Xtopsl(X, g, tol), gdat);
+	  z = klein_act_i(gact, zorig);
+	}
 	long outside = normbound_outside(U, z, tol);
 	if (outside <= 0) {/*We are inside or on the boundary.*/
 	  GEN gact = psl_to_klein(Xtopsl(X, g, tol), gdat);
@@ -1202,6 +1211,7 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopsl)(GEN, GEN, GEN), GEN (*Xmul)(GE
 	}
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
+	ind++;
   }
   if (flag == 0) return gerepilecopy(av, g);
   if (flag == 1) return gerepilecopy(av, z);
@@ -1398,8 +1408,9 @@ afuchtopsl(GEN X, GEN g, GEN tol)
   GEN emb = RgM_Rg_mul(gel(mats, 1), gel(g, 1));
   long lg = lg(g), i;
   for (i = 2; i<lg; i++) emb = RgM_add(emb, RgM_Rg_mul(gel(mats, i), gel(g, i)));
-  GEN det = subrr(mulrr(gcoeff(emb, 1, 1), gcoeff(emb, 2, 2)), mulrr(gcoeff(emb, 1, 2), gcoeff(emb, 2, 1)));/*Must scale by sqrt(det)*/
-  if (!toleq(det, gen_1, tol)) emb = RgM_Rg_div(emb, sqrtr(det));/*The norm is often 1, so we omit the scaling if we can.*/
+  //GEN det = subrr(mulrr(gcoeff(emb, 1, 1), gcoeff(emb, 2, 2)), mulrr(gcoeff(emb, 1, 2), gcoeff(emb, 2, 1)));/*Must scale by sqrt(det)*/
+  //GEN rtdet = gtofp(sqrtr(invr(det)), lg(tol));
+  //emb = RgM_Rg_mul(emb, rtdet);
   return gerepileupto(av, emb);
 }
 
