@@ -4,7 +4,6 @@
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 7. Remove gdat from normbound output?
-8. Potentially take out rootnorminv from everything and just compute it, it really is just 2 multiplications and 1 subtraction extra.
 */
 
 /*
@@ -31,9 +30,6 @@ POSSIBLE FUTURE ADDITIONS:
 #define FDOMDECL
 #include "fdom.h"
 #endif
-
-/*DEFINITIONS*/
-
 
 /*STATIC DECLARATIONS*/
 
@@ -96,17 +92,22 @@ static GEN argmod_complex(GEN c, GEN tol);
 /*2: NORMALIZED BOUNDARY*/
 static GEN normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
 static GEN normbound_icircs(GEN C, GEN gdat);
-static int cmp_icircangle(void *nul, GEN c1, GEN c2);
 static long normbound_icircs_bigr(GEN C, GEN order);
 static void normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long *found);
 static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toins, long *found);
 static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long toins, long *found);
 static GEN normbound_area(GEN C, long prec);
-static long args_find_cross(GEN args);
-static long args_search(GEN args, long ind, GEN arg, GEN tol);
 static long normbound_outside(GEN U, GEN z, GEN tol);
 
-/*2: REDUCTION*/
+/*2: NORMALIZED BOUNDARY APPENDING*/
+static GEN normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
+
+/*2: NORMALIZED BOUNDARY ANGLES*/
+static int cmp_icircangle(void *nul, GEN c1, GEN c2);
+static long args_find_cross(GEN args);
+static long args_search(GEN args, long ind, GEN arg, GEN tol);
+
+/*2: NORMALIZED BOUNDARY REDUCTION*/
 static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
 static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat);
 
@@ -131,30 +132,29 @@ static long algsplitoo(GEN A);
 
 
 
-
-
-
-
 /*SECTION 1: GEOMETRIC METHODS*/
 
 
 /*LINES, SEGMENTS, TOLERANCE, POINTS
-Line   ->	[a, b, c]			Representing ax+by=c. We will normalize so that c=1 or 0. It is assumed that at least one of a, b is non-zero. We also
-								assume that a and b are of type t_REAL.
-Segment->	[a, b, c, x0, x1]	[a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going
-								through oo. We also require x0 and x1 to have type t_COMPLEX with t_REAL components.
-GEN tol->	The tolerance, which MUST be of type t_REAL. The default choice is tol=deftol(prec). Two points are declared as equal if they are equal up
-			to tolerance.
-Points ->	Stored as t_COMPLEX with t_REAL entries.
+Line	[a, b, c]
+	Representing ax+by=c. We will normalize so that c=gen_1 or gen_0. It is assumed that at least one of a, b is non-zero. We also assume that a and b are of type t_REAL.
+Point
+	Stored as t_COMPLEX with t_REAL entries.
+Segment	[a, b, c, x0, x1]
+	[a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going through oo. We also require x0 and x1 to have type t_COMPLEX with t_REAL components.
+tol
+	The tolerance, which MUST be of type t_REAL. The default choice is tol=deftol(prec). Two points are declared as equal if they are equal up to tolerance.
 */
 
 /* GEOMETRIC DATA
 We will need to deal with passing from the upper half plane model -> unit ball model -> Klein model, as well as doing computations with tolerance. For this, we will fix a "geometric data" argument:
-gdat = 	[tol, p]
-tol   ->	The tolerance, which should be initially set with tol=deftol(prec).
-p     ->	The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, 
-			otherwise issues may arise. We convert it to have components that are t_REAL.
-PRECISION: can be retrieved by lg(tol), so we don't store it.
+gdat = [tol, p]
+tol
+	The tolerance, which should be initially set with tol=deftol(prec).
+p
+	The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, otherwise issues may arise. We convert it to have components that are t_REAL.
+precision
+	Can be retrieved by lg(tol), so we don't store it.
 */
 
 
@@ -263,11 +263,14 @@ seg_int(GEN l1, GEN l2, GEN tol)
 /*1: MATRIX ACTION ON GEOMETRY*/
 
 /*EQUATIONS FOR ACTION
-UPPER HALF PLANE->	M=[a, b;c, d] in (P)GL(2, R)^+ acts on z via (az+b)/(cz+d). 
-UNIT DISC		->	M=[A, B;conj(B), conj(A)] in (P)SU(1, 1) acts on z in the same way as PGL. 
-KLEIN			->	M=[A, B] corresponding to the same (A, B) as for the unit disc action. The corresponding equation on a point in the Klein model is
-					via Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B.
-					=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
+UPPER HALF PLANE
+	M=[a, b;c, d] in (P)GL(2, R)^+ acts on z via (az+b)/(cz+d). 
+UNIT DISC
+	M=[A, B;conj(B), conj(A)] in (P)SU(1, 1) acts on z in the same way as PGL. 
+KLEIN
+	M=[A, B] corresponding to the same (A, B) as for the unit disc action. The corresponding equation on a point in the Klein model is via 
+	Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B
+	=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
 */
 
 /*Returns the default value of p, which is Pi/8+0.5*I*/
@@ -709,19 +712,23 @@ Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be
 We do all of our computations in the Klein model.
 */
 
+
 /*2: ISOMETRIC CIRCLES*/
 
-
 /* ISOMETRIC CIRCLE FORMATTING
-icirc  ->	[a, b, r, p1, p2, ang1, ang2]
-a, b   ->	ax+by=1 is the Klein model equation of the boundary
-			(x-a)^2+(y-b)^2=r^2 is the unit disc model equation of the boundary
-r      ->	r^2+1=a^2+b^2 as it is orthogonal to the unit disc
-p1/p2  ->	Intersection points with the unit disc; see below for the ordering.  
-ang1   ->	Assume that the angle from p1 to p2 is <pi (which uniquely determines them). Then ang1 is the argument of p1, in the range [0, 2*pi).
-ang2   ->	The argument of p2, in the range [0, 2*pi). It may be less than ang1 if the arc crosses 1.
-a, b, r, ang1, ang2 must be t_REAL.
-p1 and p2 must be t_COMPLEX with t_REAL components.
+icirc
+	[a, b, r, p1, p2, ang1, ang2]
+a, b
+	ax+by=1 is the Klein model equation of the boundary. a and b are t_REAL
+	(x-a)^2+(y-b)^2=r^2 is the unit disc model equation of the boundary
+r
+	r^2+1=a^2+b^2 as it is orthogonal to the unit disc, and is of type t_REAL
+p1/p2
+	Intersection points with the unit disc; see below for the ordering. Of type t_COMPLEX with t_REAL components.
+ang1
+	Assume that the angle from p1 to p2 is <pi (which uniquely determines them). Then ang1 is the argument of p1, in the range [0, 2*pi). Type t_REAL
+ang2
+	The argument of p2, in the range [0, 2*pi). It may be less than ang1 if the arc crosses 1. Type t_REAL.
 */
 
 
@@ -817,18 +824,24 @@ argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
 /*NORMALIZED BOUNDARY FORMATTING
 A normalized boundary is represented by U, where
 U=[elts, sides, vcors, vargs, crossind, kact, area, spair, gdat]
-elts     ->	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
-sides    ->	The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0.
-vcors    ->	Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this 
-			order going counterclockwise about the origin.
-vargs    ->	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, 
-			BUT vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
-crossind ->	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that 
-			vertex.	Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
-kact     ->	The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
-area     ->	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
-spair    ->	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will be stored as 0.
-gdat	 ->	Stores the geometric data associated to the computations.
+elts
+	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
+sides
+	The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0. The first side is the closest to the origin.
+vcors
+	Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this order going counterclockwise about the origin.
+vargs
+	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, BUT vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
+crossind
+	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that vertex.	Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
+kact
+	The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
+area
+	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
+spair
+	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will be stored as 0.
+gdat
+	Stores the geometric data associated to the computations.
 */
 
 
@@ -990,10 +1003,6 @@ normbound_icircs(GEN C, GEN gdat)
   return rv;
 }
 
-/*Used for sorting C by initial angles.*/
-static int
-cmp_icircangle(void *nul, GEN c1, GEN c2){return cmprr(gmael(c1, 3, 6), gmael(c2, 3, 6));}
-
 /*Finds the index i such that C[order[i]] has the largest r value, which is guaranteed to be on the normalized boundary.*/
 static long
 normbound_icircs_bigr(GEN C, GEN order)
@@ -1052,6 +1061,124 @@ normbound_area(GEN C, long prec)
   return gerepileupto(av, area);
 }
 
+/*Let ind be the index of the edge that z is on when projected from the origin to the boundary (2 possibilities if it is a vertex). Returns 0 if z is in the interior of U, -ind if z is on the boundary, and ind if z is outside the boundary. Assume that the normalized boundary is non-trivial.*/
+static long
+normbound_outside(GEN U, GEN z, GEN tol)
+{
+  pari_sp av = avma;
+  GEN arg = argmod_complex(z, tol);
+  long sideind = args_search(normbound_get_vargs(U), normbound_get_cross(U), arg, tol);/*Find the side*/
+  if (sideind < 0) sideind = -sideind;/*We line up with a vertex.*/
+  GEN side = gel(normbound_get_sides(U), sideind);/*The side!*/
+  if (gequal0(side)) {
+	if (toleq(normcr(z), gen_1, tol)) return gc_long(av, -sideind);/*We are on the unit circle at an infinite side.*/
+	return gc_long(av, 0);/*Infinite side, and we are inside.*/
+  }
+  GEN where = subrs(addrr(mulrr(gel(z, 1), gel(side, 1)), mulrr(gel(z, 2), gel(side, 2))), 1);/*sign(where)==-1 iff where is inside, 0 iff where is on.*/
+  int s = tolsigne(where, tol);
+  if (s < 0) return gc_long(av, 0);/*Same side as 0, so inside*/
+  if (s == 0) return gc_long(av, -sideind);/*On the side*/
+  return gc_long(av, sideind);/*Outside*/
+}
+
+
+/*2: NORMALIZED BOUNDARY APPENDING*/
+
+/*Initializes the inputs for normbound_append_icircs. G is the set of elements we are forming the normalized boundary for, and U is the necessarily non-trivial current boundary. Returns 0 if the normalized boundary does not change. Not gerepileupto safe, and leaves garbage.*/
+static GEN
+normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
+{
+  pari_sp av = avma;/*DELETE*/
+  
+  long lG = lg(G), lU = lg(gel(U, 1)), i;
+  GEN Cnew = vectrunc_init(lG);/*Start by initializing the new circles.*/
+  for (i = 1; i < lG; i++) {
+	GEN circ = icirc_elt(X, gel(G, i), Xtopgl, gdat);
+	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
+	vectrunc_append(Cnew, circ);
+  }
+  long lCnew = lg(Cnew);
+  if (lCnew == 1) return gen_0;
+  long lenU = lU-1;/*Now we figure out the order of U, before merging them.*/
+  long Ustart = normbound_get_cross(U)%lenU+1;/*The side which crosses the origin. We do a linear probe to find the smallest initial angle.*/
+  long Unext = Ustart%lenU+1;
+  GEN Usides = normbound_get_sides(U), tol = gdat_get_tol(gdat);
+  for (;;) {
+	if (gequal0(gel(Usides, Ustart))) {Ustart = Unext; break;}/*The next side is not infinite, and must be the first one.*/
+	if (gequal0(gel(Usides, Unext))) {Ustart = Unext%lenU+1; break;}/*Must move past the infinite side.*/
+	if (tolcmp(gmael(Usides, Ustart, 6), gmael(Usides, Unext, 6), tol) >= 0) {Ustart = Unext; break;}/*We have crossed over.*/
+	Ustart = Unext;
+	Unext = Unext%lenU+1;
+  }
+  GEN Uelts = normbound_get_elts(U), Ukact = normbound_get_kact(U);
+  GEN order = gen_indexsort(Cnew, NULL, &cmp_icircangle);/*Order the sides by initial angle.*/
+  GEN C = vectrunc_init(lCnew+lU);/*Tracks the sorted isometric circle triples.*/
+  GEN Ctype = vecsmalltrunc_init(lCnew+lU);/*Tracks whether they are 0=new or 1=old.*/
+  long Cnewind, Uind;
+  if (tolcmp(gmael3(Cnew, order[1], 3, 6), gmael(Usides, Ustart, 6), tol) >= 0) {/*Start with U.*/
+    vectrunc_append(C, mkvec3(gel(Uelts, Ustart), gel(Ukact, Ustart), gel(Usides, Ustart)));
+	vecsmalltrunc_append(Ctype, 1);/*Old side*/
+	Cnewind = 1;
+	Uind = Ustart%lenU+1;
+	if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU+1;/*Move past infinite side.*/
+  }
+  else {/*Start with C*/
+	vectrunc_append(C, gel(Cnew, order[1]));
+	vecsmalltrunc_append(Ctype, 0);/*New side*/
+	Cnewind = 2;
+	Uind = Ustart;
+  }
+  for (;;) {/*Now we merge the two into one list, keeping track of old vs new sides.*/
+	if (lg(C)>Cnewind && Uind == Ustart) {/*We have finished with the U's (first inequality tracks if we have added any U's).*/
+	  while (Cnewind < lCnew) {/*Just C's left.*/
+	    vectrunc_append(C, gel(Cnew, order[Cnewind]));
+	    vecsmalltrunc_append(Ctype, 0);
+	    Cnewind++;
+	  }
+	  break;
+	}
+	if (Cnewind == lCnew) {/*Done with C's but not the U's.*/
+	  do {
+		vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
+		vecsmalltrunc_append(Ctype, 1);
+		Uind = Uind%lenU+1;
+	    if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU+1;/*Move past infinite side.*/
+	  } while (Uind != Ustart);
+	}
+	/*We still have U's and C's left.*/
+	if (cmprr(gmael3(Cnew, order[Cnewind], 3, 6), gmael(Usides, Uind, 6)) >= 0) {/*No need for tolcmp, we don't care if =.*/
+	  vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
+	  vecsmalltrunc_append(Ctype, 1);
+	  Uind = Uind%lenU+1;
+	  if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU+1;/*Move past infinite side.*/
+	  continue;
+	}
+	vectrunc_append(C, gel(Cnew, order[Cnewind]));
+	vecsmalltrunc_append(Ctype, 0);
+	Cnewind++;
+  }
+  
+  return gerepilecopy(av, mkvec2(C, Ctype));/*CHANGE*/
+}
+
+/*Does normbound_icircs, except we already have a normalized boundary U that we add to. Assumptions:
+	If we do NOT change the boundary, we just return 0. This is for convenience with normbasis.
+	Not gerepileupto safe, and leaves garbage.
+*/
+/*static GEN
+normbound_append_icircs(GEN U, GEN C, GEN gdat)
+{
+  
+}*/
+
+
+
+/*2: NORMALIZED BOUNDARY ANGLES*/
+
+/*Used for sorting C by initial angles.*/
+static int
+cmp_icircangle(void *nul, GEN c1, GEN c2){return cmprr(gmael(c1, 3, 6), gmael(c2, 3, 6));}
+
 /*Assuming there is a unique index i such that args[i]>args[i+1], we return i. No need for tolerance. We assume that #args>=2.*/
 static long
 args_find_cross(GEN args)
@@ -1103,28 +1230,8 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
   return l2;
 }
 
-/*Let ind be the index of the edge that z is on when projected from the origin to the boundary (2 possibilities if it is a vertex). Returns 0 if z is in the interior of U, -ind if z is on the boundary, and ind if z is outside the boundary. Assume that the normalized boundary is non-trivial.*/
-static long
-normbound_outside(GEN U, GEN z, GEN tol)
-{
-  pari_sp av = avma;
-  GEN arg = argmod_complex(z, tol);
-  long sideind = args_search(normbound_get_vargs(U), normbound_get_cross(U), arg, tol);/*Find the side*/
-  if (sideind < 0) sideind = -sideind;/*We line up with a vertex.*/
-  GEN side = gel(normbound_get_sides(U), sideind);/*The side!*/
-  if (gequal0(side)) {
-	if (toleq(normcr(z), gen_1, tol)) return gc_long(av, -sideind);/*We are on the unit circle at an infinite side.*/
-	return gc_long(av, 0);/*Infinite side, and we are inside.*/
-  }
-  GEN where = subrs(addrr(mulrr(gel(z, 1), gel(side, 1)), mulrr(gel(z, 2), gel(side, 2))), 1);/*sign(where)==-1 iff where is inside, 0 iff where is on.*/
-  int s = tolsigne(where, tol);
-  if (s < 0) return gc_long(av, 0);/*Same side as 0, so inside*/
-  if (s == 0) return gc_long(av, -sideind);/*On the side*/
-  return gc_long(av, sideind);/*Outside*/
-}
 
-
-/*2: REDUCTION*/
+/*2: NORMALIZED BOUNDARY REDUCTION*/
 
 /*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns [g'g, decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
 static GEN
@@ -1214,16 +1321,26 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, where
-	X=[A, O, chol, embmats, type, splitdat, gdat, fdom, pres, sig]
-A     	-> The algebra
-O		-> The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
-chol	-> Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
-embmats	-> O[,i] is sent to embmats[i] under the embedding into M(2, R) at the unique split infinite place.
-type	-> Which symmetric space we want to compute.
-gdat	-> Geometric data
-fdom	-> Fundamental domain, if computed
-pres	-> Presentation, if computed
-sig		-> Signature, if computed
+X
+	[A, O, chol, embmats, type, splitdat, gdat, fdom, pres, sig]
+A
+	The algebra
+O
+	The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
+chol
+	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
+embmats
+	O[,i] is sent to embmats[i] under the embedding into M(2, R) at the unique split infinite place.
+type
+	Which symmetric space we want to compute.
+gdat
+	Geometric data.
+fdom
+	Fundamental domain, if computed.
+pres
+	Presentation, if computed.
+sig
+	Signature, if computed.
 */
 
 /*
@@ -1303,8 +1420,6 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-
-
 /*Returns the isometric circle of an element of A.*/
 GEN
 afuchicirc(GEN X, GEN g)
@@ -1332,6 +1447,15 @@ afuchnormbound(GEN X, GEN G)
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
   return gerepilecopy(av, normbound(X, G, &afuchtopgl, gdat));
+}
+
+/*Computes the normalized boundary of U union G, where U is an already computed normalized boundary*/
+GEN
+afuchnormbound_append(GEN X, GEN U, GEN G)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  return gerepilecopy(av, normbound_append(X, U, G, &afuchtopgl, gdat));
 }
 
 /*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element.*/

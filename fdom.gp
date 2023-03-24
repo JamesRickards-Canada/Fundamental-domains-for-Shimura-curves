@@ -28,6 +28,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchklein,"afuchklein(X, g): returns the vector giving the action of g on the Klein model, which can be supplied to klein_act.");
 	install(afuchnormbound,"GG",,fdom_library);
 	addhelp(afuchnormbound,"afuchnormbound(X, G): computes the normalized boundary of the set of elements in G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
+	install(afuchnormbound_append,"GGG",,fdom_library);
+	addhelp(afuchnormbound_append,"afuchnormbound_append(X, U, G): given a non-trivial normalized boundary U, this computes the new normalized boundary obtained by adding in the isometric circles for all elements in G. More efficient than calling afuchnormbound(X, concat(U[1], G)), as we use the already computed U to optimize the computation.");
 	install(afuchredelt,"GGDGD0,G,",,fdom_library);
 	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
 

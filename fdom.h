@@ -72,8 +72,9 @@ GEN deftol(long prec);
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
 
 /*2: NORMALIZED BOUNDARY*/
-/*2: REDUCTION*/
-
+/*2: NORMALIZED BOUNDARY APPENDING*/
+/*2: NORMALIZED BOUNDARY ANGLES*/
+/*2: NORMALIZED BOUNDARY REDUCTION*/
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -84,6 +85,7 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
 GEN afuchicirc(GEN X, GEN g);
 GEN afuchklein(GEN X, GEN g);
 GEN afuchnormbound(GEN X, GEN G);
+GEN afuchnormbound_append(GEN X, GEN U, GEN G);
 GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
