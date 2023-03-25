@@ -4,6 +4,7 @@
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 7. Remove gdat from normbound output?
+8. forqfvec with flag=2.
 */
 
 /*
@@ -91,9 +92,9 @@ static GEN argmod_complex(GEN c, GEN tol);
 
 /*2: NORMALIZED BOUNDARY*/
 static GEN normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
-static GEN normbound_icircs(GEN C, GEN gdat);
+static GEN normbound_icircs(GEN C, GEN indtransfer, GEN gdat);
 static long normbound_icircs_bigr(GEN C, GEN order);
-static void normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long *found);
+static void normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN infinite, GEN curcirc, long *found);
 static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toins, long *found);
 static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long toins, long *found);
 static GEN normbound_area(GEN C, long prec);
@@ -824,7 +825,7 @@ argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
 
 /*NORMALIZED BOUNDARY FORMATTING
 A normalized boundary is represented by U, where
-U=[elts, sides, vcors, vargs, crossind, kact, area, spair, gdat]
+U=[elts, sides, vcors, vargs, crossind, kact, area, spair, deleted]
 elts
 	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
 sides
@@ -840,9 +841,9 @@ kact
 area
 	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
 spair
-	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will be stored as 0.
-gdat
-	Stores the geometric data associated to the computations.
+	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will store the indices of the sides that got deleted.
+infinite
+	Stores the indices of the infinite sides.
 */
 
 
@@ -852,23 +853,26 @@ normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 {
   long lG = lg(G), i;
   GEN C = vectrunc_init(lG);
+  GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
 	GEN circ = icirc_elt(X, gel(G, i), Xtopgl, gdat);
 	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
 	vectrunc_append(C, circ);
+	vecsmalltrunc_append(indtransfer, i);
   }
   if(lg(C) == 1) return gen_0;
-  return normbound_icircs(C, gdat);
+  return normbound_icircs(C, indtransfer, gdat);
 }
 
 /*Given C, the output of icirc_elt for each of our elements, this computes and returns the normalized boundary. Assumptions:
 	C[i]=[g, M, icirc], where g=elt, M=Kleinian action, and icirc=[a, b, r, p1, p2, ang1, ang2].
 	None of the entries should be infinite sides, sort this out in the method that calls this.
 	C has at least one element, so the boundary is non-trivial.
+	indtransfer tracks the indices of G in terms of the indices in C, for tracking the deleted elements.
 	Not gerepileupto safe, and leaves garbage.
 */
 static GEN
-normbound_icircs(GEN C, GEN gdat)
+normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
 {
   GEN tol = gdat_get_tol(gdat);
   long prec=lg(tol);
@@ -877,14 +881,16 @@ normbound_icircs(GEN C, GEN gdat)
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
   GEN vcors = cgetg(maxsides, t_VEC);/*Stores coordinates of the vertices.*/
   GEN vargs = cgetg(maxsides, t_VEC);/*Stores arguments of the vertices.*/
+  GEN infinite = vecsmalltrunc_init(lc);/*Stores the indices of infinite sides.*/
+  GEN deleted = vecsmalltrunc_init(lc);/*Stores the indices in C of sides that don't survive.*/
   elts[1] = order[istart];
   GEN firstcirc = gmael(C, elts[1], 3);/*The equation for the fist line, used in phase 2 and for detecting phase 2 starting.*/
   gel(vcors, 1) = gel(firstcirc, 5);/*The terminal vertex of the side is the first vertex.*/
   gel(vargs, 1) = gel(firstcirc, 7);
   long found = 1, lenc = lc-1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
-  int phase2 = 0, infinitesides = 0;/*Which phase we are in, and if there are infinite sides or not.*/
+  int phase2 = 0;/*Which phase we are in*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
-	elts, vcors, vargs, found, absind, phase2, infinitesides
+	elts, vcors, vargs, infinite, deleted, found, absind, phase2
 	PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
   */
   for (absind = 1; absind < lenc; absind++) {/*We are trying to insert the next side.*/
@@ -894,14 +900,18 @@ normbound_icircs(GEN C, GEN gdat)
 	int termloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 7), tol);/*Whether the terminal angle lies inside the last arc.*/
 	switch (termloc) {
 	  case 3:
-	    if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
+	    if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) {
+		  vecsmalltrunc_append(deleted, indtransfer[toins]);
+		  continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
+		}
 	  case 1:
 	    phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
-		infinitesides = 1;/*The last side might not be the first, but since we looped all the way around there MUST be an oo side.*/
-		normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
+		/*The last side might not be the first, but since we looped all the way around there MUST be an oo side.*/
+		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 		normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
 		continue;
 	  case 2:
+	    vecsmalltrunc_append(deleted, indtransfer[toins]);
 	    continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
 	}
 	/*If we make it here, then the terminal point lies outside of the last range.*/
@@ -910,12 +920,12 @@ normbound_icircs(GEN C, GEN gdat)
 	  case 3:/*We have an intersection to consider, will do so outside the switch.*/
 	    break;
 	  case 1:
-	    absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
+	    vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
+		absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
 		found--;
 		continue;
 	  case 0:
-	    infinitesides = 1;
-	    normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
+	    normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 	  case 2:
 	    if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  phase2 = 1;
@@ -947,7 +957,10 @@ normbound_icircs(GEN C, GEN gdat)
 	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
 	    continue;
 	  case 2:
-	    if (phase2) continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
+	    if (phase2) {
+		  vecsmalltrunc_append(deleted, indtransfer[toins]);
+		  continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
+		}
 	    /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
 		if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
 		  phase2 = 1;
@@ -958,27 +971,32 @@ normbound_icircs(GEN C, GEN gdat)
 		continue;
 	  case 0:
 	    if (!phase2) {/*We supercede the last side, so delete and try again. We could not have deleted a side, have this trigger, and intersect the last side without superceding.*/
+		  vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
 	      absind--;
 	      found--;
 	      continue;
 		}
 		int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found-1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
 		if (supercede) {
+		  vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
 		  absind--;
 		  found--;
+		  continue;
 		}
+		vecsmalltrunc_append(deleted, indtransfer[toins]);
 		continue;
 	  case 1:/*We just replace the last side, we have the same vertex and vertex angle.*/
-	    elts[found]=toins;
+	    vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
+		found--;
 		if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  gel(vcors, found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-          gel(vargs, found) = argmod_complex(gel(vcors, found), tol);/*Argument*/
+		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
+		  continue;
 		}
+		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
 	}
   }
   if (!phase2) {/*We never hit phase 2, so there is one final infinite edge to worry about.*/
-    infinitesides = 1;
-	normbound_icircs_insinfinite(elts, vcors, vargs, firstcirc, &found);
+	normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
   long i, fp1 = found+1;
@@ -997,10 +1015,10 @@ normbound_icircs(GEN C, GEN gdat)
   gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
   gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
   gel(rv, 6) = rv_kact;/*Kleinian action*/
-  if(infinitesides) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
+  if (lg(infinite) > 1) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
   else gel(rv, 7) = normbound_area(rv_sides, prec);
-  gel(rv, 8) = gen_0;/*Side pairing*/
-  gel(rv, 9) = gdat;/*Geometric data*/
+  gel(rv, 8) = deleted;/*For now, stores the deleted indices.*/
+  gel(rv, 9) = infinite;/*Infinite sides*/
   return rv;
 }
 
@@ -1022,12 +1040,14 @@ normbound_icircs_bigr(GEN C, GEN order)
 
 /*curcirc gives a new side that does not loop back around, but there is an infinite side first. This inserts the infinite side.*/
 static void
-normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long *found)
+normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN infinite, GEN curcirc, long *found)
 {
   (*found)++;
-  elts[*found] = 0;/*Infinite side*/
-  gel(vcors, *found) = gel(curcirc, 4);/*Initial vertex of curcirc.*/
-  gel(vargs, *found) = gel(curcirc, 6);/*Initial angle of curcirc.*/
+  long f = *found;
+  elts[f] = 0;/*Infinite side*/
+  vecsmalltrunc_append(infinite, f);/*This cannot get deleted, so will be always accurate.*/
+  gel(vcors, f) = gel(curcirc, 4);/*Initial vertex of curcirc.*/
+  gel(vargs, f) = gel(curcirc, 6);/*Initial angle of curcirc.*/
 }
 
 /*We are inserting a new side that does not intersect back into phase 2. If it intersected with the previous side, then that vertex should be updated before calling this.*/
@@ -1035,9 +1055,10 @@ static void
 normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcirc, long toins, long *found)
 {
   (*found)++;
-  elts[*found] = toins;/*Non-infinite side we are inserting.*/
-  gel(vcors, *found) = gel(curcirc, 5);/*Terminal vertex of curcirc.*/
-  gel(vargs, *found) = gel(curcirc, 7);/*Terminal vertex of curcirc argument.*/
+  long f = *found;
+  elts[f] = toins;/*Non-infinite side we are inserting.*/
+  gel(vcors, f) = gel(curcirc, 5);/*Terminal vertex of curcirc.*/
+  gel(vargs, f) = gel(curcirc, 7);/*Terminal vertex of curcirc argument.*/
 }
 
 /*We are performing an insertion in phase 2, i.e. we are intersecting back with the initial side. Assume we have already dealt with updating the previous vertex, if applicable.*/
@@ -1045,9 +1066,10 @@ static void
 normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long toins, long *found)
 {
   (*found)++;
-  elts[*found] = toins;
-  gel(vcors, *found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-  gel(vargs, *found) = argmod_complex(gel(vcors, *found), tol);/*Argument*/
+  long f = *found;
+  elts[f] = toins;
+  gel(vcors, f) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
+  gel(vargs, f) = argmod_complex(gel(vcors, f), tol);/*Argument*/
 }
 
 /*Returns the hyperbolic area of the normalized boundary, which is assumed to not have any infinite sides (we keep track if they exist, and do not call this method if they do). C should be the list of [a, b, r] in order. The area is (n-2)*Pi-sum(angles), where there are n sides.*/
@@ -1092,10 +1114,12 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
   pari_sp av = avma;
   long lG = lg(G), lU = lg(gel(U, 1)), i;
   GEN Cnew = vectrunc_init(lG);/*Start by initializing the new circles.*/
+  GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
 	GEN circ = icirc_elt(X, gel(G, i), Xtopgl, gdat);
 	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
 	vectrunc_append(Cnew, circ);
+	vecsmalltrunc_append(indtransfer, i);
   }
   long lCnew = lg(Cnew);
   if (lCnew == 1) return gc_const(av, gen_0);
@@ -1117,7 +1141,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
   if (tolcmp(gmael3(Cnew, order[Cbestr], 3, 3), gmael(Usides, 1, 3), tol) > 0) rbigind = -Cbestr;/*Negative to indicate C*/
   else rbigind = 0;/*it's 1, but we store it as 0, and swap it to the index that U[1] appears in when found.*/
   GEN C = vectrunc_init(lCnew+lU);/*Tracks the sorted isometric circle triples.*/
-  GEN Ctype = vecsmalltrunc_init(lCnew+lU);/*Tracks whether they are 0=new or 1=old.*/
+  GEN Ctype = vecsmalltrunc_init(lCnew+lU);/*Tracks how the C-index corresponds to U or G. negative=new and positive=old.*/
   long Cnewind, Uind;
   if (tolcmp(gmael3(Cnew, order[1], 3, 6), gmael(Usides, Ustart, 6), tol) >= 0) {/*Start with U.*/
     vectrunc_append(C, mkvec3(gel(Uelts, Ustart), gel(Ukact, Ustart), gel(Usides, Ustart)));
@@ -1129,7 +1153,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
   }
   else {/*Start with C*/
 	vectrunc_append(C, gel(Cnew, order[1]));
-	vecsmalltrunc_append(Ctype, 0);/*New side*/
+	vecsmalltrunc_append(Ctype, -indtransfer[order[1]]);/*New side*/
 	if (rbigind == -1) rbigind = 1;
 	Cnewind = 2;
 	Uind = Ustart;
@@ -1138,7 +1162,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	if (lg(C)>Cnewind && Uind == Ustart) {/*We have finished with the U's (first inequality tracks if we have added any U's).*/
 	  while (Cnewind < lCnew) {/*Just C's left.*/
 	    vectrunc_append(C, gel(Cnew, order[Cnewind]));
-	    vecsmalltrunc_append(Ctype, 0);
+	    vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
 		if (rbigind == -Cnewind) rbigind = lg(C)-1;
 	    Cnewind++;
 	  }
@@ -1164,18 +1188,20 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	  continue;
 	}
 	vectrunc_append(C, gel(Cnew, order[Cnewind]));
-	vecsmalltrunc_append(Ctype, 0);
+	vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
 	if (rbigind == -Cnewind) rbigind = lg(C)-1;
 	Cnewind++;
   }
-  return normbound_append_icircs(normbound_get_vcors(U), normbound_get_vargs(U), C, Ctype, rbigind, gdat);
+  GEN newU = normbound_append_icircs(normbound_get_vcors(U), normbound_get_vargs(U), C, Ctype, rbigind, gdat);
+  
+  return newU;
 }
 
 /*Does normbound_icircs, except we already have a normalized boundary U that we add to. We prep this method with normbound_append. This method is very similar to normbound_icircs.
 Ucors: the previously computed coordinates of vertices
 Uargs: the previuosly computed arguments of vertices
 C: Same as for normbound
-Ctype[i] = ind>0 if C[i] = U[1][ind], and 0 if it is new.
+Ctype[i] = ind>0 if C[i] = U[1][ind], and -ind if C[i] = G[-ind] where G was input in normbound_append.
 If we do NOT change the boundary, we just return 0. This is for convenience with normbasis.
 Not gerepileupto safe, and leaves garbage.
 */
@@ -1189,16 +1215,18 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
   GEN vcors = cgetg(maxsides, t_VEC);/*Stores coordinates of the vertices.*/
   GEN vargs = cgetg(maxsides, t_VEC);/*Stores arguments of the vertices.*/
+  GEN infinite = vecsmalltrunc_init(lc);/*Stores the indices of infinite sides.*/
+  GEN deleted = vecsmalltrunc_init(lc);/*Stores the indices in C of sides that don't survive.*/
   elts[1] = rbigind;
   GEN firstcirc = gmael(C, elts[1], 3);/*The equation for the fist line, used in phase 2 and for detecting phase 2 starting.*/
   gel(vcors, 1) = gel(firstcirc, 5);/*The terminal vertex of the side is the first vertex.*/
   gel(vargs, 1) = gel(firstcirc, 7);
   long found = 1, lenc = lc-1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
-  int phase2 = 0, infinitesides = 0;/*Which phase we are in, and if there are infinite sides or not*/
+  int phase2 = 0;/*Which phase we are in, and if there are infinite sides or not*/
   long newU = 0;/*The first index of a new side, used at the end to see if we are the same as before or not.*/
-  if (Ctype[rbigind] == 0) newU = 1;/*We use this to detect if the normalized boundary changed or not.*/
+  if (Ctype[rbigind] < 0) newU = 1;/*We use this to detect if the normalized boundary changed or not.*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
-	elts, vcors, vargs, found, absind, phase2, infinitesides, newU
+	elts, vcors, vargs, infinite, deleted, found, absind, phase2, infinitesides, newU
 	PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
   */
   for (absind = 1; absind < lenc; absind++) {/*We are trying to insert the next side.*/
@@ -1207,11 +1235,10 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 	GEN lastcirc = gmael(C, elts[found], 3);/*The isometric circle of the last side inserted. This is NEVER an oo side.*/
 	long t1 = Ctype[toins], t2 = Ctype[elts[found]];/*Whether the sides are new/old, and the corresponding indices if old.*/
 	GEN ipt, iptarg;
-	if (!phase2 && t1 && t2) {/*Two old sides, and not in phase 2!!*/
+	if (!phase2 && t1 > 0 && t2 > 0) {/*Two old sides, and not in phase 2!!*/
 	  long diff = (t1-t2)%lenU;
 	  if (diff > 1) {/*There was an infinite side here, and it remains!*/
-	    infinitesides = 1;
-		normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
+		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase 2 has started*/
 		  phase2 = 1;
 		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
@@ -1230,7 +1257,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 		continue;
 	  }
 	  long efm1 = elts[found-1];
-	  if (!efm1 || Ctype[efm1]) {/*Previous vertex was infinite/old, so we have the exact same structure and can just insert it.*/
+	  if (!efm1 || Ctype[efm1] > 0) {/*Previous vertex was infinite/old, so we have the exact same structure and can just insert it.*/
 	    gel(vcors, found) = ipt;/*Fix the last vertex*/
 	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
 		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
@@ -1248,15 +1275,18 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 	int termloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 7), tol);/*Whether the terminal angle lies inside the last arc.*/
 	switch (termloc) {
 	  case 3:
-	    if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
+	    if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) {
+		  vecsmalltrunc_append(deleted, t1);
+		  continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
+		}
 	  case 1:
 	    phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
-		infinitesides = 1;/*The last side might not be the first, but since we looped all the way around there MUST be an oo side.*/
-		normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
+		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 		normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 		continue;
 	  case 2:
+	    vecsmalltrunc_append(deleted, t1);
 	    continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
 	}
 	/*If we make it here, then the terminal point lies outside of the last range.*/
@@ -1266,21 +1296,21 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 	    break;
 	  case 1:
 	    if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+		vecsmalltrunc_append(deleted, Ctype[elts[found]]);
 		absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
 		found--;
 		continue;
 	  case 0:
-	    infinitesides = 1;
-	    normbound_icircs_insinfinite(elts, vcors, vargs, curcirc, &found);/*Insert oo side!*/
+	    normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 	  case 2:
 	    if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  phase2 = 1;
 		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		  if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 		  continue;
 		}
 	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*New(initial)=Old(terminal), so there is no infinite side coming first (or we are coming from case=0 when we have already inserted it)*/
-		if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 		continue;
 	}
 	/*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
@@ -1290,7 +1320,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 	   gel(vcors, found) = ipt;/*Fix the last vertex*/
 	   gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
 	   normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	   if (!newU && !t1) newU = found;/*This is the first new circle.*/
+	   if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 	   continue;
 	}
 	GENERICINT:;
@@ -1302,27 +1332,31 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
 		  phase2 = 1;
 		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		  if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 		  continue;
 		}
 	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-		if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 	    continue;
 	  case 2:
-	    if (phase2) continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
+	    if (phase2) {
+		  vecsmalltrunc_append(deleted, t1);
+		  continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
+		}
 	    /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
 		if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
 		  phase2 = 1;
 		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		  if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 		  continue;
 		}
 		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-		if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
 		continue;
 	  case 0:
 	    if (!phase2) {/*We supercede the last side, so delete and try again. We could not have deleted a side, have this trigger, and intersect the last side without superceding.*/
 		  if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+		  vecsmalltrunc_append(deleted, Ctype[elts[found]]);
 	      absind--;
 	      found--;
 	      continue;
@@ -1330,24 +1364,28 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 		int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found-1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
 		if (supercede) {
 		  if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+		  vecsmalltrunc_append(deleted, Ctype[elts[found]]);
 		  absind--;
 		  found--;
+		  continue;
 		}
+		vecsmalltrunc_append(deleted, t1);
 		continue;
 	  case 1:/*We just replace the last side, we have the same vertex and vertex angle.*/
 	    if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
-		elts[found]=toins;
-		if (!newU && !t1) newU = found;/*This is the first new circle.*/
+		vecsmalltrunc_append(deleted, Ctype[elts[found]]);
+		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+		found--;
 		if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  gel(vcors, found) = line_int11(curcirc, firstcirc, tol);/*Intersect with initial side*/
-          gel(vargs, found) = argmod_complex(gel(vcors, found), tol);/*Argument*/
+		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
+		  continue;
 		}
+		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
 	}
   }
   if (!newU) return gc_const(av, gen_0);/*We added no new sides, so return 0.*/
   if (!phase2) {/*We never hit phase 2, so there is one final infinite edge to worry about.*/
-    infinitesides = 1;
-	normbound_icircs_insinfinite(elts, vcors, vargs, firstcirc, &found);
+	normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
   long i, fp1 = found+1;
@@ -1366,10 +1404,10 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
   gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
   gel(rv, 6) = rv_kact;/*Kleinian action*/
-  if(infinitesides) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
+  if (lg(infinite) > 1) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
   else gel(rv, 7) = normbound_area(rv_sides, prec);
-  gel(rv, 8) = gen_0;/*Side pairing*/
-  gel(rv, 9) = gdat;/*Geometric data*/
+  gel(rv, 8) = deleted;/*For now, stores the deleted indices.*/
+  gel(rv, 9) = infinite;/*Infinite sides*/
   return rv;
 }
 

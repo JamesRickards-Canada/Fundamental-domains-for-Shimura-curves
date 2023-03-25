@@ -26,7 +26,7 @@ normbound_get_area(GEN U){return gel(U, 7);}
 INLINE GEN
 normbound_get_spair(GEN U){return gel(U, 8);}
 INLINE GEN
-normbound_get_gdat(GEN U){return gel(U, 9);}
+normbound_get_infinite(GEN U){return gel(U, 9);}
 
 /*3: ARITHMETIC FUCHSIAN GROUPS*/
 INLINE GEN
