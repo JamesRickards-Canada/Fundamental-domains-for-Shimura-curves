@@ -1,9 +1,7 @@
 /*TO DO
 3. CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS
-4. Make the insertion methods in normbound inline? Not sure if this does anything or not.
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
-7. Remove gdat from normbound output?
 8. forqfvec with flag=2.
 */
 
@@ -108,6 +106,10 @@ static GEN normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, lon
 static int cmp_icircangle(void *nul, GEN c1, GEN c2);
 static long args_find_cross(GEN args);
 static long args_search(GEN args, long ind, GEN arg, GEN tol);
+
+/*2: NORMALIZED BASIS*/
+static GEN edgepairing(GEN U, GEN tol);
+static GEN normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
 
 /*2: NORMALIZED BOUNDARY REDUCTION*/
 static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
@@ -630,7 +632,7 @@ subrcr(GEN r, GEN z)
 GEN
 deftol(long prec)
 {
-  return real2n(BITS_IN_LONG/2*(2-prec), prec);
+  return real2n(BITS_IN_LONG/2*(2 - prec), prec);
 }
 
 /*Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL/t_INT/t_FRAC). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact*/
@@ -827,7 +829,7 @@ argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
 A normalized boundary is represented by U, where
 U=[elts, sides, vcors, vargs, crossind, kact, area, spair, deleted]
 elts
-	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0.
+	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0. Elements cannot be stored as type t_INT.
 sides
 	The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0. The first side is the closest to the origin.
 vcors
@@ -847,7 +849,7 @@ infinite
 */
 
 
-/*Initializes the inputs for normbound_icircs. G is the set of elements we are forming the normalized boundary for. Returns 0 if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
+/*Initializes the inputs for normbound_icircs. G is the set of elements we are forming the normalized boundary for. Returns NULL if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
 static GEN
 normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 {
@@ -860,7 +862,7 @@ normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	vectrunc_append(C, circ);
 	vecsmalltrunc_append(indtransfer, i);
   }
-  if(lg(C) == 1) return gen_0;
+  if(lg(C) == 1) return NULL;
   return normbound_icircs(C, indtransfer, gdat);
 }
 
@@ -976,7 +978,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
 	      found--;
 	      continue;
 		}
-		int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found-1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
+		int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found - 1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
 		if (supercede) {
 		  vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
 		  absind--;
@@ -999,7 +1001,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
 	normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
-  long i, fp1 = found+1;
+  long i, fp1 = found + 1;
   GEN rv = cgetg(10, t_VEC);
   GEN rv_elts = cgetg(fp1, t_VEC);
   GEN rv_sides = cgetg(fp1, t_VEC);
@@ -1015,7 +1017,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
   gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
   gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
   gel(rv, 6) = rv_kact;/*Kleinian action*/
-  if (lg(infinite) > 1) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
+  if (lg(infinite) > 1) gel(rv, 7) = mkoo();/*Infinite side means infinite area.*/
   else gel(rv, 7) = normbound_area(rv_sides, prec);
   gel(rv, 8) = deleted;/*For now, stores the deleted indices.*/
   gel(rv, 9) = infinite;/*Infinite sides*/
@@ -1077,9 +1079,9 @@ static GEN
 normbound_area(GEN C, long prec)
 {
   pari_sp av = avma;
-  long n = lg(C)-1, i;
-  GEN area = mulsr(n-2, mppi(prec));/*(n-2)*Pi*/
-  for (i = 1; i < n; i++) area = subrr(area, icirc_angle(gel(C, i), gel(C, i+1), prec));
+  long n = lg(C) - 1, i;
+  GEN area = mulsr(n - 2, mppi(prec));/*(n-2)*Pi*/
+  for (i = 1; i < n; i++) area = subrr(area, icirc_angle(gel(C, i), gel(C, i + 1), prec));
   area = subrr(area, icirc_angle(gel(C, n), gel(C, 1), prec));
   return gerepileupto(av, area);
 }
@@ -1107,7 +1109,7 @@ normbound_outside(GEN U, GEN z, GEN tol)
 
 /*2: NORMALIZED BOUNDARY APPENDING*/
 
-/*Initializes the inputs for normbound_append_icircs. G is the set of elements we are forming the normalized boundary for, and U is the necessarily non-trivial current boundary. Returns 0 if the normalized boundary does not change. Not gerepileupto safe, and leaves garbage.*/
+/*Initializes the inputs for normbound_append_icircs. G is the set of elements we are forming the normalized boundary for, and U is the necessarily non-trivial current boundary. Returns NULL if the normalized boundary does not change. Not gerepileupto safe, and leaves garbage.*/
 static GEN
 normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 {
@@ -1122,17 +1124,17 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	vecsmalltrunc_append(indtransfer, i);
   }
   long lCnew = lg(Cnew);
-  if (lCnew == 1) return gc_const(av, gen_0);
+  if (lCnew == 1) return gc_NULL(av);
   long lenU = lU-1;/*Now we figure out the order of U, before merging them.*/
   long Ustart = normbound_get_cross(U)%lenU+1;/*The side which crosses the origin. We do a linear probe to find the smallest initial angle.*/
   long Unext = Ustart%lenU+1;
   GEN Usides = normbound_get_sides(U), tol = gdat_get_tol(gdat);
   for (;;) {
 	if (gequal0(gel(Usides, Ustart))) {Ustart = Unext; break;}/*The next side is not infinite, and must be the first one.*/
-	if (gequal0(gel(Usides, Unext))) {Ustart = Unext%lenU+1; break;}/*Must move past the infinite side.*/
+	if (gequal0(gel(Usides, Unext))) {Ustart = Unext%lenU + 1; break;}/*Must move past the infinite side.*/
 	if (tolcmp(gmael(Usides, Ustart, 6), gmael(Usides, Unext, 6), tol) >= 0) {Ustart = Unext; break;}/*We have crossed over.*/
 	Ustart = Unext;
-	Unext = Unext%lenU+1;
+	Unext = Unext%lenU + 1;
   }
   GEN Uelts = normbound_get_elts(U), Ukact = normbound_get_kact(U);
   GEN order = gen_indexsort(Cnew, NULL, &cmp_icircangle);/*Order the new sides by initial angle.*/
@@ -1140,16 +1142,16 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
   long rbigind;/*Stores the largest r value index, which is either U[1], or Cnew[Cbestr].*/
   if (tolcmp(gmael3(Cnew, order[Cbestr], 3, 3), gmael(Usides, 1, 3), tol) > 0) rbigind = -Cbestr;/*Negative to indicate C*/
   else rbigind = 0;/*it's 1, but we store it as 0, and swap it to the index that U[1] appears in when found.*/
-  GEN C = vectrunc_init(lCnew+lU);/*Tracks the sorted isometric circle triples.*/
-  GEN Ctype = vecsmalltrunc_init(lCnew+lU);/*Tracks how the C-index corresponds to U or G. negative=new and positive=old.*/
+  GEN C = vectrunc_init(lCnew + lU);/*Tracks the sorted isometric circle triples.*/
+  GEN Ctype = vecsmalltrunc_init(lCnew + lU);/*Tracks how the C-index corresponds to U or G. negative=new and positive=old.*/
   long Cnewind, Uind;
   if (tolcmp(gmael3(Cnew, order[1], 3, 6), gmael(Usides, Ustart, 6), tol) >= 0) {/*Start with U.*/
     vectrunc_append(C, mkvec3(gel(Uelts, Ustart), gel(Ukact, Ustart), gel(Usides, Ustart)));
 	vecsmalltrunc_append(Ctype, Ustart);/*Old side*/
 	if (!rbigind && Ustart == 1) rbigind = 1;
 	Cnewind = 1;
-	Uind = Ustart%lenU+1;
-	if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU+1;/*Move past infinite side.*/
+	Uind = Ustart%lenU + 1;
+	if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
   }
   else {/*Start with C*/
 	vectrunc_append(C, gel(Cnew, order[1]));
@@ -1163,7 +1165,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	  while (Cnewind < lCnew) {/*Just C's left.*/
 	    vectrunc_append(C, gel(Cnew, order[Cnewind]));
 	    vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
-		if (rbigind == -Cnewind) rbigind = lg(C)-1;
+		if (rbigind == -Cnewind) rbigind = lg(C) - 1;
 	    Cnewind++;
 	  }
 	  break;
@@ -1172,9 +1174,9 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	  do {
 		vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
 		vecsmalltrunc_append(Ctype, Uind);
-		if (!rbigind && Uind == 1) rbigind = lg(C)-1;
-		Uind = Uind%lenU+1;
-	    if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU+1;/*Move past infinite side.*/
+		if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
+		Uind = Uind%lenU + 1;
+	    if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
 	  } while (Uind != Ustart);
 	  break;
 	}
@@ -1182,19 +1184,17 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
 	if (cmprr(gmael3(Cnew, order[Cnewind], 3, 6), gmael(Usides, Uind, 6)) >= 0) {/*No need for tolcmp, we don't care if =.*/
 	  vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
 	  vecsmalltrunc_append(Ctype, Uind);
-	  if (!rbigind && Uind == 1) rbigind = lg(C)-1;
-	  Uind = Uind%lenU+1;
-	  if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU+1;/*Move past infinite side.*/
+	  if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
+	  Uind = Uind%lenU + 1;
+	  if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
 	  continue;
 	}
 	vectrunc_append(C, gel(Cnew, order[Cnewind]));
 	vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
-	if (rbigind == -Cnewind) rbigind = lg(C)-1;
+	if (rbigind == -Cnewind) rbigind = lg(C) - 1;
 	Cnewind++;
   }
-  GEN newU = normbound_append_icircs(normbound_get_vcors(U), normbound_get_vargs(U), C, Ctype, rbigind, gdat);
-  
-  return newU;
+  return normbound_append_icircs(normbound_get_vcors(U), normbound_get_vargs(U), C, Ctype, rbigind, gdat);
 }
 
 /*Does normbound_icircs, except we already have a normalized boundary U that we add to. We prep this method with normbound_append. This method is very similar to normbound_icircs.
@@ -1202,7 +1202,7 @@ Ucors: the previously computed coordinates of vertices
 Uargs: the previuosly computed arguments of vertices
 C: Same as for normbound
 Ctype[i] = ind>0 if C[i] = U[1][ind], and -ind if C[i] = G[-ind] where G was input in normbound_append.
-If we do NOT change the boundary, we just return 0. This is for convenience with normbasis.
+If we do NOT change the boundary, we just return NULL. This is for convenience with normbasis.
 Not gerepileupto safe, and leaves garbage.
 */
 static GEN
@@ -1211,7 +1211,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
   long prec=lg(tol);
-  long lc = lg(C), maxsides = 2*lc, lenU = lg(Uvcors)-1;
+  long lc = lg(C), maxsides = 2*lc, lenU = lg(Uvcors) - 1;
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
   GEN vcors = cgetg(maxsides, t_VEC);/*Stores coordinates of the vertices.*/
   GEN vargs = cgetg(maxsides, t_VEC);/*Stores arguments of the vertices.*/
@@ -1221,7 +1221,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   GEN firstcirc = gmael(C, elts[1], 3);/*The equation for the fist line, used in phase 2 and for detecting phase 2 starting.*/
   gel(vcors, 1) = gel(firstcirc, 5);/*The terminal vertex of the side is the first vertex.*/
   gel(vargs, 1) = gel(firstcirc, 7);
-  long found = 1, lenc = lc-1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
+  long found = 1, lenc = lc - 1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
   int phase2 = 0;/*Which phase we are in, and if there are infinite sides or not*/
   long newU = 0;/*The first index of a new side, used at the end to see if we are the same as before or not.*/
   if (Ctype[rbigind] < 0) newU = 1;/*We use this to detect if the normalized boundary changed or not.*/
@@ -1230,13 +1230,13 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 	PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
   */
   for (absind = 1; absind < lenc; absind++) {/*We are trying to insert the next side.*/
-	long toins = 1+(rbigind+absind-1)%lenc;/*The index of the side to insert.*/
+	long toins = 1 + (rbigind + absind - 1)%lenc;/*The index of the side to insert.*/
 	GEN curcirc = gmael(C, toins, 3);/*The isometric circle we are trying to insert*/
 	GEN lastcirc = gmael(C, elts[found], 3);/*The isometric circle of the last side inserted. This is NEVER an oo side.*/
 	long t1 = Ctype[toins], t2 = Ctype[elts[found]];/*Whether the sides are new/old, and the corresponding indices if old.*/
 	GEN ipt, iptarg;
 	if (!phase2 && t1 > 0 && t2 > 0) {/*Two old sides, and not in phase 2!!*/
-	  long diff = (t1-t2)%lenU;
+	  long diff = (t1 - t2)%lenU;
 	  if (diff > 1) {/*There was an infinite side here, and it remains!*/
 		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase 2 has started*/
@@ -1256,7 +1256,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
 		continue;
 	  }
-	  long efm1 = elts[found-1];
+	  long efm1 = elts[found - 1];
 	  if (!efm1 || Ctype[efm1] > 0) {/*Previous vertex was infinite/old, so we have the exact same structure and can just insert it.*/
 	    gel(vcors, found) = ipt;/*Fix the last vertex*/
 	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
@@ -1383,12 +1383,12 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
 	}
   }
-  if (!newU) return gc_const(av, gen_0);/*We added no new sides, so return 0.*/
+  if (!newU) return gc_NULL(av);/*We added no new sides, so return NULL.*/
   if (!phase2) {/*We never hit phase 2, so there is one final infinite edge to worry about.*/
 	normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
-  long i, fp1 = found+1;
+  long i, fp1 = found + 1;
   GEN rv = cgetg(10, t_VEC);
   GEN rv_elts = cgetg(fp1, t_VEC);
   GEN rv_sides = cgetg(fp1, t_VEC);
@@ -1404,7 +1404,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
   gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
   gel(rv, 6) = rv_kact;/*Kleinian action*/
-  if (lg(infinite) > 1) gel(rv, 7)=mkoo();/*Infinite side means infinite area.*/
+  if (lg(infinite) > 1) gel(rv, 7) = mkoo();/*Infinite side means infinite area.*/
   else gel(rv, 7) = normbound_area(rv_sides, prec);
   gel(rv, 8) = deleted;/*For now, stores the deleted indices.*/
   gel(rv, 9) = infinite;/*Infinite sides*/
@@ -1422,11 +1422,11 @@ cmp_icircangle(void *nul, GEN c1, GEN c2){return cmprr(gmael(c1, 3, 6), gmael(c2
 static long
 args_find_cross(GEN args)
 {
-  long l1 = 1, l2 = lg(args)-1;
+  long l1 = 1, l2 = lg(args) - 1;
   int c = cmprr(gel(args, l1), gel(args, l2));
   if (c < 0) return l2;/*Sorted already, so it only loops back at the end.*/
   while (l2-l1 > 1) {
-	long l = (l1+l2)>>1;/*floor((l1+l2)/2)*/
+	long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
 	int c = cmprr(gel(args, l1), gel(args, l));
 	if (c < 0) l1 = l;
 	else l2 = l;
@@ -1444,13 +1444,13 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
   if (c1 < 0) {/*In block from 1 to ind*/
     l1 = 1;
 	int cind = tolcmp(gel(args, ind), arg, tol);
-    if (cind < 0) return (ind%na)+1;/*Make sure we overflow back to 1 if ind=na. This also covers if ind=1.*/
+    if (cind < 0) return (ind%na) + 1;/*Make sure we overflow back to 1 if ind=na. This also covers if ind=1.*/
     if (cind == 0) return -ind;
 	l2 = ind;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
   }
   else {/*In block from ind+1 to na.*/
 	if (ind == na) return 1;/*Strictly increasing, so we can insert at the start.*/
-	l1 = ind+1;
+	l1 = ind + 1;
 	int cind = tolcmp(gel(args, l1), arg, tol);
 	if (cind > 0) return l1;
 	if (cind == 0) return -l1;
@@ -1459,8 +1459,8 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 	if (cend == 0) return -na;
 	l2 = na;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
   }
-  while (l2-l1 > 1) {
-	long l = (l1+l2)>>1;/*floor((l1+l2)/2)*/
+  while (l2 - l1 > 1) {
+	long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
 	int c = tolcmp(gel(args, l), arg, tol);
 	if (c > 0) {l2 = l;continue;}
 	if (c == 0) return -l;
@@ -1468,6 +1468,143 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
   }
   return l2;
 }
+
+
+/*2: NORMALIZED BASIS*/
+
+/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind] is a VECSMALL. gind is the index of the unpaired side, and vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides.*/
+static GEN
+edgepairing(GEN U, GEN tol)
+{
+  pari_sp av = avma;
+  GEN vcors = normbound_get_vcors(U);/*Vertex coordinates*/
+  GEN vargs = normbound_get_vargs(U);/*Vertex arguments*/
+  long cross = normbound_get_cross(U);/*crossing point, used in args_search*/
+  GEN kact = normbound_get_kact(U);/*Action of the sides*/
+  long lU = lg(kact), lenU = lU - 1, i;/*Number of sides*/
+  GEN unpair = vectrunc_init(2*lU - 1), pair = zero_zv(lenU);/*Unpair stores the unpaired edges, pair stores the paired edges*/
+  for (i = 1; i < lU; i++) {/*Try to pair the ith side.*/
+    GEN act = gel(kact, i);
+	if (gequal0(act)) {pair[i] = i;continue;}/*oo side, go next (we say it is paired with itself)*/
+	if (pair[i]) continue;/*We have already paired this side, so move on.*/
+	GEN v1 = klein_act_i(act, gel(vcors, i));/*Image of the ith vertex.*/
+	GEN v1arg = argmod_complex(v1, tol);/*Argument*/
+	long v1pair = args_search(vargs, cross, v1arg, tol);
+	if (v1pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now.*/
+	  v1pair = -v1pair;
+	  if (!toleq(v1, gel(vcors, v1pair), tol)) v1pair = 0;/*Sadly, they are not equal.*/
+	}
+	else v1pair = 0;
+	long i2;
+	if (i == 1) i2 = lenU;
+	else i2 = i - 1;/*i2 is the previous vertex, also on the ith side.*/
+	GEN v2 = klein_act_i(act, gel(vcors, i2));/*Image of the second (i-1 st) vertex.*/
+	if (v1pair) {/*The first vertex is paired! i2, if paired, must go to v1pair+1*/
+	  long v2pair = (v1pair%lenU) + 1;
+	  if (!toleq(v2, gel(vcors, v2pair), tol)) v2pair = 0;/*It doesn't work.*/
+	  if (v2pair) {/*Both vertices were paired!*/
+		pair[i] = v2pair;
+		pair[v2pair] = i;
+		continue;
+	  }
+	  vectrunc_append(unpair, mkvecsmall2(i, i2));/*Only the second vertex (i2) is not paired.*/
+	  continue;
+	}
+	vectrunc_append(unpair, mkvecsmall2(i, i));/*Now, the first vertex is unpaired.*/
+	GEN v2arg = argmod_complex(v2, tol);/*Do the above with the second vertex.*/
+	long v2pair = args_search(vargs, cross, v2arg, tol);
+	if (v2pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now.*/
+	  if (toleq(v2, gel(vcors, -v2pair), tol)) continue;/*They are equal, so we are paired, and move on.*/
+	}
+    vectrunc_append(unpair, mkvecsmall2(i, i2));/*Second vertex unpaired.*/
+  }
+  if (lg(unpair) == 1) return gerepilecopy(av, pair);/*All sides paired*/
+  return gerepilecopy(av, unpair);
+}
+
+/*Returns the normalized basis of G. Can pass in U as a normalized basis to append to, or NULL to just start with G. If no normalized basis, returns NULL.*/
+static GEN
+normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat)
+{
+  pari_sp av = avma;
+  GEN tol = gdat_get_tol(gdat);
+  long lG = lg(G), i, j = lG;
+  GEN Gstart = cgetg(2*lG - 1, t_VEC), Gadd;/*Make the vector with G and its inverses.*/
+  for (i = 1; i < lG; i++) {
+	gel(Gstart, i) = gel(G, i);
+	gel(Gstart, j) = Xinv(X, gel(G, i));
+	j++;
+  }
+  /*Start by initializing U and Gadd by reducing the elements of Gstart*/
+  if (!U) {/*No U is passed in.*/
+	U = normbound(X, Gstart, Xtopgl, gdat);
+	if (!U) return gc_NULL(av);/*No valid isometric circles.*/
+	GEN del = normbound_get_spair(U), g;/*The deleted sides*/
+	long ldel = lg(del);
+	Gadd = vectrunc_init(ldel);
+	for (i = 1; i<ldel; i++) {
+	  g = red_elt(X, U, gel(Gstart, del[i]), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
+	}
+  }
+  else {/*U is passed in, so just initialize Gadd by reducing each element.*/
+    lG = lg(Gstart);
+	Gadd = vectrunc_init(lG);
+	GEN g;
+	for (i = 1; i < lG; i++) {
+	  g = red_elt(X, U, gel(Gstart, i), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
+	}
+  } 
+  for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we need to check.*/
+    while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
+	  GEN Unew = normbound_append(X, U, Gadd, Xtopgl, gdat);
+	  if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
+		lG = lg(Gadd);
+		GEN Gnew = vectrunc_init(lG), g;
+		for (i = 1; i < lG; i++) {
+		  g = red_elt(X, U, gel(Gadd, i), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+		  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+		  vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
+		}
+		Gadd = Gnew;
+		continue;/*Try again!*/
+	  }
+	  GEN del = normbound_get_spair(Unew);/*The deleted sides*/
+	  long ldel = lg(del), ind;
+	  GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
+	  for (i = 1; i<ldel; i++) {
+		ind = del[i];
+		if (ind > 0) g = red_elt(X, Unew, gel(Uelts, ind), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce element from U*/
+		else g = red_elt(X, Unew, gel(Gadd, -ind), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce element from Gadd*/
+	    if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+	    vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
+	  }
+	  Gadd = Gnew;
+	  U = Unew;/*Update U*/
+	}
+	/*At this point, <G> = <U[1]>_(no-inverse). Now we have to check if there is a side pairing.*/
+	GEN unpair = edgepairing(U, tol);
+	if (typ(unpair) == t_VECSMALL) {/*All paired up!*/
+	  gel(U, 8) = unpair;
+	  return gerepilecopy(av, U);
+	}
+	GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
+	long lunp;
+	Gadd = cgetg_copy(unpair, &lunp);/*Add the reductions of g with respect to v for each pair [g, v] in unpair*/
+	for (i = 1; i < lunp; i++) {
+	  GEN v = gel(vcors, gel(unpair, i)[2]);
+	  if (toleq(normcr(v), gen_1, tol)) pari_err_TYPE("TO DO: INFINITE VERTICES MOVE INSIDE", v);
+	  
+	  gel(Gadd, i) = red_elt(X, U, stoi(gel(unpair, i)[1]), v, Xtopgl, Xmul, 0, gdat);/*Add the reduction in.*/
+	}
+  }
+}
+
+
+
 
 
 /*2: NORMALIZED BOUNDARY REDUCTION*/
@@ -1483,7 +1620,7 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   long ind = 1, maxind = 32;
-  GEN decomp = cgetg(maxind+1, t_VECSMALL);
+  GEN decomp = cgetg(maxind + 1, t_VECSMALL);
   for (;;) {
 	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
 	  GEN gact = pgl_to_klein(Xtopgl(X, g), gdat);
@@ -1505,20 +1642,27 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(
 	decomp[ind] = outside;
 	ind++;
   }
-  decomp = vecsmall_shorten(decomp, ind-1);/*Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.*/
+  decomp = vecsmall_shorten(decomp, ind - 1);/*Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.*/
   return gerepilecopy(av, mkvec2(g, vecsmall_reverse(decomp)));
 }
 
-/*red_elt_decomp, except we return g'g if flag=0, g'gz if flag=1, and [g'g,g'gz] if flag=2.*/
+/*red_elt_decomp, except we return g'g if flag=0, g'gz if flag=1, and [g'g,g'gz] if flag=2. Can pass g as t_INT so that g=U[1][g].*/
 static GEN
 red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
-  GEN zorig = z;
-  z = klein_act_i(pgl_to_klein(Xtopgl(X, g), gdat), z);/*Starting point*/
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
+  GEN zorig = z;
+  GEN gklein;
+  if (typ(g) == t_INT) {/*Retrieve it.*/
+	long gind = itos(g);
+	gklein = gel(kact, gind);
+	g = gel(elts, gind);
+  }
+  else gklein = pgl_to_klein(Xtopgl(X, g), gdat);/*Compute it.*/
+  z = klein_act_i(gklein, z);/*Starting point.*/
   long ind = 1;
   for (;;) {
 	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
@@ -1590,7 +1734,7 @@ type=0 means O^1, the default.*/
 static GEN
 afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 {
-  if(!O) O = matid(lg(alg_get_basis(A))-1);
+  if(!O) O = matid(lg(alg_get_basis(A)) - 1);
   GEN AX = cgetg(10, t_VEC);
   gel(AX, 1) = A;
   gel(AX, 2) = O;
@@ -1685,7 +1829,9 @@ afuchnormbound(GEN X, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  return gerepilecopy(av, normbound(X, G, &afuchtopgl, gdat));
+  GEN U = normbound(X, G, &afuchtopgl, gdat);
+  if (U) return gerepilecopy(av, U);
+  return gc_const(av, gen_0);/*No normalized boundary, return 0.*/
 }
 
 /*Computes the normalized boundary of U union G, where U is an already computed normalized boundary*/
@@ -1694,7 +1840,9 @@ afuchnormbound_append(GEN X, GEN U, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  return gerepilecopy(av, normbound_append(X, U, G, &afuchtopgl, gdat));
+  GEN Unew = normbound_append(X, U, G, &afuchtopgl, gdat);
+  if (Unew) return gerepilecopy(av, Unew);
+  return gc_const(av, gen_0);
 }
 
 /*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element.*/
