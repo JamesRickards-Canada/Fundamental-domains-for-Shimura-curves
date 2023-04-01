@@ -126,6 +126,7 @@ static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchid(GEN X);
 static GEN afuchinv(GEN X, GEN g);
+static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchtopgl(GEN X, GEN g);
 
@@ -1528,6 +1529,10 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
+  long prec = lg(tol);
+  GEN origin = gtocr(gen_0, prec);
+  long scaleden = -22;
+  GEN scale = subsr(1, real2n(scaleden, prec));/*For scaling the infinite sides in. May be increased later if not enough.*/
   long lG = lg(G), i, j = lG;
   GEN Gstart = cgetg(2*lG - 1, t_VEC), Gadd;/*Make the vector with G and its inverses.*/
   for (i = 1; i < lG; i++) {
@@ -1543,7 +1548,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	long ldel = lg(del);
 	Gadd = vectrunc_init(ldel);
 	for (i = 1; i<ldel; i++) {
-	  g = red_elt(X, U, gel(Gstart, del[i]), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+	  g = red_elt(X, U, gel(Gstart, del[i]), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
 	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
 	}
@@ -1553,11 +1558,11 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	Gadd = vectrunc_init(lG);
 	GEN g;
 	for (i = 1; i < lG; i++) {
-	  g = red_elt(X, U, gel(Gstart, i), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+	  g = red_elt(X, U, gel(Gstart, i), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
 	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
 	}
-  } 
+  }
   for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we need to check.*/
     while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
 	  GEN Unew = normbound_append(X, U, Gadd, Xtopgl, gdat);
@@ -1565,7 +1570,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 		lG = lg(Gadd);
 		GEN Gnew = vectrunc_init(lG), g;
 		for (i = 1; i < lG; i++) {
-		  g = red_elt(X, U, gel(Gadd, i), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+		  g = red_elt(X, U, gel(Gadd, i), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
 		  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 		  vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
 		}
@@ -1577,8 +1582,8 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	  GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
 	  for (i = 1; i<ldel; i++) {
 		ind = del[i];
-		if (ind > 0) g = red_elt(X, Unew, gel(Uelts, ind), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce element from U*/
-		else g = red_elt(X, Unew, gel(Gadd, -ind), gen_0, Xtopgl, Xmul, 0, gdat);/*Reduce element from Gadd*/
+		if (ind > 0) g = red_elt(X, Unew, gel(Uelts, ind), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from U*/
+		else g = red_elt(X, Unew, gel(Gadd, -ind), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from Gadd*/
 	    if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	    vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
 	  }
@@ -1592,19 +1597,23 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	  return gerepilecopy(av, U);
 	}
 	GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
-	long lunp;
-	Gadd = cgetg_copy(unpair, &lunp);/*Add the reductions of g with respect to v for each pair [g, v] in unpair*/
+	GEN elts = normbound_get_elts(U);
+	long lunp = lg(unpair);
+	Gadd = vectrunc_init(lunp);/*Add the reductions of g with respect to v for each pair [g, v] in unpair*/
+	pari_printf("%d\n", lunp);
 	for (i = 1; i < lunp; i++) {
 	  GEN v = gel(vcors, gel(unpair, i)[2]);
-	  if (toleq(normcr(v), gen_1, tol)) pari_err_TYPE("TO DO: INFINITE VERTICES MOVE INSIDE", v);
-	  
-	  gel(Gadd, i) = red_elt(X, U, stoi(gel(unpair, i)[1]), v, Xtopgl, Xmul, 0, gdat);/*Add the reduction in.*/
+	  if (!toleq(normcr(v), gen_1, tol)) {/*Interior vertex.*/
+		vectrunc_append(Gadd, red_elt(X, U, stoi(gel(unpair, i)[1]), v, Xtopgl, Xmul, 0, gdat));/*Add the reduction in.*/
+		continue;
+	  }/*We must fix infinite sides by replacing them with a nearby interior point.*/
+	  v = mulcrr(v, scale);  
+	  vectrunc_append(Gadd, red_elt(X, U, stoi(gel(unpair, i)[1]), v, Xtopgl, Xmul, 0, gdat));
 	}
+	scaleden--;
+	scale = subsr(1, real2n(scaleden, prec));/*Update scale.*/
   }
 }
-
-
-
 
 
 /*2: NORMALIZED BOUNDARY REDUCTION*/
@@ -1825,6 +1834,17 @@ afuchklein(GEN X, GEN g)
 
 /*Returns the normalized boundary of the set of elements G in A.*/
 GEN
+afuchnormbasis(GEN X, GEN G)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  GEN U = normbasis(X, NULL, G, &afuchtopgl, &afuchmul, &afuchinv, &afuchistriv, gdat);
+  if (U) return gerepilecopy(av, U);
+  return gc_const(av, gen_0);/*No normalized basis, return 0.*/
+}
+
+/*Returns the normalized boundary of the set of elements G in A.*/
+GEN
 afuchnormbound(GEN X, GEN G)
 {
   pari_sp av = avma;
@@ -1870,6 +1890,16 @@ afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
 /*alginv formatted for the input of an afuch, for use in the geometry section.*/
 static GEN
 afuchinv(GEN X, GEN g){return alginv(afuch_get_alg(X), g);}
+
+/*Returns 1 if g is the identity element. We don't actually need X here, but pass it anyway.*/
+static int
+afuchistriv(GEN X, GEN g)
+{
+  if (!isint1(gel(g, 1)) && !isintm1(gel(g, 1))) return 0;
+  long lG = lg(g), i;
+  for (i = 2; i < lG; i++) if (!isintzero(gel(g, i))) return 0;
+  return 1;
+}
 
 /*algmul formatted for the input of an afuch, for use in the geometry section.*/
 static GEN

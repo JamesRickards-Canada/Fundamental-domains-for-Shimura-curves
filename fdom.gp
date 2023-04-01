@@ -26,6 +26,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchicirc,"afuchicirc(X, g): returns the isometric circle of g, an element of non-zero norm.");
 	install(afuchklein,"GG",,fdom_library);
 	addhelp(afuchklein,"afuchklein(X, g): returns the vector giving the action of g on the Klein model, which can be supplied to klein_act.");
+	install(afuchnormbasis,"GG",,fdom_library);
+	addhelp(afuchnormbasis,"afuchnormbasis(X, G): computes the normalized basis of the set of elements of G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
 	install(afuchnormbound,"GG",,fdom_library);
 	addhelp(afuchnormbound,"afuchnormbound(X, G): computes the normalized boundary of the set of elements in G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
 	install(afuchnormbound_append,"GGG",,fdom_library);

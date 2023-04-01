@@ -85,6 +85,7 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchicirc(GEN X, GEN g);
 GEN afuchklein(GEN X, GEN g);
+GEN afuchnormbasis(GEN X, GEN G);
 GEN afuchnormbound(GEN X, GEN G);
 GEN afuchnormbound_append(GEN X, GEN U, GEN G);
 GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
