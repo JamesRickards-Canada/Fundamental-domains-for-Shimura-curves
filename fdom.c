@@ -3,7 +3,6 @@
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 8. forqfvec with flag=2.
-9. UPDATE afuchistrivial non norm 1 elements, since afuchinv does conjugation instead now.. For trivial, we can compute the reduced trace and check if it is a scalar multiple of our starting element.
 */
 
 /*
@@ -1956,14 +1955,13 @@ afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
 static GEN
 afuchinv(GEN X, GEN g){return ZM_ZC_mul(afuch_get_orderconj(X), g);}
 
-/*Returns 1 if g is a scalar. We don't actually need X here, but pass it anyway.*/
+/*Returns 1 if g is a scalar, i.e. g==conj(g).*/
 static int
 afuchistriv(GEN X, GEN g)
 {
-  if (gequal0(gel(g, 1))) return 0;
-  long lG = lg(g), i;
-  for (i = 2; i < lG; i++) if (!gequal0(gel(g, i))) return 0;
-  return 1;
+  pari_sp av = avma;
+  GEN gconj = afuchinv(X, g);/*It's actually the conjugate, not the inverse.*/
+  return gc_int(av, ZV_equal(g, gconj));
 }
 
 /*algmul formatted for the input of an afuch, for use in the geometry section.*/
@@ -1988,7 +1986,7 @@ afuchtopgl(GEN X, GEN g)
   GEN mats = afuch_get_embmats(X);
   GEN emb = RgM_Rg_mul(gel(mats, 1), gel(g, 1));
   long lg = lg(g), i;
-  for (i = 2; i<lg; i++) emb = RgM_add(emb, RgM_Rg_mul(gel(mats, i), gel(g, i)));
+  for (i = 2; i < lg; i++) emb = RgM_add(emb, RgM_Rg_mul(gel(mats, i), gel(g, i)));
   return gerepileupto(av, emb);
 }
 
