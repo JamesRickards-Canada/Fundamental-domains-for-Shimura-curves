@@ -3,6 +3,8 @@
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 8. forqfvec with flag=2.
+9. UPDATE afuchistrivial and afuchinv for when we have non norm 1 elements. For trivial, we can compute the reduced trace and check if it is a scalar multiple of our starting element.
+10. Store conjugates of the basis in a matrix, then matrix multiply to find conjugate. This is much much faster.
 */
 
 /*
@@ -97,6 +99,7 @@ static void normbound_icircs_insclean(GEN elts, GEN vcors, GEN vargs, GEN curcir
 static void normbound_icircs_phase2(GEN elts, GEN vcors, GEN vargs, GEN curcirc, GEN firstcirc, GEN tol, long toins, long *found);
 static GEN normbound_area(GEN C, long prec);
 static long normbound_outside(GEN U, GEN z, GEN tol);
+static int normbound_whichside(GEN side, GEN z, GEN tol);
 
 /*2: NORMALIZED BOUNDARY APPENDING*/
 static GEN normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
@@ -1096,17 +1099,24 @@ normbound_outside(GEN U, GEN z, GEN tol)
   long sideind = args_search(normbound_get_vargs(U), normbound_get_cross(U), arg, tol);/*Find the side*/
   if (sideind < 0) sideind = -sideind;/*We line up with a vertex.*/
   GEN side = gel(normbound_get_sides(U), sideind);/*The side!*/
-  if (gequal0(side)) {
-	if (toleq(normcr(z), gen_1, tol)) return gc_long(av, -sideind);/*We are on the unit circle at an infinite side.*/
-	return gc_long(av, 0);/*Infinite side, and we are inside.*/
-  }
-  GEN where = subrs(addrr(mulrr(gel(z, 1), gel(side, 1)), mulrr(gel(z, 2), gel(side, 2))), 1);/*sign(where)==-1 iff where is inside, 0 iff where is on.*/
-  int s = tolsigne(where, tol);
-  if (s < 0) return gc_long(av, 0);/*Same side as 0, so inside*/
-  if (s == 0) return gc_long(av, -sideind);/*On the side*/
+  int which = normbound_whichside(side, z, tol);
+  if (which == -1) return gc_long(av, 0);/*Same side as 0, so inside.*/
+  if (which == 0) return gc_long(av, -sideind);/*On the side*/
   return gc_long(av, sideind);/*Outside*/
 }
 
+/*Given an isometric circle side, this returns -1 if z is on the same side as the origin, 0 if it is on it, and 1 else*/
+static int
+normbound_whichside(GEN side, GEN z, GEN tol)
+{
+  pari_sp av = avma;
+  if (gequal0(side)) {
+	if (toleq(normcr(z), gen_1, tol)) return gc_int(av, 0);/*Unit disc point, infinite side*/
+	return gc_int(av, -1);/*Interior point, infinite side*/
+  }
+  GEN where = subrs(addrr(mulrr(gel(z, 1), gel(side, 1)), mulrr(gel(z, 2), gel(side, 2))), 1);/*sign(where)==-1 iff where is on the same side as 0, 0 iff where is on the side.*/
+  return gc_int(av, tolsigne(where, tol));
+}
 
 /*2: NORMALIZED BOUNDARY APPENDING*/
 
@@ -1237,7 +1247,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 	long t1 = Ctype[toins], t2 = Ctype[elts[found]];/*Whether the sides are new/old, and the corresponding indices if old.*/
 	GEN ipt, iptarg;
 	if (!phase2 && t1 > 0 && t2 > 0) {/*Two old sides, and not in phase 2!!*/
-	  long diff = (t1 - t2)%lenU;
+	  long diff = smodss(t1 - t2, lenU);
 	  if (diff > 1) {/*There was an infinite side here, and it remains!*/
 		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
 		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase 2 has started*/
@@ -1473,7 +1483,7 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 
 /*2: NORMALIZED BASIS*/
 
-/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind] is a VECSMALL. gind is the index of the unpaired side, and vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides.*/
+/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv is on side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.*/
 static GEN
 edgepairing(GEN U, GEN tol)
 {
@@ -1482,6 +1492,7 @@ edgepairing(GEN U, GEN tol)
   GEN vargs = normbound_get_vargs(U);/*Vertex arguments*/
   long cross = normbound_get_cross(U);/*crossing point, used in args_search*/
   GEN kact = normbound_get_kact(U);/*Action of the sides*/
+  GEN sides = normbound_get_sides(U);/*Sides*/
   long lU = lg(kact), lenU = lU - 1, i;/*Number of sides*/
   GEN unpair = vectrunc_init(2*lU - 1), pair = zero_zv(lenU);/*Unpair stores the unpaired edges, pair stores the paired edges*/
   for (i = 1; i < lU; i++) {/*Try to pair the ith side.*/
@@ -1490,34 +1501,45 @@ edgepairing(GEN U, GEN tol)
 	if (pair[i]) continue;/*We have already paired this side, so move on.*/
 	GEN v1 = klein_act_i(act, gel(vcors, i));/*Image of the ith vertex.*/
 	GEN v1arg = argmod_complex(v1, tol);/*Argument*/
-	long v1pair = args_search(vargs, cross, v1arg, tol);
-	if (v1pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now.*/
+	long v1pair = args_search(vargs, cross, v1arg, tol), v1loc, foundv1;
+	if (v1pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v1 is on the side.*/
 	  v1pair = -v1pair;
-	  if (!toleq(v1, gel(vcors, v1pair), tol)) v1pair = 0;/*Sadly, they are not equal.*/
+	  v1loc = normbound_whichside(gel(sides, v1pair), v1, tol);
+	  if (v1loc) foundv1 = 0;/*Sadly, they are not equal.*/
+	  else foundv1 = 1;
 	}
-	else v1pair = 0;
+	else {/*We didn't find it.*/
+	  foundv1 = 0;
+	  v1loc = normbound_whichside(gel(sides, v1pair), v1, tol);
+	}
 	long i2;
 	if (i == 1) i2 = lenU;
-	else i2 = i - 1;/*i2 is the previous vertex, also on the ith side.*/
+	else i2 = i-1;/*i2 is the previous vertex, also on the ith side.*/
 	GEN v2 = klein_act_i(act, gel(vcors, i2));/*Image of the second (i-1 st) vertex.*/
-	if (v1pair) {/*The first vertex is paired! i2, if paired, must go to v1pair+1*/
-	  long v2pair = (v1pair%lenU) + 1;
-	  if (!toleq(v2, gel(vcors, v2pair), tol)) v2pair = 0;/*It doesn't work.*/
-	  if (v2pair) {/*Both vertices were paired!*/
+	GEN v2arg = argmod_complex(v2, tol);/*Argument*/
+	long v2pair = args_search(vargs, cross, v2arg, tol), v2loc, foundv2;
+	if (v2pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v2 is on the side.*/
+	  v2pair = -v2pair;
+	  v2loc = normbound_whichside(gel(sides, v2pair), v2, tol);
+	  if (v2loc) foundv2 = 0;/*Sadly, they are not equal.*/
+	  else foundv2 = 1;
+	}
+	else {/*We didn't find it.*/
+	  foundv2 = 0;
+	  v2loc = normbound_whichside(gel(sides, v2pair), v2, tol);
+	}
+	if (foundv1) {/*v1 paired*/
+	  if (foundv2) {/*Both vertices were paired!*/
 		pair[i] = v2pair;
 		pair[v2pair] = i;
 		continue;
 	  }
-	  vectrunc_append(unpair, mkvecsmall2(i, i2));/*Only the second vertex (i2) is not paired.*/
+	  vectrunc_append(unpair, mkvecsmall4(i, i2, v2pair, v2loc));/*Add the data for v2.*/
 	  continue;
 	}
-	vectrunc_append(unpair, mkvecsmall2(i, i));/*Now, the first vertex is unpaired.*/
-	GEN v2arg = argmod_complex(v2, tol);/*Do the above with the second vertex.*/
-	long v2pair = args_search(vargs, cross, v2arg, tol);
-	if (v2pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now.*/
-	  if (toleq(v2, gel(vcors, -v2pair), tol)) continue;/*They are equal, so we are paired, and move on.*/
-	}
-    vectrunc_append(unpair, mkvecsmall2(i, i2));/*Second vertex unpaired.*/
+	/*v1 is unpaired*/
+	vectrunc_append(unpair, mkvecsmall4(i, i, v1pair, v1loc));/*Add the data for v1.*/
+	if (!foundv2) vectrunc_append(unpair, mkvecsmall4(i, i2, v2pair, v2loc));/*Add the data for v2.*/
   }
   if (lg(unpair) == 1) return gerepilecopy(av, pair);/*All sides paired*/
   return gerepilecopy(av, unpair);
@@ -1531,8 +1553,6 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
   GEN tol = gdat_get_tol(gdat);
   long prec = lg(tol);
   GEN origin = gtocr(gen_0, prec);
-  long scaleden = -22;
-  GEN scale = subsr(1, real2n(scaleden, prec));/*For scaling the infinite sides in. May be increased later if not enough.*/
   long lG = lg(G), i, j = lG;
   GEN Gstart = cgetg(2*lG - 1, t_VEC), Gadd;/*Make the vector with G and its inverses.*/
   for (i = 1; i < lG; i++) {
@@ -1548,7 +1568,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	long ldel = lg(del);
 	Gadd = vectrunc_init(ldel);
 	for (i = 1; i<ldel; i++) {
-	  g = red_elt(X, U, gel(Gstart, del[i]), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+	  g = red_elt(X, U, Xinv(X, gel(Gstart, del[i])), origin, Xtopgl, Xmul, 0, gdat);/*Reduce x^-1 for each deleted side x.*/
 	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
 	}
@@ -1558,19 +1578,19 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	Gadd = vectrunc_init(lG);
 	GEN g;
 	for (i = 1; i < lG; i++) {
-	  g = red_elt(X, U, gel(Gstart, i), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+	  g = red_elt(X, U, gel(Gstart, i), origin, Xtopgl, Xmul, 0, gdat);/*Reduce x. No need to do the inverse, as our list includes all inverses of elements so we just hit it later.*/
 	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
 	}
   }
-  for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we need to check.*/
+  for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we last tried to add.*/
     while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
 	  GEN Unew = normbound_append(X, U, Gadd, Xtopgl, gdat);
 	  if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
 		lG = lg(Gadd);
 		GEN Gnew = vectrunc_init(lG), g;
 		for (i = 1; i < lG; i++) {
-		  g = red_elt(X, U, gel(Gadd, i), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+		  g = red_elt(X, U, Xinv(X, gel(Gadd, i)), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
 		  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 		  vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
 		}
@@ -1582,8 +1602,8 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	  GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
 	  for (i = 1; i<ldel; i++) {
 		ind = del[i];
-		if (ind > 0) g = red_elt(X, Unew, gel(Uelts, ind), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from U*/
-		else g = red_elt(X, Unew, gel(Gadd, -ind), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from Gadd*/
+		if (ind > 0) g = red_elt(X, Unew, Xinv(X, gel(Uelts, ind)), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from U*/
+		else g = red_elt(X, Unew, Xinv(X, gel(Gadd, -ind)), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from Gadd*/
 	    if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	    vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
 	  }
@@ -1597,23 +1617,46 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	  return gerepilecopy(av, U);
 	}
 	GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
+	GEN kact = normbound_get_kact(U);
 	GEN elts = normbound_get_elts(U);
-	long lunp = lg(unpair);
-	Gadd = vectrunc_init(lunp);/*Add the reductions of g with respect to v for each pair [g, v] in unpair*/
-	pari_printf("%d\n", lunp);
+	long lunp = lg(unpair), lenU = lg(elts)-1;
+	Gadd = vectrunc_init(lunp);/*For each entry [gind, vind, gv side, location] in unpair, we will find a new element intersecting inside U.*/
 	for (i = 1; i < lunp; i++) {
-	  GEN v = gel(vcors, gel(unpair, i)[2]);
+	  GEN dat = gel(unpair, i);
+	  GEN v = gel(vcors, dat[2]);
+	  long gind = dat[1];/*The index of g*/
 	  if (!toleq(normcr(v), gen_1, tol)) {/*Interior vertex.*/
-		vectrunc_append(Gadd, red_elt(X, U, stoi(gel(unpair, i)[1]), v, Xtopgl, Xmul, 0, gdat));/*Add the reduction in.*/
+	    if (dat[4] == -1) {/*gv is INSIDE U, so since gv is on I(g^-1), we add in g^-1.*/
+		  vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+		  continue;
+		}
+	    if (dat[4] == 0) {/*gv is on another side. We need to see if it is I(g^-1) or not.*/
+		  long gvind = dat[3];/*The side that gv is on.*/
+		  GEN endptimg = klein_act_i(gel(kact, gind), gel(vcors, smodss(gind - 2, lenU) + 1));/*Find the image of the first vertex of the side gind.*/
+		  if (toleq(endptimg, gel(vcors, gvind), tol)) {/*gv is on I(g^-1) which is part of U.*/
+			/*Let the element of the side after gdind be w (so v is the intersection). Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
+			vectrunc_append(Gadd, Xmul(X, gel(elts, gind%lenU + 1), Xinv(X, gel(elts, gind))));
+		  }
+		  else {/*gv is on a side that is NOT I(g^-1), so adding in g^-1 gives us a new side of U.*/
+			vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+		  }
+		  continue;
+		}
+	    /*Now dat[4]=1, i.e. gv is outside of U. We reduce g with respect to v to get Wg, where Wgv is strictly closer to the origin than v is. Therefore I(Wg) encloses v, so will delete the vertex v and change U. This is the case described by John Voight.*/
+		vectrunc_append(Gadd, red_elt(X, U, stoi(gind), v, Xtopgl, Xmul, 0, gdat));/*Add the reduction in.*/
 		continue;
-	  }/*We must fix infinite sides by replacing them with a nearby interior point.*/
-	  v = mulcrr(v, scale);  
-	  vectrunc_append(Gadd, red_elt(X, U, stoi(gel(unpair, i)[1]), v, Xtopgl, Xmul, 0, gdat));
+	  }
+	  /*We have an infinite vertex.*/
+	  if (gequal0(gel(elts, dat[3]))) {/*gv is on an infinite side, so g^-1 gives a new side of U.*/
+		vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+		continue;
+	  }
+	  /*gv is strictly inside I(w). Any interior point v' on I(g) close enough to v has gv' inside I(w) as well, so wgv' is closer to the origin, hence v' is inside I(wg). Thus we can add in wg to Gadd and envelop the vertex v.*/
+	  vectrunc_append(Gadd, Xmul(X, gel(elts, dat[3]), gel(elts, gind)));
 	}
-	scaleden--;
-	scale = subsr(1, real2n(scaleden, prec));/*Update scale.*/
   }
 }
+
 
 
 /*2: NORMALIZED BOUNDARY REDUCTION*/
@@ -1891,13 +1934,13 @@ afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
 static GEN
 afuchinv(GEN X, GEN g){return alginv(afuch_get_alg(X), g);}
 
-/*Returns 1 if g is the identity element. We don't actually need X here, but pass it anyway.*/
+/*Returns 1 if g is a scalar. We don't actually need X here, but pass it anyway.*/
 static int
 afuchistriv(GEN X, GEN g)
 {
-  if (!isint1(gel(g, 1)) && !isintm1(gel(g, 1))) return 0;
+  if (gequal0(gel(g, 1))) return 0;
   long lG = lg(g), i;
-  for (i = 2; i < lG; i++) if (!isintzero(gel(g, i))) return 0;
+  for (i = 2; i < lG; i++) if (!gequal0(gel(g, i))) return 0;
   return 1;
 }
 
