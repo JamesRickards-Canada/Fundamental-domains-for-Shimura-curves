@@ -34,19 +34,21 @@ afuch_get_alg(GEN X){return gel(X, 1);}
 INLINE GEN
 afuch_get_order(GEN X){return gel(X, 2);}
 INLINE GEN
-afuch_get_chol(GEN X){return gel(X, 3);}
+afuch_get_orderconj(GEN X){return gel(X, 3);}
 INLINE GEN
-afuch_get_embmats(GEN X){return gel(X, 4);}
+afuch_get_chol(GEN X){return gel(X, 4);}
 INLINE GEN
-afuch_get_type(GEN X){return gel(X, 5);}
+afuch_get_embmats(GEN X){return gel(X, 5);}
 INLINE GEN
-afuch_get_gdat(GEN X){return gel(X, 6);}
+afuch_get_type(GEN X){return gel(X, 6);}
 INLINE GEN
-afuch_get_fdom(GEN X){return gel(X, 7);}
+afuch_get_gdat(GEN X){return gel(X, 7);}
 INLINE GEN
-afuch_get_pres(GEN X){return gel(X, 8);}
+afuch_get_fdom(GEN X){return gel(X, 8);}
 INLINE GEN
-afuch_get_sig(GEN X){return gel(X, 9);}
+afuch_get_pres(GEN X){return gel(X, 9);}
+INLINE GEN
+afuch_get_sig(GEN X){return gel(X, 10);}
 
 
 /*SECTION 1: GEOMETRIC METHODS*/

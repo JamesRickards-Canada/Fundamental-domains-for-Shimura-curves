@@ -134,6 +134,7 @@ static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchtopgl(GEN X, GEN g);
 
 /*3: ALGEBRA HELPER METHODS*/
+static GEN algconj(GEN A, GEN x);
 static GEN alggeta(GEN A);
 static GEN voidalgmul(void *A, GEN x, GEN y);
 static long algsplitoo(GEN A);
@@ -1762,6 +1763,8 @@ A
 	The algebra
 O
 	The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
+Oconj
+	Conjugates of the elements of O. To conjugate an element x of A, it suffices to compute Oconj*x.
 chol
 	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
 embmats
@@ -1790,13 +1793,16 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   GEN AX = cgetg(10, t_VEC);
   gel(AX, 1) = A;
   gel(AX, 2) = O;
-  gel(AX, 3) = gen_0;/*TO DO*/
-  gel(AX, 4) = afuch_make_m2rmats(A, O, prec);
-  gel(AX, 5) = type;/*TO DO*/
-  gel(AX, 6) = gdat_initialize(p, prec);
-  gel(AX, 7) = gen_0;
+  long lgO = lg(O), i;
+  gel(AX, 3) = cgetg(lgO, t_MAT);
+  for (i = 1; i < lgO; i++) gmael(AX, 3, i) = algconj(A, gel(O, i));
+  gel(AX, 4) = gen_0;/*TO DO*/
+  gel(AX, 5) = afuch_make_m2rmats(A, O, prec);
+  gel(AX, 6) = type;/*TO DO*/
+  gel(AX, 7) = gdat_initialize(p, prec);
   gel(AX, 8) = gen_0;
   gel(AX, 9) = gen_0;
+  gel(AX, 10) = gen_0;
   return AX;
 }
 
@@ -1930,9 +1936,9 @@ afuchredelt(GEN X, GEN U, GEN g, GEN z)
 static GEN
 afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
 
-/*alginv formatted for the input of an afuch, for use in the geometry section.*/
+/*alginv formatted for the input of an afuch, for use in the geometry section. Since we work in O, entries are all in Z.*/
 static GEN
-afuchinv(GEN X, GEN g){return alginv(afuch_get_alg(X), g);}
+afuchinv(GEN X, GEN g){return ZM_ZC_mul(afuch_get_orderconj(X), g);}
 
 /*Returns 1 if g is a scalar. We don't actually need X here, but pass it anyway.*/
 static int
@@ -1985,6 +1991,16 @@ algbasisto1ijk(GEN A, GEN x)
   pari_sp av = avma;
   GEN xalg = algbasistoalg(A, x);
   return gerepileupto(av, algalgto1ijk(A, xalg));
+}
+
+/*Returns the conjugate of the element x in basis form. Not particularly fast.*/
+static GEN
+algconj(GEN A, GEN x)
+{
+  pari_sp av = avma;
+  GEN tr = algtrace(A, x, 0);
+  GEN trinA = algalgtobasis(A, mkcol2(tr, gen_0));/*Move it to A*/
+  return gerepileupto(av, RgC_sub(trinA, x));
 }
 
 /*Given a quaternion algebra, return a,*/
