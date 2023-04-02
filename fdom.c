@@ -3,8 +3,7 @@
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 8. forqfvec with flag=2.
-9. UPDATE afuchistrivial and afuchinv for when we have non norm 1 elements. For trivial, we can compute the reduced trace and check if it is a scalar multiple of our starting element.
-10. Store conjugates of the basis in a matrix, then matrix multiply to find conjugate. This is much much faster.
+9. UPDATE afuchistrivial non norm 1 elements, since afuchinv does conjugation instead now.. For trivial, we can compute the reduced trace and check if it is a scalar multiple of our starting element.
 */
 
 /*
@@ -123,6 +122,7 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xm
 /*3: INITIALIZE SYMMETRIC SPACE*/
 static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
+static GEN Omultable(GEN A, GEN O);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -714,9 +714,9 @@ tolsigne(GEN x, GEN tol)
 /* DEALING WITH GENERAL STRUCTURES
 Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma, namely:
 	i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
-	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g).
+	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
 	iii) Embed elements of Gamma in PGL(2, R)^+: format as GEN Xtopgl(GEN X, GEN g), and ensure that the coefficients are converted to t_REAL. If the natural embedding of an element does not land in PSL, do not bother rescaling it, this will be more inefficient and can often cause precision loss.
-	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL.
+	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
 	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
 We do all of our computations in the Klein model.
 */
@@ -1758,13 +1758,15 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, where
 X
-	[A, O, chol, embmats, type, splitdat, gdat, fdom, pres, sig]
+	[A, O, Oconj, Omultable, chol, embmats, type, splitdat, gdat, fdom, pres, sig]
 A
 	The algebra
 O
 	The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
 Oconj
 	Conjugates of the elements of O. To conjugate an element x of A, it suffices to compute Oconj*x.
+Omultable
+	To multiply elements of O more quickly.
 chol
 	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
 embmats
@@ -1796,13 +1798,14 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   long lgO = lg(O), i;
   gel(AX, 3) = cgetg(lgO, t_MAT);
   for (i = 1; i < lgO; i++) gmael(AX, 3, i) = algconj(A, gel(O, i));
-  gel(AX, 4) = gen_0;/*TO DO*/
-  gel(AX, 5) = afuch_make_m2rmats(A, O, prec);
-  gel(AX, 6) = type;/*TO DO*/
-  gel(AX, 7) = gdat_initialize(p, prec);
-  gel(AX, 8) = gen_0;
+  gel(AX, 4) = Omultable(A, O);
+  gel(AX, 5) = gen_0;/*TO DO*/
+  gel(AX, 6) = afuch_make_m2rmats(A, O, prec);
+  gel(AX, 7) = type;/*TO DO*/
+  gel(AX, 8) = gdat_initialize(p, prec);
   gel(AX, 9) = gen_0;
   gel(AX, 10) = gen_0;
+  gel(AX, 11) = gen_0;
   return AX;
 }
 
@@ -1858,6 +1861,19 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   return gerepilecopy(av, mats);
 }
 
+static GEN
+Omultable(GEN A, GEN O)
+{
+  long n = lg(O), i, j;
+  GEN M = cgetg(n, t_VEC);
+  for (i = 1; i < n; i++) {
+	gel(M, i) = cgetg(n, t_MAT);
+	for (j = 1; j < n; j++) {
+	  gmael(M, i, j) = algmul(A, gel(O, i), gel(O, j));
+	}
+  }
+  return M;
+}
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -1952,7 +1968,17 @@ afuchistriv(GEN X, GEN g)
 
 /*algmul formatted for the input of an afuch, for use in the geometry section.*/
 static GEN
-afuchmul(GEN X, GEN g1, GEN g2){return algmul(afuch_get_alg(X), g1, g2);}
+afuchmul(GEN X, GEN g1, GEN g2)
+{
+  pari_sp av = avma;
+  GEN T = afuch_get_ordermultable(X);
+  GEN g = ZC_Z_mul(ZM_ZC_mul(gel(T, 1), g2), gel(g1, 1));
+  long lg1 = lg(g1), i;
+  for (i = 2; i < lg1; i++) {
+	g = ZC_add(g, ZC_Z_mul(ZM_ZC_mul(gel(T, i), g2), gel(g1, i)));
+  }
+  return gerepileupto(av, g);
+}
 
 /*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PGL(2, R).*/
 static GEN
