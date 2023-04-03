@@ -32,7 +32,9 @@ normbound_get_infinite(GEN U){return gel(U, 9);}
 INLINE GEN
 afuch_get_alg(GEN X){return gel(X, 1);}
 INLINE GEN
-afuch_get_order(GEN X){return gel(X, 2);}
+afuch_get_order(GEN X){return gmael(X, 2, 1);}
+INLINE GEN
+afuch_get_orderinv(GEN X){return gmael(X, 2, 2);}
 INLINE GEN
 afuch_get_orderconj(GEN X){return gel(X, 3);}
 INLINE GEN

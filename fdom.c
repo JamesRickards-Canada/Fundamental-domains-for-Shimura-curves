@@ -55,7 +55,7 @@ static GEN klein_to_disc(GEN z, GEN tol);
 static GEN klein_to_plane(GEN z, GEN p, GEN tol);
 static GEN plane_to_disc(GEN z, GEN p);
 static GEN plane_to_klein(GEN z, GEN p);
-static GEN pgl_to_klein(GEN M, GEN gdat);
+static GEN m2r_to_klein(GEN M, GEN p);
 
 /*1: DISTANCES/AREA*/
 static GEN hdist_ud(GEN z1, GEN z2, long prec);
@@ -63,14 +63,15 @@ static GEN hdist_ud(GEN z1, GEN z2, long prec);
 /*1: OPERATIONS ON COMPLEX REALS*/
 static GEN gtocr(GEN z, long prec);
 static GEN abscr(GEN z);
-static GEN addccr(GEN z1, GEN z2);
-static GEN divccr(GEN z1, GEN z2);
-static GEN mulccr(GEN z1, GEN z2);
-static GEN mulccr_conj(GEN z1, GEN z2);
+static GEN addcrcr(GEN z1, GEN z2);
+static GEN divcrcr(GEN z1, GEN z2);
+static GEN mulcrcr(GEN z1, GEN z2);
+static GEN mulcrcr_conj(GEN z1, GEN z2);
+static GEN mulcri(GEN z, GEN n);
 static GEN mulcrr(GEN z, GEN r);
 static GEN negc(GEN z);
 static GEN normcr(GEN z);
-static GEN subccr(GEN z1, GEN z2);
+static GEN subcrcr(GEN z1, GEN z2);
 static GEN subrcr(GEN r, GEN z);
 
 /*1: TOLERANCE*/
@@ -84,12 +85,12 @@ static int tolsigne(GEN x, GEN tol);
 /*2: ISOMETRIC CIRCLES*/
 static GEN icirc_angle(GEN c1, GEN c2, long prec);
 static GEN icirc_klein(GEN M, GEN tol);
-static GEN icirc_elt(GEN X, GEN g, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
+static GEN icirc_elt(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN gdat);
 static GEN argmod(GEN x, GEN y, GEN tol);
 static GEN argmod_complex(GEN c, GEN tol);
 
 /*2: NORMALIZED BOUNDARY*/
-static GEN normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
+static GEN normbound(GEN X, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat);
 static GEN normbound_icircs(GEN C, GEN indtransfer, GEN gdat);
 static long normbound_icircs_bigr(GEN C, GEN order);
 static void normbound_icircs_insinfinite(GEN elts, GEN vcors, GEN vargs, GEN infinite, GEN curcirc, long *found);
@@ -100,7 +101,7 @@ static long normbound_outside(GEN U, GEN z, GEN tol);
 static int normbound_whichside(GEN side, GEN z, GEN tol);
 
 /*2: NORMALIZED BOUNDARY APPENDING*/
-static GEN normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat);
+static GEN normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat);
 static GEN normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, GEN gdat);
 
 /*2: NORMALIZED BOUNDARY ANGLES*/
@@ -110,16 +111,17 @@ static long args_search(GEN args, long ind, GEN arg, GEN tol);
 
 /*2: NORMALIZED BASIS*/
 static GEN edgepairing(GEN U, GEN tol);
-static GEN normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
+static GEN normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
 
 /*2: NORMALIZED BOUNDARY REDUCTION*/
-static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
-static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat);
+static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
+static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
 static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
+static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN Omultable(GEN A, GEN O);
 
@@ -130,7 +132,7 @@ static GEN afuchid(GEN X);
 static GEN afuchinv(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
-static GEN afuchtopgl(GEN X, GEN g);
+static GEN afuchtoklein(GEN X, GEN g);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
@@ -307,11 +309,11 @@ klein_act_i(GEN M, GEN z)
 {
   pari_sp av = avma;
   GEN A = gel(M, 1), B = gel(M, 2);
-  GEN AzpB = addccr(mulccr(A, z), B);/*Az+B*/
-  GEN BzcpA = addccr(mulccr_conj(B, z), A);/*B*conj(z)+A*/
-  GEN num = addccr(mulccr(A, AzpB), mulccr(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
-  GEN denom = addccr(mulccr_conj(AzpB, B), mulccr_conj(BzcpA, A));/*(Az+B)conj(B)+(B*conj(z)+A)conj(A)*/
-  return gerepilecopy(av, divccr(num, denom));
+  GEN AzpB = addcrcr(mulcrcr(A, z), B);/*Az+B*/
+  GEN BzcpA = addcrcr(mulcrcr_conj(B, z), A);/*B*conj(z)+A*/
+  GEN num = addcrcr(mulcrcr(A, AzpB), mulcrcr(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
+  GEN denom = addcrcr(mulcrcr_conj(AzpB, B), mulcrcr_conj(BzcpA, A));/*(Az+B)conj(B)+(B*conj(z)+A)conj(A)*/
+  return gerepilecopy(av, divcrcr(num, denom));
 }
 
 /*The safe version of klein_act_i, where we ensure z and M have the correct format.*/
@@ -373,9 +375,9 @@ static GEN
 disc_to_plane(GEN z, GEN p)
 {
   pari_sp av = avma;
-  GEN num = subccr(mulccr_conj(z, p), p);/*z*conj(p)-p*/
+  GEN num = subcrcr(mulcrcr_conj(z, p), p);/*z*conj(p)-p*/
   GEN denom = mkcomplex(subrs(gel(z, 1), 1), gel(z, 2));/*z-1*/
-  return gerepileupto(av, divccr(num, denom));
+  return gerepileupto(av, divcrcr(num, denom));
 }
 
 /*Given a point z in the Klein model, this transfers it to the unit disc model. The formula is z/(1+sqrt(1-|z|^2)).*/
@@ -404,9 +406,9 @@ static GEN
 plane_to_disc(GEN z, GEN p)
 {
   pari_sp av = avma;
-  GEN num = subccr(z, p);/*z-p*/
-  GEN denom = subccr(z, conj_i(p));/*z-conj(p)*/
-  return gerepileupto(av, divccr(num, denom));
+  GEN num = subcrcr(z, p);/*z-p*/
+  GEN denom = subcrcr(z, conj_i(p));/*z-conj(p)*/
+  return gerepileupto(av, divcrcr(num, denom));
 }
 
 /*Given a point z in the upper half plane model, this transfers it to the Klein model.*/
@@ -418,18 +420,18 @@ plane_to_klein(GEN z, GEN p)
   return gerepileupto(av, disc_to_klein(zdisc));/*Plane -> disc -> Klein*/
 }
 
-/*Coverts M in PGL(2, R) to [A, B] which acts on the Klein model. If M1=1/(p-conj(p))[1,-p;1,-conj(p)] and M2=[conj(p), -p;1, -1], then this is via M1*M*M2=[A, B;conj(B), conj(A)]. If M=[a, b;c, d], the explicit formula are A=(a*conj(p)-|p|^2*c+b-pd)/(p-conj(p)), and B=(-ap+p^2c-b+pd)/(p-conj(p)). This action preserves the discriminant, BUT we will not be doing this: instead of dividing by 1/(p-conj(p))=-i/2y, we will only scale by i. If your point p has y=1/2, then the disc IS preserved, so perhaps make this choice. We ensure that A and B are of type t_COMPLEX with t_REAL coefficients.*/
+/*Coverts M in M(2, R) to [A, B] which corresponds to upper half plane model -action > unit disc/Klein model action when the matrices have positive determinat (det([A, B])=|A|^2-|B|^2). If M1=1/(p-conj(p))[1,-p;1,-conj(p)] and M2=[conj(p), -p;1, -1], then this is via M1*M*M2=[A, B;conj(B), conj(A)]. If M=[a, b;c, d], the explicit formula are A=(a*conj(p)-|p|^2*c+b-pd)/(p-conj(p)), and B=(-ap+p^2c-b+pd)/(p-conj(p)), with p=x+iy -> 1/(p-conj(p))=-i/2y. We ensure that A and B are of type t_COMPLEX with t_REAL coefficients.*/
 static GEN
-pgl_to_klein(GEN M, GEN gdat)
+m2r_to_klein(GEN M, GEN p)
 {
   pari_sp av = avma;
-  GEN p = gdat_get_p(gdat);
+  GEN scale = invr(shiftr(gel(p, 2), 1));/*1/2y; -1 acts trivially*/
   GEN ampc = subrcr(gcoeff(M, 1, 1), mulcrr(p, gcoeff(M, 2, 1)));/*a-pc*/
   GEN bmpd = subrcr(gcoeff(M, 1, 2), mulcrr(p, gcoeff(M, 2, 2)));/*b-pd*/
-  GEN ampc_pconj = mulccr_conj(ampc, p);/*(a-pc)*conj(p)*/
-  GEN Apre = addccr(ampc_pconj, bmpd);/*(a-pc)*conj(p)+b-pd*/
-  GEN ampc_p = mulccr(ampc, p);/*(a-pc)*p*/
-  GEN Bpre = negc(addccr(ampc_p, bmpd));/*(-a+pc)p-b+pd*/
+  GEN ampc_pconj = mulcrcr_conj(ampc, p);/*(a-pc)*conj(p)*/
+  GEN Apre = mulcrr(addcrcr(ampc_pconj, bmpd), scale);/*((a-pc)*conj(p)+b-pd)/2y*/
+  GEN ampc_p = mulcrcr(ampc, p);/*(a-pc)*p*/
+  GEN Bpre = mulcrr(negc(addcrcr(ampc_p, bmpd)), scale);/*((-a+pc)p-b+pd)/2y*/
   GEN AB = mkvec2(mkcomplex(negr(gel(Apre, 2)), gel(Apre, 1)), mkcomplex(negr(gel(Bpre, 2)), gel(Bpre, 1)));/*times i*/
   return gerepilecopy(av, AB);
 }
@@ -532,7 +534,7 @@ abscr(GEN z)
 
 /*Adds two complex numbers with real components, giving a complex output. Clean method.*/
 static GEN
-addccr(GEN z1, GEN z2)
+addcrcr(GEN z1, GEN z2)
 {
   GEN z = cgetg(3, t_COMPLEX);
   gel(z, 1) = addrr(gel(z1, 1), gel(z2, 1));
@@ -542,9 +544,9 @@ addccr(GEN z1, GEN z2)
 
 /*Divides two complex numbers with real components, giving a complex output. Gerepileupto safe, leaves garbage.*/
 static GEN
-divccr(GEN z1, GEN z2)
+divcrcr(GEN z1, GEN z2)
 {
-  GEN num = mulccr_conj(z1, z2);/*z1/z2=(z1*conj(z2))/norm(z2)*/
+  GEN num = mulcrcr_conj(z1, z2);/*z1/z2=(z1*conj(z2))/norm(z2)*/
   GEN den = normcr(z2);
   GEN z = cgetg(3, t_COMPLEX);
   gel(z, 1) = divrr(gel(num, 1), den);
@@ -554,7 +556,7 @@ divccr(GEN z1, GEN z2)
 
 /*Multiplies two complex numbers with real components, giving a complex output. Gerepileupto safe, leaves garbage.*/
 static GEN
-mulccr(GEN z1, GEN z2)
+mulcrcr(GEN z1, GEN z2)
 {
   GEN ac = mulrr(gel(z1, 1), gel(z2, 1));
   GEN ad = mulrr(gel(z1, 1), gel(z2, 2));
@@ -566,9 +568,9 @@ mulccr(GEN z1, GEN z2)
   return z;
 }
 
-/*mulccr, except we do z1*conj(z2). Gerepileupto safe, leaves garbage.*/
+/*mulcrcr, except we do z1*conj(z2). Gerepileupto safe, leaves garbage.*/
 static GEN
-mulccr_conj(GEN z1, GEN z2)
+mulcrcr_conj(GEN z1, GEN z2)
 {
   GEN ac = mulrr(gel(z1, 1), gel(z2, 1));
   GEN ad = mulrr(gel(z1, 1), gel(z2, 2));
@@ -578,6 +580,16 @@ mulccr_conj(GEN z1, GEN z2)
   gel(z, 1) = addrr(ac, bd);
   gel(z, 2) = subrr(bc, ad);
   return z;
+}
+
+/*Multiplies a complex number with real components by an integer. Clean method.*/
+static GEN
+mulcri(GEN z, GEN n)
+{
+  GEN zn = cgetg(3, t_COMPLEX);
+  gel(zn, 1) = mulri(gel(z, 1), n);
+  gel(zn, 2) = mulri(gel(z, 2), n);
+  return zn;
 }
 
 /*Multiplies a complex number with real components by a real number. Clean method.*/
@@ -611,7 +623,7 @@ normcr(GEN z)
 
 /*Subtracts two complex numbers with real components, giving a complex output. Clean method.*/
 static GEN
-subccr(GEN z1, GEN z2)
+subcrcr(GEN z1, GEN z2)
 {
   GEN z = cgetg(3, t_COMPLEX);
   gel(z, 1) = subrr(gel(z1, 1), gel(z2, 1));
@@ -711,10 +723,10 @@ tolsigne(GEN x, GEN tol)
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
 
 /* DEALING WITH GENERAL STRUCTURES
-Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma, namely:
+Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma (that should be memory clean), namely:
 	i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
 	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
-	iii) Embed elements of Gamma in PGL(2, R)^+: format as GEN Xtopgl(GEN X, GEN g), and ensure that the coefficients are converted to t_REAL. If the natural embedding of an element does not land in PSL, do not bother rescaling it, this will be more inefficient and can often cause precision loss.
+	iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2.
 	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
 	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
 We do all of our computations in the Klein model.
@@ -765,7 +777,7 @@ icirc_klein(GEN M, GEN tol)
   pari_sp av = avma;
   long prec = lg(tol);
   GEN A = gel(M, 1), B = gel(M, 2);
-  GEN centre_pre = divccr(A, B);/*The centre is -conj(centre_pre)*/
+  GEN centre_pre = divcrcr(A, B);/*The centre is -conj(centre_pre)*/
   GEN Bnorm = normcr(B);
   GEN w = subrr(normcr(A), Bnorm);
   GEN r = sqrtr(divrr(w, Bnorm));/*sqrt(w)/|B| is the radius*/
@@ -791,14 +803,13 @@ icirc_klein(GEN M, GEN tol)
 
 /*Computes the isometric circle for g in Gamma, returning [g, M, icirc], where M gives the action of g on the Klein model.*/
 static GEN
-icirc_elt(GEN X, GEN g, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
+icirc_elt(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
-  GEN pgl = Xtopgl(X, g);
   GEN ret = cgetg(4, t_VEC);
   gel(ret, 1) = gcopy(g);
-  gel(ret, 2) = pgl_to_klein(pgl, gdat);
+  gel(ret, 2) = Xtoklein(X, g);
   gel(ret, 3) = icirc_klein(gel(ret, 2), tol);
   return gerepileupto(av, ret);
 }
@@ -855,13 +866,13 @@ infinite
 
 /*Initializes the inputs for normbound_icircs. G is the set of elements we are forming the normalized boundary for. Returns NULL if no elements giving an isometric circle are input. Not gerepileupto safe, and leaves garbage.*/
 static GEN
-normbound(GEN X, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
+normbound(GEN X, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
 {
   long lG = lg(G), i;
   GEN C = vectrunc_init(lG);
   GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
-	GEN circ = icirc_elt(X, gel(G, i), Xtopgl, gdat);
+	GEN circ = icirc_elt(X, gel(G, i), Xtoklein, gdat);
 	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
 	vectrunc_append(C, circ);
 	vecsmalltrunc_append(indtransfer, i);
@@ -1122,14 +1133,14 @@ normbound_whichside(GEN side, GEN z, GEN tol)
 
 /*Initializes the inputs for normbound_append_icircs. G is the set of elements we are forming the normalized boundary for, and U is the necessarily non-trivial current boundary. Returns NULL if the normalized boundary does not change. Not gerepileupto safe, and leaves garbage.*/
 static GEN
-normbound_append(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN gdat)
+normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
 {
   pari_sp av = avma;
   long lG = lg(G), lU = lg(gel(U, 1)), i;
   GEN Cnew = vectrunc_init(lG);/*Start by initializing the new circles.*/
   GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
-	GEN circ = icirc_elt(X, gel(G, i), Xtopgl, gdat);
+	GEN circ = icirc_elt(X, gel(G, i), Xtoklein, gdat);
 	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
 	vectrunc_append(Cnew, circ);
 	vecsmalltrunc_append(indtransfer, i);
@@ -1547,7 +1558,7 @@ edgepairing(GEN U, GEN tol)
 
 /*Returns the normalized basis of G. Can pass in U as a normalized basis to append to, or NULL to just start with G. If no normalized basis, returns NULL.*/
 static GEN
-normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat)
+normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
@@ -1562,13 +1573,13 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
   }
   /*Start by initializing U and Gadd by reducing the elements of Gstart*/
   if (!U) {/*No U is passed in.*/
-	U = normbound(X, Gstart, Xtopgl, gdat);
+	U = normbound(X, Gstart, Xtoklein, gdat);
 	if (!U) return gc_NULL(av);/*No valid isometric circles.*/
 	GEN del = normbound_get_spair(U), g;/*The deleted sides*/
 	long ldel = lg(del);
 	Gadd = vectrunc_init(ldel);
 	for (i = 1; i<ldel; i++) {
-	  g = red_elt(X, U, Xinv(X, gel(Gstart, del[i])), origin, Xtopgl, Xmul, 0, gdat);/*Reduce x^-1 for each deleted side x.*/
+	  g = red_elt(X, U, Xinv(X, gel(Gstart, del[i])), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x^-1 for each deleted side x.*/
 	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
 	}
@@ -1578,19 +1589,19 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	Gadd = vectrunc_init(lG);
 	GEN g;
 	for (i = 1; i < lG; i++) {
-	  g = red_elt(X, U, gel(Gstart, i), origin, Xtopgl, Xmul, 0, gdat);/*Reduce x. No need to do the inverse, as our list includes all inverses of elements so we just hit it later.*/
+	  g = red_elt(X, U, gel(Gstart, i), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x. No need to do the inverse, as our list includes all inverses of elements so we just hit it later.*/
 	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
 	}
   }
   for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we last tried to add.*/
     while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
-	  GEN Unew = normbound_append(X, U, Gadd, Xtopgl, gdat);
+	  GEN Unew = normbound_append(X, U, Gadd, Xtoklein, gdat);
 	  if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
 		lG = lg(Gadd);
 		GEN Gnew = vectrunc_init(lG), g;
 		for (i = 1; i < lG; i++) {
-		  g = red_elt(X, U, Xinv(X, gel(Gadd, i)), origin, Xtopgl, Xmul, 0, gdat);/*Reduce g.*/
+		  g = red_elt(X, U, Xinv(X, gel(Gadd, i)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce g.*/
 		  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 		  vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
 		}
@@ -1602,8 +1613,8 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 	  GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
 	  for (i = 1; i<ldel; i++) {
 		ind = del[i];
-		if (ind > 0) g = red_elt(X, Unew, Xinv(X, gel(Uelts, ind)), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from U*/
-		else g = red_elt(X, Unew, Xinv(X, gel(Gadd, -ind)), origin, Xtopgl, Xmul, 0, gdat);/*Reduce element from Gadd*/
+		if (ind > 0) g = red_elt(X, Unew, Xinv(X, gel(Uelts, ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from U*/
+		else g = red_elt(X, Unew, Xinv(X, gel(Gadd, -ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from Gadd*/
 	    if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
 	    vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
 	  }
@@ -1643,7 +1654,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 		  continue;
 		}
 	    /*Now dat[4]=1, i.e. gv is outside of U. We reduce g with respect to v to get Wg, where Wgv is strictly closer to the origin than v is. Therefore I(Wg) encloses v, so will delete the vertex v and change U. This is the case described by John Voight.*/
-		vectrunc_append(Gadd, red_elt(X, U, stoi(gind), v, Xtopgl, Xmul, 0, gdat));/*Add the reduction in.*/
+		vectrunc_append(Gadd, red_elt(X, U, stoi(gind), v, Xtoklein, Xmul, 0, gdat));/*Add the reduction in.*/
 		continue;
 	  }
 	  /*We have an infinite vertex.*/
@@ -1663,24 +1674,24 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GE
 
 /*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns [g'g, decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
 static GEN
-red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat)
+red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
   GEN zorig = z;
-  z = klein_act_i(pgl_to_klein(Xtopgl(X, g), gdat), z);/*Starting point*/
+  z = klein_act_i(Xtoklein(X, g), z);/*Starting point*/
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind + 1, t_VECSMALL);
   for (;;) {
 	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
-	  GEN gact = pgl_to_klein(Xtopgl(X, g), gdat);
+	  GEN gact = Xtoklein(X, g);
 	  z = klein_act_i(gact, zorig);
 	}
 	long outside = normbound_outside(U, z, tol);
 	if (outside <= 0) {/*We are inside or on the boundary.*/
-	  GEN gact = pgl_to_klein(Xtopgl(X, g), gdat);
+	  GEN gact = Xtoklein(X, g);
 	  z = klein_act_i(gact, zorig);
 	  outside = normbound_outside(U, z, tol);
 	  if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
@@ -1700,7 +1711,7 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(
 
 /*red_elt_decomp, except we return g'g if flag=0, g'gz if flag=1, and [g'g,g'gz] if flag=2. Can pass g as t_INT so that g=U[1][g].*/
 static GEN
-red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat)
+red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
@@ -1713,17 +1724,17 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtopgl)(GEN, GEN), GEN (*Xmul)(GEN, GE
 	gklein = gel(kact, gind);
 	g = gel(elts, gind);
   }
-  else gklein = pgl_to_klein(Xtopgl(X, g), gdat);/*Compute it.*/
+  else gklein = Xtoklein(X, g);/*Compute it.*/
   z = klein_act_i(gklein, z);/*Starting point.*/
   long ind = 1;
   for (;;) {
 	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
-	  GEN gact = pgl_to_klein(Xtopgl(X, g), gdat);
+	  GEN gact = Xtoklein(X, g);
 	  z = klein_act_i(gact, zorig);
 	}
 	long outside = normbound_outside(U, z, tol);
 	if (outside <= 0) {/*We are inside or on the boundary.*/
-	  GEN gact = pgl_to_klein(Xtopgl(X, g), gdat);
+	  GEN gact = Xtoklein(X, g);
 	  z = klein_act_i(gact, zorig);
 	  outside = normbound_outside(U, z, tol);
 	  if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
@@ -1747,7 +1758,7 @@ Let
 	A a quaternion algebra over F split at a unique real place
 	O be an order in A
 We can compute the fundamental domain of groups that live between O^1 and N{B^{\times}}(O)^+, i.e. berween the units of norm 1, and the elements of the normalizer with positive norm at the unique split real place.
-Inputs to most methods are named "X", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with algsymminit.
+Inputs to most methods are named "X", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with afuchinit.
 */
 
 
@@ -1755,13 +1766,13 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 
 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
-An arithmetic Fuchsian group initialization is represented by X, where
+An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[A, O, Oconj, Omultable, chol, embmats, type, splitdat, gdat, fdom, pres, sig]
+	[A, [O, Oinv], Oconj, Omultable, chol, embmats, type, gdat, fdom, pres, sig]
 A
 	The algebra
-O
-	The order, given as a matrix whose columns generate the order (with respect to the stored order in A).
+O, Oinv
+	The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
 Oconj
 	Conjugates of the elements of O. To conjugate an element x of A, it suffices to compute Oconj*x.
 Omultable
@@ -1769,7 +1780,7 @@ Omultable
 chol
 	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
 embmats
-	O[,i] is sent to embmats[i] under the embedding into M(2, R) at the unique split infinite place.
+	O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
 type
 	Which symmetric space we want to compute.
 gdat
@@ -1791,17 +1802,18 @@ static GEN
 afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   if(!O) O = matid(lg(alg_get_basis(A)) - 1);
-  GEN AX = cgetg(10, t_VEC);
+  GEN gdat = gdat_initialize(p, prec);
+  GEN AX = cgetg(12, t_VEC);
   gel(AX, 1) = A;
-  gel(AX, 2) = O;
+  gel(AX, 2) = mkvec2(O, QM_inv(O));
   long lgO = lg(O), i;
   gel(AX, 3) = cgetg(lgO, t_MAT);
   for (i = 1; i < lgO; i++) gmael(AX, 3, i) = algconj(A, gel(O, i));
   gel(AX, 4) = Omultable(A, O);
   gel(AX, 5) = gen_0;/*TO DO*/
-  gel(AX, 6) = afuch_make_m2rmats(A, O, prec);
+  gel(AX, 6) = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
   gel(AX, 7) = type;/*TO DO*/
-  gel(AX, 8) = gdat_initialize(p, prec);
+  gel(AX, 8) = gdat;
   gel(AX, 9) = gen_0;
   gel(AX, 10) = gen_0;
   gel(AX, 11) = gen_0;
@@ -1815,6 +1827,20 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
   pari_sp av = avma;
   if(!p) p = defp(prec);
   return gerepilecopy(av, afuchinit_i(A, O, type, p, prec));
+}
+
+/*Returns a vector v of pairs [A, B] such that O[,i] is sent to v[i] acting on the Klein model..*/
+static GEN
+afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec)
+{
+  pari_sp av = avma;
+  GEN m2r = afuch_make_m2rmats(A, O, prec);
+  long l, i;
+  GEN klein = cgetg_copy(m2r, &l);
+  for (i = 1; i < l; i++) {
+	gel(klein, i) = m2r_to_klein(gel(m2r, i), p);
+  }
+  return gerepileupto(av, klein);
 }
 
 /*Returns a vector v of matrices in M(2, R) such that O[,i] is sent to v[i].*/
@@ -1860,6 +1886,7 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   return gerepilecopy(av, mats);
 }
 
+/*Initializes a table to compute multiplication of elements written in terms of O's basis more efficiently.*/
 static GEN
 Omultable(GEN A, GEN O)
 {
@@ -1874,6 +1901,7 @@ Omultable(GEN A, GEN O)
   return M;
 }
 
+
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
 /*Returns the isometric circle of an element of A.*/
@@ -1882,8 +1910,9 @@ afuchicirc(GEN X, GEN g)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  GEN icirc_all = icirc_elt(X, g, &afuchtopgl, gdat);
-  return gerepileupto(av, gel(icirc_all, 3));
+  GEN ginO = QM_QC_mul(afuch_get_orderinv(X), g);/*Convert into O's basis.*/
+  GEN icirc_all = icirc_elt(X, ginO, &afuchtoklein, gdat);
+  return gerepilecopy(av, gel(icirc_all, 3));
 }
 
 /*Returns the element representing the action of g on the Klein model.*/
@@ -1891,45 +1920,44 @@ GEN
 afuchklein(GEN X, GEN g)
 {
   pari_sp av = avma;
-  GEN gdat = afuch_get_gdat(X);
-  GEN pgl = afuchtopgl(X, g);
-  return gerepileupto(av, pgl_to_klein(pgl, gdat));
+  GEN ginO = QM_QC_mul(afuch_get_orderinv(X), g);/*Convert into O's basis.*/
+  return gerepileupto(av, afuchtoklein(X, ginO));
 }
 
-/*Returns the normalized boundary of the set of elements G in A.*/
+/*Returns the normalized boundary of the set of elements G in A. ASSUMES O=IDENTITY*/
 GEN
 afuchnormbasis(GEN X, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  GEN U = normbasis(X, NULL, G, &afuchtopgl, &afuchmul, &afuchinv, &afuchistriv, gdat);
+  GEN U = normbasis(X, NULL, G, &afuchtoklein, &afuchmul, &afuchinv, &afuchistriv, gdat);
   if (U) return gerepilecopy(av, U);
   return gc_const(av, gen_0);/*No normalized basis, return 0.*/
 }
 
-/*Returns the normalized boundary of the set of elements G in A.*/
+/*Returns the normalized boundary of the set of elements G in A. ASSUMES O=IDENTITY*/
 GEN
 afuchnormbound(GEN X, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  GEN U = normbound(X, G, &afuchtopgl, gdat);
+  GEN U = normbound(X, G, &afuchtoklein, gdat);
   if (U) return gerepilecopy(av, U);
   return gc_const(av, gen_0);/*No normalized boundary, return 0.*/
 }
 
-/*Computes the normalized boundary of U union G, where U is an already computed normalized boundary*/
+/*Computes the normalized boundary of U union G, where U is an already computed normalized boundary. ASSUMES O=IDENTITY*/
 GEN
 afuchnormbound_append(GEN X, GEN U, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  GEN Unew = normbound_append(X, U, G, &afuchtopgl, gdat);
+  GEN Unew = normbound_append(X, U, G, &afuchtoklein, gdat);
   if (Unew) return gerepilecopy(av, Unew);
   return gc_const(av, gen_0);
 }
 
-/*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element.*/
+/*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element. ASSUMES O=IDENTITY*/
 GEN
 afuchredelt(GEN X, GEN U, GEN g, GEN z)
 {
@@ -1938,8 +1966,8 @@ afuchredelt(GEN X, GEN U, GEN g, GEN z)
   GEN tol = gdat_get_tol(gdat);
   GEN zsafe = gtocr(z, lg(tol));/*Make sure z has the appropriate formatting.*/
   if(!g) g = afuchid(X);
-  GEN r = red_elt_decomp(X, U, g, zsafe, &afuchtopgl, &afuchmul, gdat);/*[g'g, decomp].*/
-  GEN gact = pgl_to_klein(afuchtopgl(X, gel(r, 1)), gdat);
+  GEN r = red_elt_decomp(X, U, g, zsafe, &afuchtoklein, &afuchmul, gdat);/*[g'g, decomp].*/
+  GEN gact = afuchtoklein(X, gel(r, 1));
   GEN zimg = klein_act_i(gact, zsafe);
   return gerepilecopy(av, mkvec3(gel(r, 1), zimg, gel(r, 2)));
 }
@@ -1978,16 +2006,20 @@ afuchmul(GEN X, GEN g1, GEN g2)
   return gerepileupto(av, g);
 }
 
-/*Given an element g of A (of non-zero norm) written in basis form, this returns the image of g in PGL(2, R).*/
+/*Given an element g of O (of non-zero norm) written in basis form, this returns the image of g in acting on the Klein model.*/
 static GEN
-afuchtopgl(GEN X, GEN g)
+afuchtoklein(GEN X, GEN g)
 {
   pari_sp av = avma;
-  GEN mats = afuch_get_embmats(X);
-  GEN emb = RgM_Rg_mul(gel(mats, 1), gel(g, 1));
+  GEN embs = afuch_get_embmats(X);
+  GEN A = mulcri(gmael(embs, 1, 1), gel(g, 1));
+  GEN B = mulcri(gmael(embs, 1, 2), gel(g, 2));
   long lg = lg(g), i;
-  for (i = 2; i < lg; i++) emb = RgM_add(emb, RgM_Rg_mul(gel(mats, i), gel(g, i)));
-  return gerepileupto(av, emb);
+  for (i = 2; i < lg; i++) {
+	A = addcrcr(A, mulcri(gmael(embs, i, 1), gel(g, i)));
+	B = addcrcr(B, mulcri(gmael(embs, i, 2), gel(g, i)));
+  }
+  return gerepilecopy(av, mkvec2(A, B));
 }
 
 
