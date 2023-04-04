@@ -3384,6 +3384,14 @@ qalg_fdominitialize(GEN A, GEN O, long prec)
   return mkvecn(7, A, ramdat, varnos, roots, O, level, tol);
 }
 
+//So we can access the initialization in gp.
+GEN
+qalg_fdominitialize_gp(GEN A, GEN O, long prec)
+{
+  pari_sp av = avma;
+  return gerepilecopy(av, qalg_fdominitialize(A, O, prec));
+}
+
 //Returns the norm form as a matrix, i.e. M such that nrd(e_1*v_1+...+e_nv_n)=(e_1,...,e_n)*M*(e_1,...,e_n)~, where v_1, v_2, ..., v_n is the given basis of an order. The iith coefficient is nrd(v_i), and the ijth coefficient (i!=j) is .5*trd(v_iv_j)
 GEN
 qalg_normform(GEN Q){return qalg_normform_givenbasis(Q, qalg_get_order(Q));}

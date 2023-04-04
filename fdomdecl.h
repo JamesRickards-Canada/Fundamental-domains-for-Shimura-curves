@@ -87,6 +87,7 @@ GEN qalg_absrednormqf(GEN Q, GEN mats, GEN z1, GEN z2, GEN normformpart, long pr
 GEN qalg_fdomarea(GEN Q, long computeprec, long prec);
 GEN qalg_fdombestC(GEN Q, long prec);
 GEN qalg_fdominitialize(GEN A, GEN O, long prec);
+GEN qalg_fdominitialize_gp(GEN A, GEN O, long prec);
 GEN qalg_normform(GEN Q);
 GEN qalg_smallnorm1elts_qfminim(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nfdecomp, GEN nformpart, long prec);
 GEN qalg_smallnorm1elts_condition(GEN Q, GEN p, GEN C, GEN z1, GEN z2, long maxelts, GEN nform, GEN nformpart, long prec);
