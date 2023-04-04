@@ -2023,6 +2023,8 @@ Onormmat(GEN A, GEN O, GEN AOconj)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
+/*TO DELETE*/
+
 /*Returns the isometric circle of an element of A.*/
 GEN
 afuchicirc(GEN X, GEN g)
@@ -2034,6 +2036,8 @@ afuchicirc(GEN X, GEN g)
   return gerepilecopy(av, gel(icirc_all, 3));
 }
 
+/*TO DELETE*/
+
 /*Returns the element representing the action of g on the Klein model.*/
 GEN
 afuchklein(GEN X, GEN g)
@@ -2042,6 +2046,8 @@ afuchklein(GEN X, GEN g)
   GEN ginO = QM_QC_mul(afuch_get_Oinv(X), g);/*Convert into O's basis.*/
   return gerepileupto(av, afuchtoklein(X, ginO));
 }
+
+/*TO DELETE*/
 
 /*Returns the normalized boundary of the set of elements G in A. ASSUMES O=IDENTITY*/
 GEN
@@ -2054,6 +2060,8 @@ afuchnormbasis(GEN X, GEN G)
   return gc_const(av, gen_0);/*No normalized basis, return 0.*/
 }
 
+/*TO DELETE*/
+
 /*Returns the normalized boundary of the set of elements G in A. ASSUMES O=IDENTITY*/
 GEN
 afuchnormbound(GEN X, GEN G)
@@ -2064,6 +2072,8 @@ afuchnormbound(GEN X, GEN G)
   if (U) return gerepilecopy(av, U);
   return gc_const(av, gen_0);/*No normalized boundary, return 0.*/
 }
+
+/*TO DELETE*/
 
 /*Computes the normalized boundary of U union G, where U is an already computed normalized boundary. ASSUMES O=IDENTITY*/
 GEN
@@ -2169,6 +2179,8 @@ afuch_make_qf(GEN X, GEN z)
   GEN N = rM_upper_add(rM_upper_add(N1, N2), rM_upper_add(N3, gel(qfmats, 4)));/*N1+N2+N3+Mconst*/
   return gerepileupto(av, RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5)));
 }
+
+/*TO DELETE*/
 
 /*Does afuch_make_qf and symmetrizes the result, while also making sure z has the correct form.*/
 GEN
