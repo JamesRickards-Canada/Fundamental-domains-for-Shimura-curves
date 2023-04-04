@@ -11,8 +11,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	\\1: DISTANCES/AREAS
 	install(hdiscrandom,"Gp",,fdom_library);
 	addhelp(hdiscrandom,"Input R, a positive real number.\n Returns a random point in the ball of radius R centred at 0 in the unit disc model of the hyperbolic plane.");
-	install(hdist,"GGD1,L,p",,fdom_library);
-	addhelp(hdist,"Inputs z1, z2, {flag=1}: complex numbers in the upper half plane z1 and z2, and flag=0, 1.\n Returns the hyperbolic distance between z1 and z2. If flag=0 we use the upper half plane model, and if flag=1 we use the unit disc model.");
+	install(hdist,"GGD2,L,p",,fdom_library);
+	addhelp(hdist,"hdist(z1, z2, {flag=2}): returns the hyperbolic distance between z1 and z2. If flag=0, uses the upper half plane model. If flag=1, uses the unit disc model. If flag=2, uses the Klein model.");
 
 
 \\SECTION 3: QUATERNION ALGEBRA METHODS

@@ -71,6 +71,8 @@ static GEN mulcri(GEN z, GEN n);
 static GEN mulcrr(GEN z, GEN r);
 static GEN negc(GEN z);
 static GEN normcr(GEN z);
+static GEN rM_upper_r_mul(GEN M, GEN r);
+static GEN rM_upper_add(GEN M1, GEN M2);
 static GEN subcrcr(GEN z1, GEN z2);
 static GEN subrcr(GEN r, GEN z);
 
@@ -476,12 +478,20 @@ hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec)
   return gerepileupto(av, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
 }
 
-/*z1 and z2 are complex numbers, this computes the hyperbolic distance between them. If flag=0, assumes upper half plane model; if flag=1, assumes unit disc model.*/
+/*REWRITE OR DELETE?*/
+
+/*z1 and z2 are complex numbers, this computes the hyperbolic distance between them. If flag=0, assumes upper half plane model; if flag=1, assumes unit disc model; if flag=2, assumes the Klein model.*/
 GEN
 hdist(GEN z1, GEN z2, long flag, long prec)
 {
   pari_sp av = avma;
-  if (flag) return hdist_ud(z1, z2, prec);
+  if (flag == 1) return hdist_ud(z1, z2, prec);
+  if (flag == 2) {
+	GEN tol = deftol(prec);
+	z1 = klein_to_disc(gtocr(z1, prec), tol);
+	z2 = klein_to_disc(gtocr(z2, prec), tol);
+	return gerepileupto(av, hdist_ud(z1, z2, prec));
+  }
   GEN x1 = real_i(z1), y1 = imag_i(z1);
   GEN x2 = real_i(z2), y2 = imag_i(z2);
   GEN x = gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)), gsqr(gsub(y2, y1))), gmul(gmulsg(2, y1), y2)));
@@ -619,6 +629,34 @@ normcr(GEN z)
   GEN x = sqrr(gel(z, 1));
   GEN y = sqrr(gel(z, 2));
   return addrr(x, y);
+}
+
+/*Multiplies a square upper triangular matrix M with upper triangle having real entries by a real number r. Clean method.*/
+static GEN
+rM_upper_r_mul(GEN M, GEN r)
+{
+  long n = lg(M), i, j;
+  GEN P = cgetg(n, t_MAT);
+  for (i = 1; i < n; i++) {
+	gel(P, i) = cgetg(n, t_COL);
+	for (j = 1; j <= i; j++) gmael(P, i, j) = mulrr(gcoeff(M, j, i), r);
+	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
+  }
+  return P;
+}
+
+/*Adds two square upper triangular matrices M1, M2 with upper triangle having real entries. Clean method.*/
+static GEN
+rM_upper_add(GEN M1, GEN M2)
+{
+  long n = lg(M1), i, j;
+  GEN P = cgetg(n, t_MAT);
+  for (i = 1; i < n; i++) {
+	gel(P, i) = cgetg(n, t_COL);
+	for (j = 1; j <= i; j++) gmael(P, i, j) = addrr(gcoeff(M1, j, i), gcoeff(M2, j, i));
+	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
+  }
+  return P;
 }
 
 /*Subtracts two complex numbers with real components, giving a complex output. Clean method.*/
@@ -1768,7 +1806,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[A, [O, Oinv], Oconj, Omultable, chol, embmats, type, gdat, fdom, pres, sig]
+	[A, [O, Oinv], Oconj, Omultable, chol, kleinmats, type, gdat, fdom, pres, sig]
 A
 	The algebra
 O, Oinv
@@ -1779,7 +1817,7 @@ Omultable
 	To multiply elements of O more quickly.
 chol
 	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
-embmats
+kleinmats
 	O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
 type
 	Which symmetric space we want to compute.
@@ -1885,6 +1923,58 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   }
   return gerepilecopy(av, mats);
 }
+
+
+/*Q_{z, 0}(g)=Q_1(g)+Tr_{F/Q}(nrd(g)) is used to find elements such that gz is near 0 (see Definition 4.2 of my paper). Let c=(1/sqrt(1-|z|^2)+1), let w=z/(1+sqrt(1-|z|^2)), and let w=w_1+w_2i. This method returns a vector of symmetric matrices [Msq, M1, M2, Mconst] such that Q_1(g)=c(Msq*(w1^2+w2^2)+M1*w1+M2*w2+Mconst), which enables for efficient computation of Q_1 given z. We only store the upper half, since they are symmetric.*/
+GEN
+afuch_make_qfmats(GEN kleinmats)
+{
+  pari_sp av = avma;
+  long lk = lg(kleinmats), n = lk - 1, i, j;/*Let kleinmats[i]=[Ei, Fi].*/
+  GEN Msq = zeromatcopy(n, n);
+  GEN M1 = zeromatcopy(n, n);
+  GEN M2 = zeromatcopy(n, n);
+  GEN Mconst = zeromatcopy(n, n);
+  for (i = 1; i < lk; i++) {
+	GEN rEi = gmael3(kleinmats, i, 1, 1), imEi = gmael3(kleinmats, i, 1, 2);/*real and imaginary parts of Ei*/
+	GEN rFi = gmael3(kleinmats, i, 2, 1), imFi = gmael3(kleinmats, i, 2, 2);/*real and imaginary parts of Fi*/
+	for (j = i; j < lk; j++) {
+	  GEN rEj = gmael3(kleinmats, j, 1, 1), imEj = gmael3(kleinmats, j, 1, 2);/*real and imaginary parts of Ej*/
+	  GEN rFj = gmael3(kleinmats, j, 2, 1), imFj = gmael3(kleinmats, j, 2, 2);/*real and imaginary parts of Fj*/
+	  GEN t = addrr(mulrr(rEi, rEj), mulrr(imEi, imEj));
+	  gcoeff(Msq, i, j) = t;/*rEi*rEj+imEi+imEj*/
+	  t = addrr(addrr(mulrr(rEi, rFj), mulrr(rEj, rFi)), addrr(mulrr(imEi, imFj), mulrr(imEj, imFi)));
+	  gcoeff(M1, i, j) = t;/*rEi*rFj+rEj*rFi+imEi*imFj+imEj*imFi*/
+	  t = subrr(addrr(mulrr(rEi, imFj), mulrr(rEj, imFi)), addrr(mulrr(imEi, rFj), mulrr(imEj, rFi)));
+	  gcoeff(M2, i, j) = t;/*rEi*imFj+rEj*imFi-imEi*rFj-imEj*rFi*/
+	  t = addrr(mulrr(rFi, rFj), mulrr(imFi, imFj));
+	  gcoeff(Mconst, i, j) = t;/*rFi*rFj+imFi*imFj*/
+	}
+  }
+  return gerepilecopy(av, mkvec4(Msq, M1, M2, Mconst));
+}
+
+/*REMOVE PREC AND gtocr*/
+GEN
+makeq(GEN qfmats, GEN z, long prec)
+{
+  pari_sp av = avma;
+  
+  z = gtocr(z, prec);
+  
+  GEN znorm = normcr(z);
+  GEN rt = sqrtr(subsr(1, znorm));/*sqrt(1-|z|^2)*/
+  GEN c = addrs(invr(rt), 1);/*1/sqrt(1-|z|^2)+1*/
+  GEN zscale = invr(addrs(rt, 1));/*1/(1+sqrt(1-|z|^2))*/
+  GEN w1 = mulrr(gel(z, 1), zscale), w2 = mulrr(gel(z, 2), zscale);/*w1+w2*i=w=z/(1+sqrt(1-|z|^2))*/
+  GEN sumsq = addrr(sqrr(w1), sqrr(w2));/*w1^2+w2^2*/
+  GEN N1 = rM_upper_r_mul(gel(qfmats, 1), sumsq);/*Msq*(w1^2+w2^2)*/
+  GEN N2 = rM_upper_r_mul(gel(qfmats, 2), w1);/*M1*w1*/
+  GEN N3 = rM_upper_r_mul(gel(qfmats, 3), w2);/*M2*w2*/
+  GEN N = rM_upper_add(rM_upper_add(N1, N2), rM_upper_add(N3, gel(qfmats, 4)));/*N1+N2+N3+Mconst*/
+  return gerepileupto(av, rM_upper_r_mul(N, c));
+}
+
 
 /*Initializes a table to compute multiplication of elements written in terms of O's basis more efficiently.*/
 static GEN
