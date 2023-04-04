@@ -32,27 +32,29 @@ normbound_get_infinite(GEN U){return gel(U, 9);}
 INLINE GEN
 afuch_get_alg(GEN X){return gel(X, 1);}
 INLINE GEN
-afuch_get_order(GEN X){return gmael(X, 2, 1);}
+afuch_get_O(GEN X){return gmael(X, 2, 1);}
 INLINE GEN
-afuch_get_orderinv(GEN X){return gmael(X, 2, 2);}
+afuch_get_Oinv(GEN X){return gmael(X, 2, 2);}
 INLINE GEN
-afuch_get_orderconj(GEN X){return gel(X, 3);}
+afuch_get_Oconj(GEN X){return gmael(X, 2, 3);}
 INLINE GEN
-afuch_get_ordermultable(GEN X){return gel(X, 4);}
+afuch_get_Omultable(GEN X){return gmael(X, 2, 4);}
 INLINE GEN
-afuch_get_chol(GEN X){return gel(X, 5);}
+afuch_get_Ochol(GEN X){return gmael(X, 2, 5);}
 INLINE GEN
-afuch_get_embmats(GEN X){return gel(X, 6);}
+afuch_get_kleinmats(GEN X){return gel(X, 3);}
 INLINE GEN
-afuch_get_type(GEN X){return gel(X, 7);}
+afuch_get_qfmats(GEN X){return gel(X, 4);}
 INLINE GEN
-afuch_get_gdat(GEN X){return gel(X, 8);}
+afuch_get_type(GEN X){return gel(X, 5);}
 INLINE GEN
-afuch_get_fdom(GEN X){return gel(X, 9);}
+afuch_get_gdat(GEN X){return gel(X, 6);}
 INLINE GEN
-afuch_get_pres(GEN X){return gel(X, 10);}
+afuch_get_fdom(GEN X){return gel(X, 7);}
 INLINE GEN
-afuch_get_sig(GEN X){return gel(X, 11);}
+afuch_get_pres(GEN X){return gel(X, 8);}
+INLINE GEN
+afuch_get_sig(GEN X){return gel(X, 9);}
 
 
 /*SECTION 1: GEOMETRIC METHODS*/
@@ -97,6 +99,9 @@ GEN afuchnormbound_append(GEN X, GEN U, GEN G);
 GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
+
+/*3: FINDING ELEMENTS*/
+GEN afuchqf(GEN X, GEN z, long prec);
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);

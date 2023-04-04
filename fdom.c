@@ -73,6 +73,7 @@ static GEN negc(GEN z);
 static GEN normcr(GEN z);
 static GEN rM_upper_r_mul(GEN M, GEN r);
 static GEN rM_upper_add(GEN M1, GEN M2);
+static GEN RgM_upper_add(GEN M1, GEN M2);
 static GEN subcrcr(GEN z1, GEN z2);
 static GEN subrcr(GEN r, GEN z);
 
@@ -125,7 +126,9 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
+static GEN afuch_make_qfmats(GEN kleinmats);
 static GEN Omultable(GEN A, GEN O);
+static GEN Onormmat(GEN A, GEN O, GEN AOconj);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -134,7 +137,11 @@ static GEN afuchid(GEN X);
 static GEN afuchinv(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
+static GEN afuchmul_givenT(GEN T, GEN g1, GEN g2);
 static GEN afuchtoklein(GEN X, GEN g);
+
+/*3: FINDING ELEMENTS*/
+static GEN afuch_make_qf(GEN X, GEN z);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
@@ -654,6 +661,20 @@ rM_upper_add(GEN M1, GEN M2)
   for (i = 1; i < n; i++) {
 	gel(P, i) = cgetg(n, t_COL);
 	for (j = 1; j <= i; j++) gmael(P, i, j) = addrr(gcoeff(M1, j, i), gcoeff(M2, j, i));
+	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
+  }
+  return P;
+}
+
+/*Adds two square upper triangular matrices. Clean method.*/
+static GEN
+RgM_upper_add(GEN M1, GEN M2)
+{
+  long n = lg(M1), i, j;
+  GEN P = cgetg(n, t_MAT);
+  for (i = 1; i < n; i++) {
+	gel(P, i) = cgetg(n, t_COL);
+	for (j = 1; j <= i; j++) gmael(P, i, j) = gadd(gcoeff(M1, j, i), gcoeff(M2, j, i));
 	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
   }
   return P;
@@ -1806,7 +1827,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[A, [O, Oinv], Oconj, Omultable, chol, kleinmats, type, gdat, fdom, pres, sig]
+	[A, Odat=[O, Oinv, Oconj, Omultable, Ochol], kleinmats, qfmats, type, gdat, fdom, pres, sig]
 A
 	The algebra
 O, Oinv
@@ -1819,6 +1840,8 @@ chol
 	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
 kleinmats
 	O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
+qfmats
+	For supply into afuch_make_qf: they help make the quadratic form Q_{z, 0}(g), where if g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A).
 type
 	Which symmetric space we want to compute.
 gdat
@@ -1841,29 +1864,43 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   if(!O) O = matid(lg(alg_get_basis(A)) - 1);
   GEN gdat = gdat_initialize(p, prec);
-  GEN AX = cgetg(12, t_VEC);
+  GEN AX = cgetg(10, t_VEC);
   gel(AX, 1) = A;
-  gel(AX, 2) = mkvec2(O, QM_inv(O));
-  long lgO = lg(O), i;
-  gel(AX, 3) = cgetg(lgO, t_MAT);
-  for (i = 1; i < lgO; i++) gmael(AX, 3, i) = algconj(A, gel(O, i));
-  gel(AX, 4) = Omultable(A, O);
-  gel(AX, 5) = gen_0;/*TO DO*/
-  gel(AX, 6) = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
-  gel(AX, 7) = type;/*TO DO*/
-  gel(AX, 8) = gdat;
+  GEN Odat = cgetg(6, t_VEC);/*Order stuff*/
+  gel(Odat, 1) = O;
+  gel(Odat, 2) = QM_inv(O);
+  long lgO = lg(O), i, j;
+  GEN AOconj = cgetg(lgO, t_MAT);
+  for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
+  gel(Odat, 3) = QM_mul(gel(Odat, 2), AOconj);/*Write it in terms of O.*/
+  gel(Odat, 4) = Omultable(A, O);
+  GEN Onorm = Onormmat(A, O, AOconj);
+  gel(Odat, 5) = gen_0;/*TO DO: use Onorm*/
+  gel(AX, 2) = Odat;
+  gel(AX, 3) = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
+  GEN qfm = afuch_make_qfmats(gel(AX, 3));
+  GEN K = alg_get_center(A);
+  for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
+	for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(K, gcoeff(Onorm, i, j));
+  }
+  gel(qfm, 5) = Onorm;
+  gel(AX, 4) = qfm;
+  gel(AX, 5) = type;/*TO DO*/
+  gel(AX, 6) = gdat;
+  gel(AX, 7) = gen_0;
+  gel(AX, 8) = gen_0;
   gel(AX, 9) = gen_0;
-  gel(AX, 10) = gen_0;
-  gel(AX, 11) = gen_0;
   return AX;
 }
 
-/*Clean initialization of the symmetric space. Can pass p as NULL and will set it to the default.*/
+/*Clean initialization of the symmetric space. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
 GEN
 afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   pari_sp av = avma;
-  if(!p) p = defp(prec);
+  if (!O) O = matid(4*nf_get_degree(alg_get_center(A)));
+  if (!type) type = gen_0;
+  if (!p) p = defp(prec);
   return gerepilecopy(av, afuchinit_i(A, O, type, p, prec));
 }
 
@@ -1924,9 +1961,8 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   return gerepilecopy(av, mats);
 }
 
-
-/*Q_{z, 0}(g)=Q_1(g)+Tr_{F/Q}(nrd(g)) is used to find elements such that gz is near 0 (see Definition 4.2 of my paper). Let c=(1/sqrt(1-|z|^2)+1), let w=z/(1+sqrt(1-|z|^2)), and let w=w_1+w_2i. This method returns a vector of symmetric matrices [Msq, M1, M2, Mconst] such that Q_1(g)=c(Msq*(w1^2+w2^2)+M1*w1+M2*w2+Mconst), which enables for efficient computation of Q_1 given z. We only store the upper half, since they are symmetric.*/
-GEN
+/*Q_{z, 0}(g)=Q_1(g)+Tr_{F/Q}(nrd(g)) is used to find elements such that gz is near 0 (see Definition 4.2 of my paper). Let c=(1/sqrt(1-|z|^2)+1), let w=z/(1+sqrt(1-|z|^2)), and let w=w_1+w_2i. This method returns a vector of symmetric matrices [Msq, M1, M2, Mconst, 0] such that Q_1(g)=c(Msq*(w1^2+w2^2)+M1*w1+M2*w2+Mconst), which enables for efficient computation of Q_1 given z. We only store the upper half, since they are symmetric. We leave the entry 0 since we will insert the other half of the quadratic form, Tr_{F/Q}(nrd(g)), seperately.*/
+static GEN
 afuch_make_qfmats(GEN kleinmats)
 {
   pari_sp av = avma;
@@ -1951,30 +1987,8 @@ afuch_make_qfmats(GEN kleinmats)
 	  gcoeff(Mconst, i, j) = t;/*rFi*rFj+imFi*imFj*/
 	}
   }
-  return gerepilecopy(av, mkvec4(Msq, M1, M2, Mconst));
+  return gerepilecopy(av, mkvec5(Msq, M1, M2, Mconst, gen_0));
 }
-
-/*REMOVE PREC AND gtocr*/
-GEN
-makeq(GEN qfmats, GEN z, long prec)
-{
-  pari_sp av = avma;
-  
-  z = gtocr(z, prec);
-  
-  GEN znorm = normcr(z);
-  GEN rt = sqrtr(subsr(1, znorm));/*sqrt(1-|z|^2)*/
-  GEN c = addrs(invr(rt), 1);/*1/sqrt(1-|z|^2)+1*/
-  GEN zscale = invr(addrs(rt, 1));/*1/(1+sqrt(1-|z|^2))*/
-  GEN w1 = mulrr(gel(z, 1), zscale), w2 = mulrr(gel(z, 2), zscale);/*w1+w2*i=w=z/(1+sqrt(1-|z|^2))*/
-  GEN sumsq = addrr(sqrr(w1), sqrr(w2));/*w1^2+w2^2*/
-  GEN N1 = rM_upper_r_mul(gel(qfmats, 1), sumsq);/*Msq*(w1^2+w2^2)*/
-  GEN N2 = rM_upper_r_mul(gel(qfmats, 2), w1);/*M1*w1*/
-  GEN N3 = rM_upper_r_mul(gel(qfmats, 3), w2);/*M2*w2*/
-  GEN N = rM_upper_add(rM_upper_add(N1, N2), rM_upper_add(N3, gel(qfmats, 4)));/*N1+N2+N3+Mconst*/
-  return gerepileupto(av, rM_upper_r_mul(N, c));
-}
-
 
 /*Initializes a table to compute multiplication of elements written in terms of O's basis more efficiently.*/
 static GEN
@@ -1991,6 +2005,21 @@ Omultable(GEN A, GEN O)
   return M;
 }
 
+/*Returns the upper half part of the symmetric matrix M (with coefficients in centre(A)) such that nrd(g in basis O)=g~*M*g.*/
+static GEN
+Onormmat(GEN A, GEN O, GEN AOconj)
+{
+  long lO = lg(O), i, j;
+  GEN M = cgetg(lO, t_MAT);
+  for (i = 1; i < lO; i++) {
+	gel(M, i) = cgetg(lO, t_COL);
+	for (j = 1; j < i; j++) gmael(M, i, j) = gdivgs(lift(algtrace(A, algmul(A, gel(O, i), gel(AOconj, j)), 0)), 2);
+	gmael(M, i, i) = algnorm(A, gel(O, i), 0);
+	for (j = i+1; j < lO; j++) gmael(M, i, j) = gen_0;
+  }
+  return M;
+}
+
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -2000,7 +2029,7 @@ afuchicirc(GEN X, GEN g)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  GEN ginO = QM_QC_mul(afuch_get_orderinv(X), g);/*Convert into O's basis.*/
+  GEN ginO = QM_QC_mul(afuch_get_Oinv(X), g);/*Convert into O's basis.*/
   GEN icirc_all = icirc_elt(X, ginO, &afuchtoklein, gdat);
   return gerepilecopy(av, gel(icirc_all, 3));
 }
@@ -2010,7 +2039,7 @@ GEN
 afuchklein(GEN X, GEN g)
 {
   pari_sp av = avma;
-  GEN ginO = QM_QC_mul(afuch_get_orderinv(X), g);/*Convert into O's basis.*/
+  GEN ginO = QM_QC_mul(afuch_get_Oinv(X), g);/*Convert into O's basis.*/
   return gerepileupto(av, afuchtoklein(X, ginO));
 }
 
@@ -2071,7 +2100,7 @@ afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
 
 /*alginv formatted for the input of an afuch, for use in the geometry section. Since we work in O, entries are all in Z.*/
 static GEN
-afuchinv(GEN X, GEN g){return ZM_ZC_mul(afuch_get_orderconj(X), g);}
+afuchinv(GEN X, GEN g){return ZM_ZC_mul(afuch_get_Oconj(X), g);}
 
 /*Returns 1 if g is a scalar, i.e. g==conj(g).*/
 static int
@@ -2082,18 +2111,25 @@ afuchistriv(GEN X, GEN g)
   return gc_int(av, ZV_equal(g, gconj));
 }
 
-/*algmul formatted for the input of an afuch, for use in the geometry section.*/
+/*algmul for elements written in terms of the basis of O.*/
 static GEN
 afuchmul(GEN X, GEN g1, GEN g2)
 {
   pari_sp av = avma;
-  GEN T = afuch_get_ordermultable(X);
+  GEN T = afuch_get_Omultable(X);
+  return gerepileupto(av, afuchmul_givenT(T, g1, g2));
+}
+
+/*afuchmul, but we have extracted the O-multiplication table T. Gerepileupto suitable, leaves garbage.*/
+static GEN
+afuchmul_givenT(GEN T, GEN g1, GEN g2)
+{
   GEN g = ZC_Z_mul(ZM_ZC_mul(gel(T, 1), g2), gel(g1, 1));
   long lg1 = lg(g1), i;
   for (i = 2; i < lg1; i++) {
 	g = ZC_add(g, ZC_Z_mul(ZM_ZC_mul(gel(T, i), g2), gel(g1, i)));
   }
-  return gerepileupto(av, g);
+  return g;
 }
 
 /*Given an element g of O (of non-zero norm) written in basis form, this returns the image of g in acting on the Klein model.*/
@@ -2101,7 +2137,7 @@ static GEN
 afuchtoklein(GEN X, GEN g)
 {
   pari_sp av = avma;
-  GEN embs = afuch_get_embmats(X);
+  GEN embs = afuch_get_kleinmats(X);
   GEN A = mulcri(gmael(embs, 1, 1), gel(g, 1));
   GEN B = mulcri(gmael(embs, 1, 2), gel(g, 2));
   long lg = lg(g), i;
@@ -2110,6 +2146,42 @@ afuchtoklein(GEN X, GEN g)
 	B = addcrcr(B, mulcri(gmael(embs, i, 2), gel(g, i)));
   }
   return gerepilecopy(av, mkvec2(A, B));
+}
+
+
+/*3: FINDING ELEMENTS*/
+
+/*Returns the quadratic form Q_{z, 0}(g). If g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A). We output an upper triangular matrix M, such that if you symmetrize it (by setting M[i, j]=M[j, i] for all i>j), then g~*M*g=Q_{z, 0}(g).*/
+static GEN
+afuch_make_qf(GEN X, GEN z)
+{
+  pari_sp av = avma;
+  GEN qfmats = afuch_get_qfmats(X);
+  GEN znorm = normcr(z);
+  GEN rt = sqrtr(subsr(1, znorm));/*sqrt(1-|z|^2)*/
+  GEN c = addrs(invr(rt), 1);/*1/sqrt(1-|z|^2)+1*/
+  GEN zscale = invr(addrs(rt, 1));/*1/(1+sqrt(1-|z|^2))*/
+  GEN w1 = mulrr(gel(z, 1), zscale), w2 = mulrr(gel(z, 2), zscale);/*w1+w2*i=w=z/(1+sqrt(1-|z|^2))*/
+  GEN sumsq = addrr(sqrr(w1), sqrr(w2));/*w1^2+w2^2*/
+  GEN N1 = rM_upper_r_mul(gel(qfmats, 1), sumsq);/*Msq*(w1^2+w2^2)*/
+  GEN N2 = rM_upper_r_mul(gel(qfmats, 2), w1);/*M1*w1*/
+  GEN N3 = rM_upper_r_mul(gel(qfmats, 3), w2);/*M2*w2*/
+  GEN N = rM_upper_add(rM_upper_add(N1, N2), rM_upper_add(N3, gel(qfmats, 4)));/*N1+N2+N3+Mconst*/
+  return gerepileupto(av, RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5)));
+}
+
+/*Does afuch_make_qf and symmetrizes the result, while also making sure z has the correct form.*/
+GEN
+afuchqf(GEN X, GEN z, long prec)
+{
+  pari_sp av = avma;
+  GEN zsafe = gtocr(z, prec);
+  GEN M = afuch_make_qf(X, zsafe);
+  long lM = lg(M), i, j;
+  for (i = 2; i < lM; i++) {
+	for (j = 1; j < i; j++) gcoeff(M, i, j) = gcoeff(M, j, i);
+  }
+  return gerepilecopy(av, M);
 }
 
 
