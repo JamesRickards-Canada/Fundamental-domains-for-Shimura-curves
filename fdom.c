@@ -138,7 +138,7 @@ static GEN afuchid(GEN X);
 static GEN afuchinv(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
-static GEN afuchnorm(GEN X, GEN g);
+static GEN afuchnorm_fast(GEN X, GEN g);
 static GEN afuchnorm_chol(GEN F, GEN chol, GEN g);
 static GEN afuchnorm_mat(GEN F, GEN Onorm, GEN g);
 static GEN afuchtoklein(GEN X, GEN g);
@@ -2171,9 +2171,9 @@ afuchmul(GEN X, GEN g1, GEN g2)
   return gerepileupto(av, g);
 }
 
-/*algnorm for elements written in terms of the basis of O.*/
+/*Fast algnorm for elements written in terms of the basis of O.*/
 static GEN
-afuchnorm(GEN X, GEN g)
+afuchnorm_fast(GEN X, GEN g)
 {
   GEN F = alg_get_center(afuch_get_alg(X));
   GEN Onormdat = afuch_get_Onormdat(X);
@@ -2271,6 +2271,9 @@ afuchqf(GEN X, GEN z, long prec)
   }
   return gerepilecopy(av, M);
 }
+
+
+GEN afuchnorm(GEN X, GEN g){return afuchnorm_fast(X, g);}
 
 
 /*3: ALGEBRA HELPER METHODS*/
