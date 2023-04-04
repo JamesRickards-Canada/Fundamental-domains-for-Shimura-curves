@@ -128,7 +128,8 @@ static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
 static GEN Omultable(GEN A, GEN O);
-static GEN Onormmat(GEN A, GEN O, GEN AOconj);
+static GEN Onorm_makechol(GEN F, GEN Onorm);
+static GEN Onorm_makemat(GEN A, GEN O, GEN AOconj);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -137,7 +138,9 @@ static GEN afuchid(GEN X);
 static GEN afuchinv(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
-static GEN afuchmul_givenT(GEN T, GEN g1, GEN g2);
+static GEN afuchnorm(GEN X, GEN g);
+static GEN afuchnorm_chol(GEN F, GEN chol, GEN g);
+static GEN afuchnorm_mat(GEN F, GEN Onorm, GEN g);
 static GEN afuchtoklein(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
@@ -1874,8 +1877,13 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
   gel(Odat, 3) = QM_mul(gel(Odat, 2), AOconj);/*Write it in terms of O.*/
   gel(Odat, 4) = Omultable(A, O);
-  GEN Onorm = Onormmat(A, O, AOconj);
-  gel(Odat, 5) = gen_0;/*TO DO: use Onorm*/
+  GEN Onorm = Onorm_makemat(A, O, AOconj);
+  GEN F = alg_get_center(A);
+  if (nf_get_degree(F) >= 5) {/*More efficient to use the Cholesky norm.*/
+	gel(Odat, 5) = Onorm_makechol(F, Onorm);
+	if (gequal0(gel(Odat, 5))) gel(Odat, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
+  }
+  else gel(Odat, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
   gel(AX, 2) = Odat;
   gel(AX, 3) = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
   GEN qfm = afuch_make_qfmats(gel(AX, 3));
@@ -2005,16 +2013,44 @@ Omultable(GEN A, GEN O)
   return M;
 }
 
-/*Returns the upper half part of the symmetric matrix M (with coefficients in centre(A)) such that nrd(g in basis O)=g~*M*g.*/
+/*If possible, this initializes the Cholesky decomposition of the norm form on O, which can be evaluated with afuchnorm_chol. This is typically faster than afuchnorm_mat if deg(F)>=5, and slower if deg(F)<=4. Returns 0 if not possible to make.*/
 static GEN
-Onormmat(GEN A, GEN O, GEN AOconj)
+Onorm_makechol(GEN F, GEN Onorm)
 {
+  pari_sp av = avma;
+  long n = lg(Onorm) - 1, i, j, k;/*Onorm is nxn*/
+  GEN M = RgM_shallowcopy(Onorm);
+  GEN inds = vecsmalltrunc_init(5);/*At most 4 places where we get something non-zero.*/
+  GEN vecs = vectrunc_init(5);
+  for (i = 1; i <= n; i++) {
+    if (gequal0(gcoeff(M, i, i))) {
+	  for (j = i + 1; j <= n; j++) if (!gequal0(gcoeff(M, i, j))) return gc_const(av, gen_0);/*Bad! Not sure this will ever trigger though.*/
+	  continue;
+	}
+	GEN v = cgetg(n + 1, t_VEC);
+	for (j = 1; j < i; j++) gel(v, j) = gen_0;
+	gel(v, i) = gcoeff(M, i, i);
+    for (j = i + 1; j <= n; j++) gel(v, j) = nfdiv(F, gcoeff(M, i, j), gel(v, i));/*M[i,j]=M[i,j]/M[i,i]*/
+    for (j = i + 1; j <= n; j++) {
+      for (k = j; k <= n; k++) gcoeff(M, j, k)=nfsub(F, gcoeff(M, j, k), nfmul(F, gcoeff(M, i, j), gel(v, k)));/*M[j,k]=M[j,k]-M[i,i]*M[i,j]*M[i,k];*/
+    }
+	vecsmalltrunc_append(inds, i);
+	vectrunc_append(vecs, v);
+  }
+  return gerepilecopy(av, mkvec2(inds, vecs));
+}
+
+/*Returns the upper half part of the symmetric matrix M (with coefficients in centre(A)) such that nrd(g in basis O)=g~*M*g. Ensures that this upper half part are written in terms of the basis representation for F.*/
+static GEN
+Onorm_makemat(GEN A, GEN O, GEN AOconj)
+{
+  GEN F = alg_get_center(A);
   long lO = lg(O), i, j;
   GEN M = cgetg(lO, t_MAT);
   for (i = 1; i < lO; i++) {
 	gel(M, i) = cgetg(lO, t_COL);
-	for (j = 1; j < i; j++) gmael(M, i, j) = gdivgs(lift(algtrace(A, algmul(A, gel(O, i), gel(AOconj, j)), 0)), 2);
-	gmael(M, i, i) = algnorm(A, gel(O, i), 0);
+	for (j = 1; j < i; j++) gmael(M, i, j) = algtobasis(F, gdivgs(lift(algtrace(A, algmul(A, gel(O, i), gel(AOconj, j)), 0)), 2));
+	gmael(M, i, i) = algtobasis(F, algnorm(A, gel(O, i), 0));
 	for (j = i+1; j < lO; j++) gmael(M, i, j) = gen_0;
   }
   return M;
@@ -2127,19 +2163,59 @@ afuchmul(GEN X, GEN g1, GEN g2)
 {
   pari_sp av = avma;
   GEN T = afuch_get_Omultable(X);
-  return gerepileupto(av, afuchmul_givenT(T, g1, g2));
-}
-
-/*afuchmul, but we have extracted the O-multiplication table T. Gerepileupto suitable, leaves garbage.*/
-static GEN
-afuchmul_givenT(GEN T, GEN g1, GEN g2)
-{
   GEN g = ZC_Z_mul(ZM_ZC_mul(gel(T, 1), g2), gel(g1, 1));
   long lg1 = lg(g1), i;
   for (i = 2; i < lg1; i++) {
 	g = ZC_add(g, ZC_Z_mul(ZM_ZC_mul(gel(T, i), g2), gel(g1, i)));
   }
-  return g;
+  return gerepileupto(av, g);
+}
+
+/*algnorm for elements written in terms of the basis of O.*/
+static GEN
+afuchnorm(GEN X, GEN g)
+{
+  GEN F = alg_get_center(afuch_get_alg(X));
+  GEN Onormdat = afuch_get_Onormdat(X);
+  if (typ(Onormdat) == t_VEC) return afuchnorm_chol(F, Onormdat, g);
+  return afuchnorm_mat(F, Onormdat, g);
+}
+
+/*If X has been initialized with Onorm_makechol, then this computes the norm of an element of O in basis form.*/
+static GEN
+afuchnorm_chol(GEN F, GEN chol, GEN g)
+{
+  pari_sp av = avma;
+  GEN inds = gel(chol, 1);
+  GEN coefs = gel(chol, 2);
+  long n = lg(g), i, j;
+  GEN s = gen_0;
+  for (i = 1; i <= 4; i++) {
+	GEN t = gel(g, inds[i]);
+	for (j = inds[i] + 1; j < n; j++) t = nfadd(F, t, nfmul(F, gmael(coefs, i, j), gel(g, j)));
+	t = nfsqr(F, t);
+	s = nfadd(F, s, nfmul(F, gmael(coefs, i, inds[i]), t));
+  }
+  return gerepileupto(av, s);
+}
+
+/*If X has been initialized with Onorm_makemat, then this computes the norm of an element of O in basis form.*/
+static GEN
+afuchnorm_mat(GEN F, GEN Onorm, GEN g)
+{
+  pari_sp av = avma;
+  long lg, i, j;
+  GEN twog = cgetg_copy(g, &lg);
+  for (i = 1; i < lg - 1; i++) gel(twog, i) = shifti(gel(g, i), 1);/*2g, except the last term which is uninitialized as we don't need it.*/
+  GEN s = gen_0;
+  for (i = 1; i < lg; i++) {
+	GEN t = gen_0;
+	for (j = 1; j < i; j++) t = nfadd(F, t, nfmul(F, gcoeff(Onorm, j, i), gel(twog, j)));
+	t = nfadd(F, t, nfmul(F, gcoeff(Onorm, i, i), gel(g, i)));
+	t = nfmul(F, t, gel(g, i));
+	s = nfadd(F, s, t);
+  }
+  return gerepileupto(av, s);
 }
 
 /*Given an element g of O (of non-zero norm) written in basis form, this returns the image of g in acting on the Klein model.*/

@@ -40,7 +40,7 @@ afuch_get_Oconj(GEN X){return gmael(X, 2, 3);}
 INLINE GEN
 afuch_get_Omultable(GEN X){return gmael(X, 2, 4);}
 INLINE GEN
-afuch_get_Ochol(GEN X){return gmael(X, 2, 5);}
+afuch_get_Onormdat(GEN X){return gmael(X, 2, 5);}
 INLINE GEN
 afuch_get_kleinmats(GEN X){return gel(X, 3);}
 INLINE GEN
@@ -102,6 +102,7 @@ GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 
 /*3: FINDING ELEMENTS*/
 GEN afuchqf(GEN X, GEN z, long prec);
+GEN nfqfgaussred(GEN nf, GEN A);
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);

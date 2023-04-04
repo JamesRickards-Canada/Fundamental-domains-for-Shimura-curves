@@ -35,6 +35,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	install(afuchredelt,"GGDGD0,G,",,fdom_library);
 	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
 
+	\\3: FINDING ELEMENTS
+
 	\\3: ALGEBRA HELPER METHODS
 	install(algmulvec,"GGG",,fdom_library);
 	addhelp(algmulvec,"algmulvec(A, G, L): Returns G[L[1]]*G[L[2]]*...*G[L[n]]. If an index is negative, we take the inverse of that element.");
