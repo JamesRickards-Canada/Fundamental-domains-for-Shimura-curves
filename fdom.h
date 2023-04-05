@@ -42,6 +42,8 @@ afuch_get_Omultable(GEN X){return gmael(X, 2, 4);}
 INLINE GEN
 afuch_get_Onormdat(GEN X){return gmael(X, 2, 5);}
 INLINE GEN
+afuch_get_Onormreal(GEN X){return gmael(X, 2, 6);}
+INLINE GEN
 afuch_get_kleinmats(GEN X){return gel(X, 3);}
 INLINE GEN
 afuch_get_qfmats(GEN X){return gel(X, 4);}

@@ -130,6 +130,7 @@ static GEN afuch_make_qfmats(GEN kleinmats);
 static GEN Omultable(GEN A, GEN O);
 static GEN Onorm_makechol(GEN F, GEN Onorm);
 static GEN Onorm_makemat(GEN A, GEN O, GEN AOconj);
+static GEN Onorm_toreal(GEN A, GEN Onorm);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -141,6 +142,7 @@ static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchnorm_fast(GEN X, GEN g);
 static GEN afuchnorm_chol(GEN F, GEN chol, GEN g);
 static GEN afuchnorm_mat(GEN F, GEN Onorm, GEN g);
+static GEN afuchnorm_real(GEN X, GEN g);
 static GEN afuchtoklein(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
@@ -1830,7 +1832,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[A, Odat=[O, Oinv, Oconj, Omultable, Ochol], kleinmats, qfmats, type, gdat, fdom, pres, sig]
+	[A, Odat=[O, Oinv, Oconj, Omultable, Onormdat, Onormreal], kleinmats, qfmats, type, gdat, fdom, pres, sig]
 A
 	The algebra
 O, Oinv
@@ -1839,8 +1841,10 @@ Oconj
 	Conjugates of the elements of O. To conjugate an element x of A, it suffices to compute Oconj*x.
 Omultable
 	To multiply elements of O more quickly.
-chol
-	Cholesky decomposition of the norm form on O, used in algnorm_chol to compute norms quickly.
+Onormdat
+	Decomposition used to compute norms of elements more quickly.
+Onormreal
+	Used to compute real approximations to norms of elements, which is much more efficient when deg(F)>1.
 kleinmats
 	O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
 qfmats
@@ -1869,7 +1873,7 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   GEN gdat = gdat_initialize(p, prec);
   GEN AX = cgetg(10, t_VEC);
   gel(AX, 1) = A;
-  GEN Odat = cgetg(6, t_VEC);/*Order stuff*/
+  GEN Odat = cgetg(7, t_VEC);/*Order stuff*/
   gel(Odat, 1) = O;
   gel(Odat, 2) = QM_inv(O);
   long lgO = lg(O), i, j;
@@ -1879,11 +1883,14 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   gel(Odat, 4) = Omultable(A, O);
   GEN Onorm = Onorm_makemat(A, O, AOconj);
   GEN F = alg_get_center(A);
-  if (nf_get_degree(F) >= 5) {/*More efficient to use the Cholesky norm.*/
+  long nF = nf_get_degree(F);
+  if (nF >= 5) {/*More efficient to use the Cholesky norm.*/
 	gel(Odat, 5) = Onorm_makechol(F, Onorm);
 	if (gequal0(gel(Odat, 5))) gel(Odat, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
   }
   else gel(Odat, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
+  if (nF == 1) gel(Odat, 6) = gen_0;/*No need to store approximate if n=1.*/
+  else gel(Odat, 6) = Onorm_toreal(A, Onorm);
   gel(AX, 2) = Odat;
   gel(AX, 3) = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
   GEN qfm = afuch_make_qfmats(gel(AX, 3));
@@ -2056,6 +2063,22 @@ Onorm_makemat(GEN A, GEN O, GEN AOconj)
   return M;
 }
 
+/*Given Onorm, which gives the norm, evaluates the entries at the unique split place, returning the matrix with real entries. This will compute the approximate norm much more quickly when F!=Q.*/
+static GEN
+Onorm_toreal(GEN A, GEN Onorm)
+{
+  pari_sp av = avma;
+  long split = algsplitoo(A), n = lg(Onorm) - 1, i, j;
+  GEN F = alg_get_center(A);
+  long Fvar = nf_get_varn(F);
+  GEN rt = gel(nf_get_roots(F), split);
+  GEN Onormreal = zeromatcopy(n, n);
+  for (i = 1; i <= n; i++) {
+	for (j = i; j <=n; j++) gcoeff(Onormreal, i, j) = gsubst(lift(basistoalg(F, gcoeff(Onorm, i, j))), Fvar, rt);
+  }
+  return gerepilecopy(av, Onormreal);
+}
+
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -2218,6 +2241,10 @@ afuchnorm_mat(GEN F, GEN Onorm, GEN g)
   return gerepileupto(av, s);
 }
 
+/*Fast real approximation to algnorm.*/
+static GEN
+afuchnorm_real(GEN X, GEN g){return qfeval(afuch_get_Onormreal(X), g);}
+
 /*Given an element g of O (of non-zero norm) written in basis form, this returns the image of g in acting on the Klein model.*/
 static GEN
 afuchtoklein(GEN X, GEN g)
@@ -2273,7 +2300,13 @@ afuchqf(GEN X, GEN z, long prec)
 }
 
 
-GEN afuchnorm(GEN X, GEN g){return afuchnorm_fast(X, g);}
+/*TO DELETE*/
+
+GEN afuchnorm(GEN X, GEN g, long flag)
+{
+  if (flag) return afuchnorm_real(X, g);
+  return afuchnorm_fast(X, g);
+}
 
 
 /*3: ALGEBRA HELPER METHODS*/
