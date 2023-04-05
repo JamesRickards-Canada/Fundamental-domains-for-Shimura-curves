@@ -36,6 +36,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
 
 	\\3: FINDING ELEMENTS
+	install(afuchfindelts,"GGGD1,L,",,fdom_library);
+	addhelp(afuchfindelts,"afuchfindelts(X, z, C, {maxelts=1}: Finds the elements of norm 1 for which Q_{z, 0}(g)<=C, which will happen if gz is close to 0. Returns at most maxelts, unless this is set to 0 when it returns all elements found.");
 
 	\\3: ALGEBRA HELPER METHODS
 	install(algmulvec,"GGG",,fdom_library);

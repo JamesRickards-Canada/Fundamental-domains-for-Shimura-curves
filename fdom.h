@@ -6,7 +6,9 @@
 INLINE GEN
 gdat_get_tol(GEN gd){return gel(gd, 1);}
 INLINE GEN
-gdat_get_p(GEN gd){return gel(gd, 2);}
+gdat_get_lowtol(GEN gd){return gel(gd, 2);}
+INLINE GEN
+gdat_get_p(GEN gd){return gel(gd, 3);}
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN
@@ -77,6 +79,7 @@ GEN hdist(GEN z1, GEN z2, long flag, long prec);
 /*1: OPERATIONS ON COMPLEX REALS*/
 /*1: TOLERANCE*/
 GEN deftol(long prec);
+GEN deflowtol(long prec);
 
 
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
@@ -103,8 +106,8 @@ GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
 /*3: FINDING ELEMENTS*/
-GEN afuchqf(GEN X, GEN z, long prec);
-GEN nfqfgaussred(GEN nf, GEN A);
+GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts);
+GEN afuchqf(GEN X, GEN z);
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);

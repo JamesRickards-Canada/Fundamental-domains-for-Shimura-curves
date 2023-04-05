@@ -3,6 +3,7 @@
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 8. forqfvec with flag=2.
+9. afuch_make_qf: I must symmetrize the matrix for use in qfminim, but this really shouldn't be necessary.
 */
 
 /*
@@ -147,6 +148,7 @@ static GEN afuchtoklein(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
 static GEN afuch_make_qf(GEN X, GEN z);
+static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
@@ -311,9 +313,10 @@ defp(long prec)
 static GEN
 gdat_initialize(GEN p, long prec)
 {
-  GEN ret = cgetg(3, t_VEC);
+  GEN ret = cgetg(4, t_VEC);
   gel(ret, 1) = deftol(prec);/*Default tolerance*/
-  gel(ret, 2) = uhp_safe(p, prec);/*Convert p to have real components, and check that it was a valid input.*/
+  gel(ret, 2) = deflowtol(prec);/*Lower tolerance value*/
+  gel(ret, 3) = uhp_safe(p, prec);/*Convert p to have real components, and check that it was a valid input.*/
   return ret;
 }
 
@@ -713,6 +716,13 @@ GEN
 deftol(long prec)
 {
   return real2n(BITS_IN_LONG/2*(2 - prec), prec);
+}
+
+/*Lower tolerance. Useful if we may have more precision loss and are OK with the larger range (e.g. we have a slow routine to check exact equality, and use this to sift down to a smaller set).*/
+GEN
+deflowtol(long prec)
+{
+  return real2n(BITS_IN_LONG/4*(2 - prec), prec);
 }
 
 /*Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL/t_INT/t_FRAC). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact*/
@@ -2280,23 +2290,85 @@ afuch_make_qf(GEN X, GEN z)
   GEN N2 = rM_upper_r_mul(gel(qfmats, 2), w1);/*M1*w1*/
   GEN N3 = rM_upper_r_mul(gel(qfmats, 3), w2);/*M2*w2*/
   GEN N = rM_upper_add(rM_upper_add(N1, N2), rM_upper_add(N3, gel(qfmats, 4)));/*N1+N2+N3+Mconst*/
-  return gerepileupto(av, RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5)));
+  GEN qfup = RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5));/*The correct qf, in upper triangular form.*/
+  /*return gerepileupto(av, qfup);*/
+  long n = lg(qfup), i, j;
+  for (i = 2; i < n; i++) for (j = 1; j < i; j++) gcoeff(qfup, i, j) = gcoeff(qfup, j, i);/*Make it symmetric, which is required for qfminim FOR NOW.*/
+  return gerepilecopy(av, qfup);
 }
+
+/*Finds the norm 1 elements such that Q_{z, 0}(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. In theory we might occationally miss one if a lot of cancellation happens, since we first check the norm by its real approximation (which is significantly faster), though the tolerance should be low enough that this does not happen.*/
+static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
+{
+  pari_sp av = avma;
+  GEN lowtol = gdat_get_lowtol(afuch_get_gdat(X));
+  long prec = lg(lowtol);
+  GEN M = afuch_make_qf(X, z);
+  GEN fp = fincke_pohst(M, C, -1, prec, NULL);/*Calling fincke-pohst, which is basically qfminim0, but returns NULL instead of raising an error.*/
+  if(!fp) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
+  GEN v = gel(fp, 3);
+  int nomax, ind = 1, lv = lg(v), i;
+  if (maxelts) nomax = 0;
+  else {nomax = 1;maxelts = 10;}
+  GEN found = cgetg(maxelts + 1, t_VEC);
+  GEN F = alg_get_center(afuch_get_alg(X));
+  if (nf_get_degree(F) == 1) {/*Over Q, so no real approximation required.*/
+	for (i = 1; i < lv; i++) {
+	  GEN norm = afuchnorm_fast(X, gel(v, i));
+	  if (!gequal(norm, gen_1)) continue;/*The norm was not 1.*/
+	  if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
+	  gel(found, ind) = RgM_RgC_mul(afuch_get_O(X), gel(v, i));/*Change basis back to A.*/
+	  ind++;
+	  if (ind <= maxelts) continue;/*We can find more*/
+	  if (!nomax) break;/*We have it the maximum return vector.*/
+	  maxelts = 2*maxelts;/*Double and continue.*/
+	  found = vec_lengthen(found, maxelts);
+    }  
+  }
+  else{/*Compute the real norm first.*/
+    for (i = 1; i < lv; i++) {
+	  GEN realnorm = afuchnorm_real(X, gel(v, i));
+	  if (!toleq(realnorm, gen_1, lowtol)) continue;/*Norm not 1 up to tolerance.*/
+	  if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
+	  GEN norm = afuchnorm_fast(X, gel(v, i));
+	  norm = basistoalg(F, norm);
+	  if (!gequal(norm, gen_1)) continue;/*The norm was close to 1 but not equal.*/
+	  gel(found, ind) = RgM_RgC_mul(afuch_get_O(X), gel(v, i));/*Change basis back to A.*/
+	  ind++;
+	  if (ind <= maxelts) continue;/*We can find more*/
+	  if (!nomax) break;/*We have it the maximum return vector.*/
+	  maxelts = 2*maxelts;/*Double and continue.*/
+	  found = vec_lengthen(found, maxelts);
+    }
+  }
+  found = vec_shorten(found, ind - 1);
+  return gerepilecopy(av, found);
+}
+
+/*Add DEFAULT version of C.*/
+
+/*Safe version of afuchfindelts_i.*/
+GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
+{
+  pari_sp av = avma;
+  GEN zsafe = gtocr(z, lg(gdat_get_tol(afuch_get_gdat(X))));
+  GEN r = afuchfindelts_i(X, zsafe, C, maxelts);
+  if (r) return gerepileupto(av, r);
+  pari_err_PREC("Precision too low for Fincke Pohst");
+  return gc_const(av, gen_0);/*So that there is no compiler warning.*/
+}
+
 
 /*TO DELETE*/
 
 /*Does afuch_make_qf and symmetrizes the result, while also making sure z has the correct form.*/
 GEN
-afuchqf(GEN X, GEN z, long prec)
+afuchqf(GEN X, GEN z)
 {
   pari_sp av = avma;
-  GEN zsafe = gtocr(z, prec);
+  GEN zsafe = gtocr(z, lg(gdat_get_tol(afuch_get_gdat(X))));
   GEN M = afuch_make_qf(X, zsafe);
-  long lM = lg(M), i, j;
-  for (i = 2; i < lM; i++) {
-	for (j = 1; j < i; j++) gcoeff(M, i, j) = gcoeff(M, j, i);
-  }
-  return gerepilecopy(av, M);
+  return gerepileupto(av, M);
 }
 
 
