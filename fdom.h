@@ -54,11 +54,13 @@ afuch_get_type(GEN X){return gel(X, 5);}
 INLINE GEN
 afuch_get_gdat(GEN X){return gel(X, 6);}
 INLINE GEN
-afuch_get_fdom(GEN X){return gel(X, 7);}
+afuch_get_bestC(GEN X){return gmael(X, 7, 1);}
 INLINE GEN
-afuch_get_pres(GEN X){return gel(X, 8);}
+afuch_get_fdom(GEN X){return gel(X, 8);}
 INLINE GEN
-afuch_get_sig(GEN X){return gel(X, 9);}
+afuch_get_pres(GEN X){return gel(X, 9);}
+INLINE GEN
+afuch_get_sig(GEN X){return gel(X, 10);}
 
 
 /*SECTION 1: GEOMETRIC METHODS*/
@@ -113,7 +115,6 @@ GEN afuchqf(GEN X, GEN z);
 GEN algalgto1ijk(GEN A, GEN x);
 GEN algbasisto1ijk(GEN A, GEN x);
 GEN algmulvec(GEN A, GEN G, GEN L);
-GEN algramifiedplacesf(GEN A);
 
-
+/*3: ALGEBRA ORDER METHODS*/
 

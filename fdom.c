@@ -125,6 +125,7 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
 static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
+static GEN afuchbestC(GEN A, GEN O, long prec);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
@@ -152,11 +153,17 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
+static GEN algdiscnorm(GEN A);
 static GEN alggeta(GEN A);
 static GEN voidalgmul(void *A, GEN x, GEN y);
+static GEN algramifiedplacesf(GEN A);
+static GEN algreduceddisc(GEN A);
 static long algsplitoo(GEN A);
 
-
+/*3: ALGEBRA ORDER METHODS*/
+static GEN algd(GEN A, GEN a);
+static GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
+static GEN algorderlevel(GEN A, GEN O, int factored);
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
@@ -1842,7 +1849,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[A, Odat=[O, Oinv, Oconj, Omultable, Onormdat, Onormreal], kleinmats, qfmats, type, gdat, fdom, pres, sig]
+	[A, Odat=[O, Oinv, Oconj, Omultable, Onormdat, Onormreal], kleinmats, qfmats, type, gdat, fdomdat, fdom, pres, sig]
 A
 	The algebra
 O, Oinv
@@ -1863,6 +1870,8 @@ type
 	Which symmetric space we want to compute.
 gdat
 	Geometric data.
+fdomdat
+	[C]: Constants used specifically for computing the fundamental domain. ADD: R, passes, etc.
 fdom
 	Fundamental domain, if computed.
 pres
@@ -1881,7 +1890,7 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   if(!O) O = matid(lg(alg_get_basis(A)) - 1);
   GEN gdat = gdat_initialize(p, prec);
-  GEN AX = cgetg(10, t_VEC);
+  GEN AX = cgetg(11, t_VEC);
   gel(AX, 1) = A;
   GEN Odat = cgetg(7, t_VEC);/*Order stuff*/
   gel(Odat, 1) = O;
@@ -1912,9 +1921,12 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   gel(AX, 4) = qfm;
   gel(AX, 5) = type;/*TO DO*/
   gel(AX, 6) = gdat;
-  gel(AX, 7) = gen_0;
+  GEN fdomdat = cgetg(2, t_VEC);
+  gel(fdomdat, 1) = afuchbestC(A, O, prec);
+  gel(AX, 7) = fdomdat;
   gel(AX, 8) = gen_0;
   gel(AX, 9) = gen_0;
+  gel(AX, 10) = gen_0;
   return AX;
 }
 
@@ -1927,6 +1939,27 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
   return gerepilecopy(av, afuchinit_i(A, O, type, p, prec));
+}
+
+/*Generate the optimal C value for efficiently finding elements.*/
+static GEN
+afuchbestC(GEN A, GEN O, long prec)
+{
+  pari_sp av = avma;
+  GEN F = alg_get_center(A);
+  long n = nf_get_degree(F);
+  GEN Adisc = algdiscnorm(A);/*Norm to Q of disc(A)*/
+  GEN l = algorderlevel(A, O, 0);/*Level of O as an ideal*/
+  if (!gequal1(l)) Adisc = mulii(Adisc, idealnorm(F, l));/*Incorporating the norm to Q of the level.*/
+  GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
+  GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
+  GEN npart;
+  double npart_d[9] = {0, 2.8304840896, 0.9331764427, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
+  if (n <= 8) npart = dbltor(npart_d[n]);
+  else npart = gen_1;
+  GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
+  if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
+  return best;
 }
 
 /*Returns a vector v of pairs [A, B] such that O[,i] is sent to v[i] acting on the Klein model..*/
@@ -2345,13 +2378,14 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
   return gerepilecopy(av, found);
 }
 
-/*Add DEFAULT version of C.*/
+/*Add DEFAULT radius. Add area and radius to the fdom data.*/
 
-/*Safe version of afuchfindelts_i.*/
+/*Safe version of afuchfindelts_i. Will auto-set C, and can take z to be random from a ball of the default radius.*/
 GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
   GEN zsafe = gtocr(z, lg(gdat_get_tol(afuch_get_gdat(X))));
+  if (!C) C = afuch_get_bestC(X);
   GEN r = afuchfindelts_i(X, zsafe, C, maxelts);
   if (r) return gerepileupto(av, r);
   pari_err_PREC("Precision too low for Fincke Pohst");
@@ -2417,6 +2451,19 @@ algconj(GEN A, GEN x)
   return gerepileupto(av, RgC_sub(trinA, x));
 }
 
+/*Returns the norm to Q of the discriminant of A*/
+static GEN
+algdiscnorm(GEN A)
+{
+  pari_sp av=avma;
+  GEN F = alg_get_center(A);/*Field*/
+  GEN rams = algramifiedplacesf(A);
+  GEN algdisc = gen_1;
+  long lr = lg(rams), i;
+  for (i = 1; i < lr; i++) algdisc=mulii(algdisc, idealnorm(F, gel(rams, i)));/*Norm to Q of the ramification*/
+  return gerepileupto(av, algdisc);
+}
+
 /*Given a quaternion algebra, return a,*/
 static GEN
 alggeta(GEN A)
@@ -2458,7 +2505,7 @@ static GEN
 voidalgmul(void *A, GEN x, GEN y){return algmul(*((GEN*)A), x, y);}
 
 /*Returns the vector of finite ramified places of the algebra A.*/
-GEN
+static GEN
 algramifiedplacesf(GEN A)
 {
   pari_sp av = avma;
@@ -2470,6 +2517,18 @@ algramifiedplacesf(GEN A)
     vectrunc_append(rp, gmael(hass, 1, i));/*Ramified*/
   }
   return gerepilecopy(av, rp);
+}
+
+/*Returns the reduced discriminant of A as an ideal in the centre.*/
+static GEN
+algreduceddisc(GEN A)
+{
+  pari_sp av = avma;
+  GEN F = alg_get_center(A);
+  GEN rplaces = algramifiedplacesf(A);
+  long l = lg(rplaces);
+  GEN e = const_vecsmall(l - 1, 1);/*Vecsmall of 1's*/
+  return gerepileupto(av, idealfactorback(F, rplaces, e, 0));
 }
 
 /*If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.*/
@@ -2485,6 +2544,72 @@ algsplitoo(GEN A)
     }
   }
   return split;/*No garbage!!*/
+}
+
+
+/*3: ALGEBRA ORDER METHODS*/
+
+/*Given a1, ..., a4 in A, this returns d(a1,...,a4), i.e. det(trd(a_i*a_j))*/
+static GEN
+algd(GEN A, GEN a)
+{
+  pari_sp av = avma;
+  long i, j;
+  GEN M = cgetg(5, t_MAT);
+  for (i = 1; i < 5; i++) gel(M, i) = cgetg(5, t_COL);
+  for (i = 1; i < 5; i++) {/*Setting the coefficients of M*/
+    gcoeff(M, i, i)=algtrace(A, algsqr(A, gel(a, i)), 0);
+    for (j = i + 1; j < 5; j++) gcoeff(M, i, j) = gcoeff(M, j, i) = algtrace(A, algmul(A, gel(a, i), gel(a, j)), 0);
+  }
+  return gerepileupto(av, nfM_det(alg_get_center(A), M));
+}
+
+/*Given an order O in A, returns the discriminant of the order, which is disc(algebra)*level*/
+static GEN
+algorderdisc(GEN A, GEN O, int reduced, int factored)
+{
+  pari_sp av = avma;
+  GEN F = alg_get_center(A);/*The centre*/
+  GEN zdisc = sqri(mulii(QM_det(O), algdiscnorm(A)));/*The norm to Q of the (non-reduced) discriminant*/
+  GEN I = gen_0;/*Stores the ideal generated by d(a1, a2, a3, a4) as we run across the basis.*/
+  long lbas=lg(O), i1, i2, i3, i4;
+  for (i1 = 1; i1 < lbas; i1++) {
+    for (i2 = i1 + 1; i2 < lbas; i2++) {
+      for (i3 = i2 + 1; i3 < lbas; i3++) {
+        for (i4 = i3 + 1; i4 < lbas; i4++) {
+          GEN d = algd(A, mkvec4(gel(O, i1), gel(O, i2), gel(O, i3), gel(O, i4)));
+          I = idealadd(F, I, d);
+          if (equalii(idealnorm(F, I), zdisc)) {/*We are done!*/
+            if (!reduced && !factored) return gerepilecopy(av, I);
+            GEN fact = idealfactor(F, I);
+            if (!reduced && factored) return gerepileupto(av, fact);/*From now on, we want it reduced*/
+			long lp = lg(gel(fact, 1)), i;
+            for (i = 1; i < lp; i++) gcoeff(fact, i, 2) = shifti(gcoeff(fact, i, 2), -1);/*Divide by 2*/
+            if (factored) return gerepilecopy(av, fact);
+            return gerepileupto(av, idealfactorback(F, fact, NULL, 0));
+          }
+        }
+      }
+    }
+  }
+  pari_warn(warner, "We did not succeed in finding the discriminant.");
+  return gc_const(av, gen_0);
+}
+
+/*Returns the level of the order O.*/
+static GEN
+algorderlevel(GEN A, GEN O, int factored)
+{
+  pari_sp av = avma;
+  GEN F = alg_get_center(A);
+  GEN Odisc = algorderdisc(A, O, 0, 0);
+  GEN Adisc = idealpows(F, algreduceddisc(A), 2);
+  GEN lsqr = idealdivexact(F, Odisc, Adisc);/*Divides exactly*/
+  GEN fact = idealfactor(F, lsqr);
+  long lp = lg(gel(fact, 1)), i;
+  for (i = 1; i < lp; i++) gcoeff(fact, i, 2) = shifti(gcoeff(fact, i, 2), -1);/*Divide by 2*/
+  if(factored) return gerepilecopy(av, fact);
+  return gerepileupto(av, idealfactorback(F, fact, NULL, 0));
 }
 
 
