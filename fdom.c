@@ -127,6 +127,9 @@ static GEN normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)
 static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
 static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat);
 
+/*2: PRESENTATION*/
+static GEN minimalcycles(GEN pair);
+
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
@@ -1803,6 +1806,44 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
   if (flag == 1) return gerepilecopy(av, z);
   return gerepilecopy(av, mkvec2(g, z));
 }
+
+
+/*2: PRESENTATION*/
+
+/*Returns the set of minimal cycles of the side pairing pair. A cycle is a vecsmall [i1, i2,..., in] so that the cycle is v_i1, v_i2, ..., v_in. A cycle [-i] means that the "vertex" on side i is is a one element cycle (happens when a side is fixed).*/
+static GEN
+minimalcycles(GEN pair)
+{
+  pari_sp av = avma;
+  long np1 = lg(pair), n = np1 - 1, vleft = np1, i;/*Number of sides/vertices (not counting vertices that occur on the middle of a side).*/
+  GEN vind = const_vecsmall(n, 1);/*Tracking if the vertices have run out or not*/
+  GEN cycles = vectrunc_init(2*np1), cyc;/*Max number of cycles, since each side could have a middle vertex. In reality the number is probably much smaller, but this is safe.*/
+  long startind = 1, ind;
+  for (i = 1; i < np1; i++){/*We sort the fixed sides first, as later on we would miss the ones that get removed before checking.*/
+    if (pair[i] == i) vectrunc_append(cycles, mkvecsmall(-i));/*Middle of the side is fixed.*/
+  }
+  do {
+    cyc = vecsmalltrunc_init(vleft);
+    vecsmalltrunc_append(cyc, startind);/*Starting the cycle.*/
+    vind[startind] = 0;
+    vleft--;
+    ind = smodss(pair[startind] - 2, n) + 1;/*Hit it with the side pairing and subtract 1 to reach the paired vertex.*/
+    while (ind != startind) {/*Move along the cycle.*/
+      vind[ind] = 0;
+      vleft--;/*One less vertex*/
+      vecsmalltrunc_append(cyc, ind);/*Append it*/
+      ind = smodss(pair[ind] - 2, n) + 1;/*Update*/
+    }
+    vectrunc_append(cycles, cyc);/*New cycle.*/
+    while (startind < np1) {/*Finding the next vertex we haven't eliminated.*/
+      startind++;
+      if (vind[startind] == 1) break;
+    }
+  }
+  while(startind < np1);
+  return gerepilecopy(av, cycles);
+}
+
 
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
