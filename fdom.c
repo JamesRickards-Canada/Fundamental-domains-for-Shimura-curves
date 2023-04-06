@@ -1,11 +1,10 @@
 /*TO DO
-1. What to do with hdist?
-5. Check distances/area section: I don't really use this yet. It's just kind of there.
-6. How to input groups between O^1 and the full positive normalizer group?
-8. forqfvec with flag=2.
-9. afuch_make_qf: I must symmetrize the matrix for use in qfminim, but this really shouldn't be necessary.
-10. Update constants used for finding the optimal C.
-11. Fincke pohst with pruning?
+1. How to input groups between O^1 and the full positive normalizer group?
+2. forqfvec with flag=2.
+3. afuch_make_qf: I must symmetrize the matrix for use in qfminim, but this really shouldn't be necessary.
+4. Update constants used for finding the optimal C.
+5. Fincke pohst with pruning?
+6. hdisc_randomarc: make sure ang1>ang2? (or other way around, w/e)
 */
 
 /*
@@ -61,7 +60,9 @@ static GEN plane_to_klein(GEN z, GEN p);
 static GEN m2r_to_klein(GEN M, GEN p);
 
 /*1: DISTANCES/AREA*/
-static GEN hdist_ud(GEN z1, GEN z2, long prec);
+static GEN hdiscradius(GEN area, long prec);
+static GEN hdiscrandom(GEN R, long prec);
+static GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 
 /*1: OPERATIONS ON COMPLEX REALS*/
 static GEN gtocr(GEN z, long prec);
@@ -469,79 +470,44 @@ m2r_to_klein(GEN M, GEN p)
 
 /*1: DISTANCES/AREAS*/
 
-/*Given the area of a hyperbolic disc, this returns the radius. The formula is area=4*Pi*sinh(R/2)^2, or R=2arcsinh(sqrt(area/4Pi))*/
-GEN
+/*Given the area (t_REAL) of a hyperbolic disc, this returns the radius. The formula is area=4*Pi*sinh(R/2)^2, or R=2arcsinh(sqrt(area/4Pi))*/
+static GEN
 hdiscradius(GEN area, long prec)
 {
   pari_sp av = avma;
-  return gerepileupto(av, gtofp(gmulgs(gasinh(gsqrt(gdiv(area, Pi2n(2, prec)), prec), prec), 2), prec));
+  GEN aover4pi = divrr(area, Pi2n(2, prec));/*area/4Pi*/
+  GEN rt = sqrtr(aover4pi);
+  GEN half = gasinh(rt, prec);
+  return gerepileupto(av, shiftr(half, 1));
 }
 
-/*Returns a random point z in the unit disc, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).*/
-GEN
+/*Returns a random point z in the Klein model, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).*/
+static GEN
 hdiscrandom(GEN R, long prec)
 {
   pari_sp av = avma;
-  GEN arg = gmul(randomr(prec), Pi2n(1, prec));/*Random angle*/
-  GEN zbound = expIr(arg);/*The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]*/
-  /*a(r) = Area of hyperbolic disc radius r = 4*Pi*sinh^2(r/2).*/
-  GEN r = shiftr(gasinh(gmul(gsinh(gdivgs(R, 2), prec), gsqrt(randomr(prec), prec)), prec), 1);/*The hyperbolic radius of the new point.*/
-  GEN e2r = gexp(r, prec);
-  return gerepileupto(av, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
+  GEN zbound = expIPiR(shiftr(randomr(prec), 1), prec);/*Random boundary point. Now we need to scale by a random hyperbolic distance in [0, R]*/
+  GEN x = mulrr(gsinh(gshift(R, -1), prec), sqrtr(randomr(prec)));
+  /*We need to return zbound*tanh(2asinh(x))=zbound*2x*sqrt(x^2+1)/(2*x^2+1).*/
+  GEN xsqr = sqrr(x);
+  GEN num = shiftr(mulrr(x, sqrtr(addrs(xsqr, 1))), 1);/*2*x*sqrt(x^2+1)*/
+  GEN denom = addrs(shiftr(xsqr, 1), 1);/*2x^2+1*/
+  return gerepileupto(av, gmul(zbound, divrr(num, denom)));
 }
 
 /*Returns a random point z in the unit disc, uniform inside the ball of radius R, with argument uniform in [ang1, ang2]. See page 19 of Page (before section 2.5).*/
-GEN
+static GEN
 hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec)
 {
   pari_sp av = avma;
   GEN arg = gadd(ang1, gmul(randomr(prec), gsub(ang2, ang1)));/*Random angle in [ang1, ang2]*/
   GEN zbound = expIr(arg);/*The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]*/
-  /*a(r) = Area of hyperbolic disc radius r = 4*Pi*sinh^2(r/2).
-  dist = gmul(gsqr(gsinh(gdivgs(R, 2), prec)), randomr(prec)); A random element in [0, a(R)/4Pi].
-  r = gmulsg(2, gasinh(gsqrt(dist, prec), prec)); The radius
-  */
-  GEN r = gmulsg(2, gasinh(gmul(gsinh(gdivgs(R, 2), prec), gsqrt(randomr(prec), prec)), prec));
-  GEN e2r = gexp(r, prec);
-  return gerepileupto(av, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
-}
-
-/*REWRITE OR DELETE?*/
-
-/*z1 and z2 are complex numbers, this computes the hyperbolic distance between them. If flag=0, assumes upper half plane model; if flag=1, assumes unit disc model; if flag=2, assumes the Klein model.*/
-GEN
-hdist(GEN z1, GEN z2, long flag, long prec)
-{
-  pari_sp av = avma;
-  if (flag == 1) return hdist_ud(z1, z2, prec);
-  if (flag == 2) {
-	GEN tol = deftol(prec);
-	z1 = klein_to_disc(gtocr(z1, prec), tol);
-	z2 = klein_to_disc(gtocr(z2, prec), tol);
-	return gerepileupto(av, hdist_ud(z1, z2, prec));
-  }
-  GEN x1 = real_i(z1), y1 = imag_i(z1);
-  GEN x2 = real_i(z2), y2 = imag_i(z2);
-  GEN x = gaddsg(1, gdiv(gadd(gsqr(gsub(x2, x1)), gsqr(gsub(y2, y1))), gmul(gmulsg(2, y1), y2)));
-  GEN expd = gadd(x, gsqrt(gsubgs(gsqr(x), 1), prec));
-  return gerepileupto(av, glog(expd, prec));  
-}
-
-/*The hyperbolic distance between z1 and z2 in the unit disc model*/
-static GEN
-hdist_ud(GEN z1, GEN z2, long prec)
-{
-  pari_sp av = avma;
-  GEN a = gabs(gsubsg(1, gmul(z1, conj_i(z2))), prec);/*|1-z1*conj(z2)|*/
-  GEN b = gabs(gsub(z1, z2), prec);/*|z1-z2|*/
-  GEN num = gadd(a, b);
-  GEN denom = gsub(a, b);
-  if (gequal0(denom)) {
-    pari_warn(warner, "You may not have enough precision to compute the hyperbolic distance");
-    set_avma(av);
-    return mkoo();
-  }
-  return gerepileupto(av, glog(gdiv(num, denom), prec));/*log((a+b)/(a-b))*/
+  GEN x = mulrr(gsinh(gshift(R, -1), prec), sqrtr(randomr(prec)));
+  /*We need to return tanh(2asinh(x))=2x*sqrt(x^2+1)/(2*x^2+1).*/
+  GEN xsqr = sqrr(x);
+  GEN num = shiftr(mulrr(x, sqrtr(addrs(xsqr, 1))), 1);/*2*x*sqrt(x^2+1)*/
+  GEN denom = addrs(shiftr(xsqr, 1), 1);/*2x^2+1*/
+  return gerepileupto(av, gmul(zbound, divrr(num, denom)));
 }
 
 
@@ -2155,7 +2121,7 @@ afuchbestC(GEN A, GEN O, long prec)
   GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
   GEN npart;
   double npart_d[9] = {0, 2.8304840896, 0.9331764427, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
-  if (n <= 8) npart = dbltor(npart_d[n]);
+  if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
   else npart = gen_1;
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
   if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
@@ -2169,7 +2135,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
   pari_sp av = avma;
   GEN area = afucharea(A, O, 3, prec);
   GEN C = afuchbestC(A, O, prec);
-  GEN gamma = dbltor(2.1);
+  GEN gamma = gtofp(dbltor(2.1), prec);
   GEN R = hdiscradius(gpow(area, gamma, prec), prec);/*Setting R*/
   GEN epsilon = mkfracss(1, 6), passes;
   if (nf_get_degree(alg_get_center(A)) == 1) passes = gen_2;

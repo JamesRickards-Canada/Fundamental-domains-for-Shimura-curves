@@ -8,13 +8,6 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	install(klein_act,"GGp",,fdom_library);
 	addhelp(klein_act,"klein_act(M, z): returns the action of M on z, where we are working in the Klein model. M=[A, B] with |A|^2-|B|^2=1 acts on the unit disc model via the normal Mobius action of [A, B;conj(B), conj(A)].");
 
-	\\1: DISTANCES/AREAS
-	install(hdiscrandom,"Gp",,fdom_library);
-	addhelp(hdiscrandom,"Input R, a positive real number.\n Returns a random point in the ball of radius R centred at 0 in the unit disc model of the hyperbolic plane.");
-	install(hdist,"GGD2,L,p",,fdom_library);
-	addhelp(hdist,"hdist(z1, z2, {flag=2}): returns the hyperbolic distance between z1 and z2. If flag=0, uses the upper half plane model. If flag=1, uses the unit disc model. If flag=2, uses the Klein model.");
-
-
 \\SECTION 3: QUATERNION ALGEBRA METHODS
 	
 	\\3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS
@@ -36,7 +29,7 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
 
 	\\3: FINDING ELEMENTS
-	install(afuchfindelts,"GGDGD1,L,",,fdom_library);
+	install(afuchfindelts,"GDGDGD1,L,",,fdom_library);
 	addhelp(afuchfindelts,"afuchfindelts(X, {z}, {C}, {maxelts=1}: Finds the elements of norm 1 for which Q_{z, 0}(g)<=C, which will happen if gz is close to 0. Returns at most maxelts, unless this is set to 0 when it returns all elements found. If C is not passed, we use the default value which attemps to minimize the expected time to find an element (when we run it with random points, stopping once the first non-trivial element is found). If z is not passed we pick a uniformly random point from a ball of radius large enough so that we expect it to be random with respect to the fundamental domain.");
 
 	\\3: ALGEBRA HELPER METHODS

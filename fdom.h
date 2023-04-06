@@ -81,11 +81,6 @@ GEN pgl_act(GEN M, GEN z);
 
 /*1: TRANSFER BETWEEN MODELS*/
 /*1: DISTANCES/AREAS*/
-GEN hdiscradius(GEN area, long prec);
-GEN hdiscrandom(GEN R, long prec);
-GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
-GEN hdist(GEN z1, GEN z2, long flag, long prec);
-
 /*1: OPERATIONS ON COMPLEX REALS*/
 /*1: TOLERANCE*/
 GEN deftol(long prec);
