@@ -15,6 +15,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {p}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default order O is the stored maximal order in A, the default type is 0, and the default value of p is Pi/8+0.5*I.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
+	install(afuchfdom,"G",,fdom_library);
+	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X.");
 	install(afuchicirc,"GG",,fdom_library);
 	addhelp(afuchicirc,"afuchicirc(X, g): returns the isometric circle of g, an element of non-zero norm.");
 	install(afuchklein,"GG",,fdom_library);

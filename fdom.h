@@ -101,6 +101,7 @@ GEN deflowtol(long prec);
 GEN afuchinit(GEN A, GEN O, GEN type, GEN p, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+GEN afuchfdom(GEN X);
 GEN afuchicirc(GEN X, GEN g);
 GEN afuchklein(GEN X, GEN g);
 GEN afuchnormbasis(GEN X, GEN G);

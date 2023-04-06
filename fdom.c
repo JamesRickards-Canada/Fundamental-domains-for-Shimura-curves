@@ -32,6 +32,9 @@ POSSIBLE FUTURE ADDITIONS:
 #include "fdom.h"
 #endif
 
+/*Possibly make it's own debugging level?*/
+#define DEBUGLEVEL DEBUGLEVEL_alg
+
 /*STATIC DECLARATIONS*/
 
 /*SECTION 1: GEOMETRIC METHODS*/
@@ -131,7 +134,7 @@ static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
-static GEN Omultable(GEN A, GEN O);
+static GEN Omultable(GEN A, GEN O, GEN Oinv);
 static GEN Onorm_makechol(GEN F, GEN Onorm);
 static GEN Onorm_makemat(GEN A, GEN O, GEN AOconj);
 static GEN Onorm_toreal(GEN A, GEN Onorm);
@@ -142,6 +145,7 @@ static GEN afuchbestC(GEN A, GEN O, long prec);
 static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+static GEN afuchfdom_i(GEN X);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchid(GEN X);
@@ -1722,7 +1726,6 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
 }
 
 
-
 /*2: NORMALIZED BOUNDARY REDUCTION*/
 
 /*Reduces g with respect to z, i.e. finds g' such that g'(gz) is inside U (or on the boundary), and returns [g'g, decomp], where decomp is the Vecsmall of indices so that g'=algmulvec(A, U[1], decomp).*/
@@ -1870,7 +1873,7 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   GEN AOconj = cgetg(lgO, t_MAT);
   for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
   gel(Odat, 3) = QM_mul(gel(Odat, 2), AOconj);/*Write it in terms of O.*/
-  gel(Odat, 4) = Omultable(A, O);
+  gel(Odat, 4) = Omultable(A, O, gel(Odat, 2));
   GEN Onorm = Onorm_makemat(A, O, AOconj);
   GEN F = alg_get_center(A);
   long nF = nf_get_degree(F);
@@ -1998,14 +2001,14 @@ afuch_make_qfmats(GEN kleinmats)
 
 /*Initializes a table to compute multiplication of elements written in terms of O's basis more efficiently.*/
 static GEN
-Omultable(GEN A, GEN O)
+Omultable(GEN A, GEN O, GEN Oinv)
 {
   long n = lg(O), i, j;
   GEN M = cgetg(n, t_VEC);
   for (i = 1; i < n; i++) {
 	gel(M, i) = cgetg(n, t_MAT);
 	for (j = 1; j < n; j++) {
-	  gmael(M, i, j) = algmul(A, gel(O, i), gel(O, j));
+	  gmael(M, i, j) = QM_QC_mul(Oinv, algmul(A, gel(O, i), gel(O, j)));/*Move it back to O*/
 	}
   }
   return M;
@@ -2145,6 +2148,95 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+
+/*Computes the fundamental domain. DEBUGLEVEL allows extra input to be displayed. Not stack clean, gerepileupto suitable.*/
+static GEN
+afuchfdom_i(GEN X)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  long prec = lg(gdat_get_tol(gdat));
+  GEN twopi = Pi2n(1, prec);
+  GEN area = afuch_get_area(X);
+  GEN areabound = addrr(area, shiftr(area, -1));/*area*1.5*/
+  GEN C = afuch_get_bestC(X);/*Optimally chosen value of C*/
+  GEN R = afuch_get_R(X);/*Starting radius for finding points. Will increase if not sufficient.*/
+  GEN epsilon = afuch_get_epsilon(X);
+  long n = nf_get_degree(alg_get_center(afuch_get_alg(X)));
+  GEN passes = afuch_get_passes(X);/*Based on heuristics, we choose the number of points at each stage to expect to finish after this number of passes.*/
+  long N = 1 + itos(gceil(gdiv(gsqr(area), gmul(gmul(shiftr(twopi, 2), gsubgs(C, n)), passes))));/*Area^2/(8*Pi*(C-n)*#Passes)*/
+  if (N < 3) N = 3;/*Make sure N>=2; I think it basically always should be, but this guarantees it.*/
+  if (DEBUGLEVEL > 0) pari_printf("Initial constants:\n   C=%P.8f\n   N=%d\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N - 1, R, area);
+  pari_sp av_mid = avma;
+  GEN firstelt = afuchfindelts_i(X, gtocr(gen_0, prec), C, 1);/*This may find an element with large radius, a good start.*/
+  if (!firstelt) return gc_NULL(av);/*Precision too low.*/
+  GEN U = NULL;
+  if (lg(firstelt) > 1) U = normbound(X, firstelt, &afuchtoklein, gdat);/*Start off the boundary.*/
+  long nU = U ? lg(normbound_get_elts(U)) - 1 : 0;/*Number of sides.*/
+  long pass = 0;
+  for (;;) {
+    pass++;
+    if (DEBUGLEVEL > 0) pari_printf("Pass %d with %d random points in the ball of radius %P.8f\n", pass, N - 1, R);
+    GEN elts = vectrunc_init(N);
+	GEN oosides = nU ? normbound_get_infinite(U) : NULL;
+	long noo = nU ? lg(oosides) - 1 : 0, i;
+	if (noo) {/*Looking near infinite sides*/
+	  if (DEBUGLEVEL > 0) pari_printf("%d infinite sides\n", noo);
+	  long iside = 1;
+	  GEN Uvargs = normbound_get_vargs(U);
+	  for (i = 1; i < N; i++){
+		if (iside > noo) iside = 1;
+		long sind = oosides[iside];
+		GEN ang2 = gel(Uvargs, sind), ang1;
+		if (sind == 1) ang1 = gel(Uvargs, nU);
+		else ang1 = gel(Uvargs, sind - 1);
+		if (cmprr(ang1, ang2) > 0) ang2 = addrr(ang2, twopi);/*We loop past zero.*/
+		GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
+		GEN found = afuchfindelts_i(X, z, C, 1);
+		if (!found) return gc_NULL(av);/*Precision too low.*/
+		if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
+	  }
+	}
+	else {
+	  for (i = 1; i < N; i++){
+	    GEN z = hdiscrandom(R, prec);
+		GEN found = afuchfindelts_i(X, z, C, 1);
+		if (!found) return gc_NULL(av);/*Precision too low.*/
+		if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
+	  }
+	}
+    if (DEBUGLEVEL > 0) pari_printf("%d elements found\n", lg(elts) - 1);
+	U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchinv, &afuchistriv, gdat);
+	if (!U) {
+	  nU = 0;
+	  if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has 0 sides\n\n");
+	  R = gadd(R, epsilon);/*Update R, maybe it was too small.*/
+	  gerepileall(av_mid, 1, &R);
+	  U = NULL;
+	  continue;
+	}
+	long newnU = lg(normbound_get_elts(U)) - 1;
+    if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has %d sides\n\n", nU);
+	GEN Uarea = normbound_get_area(U);
+    if (gcmp(Uarea, areabound) < 0) return U;
+    if (pass > 1 && nU == newnU) R = gadd(R, epsilon);/*Updating R if we didn't change the number of sides.*/
+	nU = newnU;
+    if (gc_needed(av, 2)) {
+	  if (DEBUGLEVEL > 0) pari_printf("Garbage collection.\n");
+	  gerepileall(av_mid, 2, &U, &R);
+	}
+  }
+}
+
+/*Returns the fundamental domain, raising an error if there is not enough precision.*/
+GEN
+afuchfdom(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuchfdom_i(X);
+  if (!U) pari_err_PREC("afuchfdom, recompile the number field and algebra with more precision.");
+  return gerepileupto(av, U);
+}
 
 /*TO DELETE*/
 
@@ -2351,7 +2443,7 @@ afuch_make_qf(GEN X, GEN z)
   return gerepilecopy(av, qfup);
 }
 
-/*Finds the norm 1 elements such that Q_{z, 0}(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. In theory we might occationally miss one if a lot of cancellation happens, since we first check the norm by its real approximation (which is significantly faster), though the tolerance should be low enough that this does not happen.*/
+/*Finds the norm 1 elements such that Q_{z, 0}(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. In theory we might occationally miss one if a lot of cancellation happens, since we first check the norm by its real approximation (which is significantly faster), though the tolerance should be low enough that this does not happen. NOTE: we find element in the basis of O, NOT back to A.*/
 static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
@@ -2371,7 +2463,7 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
 	  GEN norm = afuchnorm_fast(X, gel(v, i));
 	  if (!gequal(norm, gen_1)) continue;/*The norm was not 1.*/
 	  if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
-	  gel(found, ind) = RgM_RgC_mul(afuch_get_O(X), gel(v, i));/*Change basis back to A.*/
+	  gel(found, ind) = gel(v, i);
 	  ind++;
 	  if (ind <= maxelts) continue;/*We can find more*/
 	  if (!nomax) break;/*We have it the maximum return vector.*/
@@ -2387,7 +2479,7 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
 	  GEN norm = afuchnorm_fast(X, gel(v, i));
 	  norm = basistoalg(F, norm);
 	  if (!gequal(norm, gen_1)) continue;/*The norm was close to 1 but not equal.*/
-	  gel(found, ind) = RgM_RgC_mul(afuch_get_O(X), gel(v, i));/*Change basis back to A.*/
+	  gel(found, ind) = gel(v, i);
 	  ind++;
 	  if (ind <= maxelts) continue;/*We can find more*/
 	  if (!nomax) break;/*We have it the maximum return vector.*/
@@ -2399,7 +2491,7 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
   return gerepilecopy(av, found);
 }
 
-/*Safe version of afuchfindelts_i. Will auto-set C, and can take z to be random from a ball of the default radius.*/
+/*Safe version of afuchfindelts_i, where we also translate elements back to A. Will auto-set C, and can take z to be random from a ball of the default radius.*/
 GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
@@ -2409,9 +2501,12 @@ GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
   else zsafe = gtocr(z, prec);
   if (!C) C = afuch_get_bestC(X);
   GEN r = afuchfindelts_i(X, zsafe, C, maxelts);
-  if (r) return gerepileupto(av, r);
-  pari_err_PREC("Precision too low for Fincke Pohst");
-  return gc_const(av, gen_0);/*So that there is no compiler warning.*/
+  if (!r) pari_err_PREC("Precision too low for Fincke Pohst");
+  GEN Or = afuch_get_O(X);
+  long lr, i;
+  GEN rshift = cgetg_copy(r, &lr);
+  for (i = 1; i < lr; i++) gel(rshift, i) = RgM_RgC_mul(Or, gel(r, i));
+  return gerepileupto(av, rshift);
 }
 
 
