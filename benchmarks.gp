@@ -187,13 +187,14 @@ A=alginit(F, [4*y^4 - 12*y^3 + 12*y - 47, -1]);
 X=afuchinit(A);
 avgtime(fil, X, tno, testspercase);tno++;\\area 198.96753472735357176930074760770184933
 
-\p115
+\p134
 F=nfinit(y^7 - y^6 - 6*y^5 + 4*y^4 + 10*y^3 - 4*y^2 - 4*y + 1);
 A=alginit(F, [-627*y^6 - 4180*y^5 + 9614*y^4 + 18601*y^3 - 21109*y^2 - 18183*y + 627, 1045*y^6 - 2926*y^5 + 2299*y^4 + 2926*y^3 - 11077*y^2 - 836*y - 23198]);\\Unramified
 X=afuchinit(A);
 avgtime(fil, X, tno, testspercase);tno++;\\area 15.70796326794802006809187444602
 \p38
 
+\p57
 F=nfinit(y^7 - 8*y^5 + 19*y^3 - y^2 - 13*y + 1);
 A=alginit(F, [-4*y^5 + y^4 + 20*y^3 - 2*y^2 - 16*y - 3, -10*y^6 - 2*y^5 + 58*y^4 + 21*y^3 - 74*y^2 - 20*y - 15]);\\Unramified
 X=afuchinit(A);
