@@ -1,9 +1,11 @@
 /*TO DO
-3. CHANGE THE LONG DECLARATIONS OUT OF FOR LOOPS
+1. What to do with hdist?
 5. Check distances/area section: I don't really use this yet. It's just kind of there.
 6. How to input groups between O^1 and the full positive normalizer group?
 8. forqfvec with flag=2.
 9. afuch_make_qf: I must symmetrize the matrix for use in qfminim, but this really shouldn't be necessary.
+10. Update constants used for finding the optimal C.
+11. Fincke pohst with pruning?
 */
 
 /*
@@ -125,7 +127,6 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
 static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
-static GEN afuchbestC(GEN A, GEN O, long prec);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
@@ -133,6 +134,11 @@ static GEN Omultable(GEN A, GEN O);
 static GEN Onorm_makechol(GEN F, GEN Onorm);
 static GEN Onorm_makemat(GEN A, GEN O, GEN AOconj);
 static GEN Onorm_toreal(GEN A, GEN Onorm);
+
+/*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
+static GEN afucharea(GEN A, GEN O, long computeprec, long prec);
+static GEN afuchbestC(GEN A, GEN O, long prec);
+static GEN afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
@@ -479,7 +485,7 @@ hdiscrandom(GEN R, long prec)
   GEN arg = gmul(randomr(prec), Pi2n(1, prec));/*Random angle*/
   GEN zbound = expIr(arg);/*The boundary point. Now we need to scale by a random hyperbolic distance in [0, R]*/
   /*a(r) = Area of hyperbolic disc radius r = 4*Pi*sinh^2(r/2).*/
-  GEN r = gmulsg(2, gasinh(gmul(gsinh(gdivgs(R, 2), prec), gsqrt(randomr(prec), prec)), prec));
+  GEN r = shiftr(gasinh(gmul(gsinh(gdivgs(R, 2), prec), gsqrt(randomr(prec), prec)), prec), 1);/*The hyperbolic radius of the new point.*/
   GEN e2r = gexp(r, prec);
   return gerepileupto(av, gmul(zbound, gdiv(gsubgs(e2r, 1), gaddgs(e2r, 1))));
 }
@@ -1845,7 +1851,6 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 
 /*3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS*/
 
-
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
@@ -1871,7 +1876,7 @@ type
 gdat
 	Geometric data.
 fdomdat
-	[C]: Constants used specifically for computing the fundamental domain. ADD: R, passes, etc.
+	[area, C, R, epsilon, passes]: Constants used specifically for computing the fundamental domain. Area is the area of the domain, C is the optimal constant for finding elements of norm 1, R is the radius used to pick random points, epsilon is the growth rate of R (in case we stagnate), and passes is the "expected" number of times we generate new points.
 fdom
 	Fundamental domain, if computed.
 pres
@@ -1921,9 +1926,7 @@ afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
   gel(AX, 4) = qfm;
   gel(AX, 5) = type;/*TO DO*/
   gel(AX, 6) = gdat;
-  GEN fdomdat = cgetg(2, t_VEC);
-  gel(fdomdat, 1) = afuchbestC(A, O, prec);
-  gel(AX, 7) = fdomdat;
+  gel(AX, 7) = afuchfdomdat_init(A, O, prec);
   gel(AX, 8) = gen_0;
   gel(AX, 9) = gen_0;
   gel(AX, 10) = gen_0;
@@ -1939,27 +1942,6 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
   return gerepilecopy(av, afuchinit_i(A, O, type, p, prec));
-}
-
-/*Generate the optimal C value for efficiently finding elements.*/
-static GEN
-afuchbestC(GEN A, GEN O, long prec)
-{
-  pari_sp av = avma;
-  GEN F = alg_get_center(A);
-  long n = nf_get_degree(F);
-  GEN Adisc = algdiscnorm(A);/*Norm to Q of disc(A)*/
-  GEN l = algorderlevel(A, O, 0);/*Level of O as an ideal*/
-  if (!gequal1(l)) Adisc = mulii(Adisc, idealnorm(F, l));/*Incorporating the norm to Q of the level.*/
-  GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
-  GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
-  GEN npart;
-  double npart_d[9] = {0, 2.8304840896, 0.9331764427, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
-  if (n <= 8) npart = dbltor(npart_d[n]);
-  else npart = gen_1;
-  GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
-  if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
-  return best;
 }
 
 /*Returns a vector v of pairs [A, B] such that O[,i] is sent to v[i] acting on the Klein model..*/
@@ -2120,6 +2102,79 @@ Onorm_toreal(GEN A, GEN Onorm)
 	for (j = i; j <=n; j++) gcoeff(Onormreal, i, j) = gsubst(lift(basistoalg(F, gcoeff(Onorm, i, j))), Fvar, rt);
   }
   return gerepilecopy(av, Onormreal);
+}
+
+
+/*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
+
+/*Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.*/
+static GEN
+afucharea(GEN A, GEN O, long computeprec, long prec)
+{
+  pari_sp av = avma;
+  long bits = bit_accuracy(computeprec);
+  GEN F = alg_get_center(A), pol = nf_get_pol(F);
+  GEN zetaval = lfun(pol, gen_2, bits);/*zeta_F(2)*/
+  GEN rams = algramifiedplacesf(A);
+  long np = lg(rams), i;
+  GEN norm=gen_1;
+  for (i = 1; i < np; i++) norm = mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));/*Product of N(p)-1 over finite p ramifying in A*/
+  GEN elevpart = gen_1, ell = algorderlevel(A, O, 1);
+  np = lg(gel(ell, 1));
+  for (i = 1; i < np; i++) {/*We have an Eichler part for each i that triggers.*/
+    GEN Np = idealnorm(F, gcoeff(ell, i, 1));/*Norm of the prime*/
+    GEN Npexp = gcoeff(ell, i, 2);/*Exponent*/
+    if (equali1(Npexp)) {
+	  elevpart = mulii(elevpart, addis(Np, 1));/*Times N(p)+1*/
+	  continue;
+	}
+    GEN Npem1 = powii(Np, gsubgs(Npexp, 1));/*Np^{e-1}*/
+    GEN Npe = mulii(Npem1, Np);/*Np^e*/
+    elevpart = mulii(elevpart, addii(Npe, Npem1));
+  }/*Product of N(p)^e*(1+1/N(p)) over p^e||level.*/
+  GEN ar = gmul(gpow(nfdisc(pol), mkfracss(3, 2), computeprec), norm);/*d_F^(3/2)*phi(D)*/
+  ar = gmul(ar, elevpart);/*d_F^(3/2)*phi(D)*psi(M)*/
+  long n = nf_get_degree(F), twon=2*n;
+  ar = gmul(ar, zetaval);/*zeta_F(2)*d_F^(3/2)*phi(D)*/
+  ar = gshift(ar, 3 - twon);
+  ar = gmul(ar, gpowgs(mppi(computeprec), 1 - twon));/*2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2)*phi(D)*/
+  return gerepileupto(av, gtofp(ar, prec));
+}
+
+/*Generate the optimal C value for efficiently finding elements.*/
+static GEN
+afuchbestC(GEN A, GEN O, long prec)
+{
+  pari_sp av = avma;
+  GEN F = alg_get_center(A);
+  long n = nf_get_degree(F);
+  GEN Adisc = algdiscnorm(A);/*Norm to Q of disc(A)*/
+  GEN l = algorderlevel(A, O, 0);/*Level of O as an ideal*/
+  if (!gequal1(l)) Adisc = mulii(Adisc, idealnorm(F, l));/*Incorporating the norm to Q of the level.*/
+  GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
+  GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
+  GEN npart;
+  double npart_d[9] = {0, 2.8304840896, 0.9331764427, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
+  if (n <= 8) npart = dbltor(npart_d[n]);
+  else npart = gen_1;
+  GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
+  if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
+  return best;
+}
+
+/*Generates the chosen constants used in computing the fundamental domain.*/
+static GEN
+afuchfdomdat_init(GEN A, GEN O, long prec)
+{
+  pari_sp av = avma;
+  GEN area = afucharea(A, O, 3, prec);
+  GEN C = afuchbestC(A, O, prec);
+  GEN gamma = dbltor(2.1);
+  GEN R = hdiscradius(gpow(area, gamma, prec), prec);/*Setting R*/
+  GEN epsilon = mkfracss(1, 6), passes;
+  if (nf_get_degree(alg_get_center(A)) == 1) passes = gen_2;
+  else passes = stoi(12);
+  return gerepilecopy(av, mkvec5(area, C, R, epsilon, passes));
 }
 
 
@@ -2307,7 +2362,7 @@ afuchtoklein(GEN X, GEN g)
 
 /*3: FINDING ELEMENTS*/
 
-/*Returns the quadratic form Q_{z, 0}(g). If g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A). We output an upper triangular matrix M, such that if you symmetrize it (by setting M[i, j]=M[j, i] for all i>j), then g~*M*g=Q_{z, 0}(g).*/
+/*Returns the quadratic form Q_{z, 0}(g). If g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A). We output the symmetric matrix M, such that g~*M*g=Q_{z, 0}(g).*/
 static GEN
 afuch_make_qf(GEN X, GEN z)
 {
@@ -2378,13 +2433,14 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
   return gerepilecopy(av, found);
 }
 
-/*Add DEFAULT radius. Add area and radius to the fdom data.*/
-
 /*Safe version of afuchfindelts_i. Will auto-set C, and can take z to be random from a ball of the default radius.*/
 GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
-  GEN zsafe = gtocr(z, lg(gdat_get_tol(afuch_get_gdat(X))));
+  long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
+  GEN zsafe;
+  if (!z) zsafe = hdiscrandom(afuch_get_R(X), prec);
+  else zsafe = gtocr(z, prec);
   if (!C) C = afuch_get_bestC(X);
   GEN r = afuchfindelts_i(X, zsafe, C, maxelts);
   if (r) return gerepileupto(av, r);
@@ -2460,7 +2516,7 @@ algdiscnorm(GEN A)
   GEN rams = algramifiedplacesf(A);
   GEN algdisc = gen_1;
   long lr = lg(rams), i;
-  for (i = 1; i < lr; i++) algdisc=mulii(algdisc, idealnorm(F, gel(rams, i)));/*Norm to Q of the ramification*/
+  for (i = 1; i < lr; i++) algdisc = mulii(algdisc, idealnorm(F, gel(rams, i)));/*Norm to Q of the ramification*/
   return gerepileupto(av, algdisc);
 }
 

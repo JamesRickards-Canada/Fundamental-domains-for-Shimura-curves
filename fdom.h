@@ -54,7 +54,15 @@ afuch_get_type(GEN X){return gel(X, 5);}
 INLINE GEN
 afuch_get_gdat(GEN X){return gel(X, 6);}
 INLINE GEN
-afuch_get_bestC(GEN X){return gmael(X, 7, 1);}
+afuch_get_area(GEN X){return gmael(X, 7, 1);}
+INLINE GEN
+afuch_get_bestC(GEN X){return gmael(X, 7, 2);}
+INLINE GEN
+afuch_get_R(GEN X){return gmael(X, 7, 3);}
+INLINE GEN
+afuch_get_epsilon(GEN X){return gmael(X, 7, 4);}
+INLINE GEN
+afuch_get_passes(GEN X){return gmael(X, 7, 5);}
 INLINE GEN
 afuch_get_fdom(GEN X){return gel(X, 8);}
 INLINE GEN
