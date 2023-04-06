@@ -138,7 +138,7 @@ static GEN Onorm_toreal(GEN A, GEN Onorm);
 /*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
 static GEN afucharea(GEN A, GEN O, long computeprec, long prec);
 static GEN afuchbestC(GEN A, GEN O, long prec);
-static GEN afuchfdomdat_init(GEN A, GEN O, long prec)
+static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
