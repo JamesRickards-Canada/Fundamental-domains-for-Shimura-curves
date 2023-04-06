@@ -16,7 +16,7 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
 	install(afuchfdom,"G",,fdom_library);
-	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X.");
+	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X. The elements returned are with respect to the basis of O, so you must convert back if you want to use them in A.");
 	install(afuchicirc,"GG",,fdom_library);
 	addhelp(afuchicirc,"afuchicirc(X, g): returns the isometric circle of g, an element of non-zero norm.");
 	install(afuchklein,"GG",,fdom_library);

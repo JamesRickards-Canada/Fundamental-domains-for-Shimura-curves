@@ -2149,7 +2149,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-/*Computes the fundamental domain. DEBUGLEVEL allows extra input to be displayed. Not stack clean, gerepileupto suitable.*/
+/*Computes the fundamental domain, DEBUGLEVEL allows extra input to be displayed. Not stack clean, gerepileupto suitable.*/
 static GEN
 afuchfdom_i(GEN X)
 {
@@ -2182,9 +2182,10 @@ afuchfdom_i(GEN X)
 	long noo = nU ? lg(oosides) - 1 : 0, i;
 	if (noo) {/*Looking near infinite sides*/
 	  if (DEBUGLEVEL > 0) pari_printf("%d infinite sides\n", noo);
-	  long iside = 1;
+	  long iside = 0;
 	  GEN Uvargs = normbound_get_vargs(U);
 	  for (i = 1; i < N; i++){
+		iside++;
 		if (iside > noo) iside = 1;
 		long sind = oosides[iside];
 		GEN ang2 = gel(Uvargs, sind), ang1;
@@ -2216,7 +2217,7 @@ afuchfdom_i(GEN X)
 	  continue;
 	}
 	long newnU = lg(normbound_get_elts(U)) - 1;
-    if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has %d sides\n\n", nU);
+    if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has %d sides\n\n", newnU);
 	GEN Uarea = normbound_get_area(U);
     if (gcmp(Uarea, areabound) < 0) return U;
     if (pass > 1 && nU == newnU) R = gadd(R, epsilon);/*Updating R if we didn't change the number of sides.*/
