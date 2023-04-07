@@ -6,6 +6,7 @@
 5. Fincke pohst with pruning?
 6. hdisc_randomarc: make sure ang1>ang2? (or other way around, w/e)
 7. Type in afuchinit.
+8. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
 */
 
 /*
@@ -143,8 +144,8 @@ static GEN Onorm_makemat(GEN A, GEN O, GEN AOconj);
 static GEN Onorm_toreal(GEN A, GEN Onorm);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
-static GEN afucharea(GEN A, GEN O, long computeprec, long prec);
-static GEN afuchbestC(GEN A, GEN O, long prec);
+static GEN afucharea(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec);
+static GEN afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec);
 static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
@@ -2099,9 +2100,9 @@ Onorm_toreal(GEN A, GEN Onorm)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
 
-/*Returns the area of the fundamental domain of Q, computed to computeprec. Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.*/
+/*Returns the area of the fundamental domain of Q, computed to computeprec (Olevel is the output of algorderlevel(A, O, 1)). Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.*/
 static GEN
-afucharea(GEN A, GEN O, long computeprec, long prec)
+afucharea(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
 {
   pari_sp av = avma;
   long bits = bit_accuracy(computeprec);
@@ -2111,11 +2112,11 @@ afucharea(GEN A, GEN O, long computeprec, long prec)
   long np = lg(rams), i;
   GEN norm=gen_1;
   for (i = 1; i < np; i++) norm = mulii(norm, subis(idealnorm(F, gel(rams, i)), 1));/*Product of N(p)-1 over finite p ramifying in A*/
-  GEN elevpart = gen_1, ell = algorderlevel(A, O, 1);
-  np = lg(gel(ell, 1));
+  GEN elevpart = gen_1;
+  np = lg(gel(Olevel_fact, 1));
   for (i = 1; i < np; i++) {/*We have an Eichler part for each i that triggers.*/
-    GEN Np = idealnorm(F, gcoeff(ell, i, 1));/*Norm of the prime*/
-    GEN Npexp = gcoeff(ell, i, 2);/*Exponent*/
+    GEN Np = idealnorm(F, gcoeff(Olevel_fact, i, 1));/*Norm of the prime*/
+    GEN Npexp = gcoeff(Olevel_fact, i, 2);/*Exponent*/
     if (equali1(Npexp)) {
 	  elevpart = mulii(elevpart, addis(Np, 1));/*Times N(p)+1*/
 	  continue;
@@ -2135,14 +2136,13 @@ afucharea(GEN A, GEN O, long computeprec, long prec)
 
 /*Generate the optimal C value for efficiently finding elements.*/
 static GEN
-afuchbestC(GEN A, GEN O, long prec)
+afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
 {
   pari_sp av = avma;
   GEN F = alg_get_center(A);
   long n = nf_get_degree(F);
   GEN Adisc = algdiscnorm(A);/*Norm to Q of disc(A)*/
-  GEN l = algorderlevel(A, O, 0);/*Level of O as an ideal*/
-  if (!gequal1(l)) Adisc = mulii(Adisc, idealnorm(F, l));/*Incorporating the norm to Q of the level.*/
+  if (!gequal1(Olevel_nofact)) Adisc = mulii(Adisc, idealnorm(F, Olevel_nofact));/*Incorporating the norm to Q of the level.*/
   GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
   GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
   GEN npart;
@@ -2159,8 +2159,11 @@ static GEN
 afuchfdomdat_init(GEN A, GEN O, long prec)
 {
   pari_sp av = avma;
-  GEN area = afucharea(A, O, 3, prec);
-  GEN C = afuchbestC(A, O, prec);
+  GEN F = alg_get_center(A);
+  GEN Olevel_fact = algorderlevel(A, O, 1);
+  GEN area = afucharea(A, O, Olevel_fact, 3, prec);
+  GEN Olevel_nofact = idealfactorback(F, Olevel_fact, NULL, 0);
+  GEN C = afuchbestC(A, O, Olevel_nofact, prec);
   GEN gamma = gtofp(dbltor(2.1), prec);
   GEN R = hdiscradius(gpow(area, gamma, prec), prec);/*Setting R*/
   GEN epsilon = mkfracss(1, 6), passes;
@@ -2745,6 +2748,10 @@ algorderlevel(GEN A, GEN O, int factored)
 {
   pari_sp av = avma;
   GEN F = alg_get_center(A);
+  if (gequal1(O)) {/*Diagonal identity, so level 1.*/
+	if (factored) return idealfactor(F, gen_1);
+	return gen_1;
+  }
   GEN Odisc = algorderdisc(A, O, 0, 0);
   GEN Adisc = idealpows(F, algreduceddisc(A), 2);
   GEN lsqr = idealdivexact(F, Odisc, Adisc);/*Divides exactly*/
