@@ -5,6 +5,7 @@
 4. Update constants used for finding the optimal C.
 5. Fincke pohst with pruning?
 6. hdisc_randomarc: make sure ang1>ang2? (or other way around, w/e)
+7. Type in afuchinit.
 */
 
 /*
@@ -133,7 +134,6 @@ static GEN minimalcycles(GEN pair);
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
-static GEN afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
@@ -1845,7 +1845,6 @@ minimalcycles(GEN pair)
 }
 
 
-
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 
@@ -1862,11 +1861,10 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS*/
 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
-An arithmetic Fuchsian group initialization is represented by X. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
+An arithmetic Fuchsian group initialization is represented by X, and is stored as a lazy vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[A, Odat=[O, Oinv, Oconj, Omultable, Onormdat, Onormreal], kleinmats, qfmats, type, gdat, fdomdat, fdom, pres, sig]
-A
-	The algebra
+	[O, Oinv, Oconj, Omultable, Onormdat, type, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, presentation]]
+
 O, Oinv
 	The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
 Oconj
@@ -1875,83 +1873,66 @@ Omultable
 	To multiply elements of O more quickly.
 Onormdat
 	Decomposition used to compute norms of elements more quickly.
+type
+	Which symmetric space we want to compute.	
+A
+	The algebra	
 Onormreal
 	Used to compute real approximations to norms of elements, which is much more efficient when deg(F)>1.
 kleinmats
 	O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
 qfmats
 	For supply into afuch_make_qf: they help make the quadratic form Q_{z, 0}(g), where if g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A).
-type
-	Which symmetric space we want to compute.
 gdat
 	Geometric data.
 fdomdat
 	[area, C, R, epsilon, passes]: Constants used specifically for computing the fundamental domain. Area is the area of the domain, C is the optimal constant for finding elements of norm 1, R is the radius used to pick random points, epsilon is the growth rate of R (in case we stagnate), and passes is the "expected" number of times we generate new points.
 fdom
 	Fundamental domain, if computed.
-pres
+presentation
 	Presentation, if computed.
-sig
-	Signature, if computed.
+	
 */
 
-/*
-TO DO: CHOL, TYPE
-type=0 means O^1, the default.*/
-
-/*Initializes the arithmetic Fuchsian group of the given inputs, ready to compute a fundamental domain. Not gerepileupto suitable, and leaves garbage.*/
-static GEN
-afuchinit_i(GEN A, GEN O, GEN type, GEN p, long prec)
-{
-  if(!O) O = matid(lg(alg_get_basis(A)) - 1);
-  GEN gdat = gdat_initialize(p, prec);
-  GEN AX = cgetg(11, t_VEC);
-  gel(AX, 1) = A;
-  GEN Odat = cgetg(7, t_VEC);/*Order stuff*/
-  gel(Odat, 1) = O;
-  gel(Odat, 2) = QM_inv(O);
-  long lgO = lg(O), i, j;
-  GEN AOconj = cgetg(lgO, t_MAT);
-  for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
-  gel(Odat, 3) = QM_mul(gel(Odat, 2), AOconj);/*Write it in terms of O.*/
-  gel(Odat, 4) = Omultable(A, O, gel(Odat, 2));
-  GEN Onorm = Onorm_makemat(A, O, AOconj);
-  GEN F = alg_get_center(A);
-  long nF = nf_get_degree(F);
-  if (nF >= 5) {/*More efficient to use the Cholesky norm.*/
-	gel(Odat, 5) = Onorm_makechol(F, Onorm);
-	if (gequal0(gel(Odat, 5))) gel(Odat, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
-  }
-  else gel(Odat, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
-  if (nF == 1) gel(Odat, 6) = gen_0;/*No need to store approximate if n=1.*/
-  else gel(Odat, 6) = Onorm_toreal(A, Onorm);
-  gel(AX, 2) = Odat;
-  gel(AX, 3) = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
-  GEN qfm = afuch_make_qfmats(gel(AX, 3));
-  GEN K = alg_get_center(A);
-  for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
-	for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(K, gcoeff(Onorm, i, j));
-  }
-  gel(qfm, 5) = Onorm;
-  gel(AX, 4) = qfm;
-  gel(AX, 5) = type;/*TO DO*/
-  gel(AX, 6) = gdat;
-  gel(AX, 7) = afuchfdomdat_init(A, O, prec);
-  gel(AX, 8) = gen_0;
-  gel(AX, 9) = gen_0;
-  gel(AX, 10) = gen_0;
-  return AX;
-}
-
-/*Clean initialization of the symmetric space. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
+/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
 GEN
 afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
 {
   pari_sp av = avma;
-  if (!O) O = matid(4*nf_get_degree(alg_get_center(A)));
+  GEN F = alg_get_center(A);
+  long nF = nf_get_degree(F);
+  if (!O) O = matid(4*nF);
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
-  return gerepilecopy(av, afuchinit_i(A, O, type, p, prec));
+  GEN gdat = gdat_initialize(p, prec);
+  GEN Oinv, AX = obj_init(6, 8);
+  gel(AX, 1) = O;
+  gel(AX, 2) = Oinv = QM_inv(O);/*Inverse*/
+  long lgO = lg(O), i, j;
+  GEN AOconj = cgetg(lgO, t_MAT);/*Conjugates of basis of O, written in A.*/
+  for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
+  gel(AX, 3) = QM_mul(Oinv, AOconj);/*Matrix of conjugates; write it in terms of O.*/
+  gel(AX, 4) = Omultable(A, O, Oinv);
+  GEN Onorm = Onorm_makemat(A, O, AOconj);
+  if (nF >= 5) {/*More efficient to use the Cholesky norm.*/
+	gel(AX, 5) = Onorm_makechol(F, Onorm);
+	if (gequal0(gel(AX, 5))) gel(AX, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
+  }
+  else gel(AX, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
+  gel(AX, 6) = type;/*TO DO*/
+  obj_insert(AX, afuch_A, A);
+  if (nF > 1) obj_insert(AX, afuch_ONORMREAL, Onorm_toreal(A, Onorm));/*No need to store approximate if n=1.*/
+  GEN kleinmats = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);
+  obj_insert(AX, afuch_KLEINMATS, kleinmats);/*Make sure p is safe.*/
+  GEN qfm = afuch_make_qfmats(kleinmats);
+  for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
+	for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(F, gcoeff(Onorm, i, j));
+  }
+  gel(qfm, 5) = Onorm;
+  obj_insert(AX, afuch_QFMATS, qfm);
+  obj_insert(AX, afuch_GDAT, gdat);
+  obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
+  return gerepilecopy(av, AX);
 }
 
 /*Returns a vector v of pairs [A, B] such that O[,i] is sent to v[i] acting on the Klein model..*/
