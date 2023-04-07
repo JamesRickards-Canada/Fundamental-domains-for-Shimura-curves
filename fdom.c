@@ -181,7 +181,6 @@ static long algsplitoo(GEN A);
 /*3: ALGEBRA ORDER METHODS*/
 static GEN algd(GEN A, GEN a);
 static GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
-static GEN algorderlevel(GEN A, GEN O, int factored);
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
@@ -2821,6 +2820,22 @@ algd(GEN A, GEN a)
   return gerepileupto(av, nfM_det(alg_get_center(A), M));
 }
 
+/*Checks if O is an order.*/
+int
+algisorder(GEN A, GEN O)
+{
+  pari_sp av = avma;
+  GEN Oinv = QM_inv(O);
+  long n = lg(O), i, j;
+  for (i = 1; i < n; i++) {
+    for (j = 1; j < n; j++) {
+      GEN elt = algmul(A, gel(O, i), gel(O, j));
+      if(!RgV_is_ZV(gmul(Oinv, elt))) return gc_int(av, 0);
+    }
+  }
+  return gc_int(av, 1);
+}
+
 /*Given an order O in A, returns the discriminant of the order, which is disc(algebra)*level*/
 static GEN
 algorderdisc(GEN A, GEN O, int reduced, int factored)
@@ -2854,7 +2869,7 @@ algorderdisc(GEN A, GEN O, int reduced, int factored)
 }
 
 /*Returns the level of the order O.*/
-static GEN
+GEN
 algorderlevel(GEN A, GEN O, int factored)
 {
   pari_sp av = avma;

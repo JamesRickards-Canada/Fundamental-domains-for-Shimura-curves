@@ -78,7 +78,7 @@ equalalg(A, B)={
 \\algelttype, algfdom, algfdomalg, algfdomarea, algfdomsignature, algfdompresentation, algfdomrootgeodesic algfdomword, algmoreprec algmulvec
 \\algfdomminimalcycles is implicitly checked via both algfdompresentation and algfdomsignature.
 testalgfdom(L)={
-  my(errrtol, F, A, U, Aold, iseq, P, g, word, newg, geod);
+  my(errtol, F, A, U, Aold, iseq, P, g, word, newg, geod);
   errtol=10^-19;
   for(i=1,#L,
     for(j=1,#L[i][1],

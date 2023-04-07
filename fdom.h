@@ -119,4 +119,5 @@ GEN algbasisto1ijk(GEN A, GEN x);
 GEN algmulvec(GEN A, GEN G, GEN L);
 
 /*3: ALGEBRA ORDER METHODS*/
-
+int algisorder(GEN A, GEN O);
+GEN algorderlevel(GEN A, GEN O, int factored);
