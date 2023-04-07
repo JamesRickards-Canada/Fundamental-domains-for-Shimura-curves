@@ -1896,7 +1896,7 @@ presentation
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
 GEN
-afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
+afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec)
 {
   pari_sp av = avma;
   GEN F = alg_get_center(A);
@@ -1932,6 +1932,7 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, long prec)
   obj_insert(AX, afuch_QFMATS, qfm);
   obj_insert(AX, afuch_GDAT, gdat);
   obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
+  if (makefdom) afuchfdom(AX);
   return gerepilecopy(av, AX);
 }
 
@@ -2171,7 +2172,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-/*Computes the fundamental domain, DEBUGLEVEL allows extra input to be displayed. Not stack clean, gerepileupto suitable.*/
+/*Computes the fundamental domain, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low.*/
 static GEN
 afuchfdom_i(GEN X)
 {
@@ -2241,7 +2242,7 @@ afuchfdom_i(GEN X)
 	long newnU = lg(normbound_get_elts(U)) - 1;
     if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has %d sides\n\n", newnU);
 	GEN Uarea = normbound_get_area(U);
-    if (gcmp(Uarea, areabound) < 0) return U;
+    if (gcmp(Uarea, areabound) < 0) break;/*Done*/
     if (pass > 1 && nU == newnU) R = gadd(R, epsilon);/*Updating R if we didn't change the number of sides.*/
 	nU = newnU;
     if (gc_needed(av, 2)) {
@@ -2249,6 +2250,8 @@ afuchfdom_i(GEN X)
 	  gerepileall(av_mid, 2, &U, &R);
 	}
   }
+  obj_insert(X, afuch_FDOM, U);
+  return gerepileupto(av, U);
 }
 
 /*Returns the fundamental domain, raising an error if there is not enough precision.*/

@@ -11,8 +11,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 \\SECTION 3: QUATERNION ALGEBRA METHODS
 	
 	\\3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS
-	install(afuchinit,"GDGDGDGp",,fdom_library);
-	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {p}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default order O is the stored maximal order in A, the default type is 0, and the default value of p is Pi/8+0.5*I.");
+	install(afuchinit,"GDGDGDGD1,L,p",,fdom_library);
+	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {p}, {makefdom=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default order O is the stored maximal order in A, the default type is 0, and the default value of p is Pi/8+0.5*I. If makefdom=1, also computes the fundamental domain and stores it.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
 	install(afuchfdom,"G",,fdom_library);
