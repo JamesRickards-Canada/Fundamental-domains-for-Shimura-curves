@@ -12,21 +12,13 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	
 	\\3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS
 	install(afuchinit,"GDGDGDGD1,L,p",,fdom_library);
-	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {p}, {makefdom=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default order O is the stored maximal order in A, the default type is 0, and the default value of p is Pi/8+0.5*I. If makefdom=1, also computes the fundamental domain and stores it.");
+	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {p}, {flag=2}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p is an upper half plane point that is sent to 0. The default order O is the stored maximal order in A, the default type is 0, and the default value of p is Pi/8+0.5*I. If flag = 1, also computes the fundamental domain. flag = 2 also computes the presentation and signature.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
 	install(afuchfdom,"G",,fdom_library);
 	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X. The elements returned are with respect to the basis of O, so you must convert back if you want to use them in A.");
-	install(afuchicirc,"GG",,fdom_library);
-	addhelp(afuchicirc,"afuchicirc(X, g): returns the isometric circle of g, an element of non-zero norm.");
-	install(afuchklein,"GG",,fdom_library);
-	addhelp(afuchklein,"afuchklein(X, g): returns the vector giving the action of g on the Klein model, which can be supplied to klein_act.");
-	install(afuchnormbasis,"GG",,fdom_library);
-	addhelp(afuchnormbasis,"afuchnormbasis(X, G): computes the normalized basis of the set of elements of G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
-	install(afuchnormbound,"GG",,fdom_library);
-	addhelp(afuchnormbound,"afuchnormbound(X, G): computes the normalized boundary of the set of elements in G, where X is an initialized arithmetic Fuchsian group. Elements of G may not have norm 0.");
-	install(afuchnormbound_append,"GGG",,fdom_library);
-	addhelp(afuchnormbound_append,"afuchnormbound_append(X, U, G): given a non-trivial normalized boundary U, this computes the new normalized boundary obtained by adding in the isometric circles for all elements in G. More efficient than calling afuchnormbound(X, concat(U[1], G)), as we use the already computed U to optimize the computation.");
+	install(afuchsignature,"G",,fdom_library);
+	addhelp(afuchsignature,"afuchsignature(X): returns the signature of X, i.e. [genus, [lengths of elliptic cycles], # of parabolic cycles].");
 	install(afuchredelt,"GGDGD0,G,",,fdom_library);
 	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
 

@@ -1,6 +1,6 @@
 /*fdom.c methods*/
 
-enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_PRES};
+enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES};
 
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
@@ -48,27 +48,29 @@ afuch_get_type(GEN X){return gel(X, 6);}
 INLINE GEN
 afuch_get_alg(GEN X){return gmael(X, 7, afuch_A);}
 INLINE GEN
-afuch_get_Onormreal(GEN X){return gmael(X, 7, afuch_ONORMREAL);}
+afuch_get_Onormreal(GEN X){return obj_check(X, afuch_ONORMREAL);}
 INLINE GEN
-afuch_get_kleinmats(GEN X){return gmael(X, 7, afuch_KLEINMATS);}
+afuch_get_kleinmats(GEN X){return obj_check(X, afuch_KLEINMATS);}
 INLINE GEN
-afuch_get_qfmats(GEN X){return gmael(X, 7, afuch_QFMATS);}
+afuch_get_qfmats(GEN X){return obj_check(X, afuch_QFMATS);}
 INLINE GEN
-afuch_get_gdat(GEN X){return gmael(X, 7, afuch_GDAT);}
+afuch_get_gdat(GEN X){return obj_check(X, afuch_GDAT);}
 INLINE GEN
-afuch_get_area(GEN X){return gmael3(X, 7, afuch_FDOMDAT, 1);}
+afuch_get_area(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 1) : NULL;}
 INLINE GEN
-afuch_get_bestC(GEN X){return gmael3(X, 7, afuch_FDOMDAT, 2);}
+afuch_get_bestC(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 2) : NULL;}
 INLINE GEN
-afuch_get_R(GEN X){return gmael3(X, 7, afuch_FDOMDAT, 3);}
+afuch_get_R(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 3) : NULL;}
 INLINE GEN
-afuch_get_epsilon(GEN X){return gmael3(X, 7, afuch_FDOMDAT, 4);}
+afuch_get_epsilon(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 4) : NULL;}
 INLINE GEN
-afuch_get_passes(GEN X){return gmael3(X, 7, afuch_FDOMDAT, 5);}
+afuch_get_passes(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 5) : NULL;}
 INLINE GEN
-afuch_get_fdom(GEN X){return gmael(X, 7, afuch_FDOM);}
+afuch_get_fdom(GEN X){return obj_check(X, afuch_FDOM);}
 INLINE GEN
-afuch_get_pres(GEN X){return gmael(X, 7, afuch_PRES);}
+afuch_get_sig(GEN X){return obj_check(X, afuch_SIG);}
+INLINE GEN
+afuch_get_pres(GEN X){return obj_check(X, afuch_PRES);}
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
@@ -102,11 +104,7 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchfdom(GEN X);
-GEN afuchicirc(GEN X, GEN g);
-GEN afuchklein(GEN X, GEN g);
-GEN afuchnormbasis(GEN X, GEN G);
-GEN afuchnormbound(GEN X, GEN G);
-GEN afuchnormbound_append(GEN X, GEN U, GEN G);
+GEN afuchsignature(GEN X);
 GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/

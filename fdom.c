@@ -131,7 +131,8 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 
 /*2: PRESENTATION*/
 static GEN minimalcycles(GEN pair);
-static GEN minimalcycles_bytype(GEN X, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -1850,10 +1851,9 @@ minimalcycles(GEN pair)
 
 /*Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m. It is returned with the types sorted, i.e. parabolic cycles first, then accidental, then elliptic.*/
 static GEN
-minimalcycles_bytype(GEN X, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
 {
   pari_sp av = avma;
-  GEN U = afuch_get_fdom(X);
   GEN G = normbound_get_elts(U);
   GEN cycles = minimalcycles(normbound_get_spair(U));/*Min cycles*/
   long lgcyc = lg(cycles), i, j;
@@ -1884,10 +1884,45 @@ minimalcycles_bytype(GEN X, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(G
   return gerepilecopy(av, mkvec2(vecpermute(cycles, ordering), vecsmallpermute(types, ordering)));/*The return, [cycles, types]*/
 }
 
+/*Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).*/
+static GEN
+signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+{
+  pari_sp av = avma;
+  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xtrace, Xistriv);/*The minimal cycles and their types.*/
+  long nfixed = 0, lgcyc = lg(gel(mcyc, 1)), i;/*The number of fixed sides, and number of cycles+1*/
+  for (i = 1; i < lgcyc; i++) {
+	if (lg(gmael(mcyc, 1, i)) == 2 && gel(mcyc, 2)[i] == 2) nfixed++;
+  }/*Fixed sides MUST correspond to length 1 cycles with order 2.*/
+  GEN elts = normbound_get_elts(U);
+  long genus=((lg(elts) - 1 + nfixed)/2 - lgcyc + 2)/2;
+  /*2*g+t+s+1_{t+s>0}=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C. We are actually overcounting by 1 if t+s=0 and there are no accidental cycles, but this is impossible as there is >=1 cycle.*/
+  long s, firstell = lgcyc;/*s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.*/
+  int foundlastpar = 0;
+  for (i = 1; i < lgcyc; i++) {
+    if (!foundlastpar) {
+      if (gel(mcyc, 2)[i] == 0) continue;
+      s = i-1;/*Found the last parabolic.*/
+      foundlastpar = 1;
+    }
+    if (gel(mcyc, 2)[i] == 1) continue;
+    firstell = i;/*Found the last accidental.*/
+    break;
+  }
+  long lgell = lgcyc - firstell + 1;
+  GEN rvec=cgetg(4, t_VEC);/*[g, V, s]*/
+  gel(rvec, 1) = stoi(genus);
+  gel(rvec, 2) = cgetg(lgell, t_VECSMALL);
+  for (i = 1; i < lgell; i++) {
+	gel(rvec, 2)[i] = gel(mcyc, 2)[firstell];
+	firstell++;
+  }
+  gel(rvec, 3) = stoi(s);
+  return gerepileupto(av, rvec);
+}
 
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
-
 
 /*ALGEBRA REQUIREMENTS: UPDATE THIS!
 Let
@@ -1904,7 +1939,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, and is stored as a lazy vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[O, Oinv, Oconj, Omultable, Onormdat, type, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, presentation]]
+	[O, Oinv, Oconj, Omultable, Onormdat, type, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres]]
 
 O, Oinv
 	The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
@@ -1930,6 +1965,8 @@ fdomdat
 	[area, C, R, epsilon, passes]: Constants used specifically for computing the fundamental domain. Area is the area of the domain, C is the optimal constant for finding elements of norm 1, R is the radius used to pick random points, epsilon is the growth rate of R (in case we stagnate), and passes is the "expected" number of times we generate new points.
 fdom
 	Fundamental domain, if computed.
+sig
+	Signature, if computed.
 presentation
 	Presentation, if computed.
 	
@@ -1937,7 +1974,7 @@ presentation
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
 GEN
-afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec)
+afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
 {
   pari_sp av = avma;
   GEN F = alg_get_center(A);
@@ -1946,7 +1983,7 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec)
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
-  GEN Oinv, AX = obj_init(6, 8);
+  GEN Oinv, AX = obj_init(6, 9);
   gel(AX, 1) = O;
   gel(AX, 2) = Oinv = QM_inv(O);/*Inverse*/
   long lgO = lg(O), i, j;
@@ -1973,7 +2010,10 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec)
   obj_insert(AX, afuch_QFMATS, qfm);
   obj_insert(AX, afuch_GDAT, gdat);
   obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
-  if (makefdom) afuchfdom(AX);
+  if (flag) {
+	afuchfdom(AX);
+	if (flag == 2) afuchsignature(AX);
+  }
   return gerepilecopy(av, AX);
 }
 
@@ -2302,9 +2342,25 @@ GEN
 afuchfdom(GEN X)
 {
   pari_sp av = avma;
-  GEN U = afuchfdom_i(X);
+  GEN U = afuch_get_fdom(X);
+  if (U) return U;
+  U = afuchfdom_i(X);
   if (!U) pari_err_PREC("afuchfdom, recompile the number field and algebra with more precision.");
   return gerepileupto(av, U);
+}
+
+/*Signature*/
+GEN
+afuchsignature(GEN X)
+{
+  pari_sp av = avma;
+  GEN sig = afuch_get_sig(X);/*Already computed.*/
+  if (sig) return sig;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  sig = signature(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+  obj_insert(X, afuch_SIG, sig);
+  return gerepileupto(av, sig);
 }
 
 /*TO DELETE*/
@@ -2471,7 +2527,8 @@ afuchnorm_mat(GEN F, GEN Onorm, GEN g)
 
 /*Fast real approximation to algnorm.*/
 static GEN
-afuchnorm_real(GEN X, GEN g){
+afuchnorm_real(GEN X, GEN g)
+{
   return qfeval(afuch_get_Onormreal(X), g);
 }
 
