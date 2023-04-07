@@ -131,6 +131,7 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 
 /*2: PRESENTATION*/
 static GEN minimalcycles(GEN pair);
+static GEN minimalcycles_bytype(GEN X, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -152,8 +153,8 @@ static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 static GEN afuchfdom_i(GEN X);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
+static GEN afuchconj(GEN X, GEN g);
 static GEN afuchid(GEN X);
-static GEN afuchinv(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchnorm_fast(GEN X, GEN g);
@@ -161,6 +162,7 @@ static GEN afuchnorm_chol(GEN F, GEN chol, GEN g);
 static GEN afuchnorm_mat(GEN F, GEN Onorm, GEN g);
 static GEN afuchnorm_real(GEN X, GEN g);
 static GEN afuchtoklein(GEN X, GEN g);
+static GEN afuchtrace(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
 static GEN afuch_make_qf(GEN X, GEN z);
@@ -789,7 +791,8 @@ Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be
 	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
 	iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2.
 	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
-	v) Pass in the identity element of Gamma and find the area of the fundamental domain. These methods are not passed in; just the values.
+	v) Find the exact trace of an element of Gamma: format as Xtrace(GEN X, GEN g).
+	vi) Input an element representing the trivial element of X.
 We do all of our computations in the Klein model.
 */
 
@@ -1845,6 +1848,43 @@ minimalcycles(GEN pair)
   return gerepilecopy(av, cycles);
 }
 
+/*Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m. It is returned with the types sorted, i.e. parabolic cycles first, then accidental, then elliptic.*/
+static GEN
+minimalcycles_bytype(GEN X, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  GEN G = normbound_get_elts(U);
+  GEN cycles = minimalcycles(normbound_get_spair(U));/*Min cycles*/
+  long lgcyc = lg(cycles), i, j;
+  GEN types = cgetg(lgcyc, t_VECSMALL);/*The types.*/
+  for (i = 1; i < lgcyc; i++) {
+    GEN cyc = gel(cycles, i), g;
+    if (cyc[1] < 0) {/*Minimal cycle that was the middle of a side. We update it to be positive now.*/
+	  cyc[1] = -cyc[1];
+	  g = gel(G, cyc[1]);
+	}
+    else {
+      g = Xid;
+      for (j = 1; j < lg(cyc); j++) g = Xmul(X, gel(G, cyc[j]), g);/*Multiply on the left by G[cyc[j]]*/
+    }
+    if (Xistriv(X, g)) {types[i] = 1; continue;}/*Accidental cycle, continue on.*/
+    GEN trd = Xtrace(X, g);/*The trace*/
+    if (gequal(trd, gen_2) || gequal(trd, gen_m2)) {types[i] = 0;continue;}/*Parabolic cycle.*/
+    long ord=1;
+    GEN gpower=g;
+    do {/*Finding the order of g*/
+      ord++;
+      gpower = Xmul(X, g, gpower);
+    }
+    while (!Xistriv(X, gpower));
+    types[i] = ord;
+  }
+  GEN ordering = vecsmall_indexsort(types);
+  return gerepilecopy(av, mkvec2(vecpermute(cycles, ordering), vecsmallpermute(types, ordering)));/*The return, [cycles, types]*/
+}
+
+
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -2233,7 +2273,7 @@ afuchfdom_i(GEN X)
 	  }
 	}
     if (DEBUGLEVEL > 0) pari_printf("%d elements found\n", lg(elts) - 1);
-	U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchinv, &afuchistriv, gdat);
+	U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
 	if (!U) {
 	  nU = 0;
 	  if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has 0 sides\n\n");
@@ -2299,7 +2339,7 @@ afuchnormbasis(GEN X, GEN G)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  GEN U = normbasis(X, NULL, G, &afuchtoklein, &afuchmul, &afuchinv, &afuchistriv, gdat);
+  GEN U = normbasis(X, NULL, G, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
   if (U) return gerepilecopy(av, U);
   return gc_const(av, gen_0);/*No normalized basis, return 0.*/
 }
@@ -2348,20 +2388,23 @@ afuchredelt(GEN X, GEN U, GEN g, GEN z)
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
+/*Conjugation formatted for the input of an afuch, for use in the geometry section. Since we work in O, entries are all in Z. We use this in place of alginv as well, to avoid a potential costly scaling.*/
+static GEN
+afuchconj(GEN X, GEN g)
+{
+  return ZM_ZC_mul(afuch_get_Oconj(X), g);
+}
+
 /*Returns the identity element*/
 static GEN
 afuchid(GEN X){return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X)))-1, 1);}
-
-/*alginv formatted for the input of an afuch, for use in the geometry section. Since we work in O, entries are all in Z.*/
-static GEN
-afuchinv(GEN X, GEN g){return ZM_ZC_mul(afuch_get_Oconj(X), g);}
 
 /*Returns 1 if g is a scalar, i.e. g==conj(g).*/
 static int
 afuchistriv(GEN X, GEN g)
 {
   pari_sp av = avma;
-  GEN gconj = afuchinv(X, g);/*It's actually the conjugate, not the inverse.*/
+  GEN gconj = afuchconj(X, g);
   return gc_int(av, ZV_equal(g, gconj));
 }
 
@@ -2428,7 +2471,9 @@ afuchnorm_mat(GEN F, GEN Onorm, GEN g)
 
 /*Fast real approximation to algnorm.*/
 static GEN
-afuchnorm_real(GEN X, GEN g){return qfeval(afuch_get_Onormreal(X), g);}
+afuchnorm_real(GEN X, GEN g){
+  return qfeval(afuch_get_Onormreal(X), g);
+}
 
 /*Given an element g of O (of non-zero norm) written in basis form, this returns the image of g in acting on the Klein model.*/
 static GEN
@@ -2444,6 +2489,15 @@ afuchtoklein(GEN X, GEN g)
 	B = addcrcr(B, mulcri(gmael(embs, i, 2), gel(g, i)));
   }
   return gerepilecopy(av, mkvec2(A, B));
+}
+
+/*Returns the trace of an element of X. We only use it in the presentation so this is not as efficient as it could be (by saving the traces of a basis).*/
+static GEN
+afuchtrace(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  GEN Ag = QM_QC_mul(afuch_get_O(X), g);/*g in A*/
+  return gerepileupto(av, algtrace(afuch_get_alg(X), Ag, 0));
 }
 
 
