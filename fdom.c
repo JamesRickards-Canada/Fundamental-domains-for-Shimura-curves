@@ -71,7 +71,6 @@ static GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 
 /*1: OPERATIONS ON COMPLEX REALS*/
 static GEN gtocr(GEN z, long prec);
-static GEN abscr(GEN z);
 static GEN addcrcr(GEN z1, GEN z2);
 static GEN divcrcr(GEN z1, GEN z2);
 static GEN mulcrcr(GEN z1, GEN z2);
@@ -136,6 +135,7 @@ static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xt
 
 /*2: PRESENTATION*/
 static GEN word_collapse(GEN word);
+static GEN word_substitute(GEN word, long ind, GEN repl);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -539,14 +539,6 @@ gtocr(GEN z, long prec)
   gel(zsafe, 1) = gtofp(z, prec);
   gel(zsafe, 2) = real_0(prec);
   return zsafe;
-}
-
-/*Returns abs(z) for a complex number z with real components. Gerepileupto safe, leaves garbage.*/
-static GEN
-abscr(GEN z)
-{
-  GEN nm=normcr(z);
-  return sqrtr(nm);
 }
 
 /*Adds two complex numbers with real components, giving a complex output. Clean method.*/
@@ -1932,7 +1924,8 @@ A word is a vecsmall, which is taken in reference to a list of elements G. A neg
 
 /*Given a word, "collapses" it down, i.e. deletes consecutive indices of the form i, -i, and repeats until the word is reduced.*/
 static GEN
-word_collapse(GEN word){
+word_collapse(GEN word)
+{
   pari_sp av = avma;
   long lgword = lg(word), n = lgword - 1, last1 = 0, newlg = lgword, i;/*last1 tracks the last value of 1 in H that we have tracked. newlg tracks the new length.*/
   GEN H = const_vecsmall(n, 1);/*H tracks if we keep each index in the collapsed word.*/
@@ -1962,6 +1955,52 @@ word_collapse(GEN word){
   }
   return gerepileupto(av, newword);
 }
+
+/*We replace all instances of the index ind in word with repl, and then collapse down to a reduced word (with regards to the free group on the indices). We return the new word. Thus, substitute_word([1,2,3,-4,5], 3, [-2, -2, 5, 4])=[1, -2, 5, 5]. */
+static GEN
+word_substitute(GEN word, long ind, GEN repl)
+{
+  pari_sp av = avma;
+  long lrepl;/*length of the replacement word*/
+  GEN invrepl = cgetg_copy(repl, &lrepl);/*The inverse of repl*/
+  long invreplind = lrepl, i;
+  for (i = 1; i < lrepl; i++) {/*Negate and reverse repl, for when we have to substitute the inverse.*/
+	invreplind--;
+	invrepl[invreplind] = -repl[i];
+  }
+  long nreplace = 0, mind = -ind, lgword;/*nreplace counts how many replacement we need to perform, and mind is -ind.*/
+  GEN replaceplaces = cgetg_copy(word, &lgword);/*index 1 means replace this with repl,-1 with invrepl, and 0 means keep.*/
+  for (i = 1; i < lgword; i++) {
+    if (word[i] == ind) {replaceplaces[i] = 1;nreplace++;}
+    else if (word[i] == mind) {replaceplaces[i] = -1;nreplace++;}
+    else replaceplaces[i] = 0;
+  }
+  if (nreplace==0) return gerepileupto(av, word_collapse(word));/*Nothing to replace! Just collapse the word down.*/
+  long newwordlg = lgword + nreplace*(lrepl-2);/*The new lg*/
+  GEN newword = cgetg(newwordlg, t_VECSMALL);/*The new word*/
+  long newind = 1, j;
+  for (i = 1; i < lgword; i++){/*Make the new word*/
+    switch (replaceplaces[i]) {
+	  case 0:/*Move this index to the new word.*/
+	    newword[newind] = word[i];
+		newind++;
+        break;
+	  case 1:
+	    for (j = 1; j < lrepl; j++) {
+          newword[newind] = repl[j];
+          newind++;
+        }
+		break;
+	  default:/*Case -1, add in invrepl.*/
+	    for (j = 1; j < lrepl; j++) {
+          newword[newind] = invrepl[j];
+          newind++;
+        }
+	}
+  }
+  return gerepileupto(av, word_collapse(newword));/*Collapse the finalword.*/
+}
+
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
