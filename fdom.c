@@ -138,8 +138,10 @@ static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN
 static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
 /*2: PRESENTATION*/
+static void presentation_update(GEN words, long ind, GEN repl);
 static GEN word_collapse(GEN word);
-static GEN word_substitute(GEN word, long ind, GEN repl);
+static GEN word_inv(GEN word);
+static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -1199,7 +1201,7 @@ static GEN
 normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
 {
   pari_sp av = avma;
-  long lG = lg(G), lU = lg(gel(U, 1)), i;
+  long lG = lg(G), lU = lg(normbound_get_elts(U)), i;
   GEN Cnew = vectrunc_init(lG);/*Start by initializing the new circles.*/
   GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
@@ -1926,6 +1928,164 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
 A word is a vecsmall, which is taken in reference to a list of elements G. A negative entry denotes taking the inverse of the corresponding index, so the word [1, -2, 5] is G[1]*G[2]^-1*G[5]. The fundamental domain gives us a set of generators, and we will manipulate this into a minimal set of generators with relations (stored as words).
 */
 
+/*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].*/
+GEN
+presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+{
+  pari_sp av = avma;
+  /*Initially, we start with using the original indices (of U[1]), and transfer over at the very end.*/
+  long lgelts, i, j;
+  GEN elts = normbound_get_elts(U);
+  GEN words = cgetg_copy(elts, &lgelts);/*Stores elts[i] as a word in terms of the minimal generators.*/
+  for (i = 1; i < lgelts; i++) gel(words, i) = mkvecsmall(i);/*Initially, each entry is just itself.*/
+  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xtrace, Xistriv);/*Minimal cycles by type.*/
+  GEN cyc = gel(mcyc, 1), cyctype = gel(mcyc, 2), pairing = normbound_get_spair(U);/*Cycles, types, pairing*/
+  long lgcyc = lg(cyc), ngens = 0;
+  for (i = 1; i < lgcyc; i++) {/*The relations are in reverse.*/
+    if (cyctype[i] == 0) gel(cyc, i) = mkvecsmall(0);/*Parabolic elements give no relations (for Shimura curves, they should only exist with M_2(Q))*/
+    GEN cy1 = vecsmall_reverse(gel(cyc, i)), cy = cy1;/*The element, whose cyctype[i]th power is 1.*/
+    for (j = 2; j <= cyctype[i]; j++) cy = vecsmall_concat(cy, cy1);/*Concat to make the power right.*/
+    gel(cyc, i) = cy;/*The actual relations are now stored in cyc.*/
+  }
+  GEN H=cgetg(lgelts, t_VECSMALL);/*We start by taking only one of g or g^(-1) for all g. In general, H tracks which elements are left in the generating set. Of the pair that appears, we just keep the first one we find.*/
+  for (i = 1; i < lgelts; i++){/*Initially, H[i]=1 if g=g^(-1), and for exactly one of [g, g^(-1)] for all other g.*/
+    long pairedind = pairing[i];/*What side i is paired to.*/
+    if (pairedind >= i) { H[i]=1; ngens++; continue; }/*No need to update words, we are keeping this generator for now.*/
+    H[i] = 0;/*H[i]=0 and update the word to g^-1, g is the paired index.*/
+    gel(words, i)[1] = -pairedind;
+    presentation_update(cyc, i, gel(words, i));/*Update the cycles.*/
+  }
+  /*At this point, we have replaced all inverses.*/
+  long accind = 1;/*accind tracks the first accidental cycle.*/
+  while (accind < lgcyc && cyctype[accind] == 0) accind++;/*Find the first accidental cycle.*/
+  long ellind = accind;
+  while (ellind < lgcyc && cyctype[ellind] == 1) ellind++;/*Find the first elliptic cycle.*/
+  long naccident = ellind-accind;/*How many accidental cycles*/
+  GEN r = gen_0;/*The accidental relation, if it exists.*/
+  if (naccident) r = gel(cyc, accind);/*The first accidental relation.*/
+  if (naccident > 1) {/*More than one relation. We go through the relations, updating r by solving for elements it has in common in another relation.*/
+    ngens = ngens - naccident + 1;/*Updating the number of generators.*/
+    long lastrel = ellind - 1;/*The last relation we consider. We swap this with the relation we find every step and decrease it, so we only need to consider relations from accind+1 to lastrel at each step.*/
+    long indrep=1, torep;/*indrep stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement. No collapsing occurs, since each index and its inverse appear at most once in the relations (and cannot disappear, unless we cancel them).*/
+    GEN repind = gen_0, cycle;/*repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.*/
+    /*Now we look for a common term.*/
+    for (i = 1; i < naccident; i++) {/*Each step we solve the relation.*/
+	  long lr = lg(r);
+      for (j = indrep; j < lr; j++) {/*Trying to replace index j. We stop once we find one replacable.*/
+        torep = r[j];/*What we try to replace.*/
+        long mtorep = -torep, l, m;/*The inverse.*/
+        for (l = accind + 1; l <= lastrel; l++) {/*Looking at cycle l*/
+          for(m = 1; m < lg(gel(cyc, l)); m++) {/*element m of cycle l*/
+            long thisind = gel(cyc, l)[m];
+            if(thisind != torep && thisind != mtorep) continue;
+            if (torep > 0) H[torep] = 0;/*Make sure it has been deleted from H.*/
+            else H[mtorep] = 0;
+            repind = mkvecsmall3(j, l, m);
+            l = lastrel+1;/*Break loop*/
+            j = lr;/*Break loop*/
+            break;/*Break loop*/
+          }
+        }
+      }
+      /*Now, repind gives us all the information we need to do the replacement.*/
+      cycle = gel(cyc, repind[2]);/*The cycle being deleted.*/
+      long lcyc = lg(cycle);
+      GEN repl = cgetg(lcyc-1, t_VECSMALL);/*cycle[repind[3]]. we have a1*...*an=1 -> a_m=a_{m-1}^(-1)*...*a_1^(-1)*a_n^(-1)*a_{n-1}^(-1)*...*a_{m+1}^(-1).*/
+      long irepl = 1;
+      for (j = repind[3] - 1; j > 0; j--) { repl[irepl] = -cycle[j]; irepl++; }
+      for (j = lcyc - 1; j > repind[3]; j--) { repl[irepl] = -cycle[j]; irepl++; }/*Replace index cycle[repind[3]] with the word repl.*/
+      presentation_update(words, cycle[repind[3]], repl);/*Replace the words.*/
+      r = word_substitute(r, cycle[repind[3]], repl, NULL);/*Replace it in r. No need to replace it in the other relations, since it cannot appear.*/
+      indrep = repind[1];/*The index we replaced.*/
+      gel(cyc, repind[2]) = gel(cyc, lastrel);/*Replace the relation we replaced with the last one.*/
+      lastrel--;/*One less relation.*/
+      }
+  }
+  /*Now we are almost done. If there is an elliptic cycle, we can do one final replacement.*/
+  if (ellind < lgcyc) {
+    ngens--;/*One less generator.*/
+    long lr = lg(r), irel = 0, rind = 0;/*r[rind] shares an index with cyc[irel].*/
+    for (i = ellind; i < lgcyc; i++) {/*Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A, , I/2);*/
+      long maxj = (lg(gel(cyc, i)) - 1)/cyctype[i];/*Since the elliptic relation is repeated cyctype[i] times, we only need to check the first grouping of indices.*/
+      for (j = 1; j <= maxj; j++) {
+        long ind = gel(cyc, i)[j], mind = -ind, rinc;
+        for (rinc = 1; rinc < lr; rinc++) {/*There MUST be an accidental cycle, so r is non-zero.*/
+          if (r[rinc] != ind && r[rinc] != mind) continue;/*Not equal*/
+          irel = i;
+          rind = rinc;
+          j = maxj + 1;/*break*/
+          i = lgcyc;/*break*/
+          break;/*break*/
+        }
+      }
+    }
+    /*Now we solve for the index with r.*/
+    if (r[rind] > 0) H[r[rind]] = 0;/*Deleting from H.*/
+    else H[-r[rind]] = 0;
+    GEN repl = cgetg(lr - 1, t_VECSMALL);
+    long irepl = 1;
+    for (j = rind - 1; j > 0; j--) { repl[irepl] = -r[j]; irepl++; }
+    for (j = lr - 1; j > rind; j--) { repl[irepl] = -r[j]; irepl++; }/*The replacment for r.*/
+    presentation_update(words, r[rind], repl);/*Replace the words.*/
+    gel(cyc, irel) = word_substitute(gel(cyc, irel), r[rind], repl, NULL);/*Update the elliptic relation.*/
+  }
+  /*Ok, time to finish. H tracks which indices remain, words track the words, and we have some relations. We have to change the indices to in terms of the remaining generators.*/
+  GEN gens = cgetg(ngens + 1, t_VEC);/*The generators.*/
+  long igens = 1, Hind = 1;
+  for (i = 1; i < lgelts; i++) {
+    if (H[i] == 1) {
+      H[i] = Hind;
+      Hind++;
+      gel(gens, igens) = gel(elts, i);
+      igens++;
+    }
+  }/*Index i is replaced with index H[i].*/
+  /*Let's do words first.*/
+  for (i = 1; i < lgelts; i++) {
+    for (j = 1; j < lg(gel(words, i)); j++) {
+      long k = gel(words, i)[j];
+      if (k > 0) gel(words, i)[j] = H[k];
+      else gel(words, i)[j] = -H[-k];
+    }
+  }
+  /*Now, relations*/
+  GEN relations;
+  if (ellind < lgcyc) {/*There were elliptic relations, and this is all that remains (since the final accidental relation was combined into an elliptic one).*/
+    long nell = lgcyc - ellind + 1;/*Number of relations;*/
+    relations = cgetg(nell, t_VEC);
+    long relind = 1;
+    for (i = ellind; i < lgcyc; i++) {
+      long lr;
+      gel(relations, relind) = cgetg_copy(gel(cyc, i), &lr);
+      for (j = 1; j < lr; j++) {
+        long k = gel(cyc, i)[j];
+        if (k > 0) gel(relations, relind)[j] = H[k];
+        else gel(relations, relind)[j] = -H[-k];
+      }
+      relind++;
+    }
+  }
+  else {/*No elliptic relations, so just r leftover.*/
+    long lr = lg(r);
+    for (i = 1; i < lr; i++) {
+      long k = r[i];
+      if(k > 0) r[i] = H[k];
+      else r[i] = -H[-k];
+    }
+    relations = mkvec(r);
+  }
+  return gerepilecopy(av, mkvec3(gens, relations, words));
+}
+
+/*Perform word_substitute(word, ind, repl) on each word in words, and updates it. This is OK since word is a GEN vector, so we are updating the memory addresses.*/
+static void
+presentation_update(GEN words, long ind, GEN repl)
+{
+  GEN invrepl = word_inv(repl);
+  long lwords = lg(words), i;
+  for (i = 1; i < lwords; i++) gel(words, i)=word_substitute(gel(words, i), ind, repl, invrepl);/*Substitute!*/
+}
+
 /*Given a word, "collapses" it down, i.e. deletes consecutive indices of the form i, -i, and repeats until the word is reduced.*/
 static GEN
 word_collapse(GEN word)
@@ -1960,18 +2120,27 @@ word_collapse(GEN word)
   return gerepileupto(av, newword);
 }
 
-/*We replace all instances of the index ind in word with repl, and then collapse down to a reduced word (with regards to the free group on the indices). We return the new word. Thus, substitute_word([1,2,3,-4,5], 3, [-2, -2, 5, 4])=[1, -2, 5, 5]. */
+/*Inverse of the word.*/
 static GEN
-word_substitute(GEN word, long ind, GEN repl)
+word_inv(GEN word)
+{
+  long lword, i;
+  GEN invword = cgetg_copy(word, &lword);/*The inverse of word*/
+  long invind = lword;
+  for (i = 1; i < lword; i++) {/*Negate and reverse word*/
+    invind--;
+    invword[invind] = -word[i];
+  }
+  return invword;
+}
+
+/*We replace all instances of the index ind in word with repl, and then collapse down to a reduced word (with regards to the free group on the indices). We return the new word. Thus, substitute_word([1,2,3,-4,5], 3, [-2, -2, 5, 4])=[1, -2, 5, 5]. invrepl can be passed as NULL.*/
+static GEN
+word_substitute(GEN word, long ind, GEN repl, GEN invrepl)
 {
   pari_sp av = avma;
-  long lrepl;/*length of the replacement word*/
-  GEN invrepl = cgetg_copy(repl, &lrepl);/*The inverse of repl*/
-  long invreplind = lrepl, i;
-  for (i = 1; i < lrepl; i++) {/*Negate and reverse repl, for when we have to substitute the inverse.*/
-	invreplind--;
-	invrepl[invreplind] = -repl[i];
-  }
+  long lrepl = lg(repl), i;/*length of the replacement word*/
+  if (!invrepl) invrepl = word_inv(repl);
   long nreplace = 0, mind = -ind, lgword;/*nreplace counts how many replacement we need to perform, and mind is -ind.*/
   GEN replaceplaces = cgetg_copy(word, &lgword);/*index 1 means replace this with repl,-1 with invrepl, and 0 means keep.*/
   for (i = 1; i < lgword; i++) {
