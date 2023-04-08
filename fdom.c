@@ -129,10 +129,13 @@ static GEN normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)
 static GEN red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN gdat);
 static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), int flag, GEN gdat);
 
-/*2: PRESENTATION*/
+/*2: CYCLES AND SIGNATURE*/
 static GEN minimalcycles(GEN pair);
 static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+
+/*2: PRESENTATION*/
+static GEN word_collapse(GEN word);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -1812,7 +1815,7 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
 }
 
 
-/*2: PRESENTATION*/
+/*2: CYCLES AND SIGNATURE*/
 
 /*Returns the set of minimal cycles of the side pairing pair. A cycle is a vecsmall [i1, i2,..., in] so that the cycle is v_i1, v_i2, ..., v_in. A cycle [-i] means that the "vertex" on side i is is a one element cycle (happens when a side is fixed).*/
 static GEN
@@ -1920,6 +1923,45 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
   return gerepileupto(av, rvec);
 }
 
+
+/*2: PRESENTATION*/
+
+/*
+A word is a vecsmall, which is taken in reference to a list of elements G. A negative entry denotes taking the inverse of the corresponding index, so the word [1, -2, 5] is G[1]*G[2]^-1*G[5]. The fundamental domain gives us a set of generators, and we will manipulate this into a minimal set of generators with relations (stored as words).
+*/
+
+/*Given a word, "collapses" it down, i.e. deletes consecutive indices of the form i, -i, and repeats until the word is reduced.*/
+static GEN
+word_collapse(GEN word){
+  pari_sp av = avma;
+  long lgword = lg(word), n = lgword - 1, last1 = 0, newlg = lgword, i;/*last1 tracks the last value of 1 in H that we have tracked. newlg tracks the new length.*/
+  GEN H = const_vecsmall(n, 1);/*H tracks if we keep each index in the collapsed word.*/
+  for (i = 1; i < n; i++) {/*We go through the word.*/
+    if (word[i] != -word[i+1]) {last1 = i;continue;}/*Nothing to do here, move on. H[i]=1 is necessarily true.*/
+    H[i] = 0;
+    H[i+1] = 0;/*Deleting i and i+1*/
+    newlg -= 2;/*2 less entries*/
+    if (last1 == 0) {i++;continue;}/*All previous entries are already deleted, along with i+1, so just move on to i+2.*/
+    long next1 = i + 2;/*Next entry with 1*/
+    while (last1 > 0 && next1 < lgword) {
+      if (word[last1] != -word[next1]) break;/*Maximum collapsing achieved.*/
+      H[last1]=0;
+      H[next1]=0;
+      newlg-=2;/*2 less entries*/
+      while (last1 > 0 && H[last1] == 0) last1--;/*Going backwards*/
+      next1++;/*Going forwards. We are guaranteed that next1=lgword or H[next1]=1.*/
+    }
+    i = next1 - 1;/*We do i++ at the end of the loop, so we want to go on to i=next1 next.*/
+  }
+  GEN newword = cgetg(newlg, t_VECSMALL);
+  long nind = 1;
+  for (i = 1; i < lgword; i++) {
+    if (H[i] == 0) continue;/*Go on*/
+    newword[nind] = word[i];
+    nind++;
+  }
+  return gerepileupto(av, newword);
+}
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
