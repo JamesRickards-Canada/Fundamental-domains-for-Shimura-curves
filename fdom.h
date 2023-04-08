@@ -84,8 +84,6 @@ GEN pgl_act(GEN M, GEN z);
 /*1: DISTANCES/AREAS*/
 /*1: OPERATIONS ON COMPLEX REALS*/
 /*1: TOLERANCE*/
-GEN deftol(long prec);
-GEN deflowtol(long prec);
 
 
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
