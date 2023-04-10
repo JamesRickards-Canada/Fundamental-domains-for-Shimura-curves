@@ -59,12 +59,6 @@ static GEN klein_safe(GEN M, long prec);
 static GEN uhp_safe(GEN p, long prec);
 
 /*1: TRANSFER BETWEEN MODELS*/
-static GEN disc_to_klein(GEN z);
-static GEN disc_to_plane(GEN z, GEN p);
-static GEN klein_to_disc(GEN z, GEN tol);
-static GEN klein_to_plane(GEN z, GEN p, GEN tol);
-static GEN plane_to_disc(GEN z, GEN p);
-static GEN plane_to_klein(GEN z, GEN p);
 static GEN m2r_to_klein(GEN M, GEN p);
 
 /*1: DISTANCES/AREA*/
@@ -425,7 +419,7 @@ uhp_safe(GEN p, long prec)
 /*1: TRANSFER BETWEEN MODELS*/
 
 /*Given a point z in the unit disc model, this transfers it to the Klein model.*/
-static GEN
+GEN
 disc_to_klein(GEN z)
 {
   pari_sp av = avma;
@@ -435,7 +429,7 @@ disc_to_klein(GEN z)
 }
 
 /*Given a point z in the unit disc model, this transfers it to the upper half plane model. The formula is conj(p)*z-p/(z-1)*/
-static GEN
+GEN
 disc_to_plane(GEN z, GEN p)
 {
   pari_sp av = avma;
@@ -445,7 +439,7 @@ disc_to_plane(GEN z, GEN p)
 }
 
 /*Given a point z in the Klein model, this transfers it to the unit disc model. The formula is z/(1+sqrt(1-|z|^2)).*/
-static GEN
+GEN
 klein_to_disc(GEN z, GEN tol)
 {
   pari_sp av = avma;
@@ -457,7 +451,7 @@ klein_to_disc(GEN z, GEN tol)
 }
 
 /*Given a point z in the Klein model, this transfers it to the upper half plane model.*/
-static GEN
+GEN
 klein_to_plane(GEN z, GEN p, GEN tol)
 {
   pari_sp av = avma;
@@ -466,7 +460,7 @@ klein_to_plane(GEN z, GEN p, GEN tol)
 }
 
 /*Given a point z in the upper half plane model, this transfers it to the unit disc model. The formula is (z-p)/(z-conj(p))*/
-static GEN
+GEN
 plane_to_disc(GEN z, GEN p)
 {
   pari_sp av = avma;
@@ -476,7 +470,7 @@ plane_to_disc(GEN z, GEN p)
 }
 
 /*Given a point z in the upper half plane model, this transfers it to the Klein model.*/
-static GEN
+GEN
 plane_to_klein(GEN z, GEN p)
 {
   pari_sp av = avma;

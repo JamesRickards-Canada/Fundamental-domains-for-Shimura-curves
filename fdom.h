@@ -79,6 +79,14 @@ GEN klein_act_i(GEN M, GEN z);
 GEN klein_act(GEN M, GEN z, long prec);
 GEN pgl_act(GEN M, GEN z);
 
+/*1: TRANSFER BETWEEN MODELS*/
+GEN disc_to_klein(GEN z);
+GEN disc_to_plane(GEN z, GEN p);
+GEN klein_to_disc(GEN z, GEN tol);
+GEN klein_to_plane(GEN z, GEN p, GEN tol);
+GEN plane_to_disc(GEN z, GEN p);
+GEN plane_to_klein(GEN z, GEN p);
+
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
@@ -105,4 +113,10 @@ GEN algmulvec(GEN A, GEN G, GEN L);
 /*3: ALGEBRA ORDER METHODS*/
 int algisorder(GEN A, GEN O);
 GEN algorderlevel(GEN A, GEN O, int factored);
+
+
+/*fdom_extra.c methods*/
+
+/*SECTION 1: VISUALIZATION*/
+void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, int open);
 
