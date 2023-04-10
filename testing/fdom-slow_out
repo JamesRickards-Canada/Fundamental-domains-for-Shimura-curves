@@ -42,8 +42,7 @@ Passed word test
 [9, Vecsmall([3, 3, 3, 3]), 0]
 Passed word test
   *** afuchfdom: Warning: Increasing precision.
-  *** afuchfdom: Warning: Increasing precision.
-  *** afuchfdom: Warning: Precision increased to 6, i.e. \p77.
+  *** afuchfdom: Warning: Precision increased to 5, i.e. \p57.
 [2, Vecsmall([3, 3, 5, 5]), 0]
 Passed word test
 Mat(5)
