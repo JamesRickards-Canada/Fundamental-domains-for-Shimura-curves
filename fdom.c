@@ -143,6 +143,7 @@ static void presentation_update(GEN words, long ind, GEN repl);
 static GEN word_collapse(GEN word);
 static GEN word_inv(GEN word);
 static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl);
+static GEN word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -2175,6 +2176,31 @@ word_substitute(GEN word, long ind, GEN repl, GEN invrepl)
   return gerepileupto(av, word_collapse(newword));/*Collapse the finalword.*/
 }
 
+/*Writes g as a word in terms of the presentation.*/
+static GEN
+word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat)
+{
+  pari_sp av = avma;
+  GEN tol = gdat_get_tol(gdat);
+  long prec = lg(tol);
+  GEN origin = gtocr(gen_0, prec);
+  GEN ginv = Xinv(X, g);/*g^-1*/
+  GEN gred = red_elt_decomp(X, U, ginv, origin, Xtoklein, Xmul, gdat);/*Reduction of g^-1, which gives a word for g.*/
+  if (!Xistriv(X, gel(gred, 1))) pari_err(e_MISC, "We could not reduce the element to the identity. Increase the precision perhaps?");
+  GEN oldword = gel(gred, 2);/*g as a word in U[1]. We must move it to a word in P[1].*/
+  GEN Ptrans = gel(P, 3);/*U[1] in terms of P.*/
+  long newlg = 1, lold = lg(oldword), i;
+  for (i = 1; i < lold; i++) newlg = newlg + lg(gel(Ptrans, oldword[i])) - 1;/*Getting the new length.*/
+  GEN newword = cgetg(newlg, t_VECSMALL);
+  long inew = 1;
+  for (i = 1; i < lold; i++) {
+    GEN repl = gel(Ptrans, oldword[i]);/*What to sub in.*/
+	long lrepl = lg(repl), j;
+    for (j = 1; j < lrepl; j++) { newword[inew] = repl[j]; inew++; }
+  }
+  return gerepileupto(av, word_collapse(newword));
+}
+
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -2633,9 +2659,11 @@ afuchsignature(GEN X)
 
 /*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element. ASSUMES O=IDENTITY*/
 GEN
-afuchredelt(GEN X, GEN U, GEN g, GEN z)
+afuchredelt(GEN X, GEN g, GEN z)
 {
   pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
   GEN gdat = afuch_get_gdat(X);
   GEN tol = gdat_get_tol(gdat);
   GEN zsafe = gtocr(z, lg(tol));/*Make sure z has the appropriate formatting.*/
@@ -2644,6 +2672,18 @@ afuchredelt(GEN X, GEN U, GEN g, GEN z)
   GEN gact = afuchtoklein(X, gel(r, 1));
   GEN zimg = klein_act_i(gact, zsafe);
   return gerepilecopy(av, mkvec3(gel(r, 1), zimg, gel(r, 2)));
+}
+
+/*Writing an element as a word in the presentation. We do not reduce wrt the generators.*/
+GEN
+afuchword(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  GEN P = afuch_get_pres(X);
+  if (!P) P = afuchpresentation(X);
+  return gerepileupto(av, word(X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X)));
 }
 
 

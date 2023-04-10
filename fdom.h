@@ -105,7 +105,8 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec);
 GEN afuchfdom(GEN X);
 GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
-GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
+GEN afuchredelt(GEN X, GEN g, GEN z);
+GEN afuchword(GEN X, GEN g);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 

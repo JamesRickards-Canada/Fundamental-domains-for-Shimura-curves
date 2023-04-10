@@ -21,8 +21,10 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchpresentation,"afuchpresentation(X): returns the presentation P of X. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A. P[3] tracks the sides of the fundamental domain in terms of the generators here, used to write an element as a word in these generators.");
 	install(afuchsignature,"G",,fdom_library);
 	addhelp(afuchsignature,"afuchsignature(X): returns the signature of X, i.e. [genus, [lengths of elliptic cycles], # of parabolic cycles].");
-	install(afuchredelt,"GGDGD0,G,",,fdom_library);
-	addhelp(afuchredelt,"afuchredelt(X, U, {g=id}, {z=0}: reduces gz to the normalized boundary U, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp).");
+	install(afuchredelt,"GDGD0,G,",,fdom_library);
+	addhelp(afuchredelt,"afuchredelt(X, {g=id}, {z=0}: reduces gz to the fundamental domain, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp). Except for a set of z of area 0, g'g should be trivial.");
+	install(afuchword,"GG",,fdom_library);
+	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
 
 	\\3: FINDING ELEMENTS
 	install(afuchfindelts,"GDGDGD1,L,",,fdom_library);
