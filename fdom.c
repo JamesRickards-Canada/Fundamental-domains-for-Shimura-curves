@@ -199,29 +199,31 @@ static GEN elementabsmultable_Z(GEN mt, GEN x);
 static GEN FpM_trace(GEN x, GEN p);
 static GEN ZM_trace(GEN x);
 
+/*MAIN BODY*/
+
+
 /*SECTION 1: GEOMETRIC METHODS*/
 
-
 /*LINES, SEGMENTS, TOLERANCE, POINTS
-Line	[a, b, c]
-	Representing ax+by=c. We will normalize so that c=gen_1 or gen_0. It is assumed that at least one of a, b is non-zero. We also assume that a and b are of type t_REAL.
+Line    [a, b, c]
+    Representing ax+by=c. We will normalize so that c=gen_1 or gen_0. It is assumed that at least one of a, b is non-zero. We also assume that a and b are of type t_REAL.
 Point
-	Stored as t_COMPLEX with t_REAL entries.
-Segment	[a, b, c, x0, x1]
-	[a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going through oo. We also require x0 and x1 to have type t_COMPLEX with t_REAL components.
+    Stored as t_COMPLEX with t_REAL entries.
+Segment [a, b, c, x0, x1]
+    [a, b, c] gives the line, which has start point x0 and ends at x1, which are complex. We do not allow segments going through oo. We also require x0 and x1 to have type t_COMPLEX with t_REAL components.
 tol
-	The tolerance, which MUST be of type t_REAL. The default choice is tol=deftol(prec). Two points are declared as equal if they are equal up to tolerance.
+    The tolerance, which MUST be of type t_REAL. The default choice is tol=deftol(prec). Two points are declared as equal if they are equal up to tolerance.
 */
 
 /* GEOMETRIC DATA
 We will need to deal with passing from the upper half plane model -> unit ball model -> Klein model, as well as doing computations with tolerance. For this, we will fix a "geometric data" argument:
 gdat = [tol, p]
 tol
-	The tolerance, which should be initially set with tol=deftol(prec).
+    The tolerance, which should be initially set with tol=deftol(prec).
 p
-	The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, otherwise issues may arise. We convert it to have components that are t_REAL.
+    The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, otherwise issues may arise. We convert it to have components that are t_REAL.
 precision
-	Can be retrieved by lg(tol), so we don't store it.
+    Can be retrieved by lg(tol), so we don't store it.
 */
 
 
@@ -235,11 +237,11 @@ angle_onarc(GEN a1, GEN a2, GEN a, GEN tol)
   if (!a1cmp) return 1;/*Equal to a1*/
   int cross = cmprr(a1, a2);/*No need for tolerance here*/
   if (cross > 0){/*The arc crosses the x-axis.*/
-	if (a1cmp < 0) return 3;/*Between a1 and the x-axis*/
-	int a2cmp = tolcmp(a, a2, tol);
-	if (!a2cmp) return 2;/*Equal to a2*/
-	if (a2cmp < 0) return 3;/*Inside*/
-	return 0;/*Outside*/
+    if (a1cmp < 0) return 3;/*Between a1 and the x-axis*/
+    int a2cmp = tolcmp(a, a2, tol);
+    if (!a2cmp) return 2;/*Equal to a2*/
+    if (a2cmp < 0) return 3;/*Inside*/
+    return 0;/*Outside*/
   }
   if (a1cmp > 0) return 0;/*Between x-axis and a1*/
   int a2cmp = tolcmp(a, a2, tol);
@@ -258,10 +260,10 @@ line_int(GEN l1, GEN l2, GEN tol)
   if (!det) return gc_NULL(av);/*Lines are parallel*/
   if (!signe(c1)) {/*ax+by = 0*/
     if (!signe(c2)) {/*Both must pass through 0*/
-	  GEN zeror = real_0(lg(tol));/*prec=lg(tol)*/
-	  return gerepilecopy(av, mkcomplex(zeror, zeror));
-	}
-	return gerepilecopy(av, mkcomplex(divrr(negr(gel(l1, 2)), det), divrr(gel(l1, 1), det)));/*-b/det, a/det*/
+      GEN zeror = real_0(lg(tol));/*prec=lg(tol)*/
+      return gerepilecopy(av, mkcomplex(zeror, zeror));
+    }
+    return gerepilecopy(av, mkcomplex(divrr(negr(gel(l1, 2)), det), divrr(gel(l1, 1), det)));/*-b/det, a/det*/
   }
   /*Next, cx+dy = 0*/
   if (!signe(c2)) return gerepilecopy(av, mkcomplex(divrr(gel(l2, 2), det), divrr(negr(gel(l2, 1)), det)));/*d/det, -c/det*/
@@ -300,14 +302,14 @@ onseg(GEN l, GEN p, GEN tol)
   GEN pstart = gel(l, 4), px = gel(p, 1);
   int xcmp1 = tolcmp(gel(pstart, 1), px, tol);/*Compare x coeff of starting point and x*/
   if (!xcmp1) {/*Same x-value*/
-	GEN py = gel(p, 2);
-	int ycmp1 = tolcmp(gel(pstart, 2), py, tol);
-	if (!ycmp1) return gc_int(av, 2);/*We must be the starting point.*/
-	GEN pend = gel(l, 5);/*At this point, the slope must be oo*/
-	int ycmp2 = tolcmp(py, gel(pend, 2), tol);
-	if (!ycmp2) return gc_int(av, 3);/*Since we assume that p is on the line, we must be at endpoint 2 now.*/
-	if (ycmp1 == ycmp2) return gc_int(av, 1);/*Must be between*/
-	return gc_int(av, 0);/*Above or below*/
+    GEN py = gel(p, 2);
+    int ycmp1 = tolcmp(gel(pstart, 2), py, tol);
+    if (!ycmp1) return gc_int(av, 2);/*We must be the starting point.*/
+    GEN pend = gel(l, 5);/*At this point, the slope must be oo*/
+    int ycmp2 = tolcmp(py, gel(pend, 2), tol);
+    if (!ycmp2) return gc_int(av, 3);/*Since we assume that p is on the line, we must be at endpoint 2 now.*/
+    if (ycmp1 == ycmp2) return gc_int(av, 1);/*Must be between*/
+    return gc_int(av, 0);/*Above or below*/
   }/*Now we have distinct x-values*/
   int xcmp2 = tolcmp(px, gel(gel(l, 5), 1), tol);
   if (xcmp2 == 0) return gc_int(av, 3);/*End point, as the slope cannot be oo as pstartx! = pendx*/
@@ -331,13 +333,13 @@ seg_int(GEN l1, GEN l2, GEN tol)
 
 /*EQUATIONS FOR ACTION
 UPPER HALF PLANE
-	M=[a, b;c, d] in (P)GL(2, R)^+ acts on z via (az+b)/(cz+d). 
+    M=[a, b;c, d] in (P)GL(2, R)^+ acts on z via (az+b)/(cz+d). 
 UNIT DISC
-	M=[A, B;conj(B), conj(A)] in (P)SU(1, 1) acts on z in the same way as PGL. 
+    M=[A, B;conj(B), conj(A)] in (P)SU(1, 1) acts on z in the same way as PGL. 
 KLEIN
-	M=[A, B] corresponding to the same (A, B) as for the unit disc action. The corresponding equation on a point in the Klein model is via 
-	Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B
-	=(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
+    M=[A, B] corresponding to the same (A, B) as for the unit disc action. The corresponding equation on a point in the Klein model is via 
+    Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B
+    =(A(Az+B)+B(B*conj(z)+A))/(conj(B)(Az+B)+conj(A)(B*conj(z)+A)).
 */
 
 /*Returns the default value of p, which is Pi/8+0.5*I*/
@@ -548,7 +550,7 @@ gtocr(GEN z, long prec)
   if (typ(z) == t_COMPLEX) {
     gel(zsafe, 1) = gtofp(gel(z, 1), prec);
     gel(zsafe, 2) = gtofp(gel(z, 2), prec);
-	return zsafe;
+    return zsafe;
   }
   gel(zsafe, 1) = gtofp(z, prec);
   gel(zsafe, 2) = real_0(prec);
@@ -651,9 +653,9 @@ rM_upper_r_mul(GEN M, GEN r)
   long n = lg(M), i, j;
   GEN P = cgetg(n, t_MAT);
   for (i = 1; i < n; i++) {
-	gel(P, i) = cgetg(n, t_COL);
-	for (j = 1; j <= i; j++) gmael(P, i, j) = mulrr(gcoeff(M, j, i), r);
-	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
+    gel(P, i) = cgetg(n, t_COL);
+    for (j = 1; j <= i; j++) gmael(P, i, j) = mulrr(gcoeff(M, j, i), r);
+    for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
   }
   return P;
 }
@@ -665,9 +667,9 @@ rM_upper_add(GEN M1, GEN M2)
   long n = lg(M1), i, j;
   GEN P = cgetg(n, t_MAT);
   for (i = 1; i < n; i++) {
-	gel(P, i) = cgetg(n, t_COL);
-	for (j = 1; j <= i; j++) gmael(P, i, j) = addrr(gcoeff(M1, j, i), gcoeff(M2, j, i));
-	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
+    gel(P, i) = cgetg(n, t_COL);
+    for (j = 1; j <= i; j++) gmael(P, i, j) = addrr(gcoeff(M1, j, i), gcoeff(M2, j, i));
+    for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
   }
   return P;
 }
@@ -679,9 +681,9 @@ RgM_upper_add(GEN M1, GEN M2)
   long n = lg(M1), i, j;
   GEN P = cgetg(n, t_MAT);
   for (i = 1; i < n; i++) {
-	gel(P, i) = cgetg(n, t_COL);
-	for (j = 1; j <= i; j++) gmael(P, i, j) = gadd(gcoeff(M1, j, i), gcoeff(M2, j, i));
-	for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
+    gel(P, i) = cgetg(n, t_COL);
+    for (j = 1; j <= i; j++) gmael(P, i, j) = gadd(gcoeff(M1, j, i), gcoeff(M2, j, i));
+    for (j = i + 1; j < n; j++) gmael(P, i, j) = gen_0;
   }
   return P;
 }
@@ -746,30 +748,30 @@ static int
 toleq0(GEN x, GEN tol)
 {
   switch (typ(x)) {
-	case t_REAL:
-	  if (abscmprr(x, tol) < 0) return 1;/*|x|<tol*/
-	  return 0;
-	case t_COMPLEX:;
-	  long i;
-	  for (i = 1; i <= 2; i++) {
-		switch (typ(gel(x, i))) {
-		  case t_REAL:
-		    if (abscmprr(gel(x, i), tol) >= 0) return 0;/*Too large*/
-			break;
-		  case t_INT:
-		    if (signe(gel(x, i))) return 0;
-			break;
-		  case t_FRAC:/*Fraction component, cannot be 0*/
-		    return 0;
-		  default:/*Illegal input*/
-		    pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
-		}
-	  }
-	  return 1;/*We passed*/
-	case t_INT:/*Given exactly*/
-	  return !signe(x);
-	case t_FRAC:/*t_FRAC cannot be 0*/
-	  return 0;
+    case t_REAL:
+      if (abscmprr(x, tol) < 0) return 1;/*|x|<tol*/
+      return 0;
+    case t_COMPLEX:;
+      long i;
+      for (i = 1; i <= 2; i++) {
+        switch (typ(gel(x, i))) {
+          case t_REAL:
+            if (abscmprr(gel(x, i), tol) >= 0) return 0;/*Too large*/
+            break;
+          case t_INT:
+            if (signe(gel(x, i))) return 0;
+            break;
+          case t_FRAC:/*Fraction component, cannot be 0*/
+            return 0;
+          default:/*Illegal input*/
+            pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
+        }
+      }
+      return 1;/*We passed*/
+    case t_INT:/*Given exactly*/
+      return !signe(x);
+    case t_FRAC:/*t_FRAC cannot be 0*/
+      return 0;
   }
   pari_err_TYPE("Tolerance equality only valid for type t_INT, t_FRAC, t_REAL, t_COMPLEX", x);
   return 0;/*So that there is no warning*/
@@ -780,12 +782,12 @@ static int
 tolsigne(GEN x, GEN tol)
 {
   switch (typ(x)) {
-	case t_REAL:
-	  if (abscmprr(x, tol) < 0) return 0;/*|x|<tol*/
-	case t_INT:/*Given exactly or real and not 0 up to tolerance.*/
-	  return signe(x);
-	case t_FRAC:/*t_FRAC cannot be 0*/
-	  return signe(gel(x, 1));
+    case t_REAL:
+      if (abscmprr(x, tol) < 0) return 0;/*|x|<tol*/
+    case t_INT:/*Given exactly or real and not 0 up to tolerance.*/
+      return signe(x);
+    case t_FRAC:/*t_FRAC cannot be 0*/
+      return signe(gel(x, 1));
   }
   pari_err_TYPE("Tolerance comparison only valid for type t_INT, t_FRAC, t_REAL", x);
   return 0;/*So that there is no warning*/
@@ -796,12 +798,12 @@ tolsigne(GEN x, GEN tol)
 
 /* DEALING WITH GENERAL STRUCTURES
 Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma (that should be memory clean), namely:
-	i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
-	ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
-	iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2.
-	iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
-	v) Find the exact trace of an element of Gamma: format as Xtrace(GEN X, GEN g).
-	vi) Input an element representing the trivial element of X.
+    i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
+    ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
+    iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2.
+    iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
+    v) Find the exact trace of an element of Gamma: format as Xtrace(GEN X, GEN g).
+    vi) Input an element representing the trivial element of X.
 We do all of our computations in the Klein model.
 */
 
@@ -810,18 +812,18 @@ We do all of our computations in the Klein model.
 
 /* ISOMETRIC CIRCLE FORMATTING
 icirc
-	[a, b, r, p1, p2, ang1, ang2]
+    [a, b, r, p1, p2, ang1, ang2]
 a, b
-	ax+by=1 is the Klein model equation of the boundary. a and b are t_REAL
-	(x-a)^2+(y-b)^2=r^2 is the unit disc model equation of the boundary
+    ax+by=1 is the Klein model equation of the boundary. a and b are t_REAL
+    (x-a)^2+(y-b)^2=r^2 is the unit disc model equation of the boundary
 r
-	r^2+1=a^2+b^2 as it is orthogonal to the unit disc, and is of type t_REAL
+    r^2+1=a^2+b^2 as it is orthogonal to the unit disc, and is of type t_REAL
 p1/p2
-	Intersection points with the unit disc; see below for the ordering. Of type t_COMPLEX with t_REAL components.
+    Intersection points with the unit disc; see below for the ordering. Of type t_COMPLEX with t_REAL components.
 ang1
-	Assume that the angle from p1 to p2 is <pi (which uniquely determines them). Then ang1 is the argument of p1, in the range [0, 2*pi). Type t_REAL
+    Assume that the angle from p1 to p2 is <pi (which uniquely determines them). Then ang1 is the argument of p1, in the range [0, 2*pi). Type t_REAL
 ang2
-	The argument of p2, in the range [0, 2*pi). It may be less than ang1 if the arc crosses 1. Type t_REAL.
+    The argument of p2, in the range [0, 2*pi). It may be less than ang1 if the arc crosses 1. Type t_REAL.
 */
 
 
@@ -840,8 +842,8 @@ icirc_angle(GEN c1, GEN c2, long prec)
 }
 
 /*Given M=[A, B] with |A|^2-|B|^2=w acting on the Klein model, this returns the isometric circle associated to it. This has centre -conj(A/B), radius sqrt(w)/|B|. In the Klein model, the centre being a+bi -> xa+yb=1, and this intersects the unit disc at (a+/-br/(a^2+b^2), (b-/+ar)/(a^2+b^2)). Assumptions:
-	If we pass in an element giving everything (i.e. B=0), we return 0.
-	A and B are t_COMPLEX with t_REAL components
+    If we pass in an element giving everything (i.e. B=0), we return 0.
+    A and B are t_COMPLEX with t_REAL components
 */
 static GEN
 icirc_klein(GEN M, GEN tol)
@@ -866,10 +868,10 @@ icirc_klein(GEN M, GEN tol)
   GEN p2 = mkcomplex(divrr(ambr, asqbsq), divrr(bpar, asqbsq));/*Second intersection point.*/
   GEN thetadiff = subrr(theta2, theta1);
   if (signe(thetadiff) == 1) {/*If the next if block executes, theta2 is actually the "first" angle, so we swap them.*/
-	if (cmprr(thetadiff, mppi(prec)) > 0) return gerepilecopy(av, mkvecn(7, a, b, r, p2, p1, theta2, theta1));
+    if (cmprr(thetadiff, mppi(prec)) > 0) return gerepilecopy(av, mkvecn(7, a, b, r, p2, p1, theta2, theta1));
   }
   else {/*Same as above*/
-	if (cmprr(thetadiff, negr(mppi(prec))) > 0) return gerepilecopy(av, mkvecn(7, a, b, r, p2, p1, theta2, theta1));
+    if (cmprr(thetadiff, negr(mppi(prec))) > 0) return gerepilecopy(av, mkvecn(7, a, b, r, p2, p1, theta2, theta1));
   }
   return gerepilecopy(av, mkvecn(7, a, b, r, p1, p2, theta1, theta2));/*Return the output!*/
 }
@@ -894,9 +896,9 @@ argmod(GEN x, GEN y, GEN tol)
   long prec = lg(tol);
   int xsign = tolsigne(x, tol);/*Sign of x up to tolerance.*/
   if (xsign == 0) {/*Fixing theta when x == 0, so the line is vertical.*/
-	GEN theta = Pi2n(-1, prec);/*Pi/2*/
-	if (signe(y) == -1) theta = addrr(theta, mppi(prec));/*3Pi/2*/
-	return theta;
+    GEN theta = Pi2n(-1, prec);/*Pi/2*/
+    if (signe(y) == -1) theta = addrr(theta, mppi(prec));/*3Pi/2*/
+    return theta;
   }
   GEN theta = gatan(gdiv(y, x), prec);
   if (xsign == -1) return addrr(theta, mppi(prec));/*atan lies in (-Pi/2, Pi/2), so must add by Pi to get it correct.*/
@@ -917,23 +919,23 @@ argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
 A normalized boundary is represented by U, where
 U=[elts, sides, vcors, vargs, crossind, kact, area, spair, deleted]
 elts
-	Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0. Elements cannot be stored as type t_INT.
+    Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0. Elements cannot be stored as type t_INT.
 sides
-	The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0. The first side is the closest to the origin.
+    The ith entry is the isometric circle corresponding to elts[i], stored as an icirc. Infinite side -> 0. The first side is the closest to the origin.
 vcors
-	Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this order going counterclockwise about the origin.
+    Vertex coordinates, stored as a t_COMPLEX with real components. The side sides[i] has vertices vcor[i-1] and vcor[i], appearing in this order going counterclockwise about the origin.
 vargs
-	The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, BUT vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
+    The argument of the corresponding vertex, normalized to lie in [0, 2*Pi), stored as t_REAL. These are stored in counterclockwise order, BUT vargs itself is not sorted: it is increasing from 1 to crossind, and from crossind+1 to the end.
 crossind
-	the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that vertex.	Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
+    the arc from vertex crossind to crossind+1 contains the positive x-axis. If one vertex IS on this axis, then crossind+1 gives that vertex.  Alternatively, crossind is the unique vertex such that vargs[crossind]>vargs[crossind+1], taken cyclically.
 kact
-	The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
+    The action of the corresponding element on the Klein model, for use in klein_act. Infinite side -> 0
 area
-	The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
+    The hyperbolic area of U, which will be oo unless we are a finite index subgroup of Gamma.
 spair
-	Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will store the indices of the sides that got deleted.
+    Stores the side pairing of U, if it exists/has been computed. When computing the normalized boundary, this will store the indices of the sides that got deleted.
 infinite
-	Stores the indices of the infinite sides.
+    Stores the indices of the infinite sides.
 */
 
 
@@ -945,21 +947,21 @@ normbound(GEN X, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
   GEN C = vectrunc_init(lG);
   GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
-	GEN circ = icirc_elt(X, gel(G, i), Xtoklein, gdat);
-	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
-	vectrunc_append(C, circ);
-	vecsmalltrunc_append(indtransfer, i);
+    GEN circ = icirc_elt(X, gel(G, i), Xtoklein, gdat);
+    if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
+    vectrunc_append(C, circ);
+    vecsmalltrunc_append(indtransfer, i);
   }
   if(lg(C) == 1) return NULL;
   return normbound_icircs(C, indtransfer, gdat);
 }
 
 /*Given C, the output of icirc_elt for each of our elements, this computes and returns the normalized boundary. Assumptions:
-	C[i]=[g, M, icirc], where g=elt, M=Kleinian action, and icirc=[a, b, r, p1, p2, ang1, ang2].
-	None of the entries should be infinite sides, sort this out in the method that calls this.
-	C has at least one element, so the boundary is non-trivial.
-	indtransfer tracks the indices of G in terms of the indices in C, for tracking the deleted elements.
-	Not gerepileupto safe, and leaves garbage.
+    C[i]=[g, M, icirc], where g=elt, M=Kleinian action, and icirc=[a, b, r, p1, p2, ang1, ang2].
+    None of the entries should be infinite sides, sort this out in the method that calls this.
+    C has at least one element, so the boundary is non-trivial.
+    indtransfer tracks the indices of G in terms of the indices in C, for tracking the deleted elements.
+    Not gerepileupto safe, and leaves garbage.
 */
 static GEN
 normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
@@ -980,113 +982,113 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
   long found = 1, lenc = lc-1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
   int phase2 = 0;/*Which phase we are in*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
-	elts, vcors, vargs, infinite, deleted, found, absind, phase2
-	PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
+    elts, vcors, vargs, infinite, deleted, found, absind, phase2
+    PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
   */
   for (absind = 1; absind < lenc; absind++) {/*We are trying to insert the next side.*/
-	long toins = order[1 + (istart + absind - 1)%lenc];/*The index of the side to insert.*/
-	GEN curcirc = gmael(C, toins, 3);/*The isometric circle we are trying to insert*/
-	GEN lastcirc = gmael(C, elts[found], 3);/*The isometric circle of the last side inserted. This is NEVER an oo side.*/
-	int termloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 7), tol);/*Whether the terminal angle lies inside the last arc.*/
-	switch (termloc) {
-	  case 3:
-	    if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) {
-		  vecsmalltrunc_append(deleted, indtransfer[toins]);
-		  continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
-		}
-	  case 1:
-	    phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
-		/*The last side might not be the first, but since we looped all the way around there MUST be an oo side.*/
-		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
-		normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		continue;
-	  case 2:
-	    vecsmalltrunc_append(deleted, indtransfer[toins]);
-	    continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
-	}
-	/*If we make it here, then the terminal point lies outside of the last range.*/
-	int initloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol);/*Whether the initial angle lies inside the last arc.*/
-	switch (initloc) {
-	  case 3:/*We have an intersection to consider, will do so outside the switch.*/
-	    break;
-	  case 1:
-	    vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
-		absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
-		found--;
-		continue;
-	  case 0:
-	    normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
-	  case 2:
-	    if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  continue;
-		}
-	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*New(initial)=Old(terminal), so there is no infinite side coming first (or we are coming from case=0 when we have already inserted it)*/
-		continue;
-	}
-	/*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
-	GEN ipt = line_int11(curcirc, lastcirc, tol);/*Find the intersection point, guaranteed to be in the unit disc.*/
-	GEN iptarg = argmod_complex(ipt, tol);/*Argument*/
-	if (found == 1) {/*Straight up insert it; no phase 2 guaranteed.*/
-	   gel(vcors, found) = ipt;/*Fix the last vertex*/
-	   gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
-	   normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	   continue;
-	}
-	int newptdat = angle_onarc(gel(vargs, found - 1), gel(vargs, found), iptarg, tol);/*The new point wrt the previous side.*/
-	switch (newptdat) {
-	  case 3:/*Insert it!*/
-	    gel(vcors, found) = ipt;/*Fix the last vertex*/
-	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
-		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  continue;
-		}
-	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	    continue;
-	  case 2:
-	    if (phase2) {
-		  vecsmalltrunc_append(deleted, indtransfer[toins]);
-		  continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
-		}
-	    /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
-		if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  continue;
-		}
-		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-		continue;
-	  case 0:
-	    if (!phase2) {/*We supercede the last side, so delete and try again. We could not have deleted a side, have this trigger, and intersect the last side without superceding.*/
-		  vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
-	      absind--;
-	      found--;
-	      continue;
-		}
-		int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found - 1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
-		if (supercede) {
-		  vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
-		  absind--;
-		  found--;
-		  continue;
-		}
-		vecsmalltrunc_append(deleted, indtransfer[toins]);
-		continue;
-	  case 1:/*We just replace the last side, we have the same vertex and vertex angle.*/
-	    vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
-		found--;
-		if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
-		  continue;
-		}
-		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	}
+    long toins = order[1 + (istart + absind - 1)%lenc];/*The index of the side to insert.*/
+    GEN curcirc = gmael(C, toins, 3);/*The isometric circle we are trying to insert*/
+    GEN lastcirc = gmael(C, elts[found], 3);/*The isometric circle of the last side inserted. This is NEVER an oo side.*/
+    int termloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 7), tol);/*Whether the terminal angle lies inside the last arc.*/
+    switch (termloc) {
+      case 3:
+        if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) {
+          vecsmalltrunc_append(deleted, indtransfer[toins]);
+          continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
+        }
+      case 1:
+        phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
+        /*The last side might not be the first, but since we looped all the way around there MUST be an oo side.*/
+        normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
+        normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+        continue;
+      case 2:
+        vecsmalltrunc_append(deleted, indtransfer[toins]);
+        continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
+    }
+    /*If we make it here, then the terminal point lies outside of the last range.*/
+    int initloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol);/*Whether the initial angle lies inside the last arc.*/
+    switch (initloc) {
+      case 3:/*We have an intersection to consider, will do so outside the switch.*/
+        break;
+      case 1:
+        vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
+        absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
+        found--;
+        continue;
+      case 0:
+        normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
+      case 2:
+        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*New(initial)=Old(terminal), so there is no infinite side coming first (or we are coming from case=0 when we have already inserted it)*/
+        continue;
+    }
+    /*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
+    GEN ipt = line_int11(curcirc, lastcirc, tol);/*Find the intersection point, guaranteed to be in the unit disc.*/
+    GEN iptarg = argmod_complex(ipt, tol);/*Argument*/
+    if (found == 1) {/*Straight up insert it; no phase 2 guaranteed.*/
+       gel(vcors, found) = ipt;/*Fix the last vertex*/
+       gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
+       normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+       continue;
+    }
+    int newptdat = angle_onarc(gel(vargs, found - 1), gel(vargs, found), iptarg, tol);/*The new point wrt the previous side.*/
+    switch (newptdat) {
+      case 3:/*Insert it!*/
+        gel(vcors, found) = ipt;/*Fix the last vertex*/
+        gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
+        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+        continue;
+      case 2:
+        if (phase2) {
+          vecsmalltrunc_append(deleted, indtransfer[toins]);
+          continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
+        }
+        /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
+        if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+        continue;
+      case 0:
+        if (!phase2) {/*We supercede the last side, so delete and try again. We could not have deleted a side, have this trigger, and intersect the last side without superceding.*/
+          vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
+          absind--;
+          found--;
+          continue;
+        }
+        int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found - 1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
+        if (supercede) {
+          vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
+          absind--;
+          found--;
+          continue;
+        }
+        vecsmalltrunc_append(deleted, indtransfer[toins]);
+        continue;
+      case 1:/*We just replace the last side, we have the same vertex and vertex angle.*/
+        vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
+        found--;
+        if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+    }
   }
   if (!phase2) {/*We never hit phase 2, so there is one final infinite edge to worry about.*/
-	normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
+    normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
   long i, fp1 = found + 1;
@@ -1095,9 +1097,9 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
   GEN rv_sides = cgetg(fp1, t_VEC);
   GEN rv_kact = cgetg(fp1, t_VEC);
   for (i = 1; i <= found; i++) {/*Make sure we treat infinite sides correctly!*/
-	gel(rv_elts, i) = elts[i] ? gmael(C, elts[i], 1) : gen_0;
-	gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
-	gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
+    gel(rv_elts, i) = elts[i] ? gmael(C, elts[i], 1) : gen_0;
+    gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
+    gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
   }
   gel(rv, 1) = rv_elts;/*The elements*/
   gel(rv, 2) = rv_sides;/*The sides*/
@@ -1120,10 +1122,10 @@ normbound_icircs_bigr(GEN C, GEN order)
   long i, best = 1;
   GEN maxr = gmael3(C, order[1], 3, 3);
   for (i = 2; i < lg(C); i++) {
-	GEN newr = gmael3(C, order[i], 3, 3);
-	if (cmprr(newr, maxr) <= 0) continue;/*Not as big. No need for tolerance here, it won't affect anything.*/
-	best = i;
-	maxr = newr;
+    GEN newr = gmael3(C, order[i], 3, 3);
+    if (cmprr(newr, maxr) <= 0) continue;/*Not as big. No need for tolerance here, it won't affect anything.*/
+    best = i;
+    maxr = newr;
   }
   return gc_long(av, best);
 }
@@ -1195,8 +1197,8 @@ normbound_whichside(GEN side, GEN z, GEN tol)
 {
   pari_sp av = avma;
   if (gequal0(side)) {
-	if (toleq(normcr(z), gen_1, tol)) return gc_int(av, 0);/*Unit disc point, infinite side*/
-	return gc_int(av, -1);/*Interior point, infinite side*/
+    if (toleq(normcr(z), gen_1, tol)) return gc_int(av, 0);/*Unit disc point, infinite side*/
+    return gc_int(av, -1);/*Interior point, infinite side*/
   }
   GEN where = subrs(addrr(mulrr(gel(z, 1), gel(side, 1)), mulrr(gel(z, 2), gel(side, 2))), 1);/*sign(where)==-1 iff where is on the same side as 0, 0 iff where is on the side.*/
   return gc_int(av, tolsigne(where, tol));
@@ -1213,10 +1215,10 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
   GEN Cnew = vectrunc_init(lG);/*Start by initializing the new circles.*/
   GEN indtransfer = vecsmalltrunc_init(lG);/*Transfer indices of C back to G*/
   for (i = 1; i < lG; i++) {
-	GEN circ = icirc_elt(X, gel(G, i), Xtoklein, gdat);
-	if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
-	vectrunc_append(Cnew, circ);
-	vecsmalltrunc_append(indtransfer, i);
+    GEN circ = icirc_elt(X, gel(G, i), Xtoklein, gdat);
+    if(gequal0(gel(circ, 3))) continue;/*No isometric circle*/
+    vectrunc_append(Cnew, circ);
+    vecsmalltrunc_append(indtransfer, i);
   }
   long lCnew = lg(Cnew);
   if (lCnew == 1) return gc_NULL(av);
@@ -1225,11 +1227,11 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
   long Unext = Ustart%lenU + 1;
   GEN Usides = normbound_get_sides(U), tol = gdat_get_tol(gdat);
   for (;;) {
-	if (gequal0(gel(Usides, Ustart))) { Ustart = Unext; break; }/*The next side is not infinite, and must be the first one.*/
-	if (gequal0(gel(Usides, Unext))) { Ustart = Unext%lenU + 1; break; }/*Must move past the infinite side.*/
-	if (tolcmp(gmael(Usides, Ustart, 6), gmael(Usides, Unext, 6), tol) >= 0) { Ustart = Unext; break; }/*We have crossed over.*/
-	Ustart = Unext;
-	Unext = Unext%lenU + 1;
+    if (gequal0(gel(Usides, Ustart))) { Ustart = Unext; break; }/*The next side is not infinite, and must be the first one.*/
+    if (gequal0(gel(Usides, Unext))) { Ustart = Unext%lenU + 1; break; }/*Must move past the infinite side.*/
+    if (tolcmp(gmael(Usides, Ustart, 6), gmael(Usides, Unext, 6), tol) >= 0) { Ustart = Unext; break; }/*We have crossed over.*/
+    Ustart = Unext;
+    Unext = Unext%lenU + 1;
   }
   GEN Uelts = normbound_get_elts(U), Ukact = normbound_get_kact(U);
   GEN order = gen_indexsort(Cnew, NULL, &cmp_icircangle);/*Order the new sides by initial angle.*/
@@ -1242,52 +1244,52 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
   long Cnewind, Uind;
   if (tolcmp(gmael3(Cnew, order[1], 3, 6), gmael(Usides, Ustart, 6), tol) >= 0) {/*Start with U.*/
     vectrunc_append(C, mkvec3(gel(Uelts, Ustart), gel(Ukact, Ustart), gel(Usides, Ustart)));
-	vecsmalltrunc_append(Ctype, Ustart);/*Old side*/
-	if (!rbigind && Ustart == 1) rbigind = 1;
-	Cnewind = 1;
-	Uind = Ustart%lenU + 1;
-	if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
+    vecsmalltrunc_append(Ctype, Ustart);/*Old side*/
+    if (!rbigind && Ustart == 1) rbigind = 1;
+    Cnewind = 1;
+    Uind = Ustart%lenU + 1;
+    if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
   }
   else {/*Start with C*/
-	vectrunc_append(C, gel(Cnew, order[1]));
-	vecsmalltrunc_append(Ctype, -indtransfer[order[1]]);/*New side*/
-	if (rbigind == -1) rbigind = 1;
-	Cnewind = 2;
-	Uind = Ustart;
+    vectrunc_append(C, gel(Cnew, order[1]));
+    vecsmalltrunc_append(Ctype, -indtransfer[order[1]]);/*New side*/
+    if (rbigind == -1) rbigind = 1;
+    Cnewind = 2;
+    Uind = Ustart;
   }
   for (;;) {/*Now we merge the two into one list, keeping track of old vs new sides.*/
-	if (lg(C)>Cnewind && Uind == Ustart) {/*We have finished with the U's (first inequality tracks if we have added any U's).*/
-	  while (Cnewind < lCnew) {/*Just C's left.*/
-	    vectrunc_append(C, gel(Cnew, order[Cnewind]));
-	    vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
-		if (rbigind == -Cnewind) rbigind = lg(C) - 1;
-	    Cnewind++;
-	  }
-	  break;
-	}
-	if (Cnewind == lCnew) {/*Done with C's but not the U's.*/
-	  do {
-		vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
-		vecsmalltrunc_append(Ctype, Uind);
-		if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
-		Uind = Uind%lenU + 1;
-	    if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
-	  } while (Uind != Ustart);
-	  break;
-	}
-	/*We still have U's and C's left.*/
-	if (cmprr(gmael3(Cnew, order[Cnewind], 3, 6), gmael(Usides, Uind, 6)) >= 0) {/*No need for tolcmp, we don't care if =.*/
-	  vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
-	  vecsmalltrunc_append(Ctype, Uind);
-	  if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
-	  Uind = Uind%lenU + 1;
-	  if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
-	  continue;
-	}
-	vectrunc_append(C, gel(Cnew, order[Cnewind]));
-	vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
-	if (rbigind == -Cnewind) rbigind = lg(C) - 1;
-	Cnewind++;
+    if (lg(C)>Cnewind && Uind == Ustart) {/*We have finished with the U's (first inequality tracks if we have added any U's).*/
+      while (Cnewind < lCnew) {/*Just C's left.*/
+        vectrunc_append(C, gel(Cnew, order[Cnewind]));
+        vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
+        if (rbigind == -Cnewind) rbigind = lg(C) - 1;
+        Cnewind++;
+      }
+      break;
+    }
+    if (Cnewind == lCnew) {/*Done with C's but not the U's.*/
+      do {
+        vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
+        vecsmalltrunc_append(Ctype, Uind);
+        if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
+        Uind = Uind%lenU + 1;
+        if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
+      } while (Uind != Ustart);
+      break;
+    }
+    /*We still have U's and C's left.*/
+    if (cmprr(gmael3(Cnew, order[Cnewind], 3, 6), gmael(Usides, Uind, 6)) >= 0) {/*No need for tolcmp, we don't care if =.*/
+      vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
+      vecsmalltrunc_append(Ctype, Uind);
+      if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
+      Uind = Uind%lenU + 1;
+      if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
+      continue;
+    }
+    vectrunc_append(C, gel(Cnew, order[Cnewind]));
+    vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
+    if (rbigind == -Cnewind) rbigind = lg(C) - 1;
+    Cnewind++;
   }
   return normbound_append_icircs(normbound_get_vcors(U), normbound_get_vargs(U), C, Ctype, rbigind, gdat);
 }
@@ -1321,166 +1323,166 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   long newU = 0;/*The first index of a new side, used at the end to see if we are the same as before or not.*/
   if (Ctype[rbigind] < 0) newU = 1;/*We use this to detect if the normalized boundary changed or not.*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
-	elts, vcors, vargs, infinite, deleted, found, absind, phase2, infinitesides, newU
-	PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
+    elts, vcors, vargs, infinite, deleted, found, absind, phase2, infinitesides, newU
+    PHASE 2: The same, but we have looped back around, and need to insert the last edge into the first (which will never disappear).
   */
   for (absind = 1; absind < lenc; absind++) {/*We are trying to insert the next side.*/
-	long toins = 1 + (rbigind + absind - 1)%lenc;/*The index of the side to insert.*/
-	GEN curcirc = gmael(C, toins, 3);/*The isometric circle we are trying to insert*/
-	GEN lastcirc = gmael(C, elts[found], 3);/*The isometric circle of the last side inserted. This is NEVER an oo side.*/
-	long t1 = Ctype[toins], t2 = Ctype[elts[found]];/*Whether the sides are new/old, and the corresponding indices if old.*/
-	GEN ipt, iptarg;
-	if (!phase2 && t1 > 0 && t2 > 0) {/*Two old sides, and not in phase 2!!*/
-	  long diff = smodss(t1 - t2, lenU);
-	  if (diff > 1) {/*There was an infinite side here, and it remains!*/
-		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
-		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase 2 has started*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  continue;
-		}
-		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert, no phase 2.*/
-		continue;
-	  }
-	  /*Now our old side intersected the last old side. We can recover the intersection point and angle. This part is very similar to when we have an intersection of the last and current sides as seen below.*/
-	  ipt = gel(Uvcors, t2);
-	  iptarg = gel(Uvargs, t2);
-	  if (found == 1) {/*Only 2 sides: this and the old one, they intersect, and we can't be in phase 2.*/
-	    gel(vcors, found) = ipt;/*Fix the last vertex*/
-	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
-		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-		continue;
-	  }
-	  long efm1 = elts[found - 1];
-	  if (!efm1 || Ctype[efm1] > 0) {/*Previous vertex was infinite/old, so we have the exact same structure and can just insert it.*/
-	    gel(vcors, found) = ipt;/*Fix the last vertex*/
-	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
-		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  continue;
-		}
-	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	    continue;
-	  }
-	  /*Previous vertex was new, so we might envelop the last side. The rest is the same as normal, so we use a GOTO statement.*/
-	  goto GENERICINT;
-	}
-	/*One of the two is new, so we do the normal thing.*/
-	int termloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 7), tol);/*Whether the terminal angle lies inside the last arc.*/
-	switch (termloc) {
-	  case 3:
-	    if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) {
-		  vecsmalltrunc_append(deleted, t1);
-		  continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
-		}
-	  case 1:
-	    phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
-		normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
-		normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		continue;
-	  case 2:
-	    vecsmalltrunc_append(deleted, t1);
-	    continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
-	}
-	/*If we make it here, then the terminal point lies outside of the last range.*/
-	int initloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol);/*Whether the initial angle lies inside the last arc.*/
-	switch (initloc) {
-	  case 3:/*We have an intersection to consider, will do so outside the switch.*/
-	    break;
-	  case 1:
-	    if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
-		vecsmalltrunc_append(deleted, Ctype[elts[found]]);
-		absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
-		found--;
-		continue;
-	  case 0:
-	    normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
-	  case 2:
-	    if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		  continue;
-		}
-	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*New(initial)=Old(terminal), so there is no infinite side coming first (or we are coming from case=0 when we have already inserted it)*/
-		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		continue;
-	}
-	/*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
-	ipt = line_int11(curcirc, lastcirc, tol);/*Find the intersection point, guaranteed to be in the unit disc.*/
-	iptarg = argmod_complex(ipt, tol);/*Argument*/
-	if (found == 1) {/*Straight up insert it; no phase 2 guaranteed.*/
-	   gel(vcors, found) = ipt;/*Fix the last vertex*/
-	   gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
-	   normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	   if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-	   continue;
-	}
-	GENERICINT:;
-	int newptdat = angle_onarc(gel(vargs, found - 1), gel(vargs, found), iptarg, tol);/*The new point wrt the previous side.*/
-	switch (newptdat) {
-	  case 3:/*Insert it!*/
-	    gel(vcors, found) = ipt;/*Fix the last vertex*/
-	    gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
-		if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		  continue;
-		}
-	    normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-	    continue;
-	  case 2:
-	    if (phase2) {
-		  vecsmalltrunc_append(deleted, t1);
-		  continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
-		}
-	    /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
-		if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
-		  phase2 = 1;
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
-		  if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		  continue;
-		}
-		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		continue;
-	  case 0:
-	    if (!phase2) {/*We supercede the last side, so delete and try again. We could not have deleted a side, have this trigger, and intersect the last side without superceding.*/
-		  if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
-		  vecsmalltrunc_append(deleted, Ctype[elts[found]]);
-	      absind--;
-	      found--;
-	      continue;
-		}
-		int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found-1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
-		if (supercede) {
-		  if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
-		  vecsmalltrunc_append(deleted, Ctype[elts[found]]);
-		  absind--;
-		  found--;
-		  continue;
-		}
-		vecsmalltrunc_append(deleted, t1);
-		continue;
-	  case 1:/*We just replace the last side, we have the same vertex and vertex angle.*/
-	    if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
-		vecsmalltrunc_append(deleted, Ctype[elts[found]]);
-		if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
-		found--;
-		if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
-		  continue;
-		}
-		normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
-	}
+    long toins = 1 + (rbigind + absind - 1)%lenc;/*The index of the side to insert.*/
+    GEN curcirc = gmael(C, toins, 3);/*The isometric circle we are trying to insert*/
+    GEN lastcirc = gmael(C, elts[found], 3);/*The isometric circle of the last side inserted. This is NEVER an oo side.*/
+    long t1 = Ctype[toins], t2 = Ctype[elts[found]];/*Whether the sides are new/old, and the corresponding indices if old.*/
+    GEN ipt, iptarg;
+    if (!phase2 && t1 > 0 && t2 > 0) {/*Two old sides, and not in phase 2!!*/
+      long diff = smodss(t1 - t2, lenU);
+      if (diff > 1) {/*There was an infinite side here, and it remains!*/
+        normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
+        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase 2 has started*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert, no phase 2.*/
+        continue;
+      }
+      /*Now our old side intersected the last old side. We can recover the intersection point and angle. This part is very similar to when we have an intersection of the last and current sides as seen below.*/
+      ipt = gel(Uvcors, t2);
+      iptarg = gel(Uvargs, t2);
+      if (found == 1) {/*Only 2 sides: this and the old one, they intersect, and we can't be in phase 2.*/
+        gel(vcors, found) = ipt;/*Fix the last vertex*/
+        gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+        continue;
+      }
+      long efm1 = elts[found - 1];
+      if (!efm1 || Ctype[efm1] > 0) {/*Previous vertex was infinite/old, so we have the exact same structure and can just insert it.*/
+        gel(vcors, found) = ipt;/*Fix the last vertex*/
+        gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
+        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+        continue;
+      }
+      /*Previous vertex was new, so we might envelop the last side. The rest is the same as normal, so we use a GOTO statement.*/
+      goto GENERICINT;
+    }
+    /*One of the two is new, so we do the normal thing.*/
+    int termloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 7), tol);/*Whether the terminal angle lies inside the last arc.*/
+    switch (termloc) {
+      case 3:
+        if (angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol)) {
+          vecsmalltrunc_append(deleted, t1);
+          continue;/*The initial angle also lies here, so we are totally enveloped, and we move on.*/
+        }
+      case 1:
+        phase2 = 1;/*We have looped back around and are intersecting from the right. This is also valid when case=3 and we didn't continue.*/
+        normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
+        normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+        if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+        continue;
+      case 2:
+        vecsmalltrunc_append(deleted, t1);
+        continue;/*The terminal angle is the same as the previous, so we are enveloped. It is not possible for our new side to envelop the old side.*/
+    }
+    /*If we make it here, then the terminal point lies outside of the last range.*/
+    int initloc = angle_onarc(gel(lastcirc, 6), gel(lastcirc, 7), gel(curcirc, 6), tol);/*Whether the initial angle lies inside the last arc.*/
+    switch (initloc) {
+      case 3:/*We have an intersection to consider, will do so outside the switch.*/
+        break;
+      case 1:
+        if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+        vecsmalltrunc_append(deleted, Ctype[elts[found]]);
+        absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
+        found--;
+        continue;
+      case 0:
+        normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
+      case 2:
+        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*New(initial)=Old(terminal), so there is no infinite side coming first (or we are coming from case=0 when we have already inserted it)*/
+        if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+        continue;
+    }
+    /*If we make it here, our current circle intersects the last one, so we need to see if it is "better" than the previous intersection.*/
+    ipt = line_int11(curcirc, lastcirc, tol);/*Find the intersection point, guaranteed to be in the unit disc.*/
+    iptarg = argmod_complex(ipt, tol);/*Argument*/
+    if (found == 1) {/*Straight up insert it; no phase 2 guaranteed.*/
+       gel(vcors, found) = ipt;/*Fix the last vertex*/
+       gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
+       normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+       if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+       continue;
+    }
+    GENERICINT:;
+    int newptdat = angle_onarc(gel(vargs, found - 1), gel(vargs, found), iptarg, tol);/*The new point wrt the previous side.*/
+    switch (newptdat) {
+      case 3:/*Insert it!*/
+        gel(vcors, found) = ipt;/*Fix the last vertex*/
+        gel(vargs, found) = iptarg;/*Fix the last vertex argument*/
+        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+        if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+        continue;
+      case 2:
+        if (phase2) {
+          vecsmalltrunc_append(deleted, t1);
+          continue;/*Previous vertex was intersection with firstcirc, which cannot be deleted. Thus we are enveloped.*/
+        }
+        /*Now there is no need to fix previous vertex, and we don't start in phase 2*/
+        if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started, but we can insert our side*/
+          phase2 = 1;
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
+          if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+        if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+        continue;
+      case 0:
+        if (!phase2) {/*We supercede the last side, so delete and try again. We could not have deleted a side, have this trigger, and intersect the last side without superceding.*/
+          if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+          vecsmalltrunc_append(deleted, Ctype[elts[found]]);
+          absind--;
+          found--;
+          continue;
+        }
+        int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found-1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
+        if (supercede) {
+          if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+          vecsmalltrunc_append(deleted, Ctype[elts[found]]);
+          absind--;
+          found--;
+          continue;
+        }
+        vecsmalltrunc_append(deleted, t1);
+        continue;
+      case 1:/*We just replace the last side, we have the same vertex and vertex angle.*/
+        if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
+        vecsmalltrunc_append(deleted, Ctype[elts[found]]);
+        if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
+        found--;
+        if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+          normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
+          continue;
+        }
+        normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);/*Clean insert*/
+    }
   }
   if (!newU) return gc_NULL(av);/*We added no new sides, so return NULL.*/
   if (!phase2) {/*We never hit phase 2, so there is one final infinite edge to worry about.*/
-	normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
+    normbound_icircs_insinfinite(elts, vcors, vargs, infinite, firstcirc, &found);
   }
   /*Now we can compile everything into the return vector.*/
   long i, fp1 = found + 1;
@@ -1489,9 +1491,9 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   GEN rv_sides = cgetg(fp1, t_VEC);
   GEN rv_kact = cgetg(fp1, t_VEC);
   for (i = 1; i <= found; i++) {/*Make sure we treat infinite sides correctly!*/
-	gel(rv_elts, i) = elts[i] ? gmael(C, elts[i], 1) : gen_0;
-	gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
-	gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
+    gel(rv_elts, i) = elts[i] ? gmael(C, elts[i], 1) : gen_0;
+    gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
+    gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
   }
   gel(rv, 1) = rv_elts;/*The elements*/
   gel(rv, 2) = rv_sides;/*The sides*/
@@ -1521,10 +1523,10 @@ args_find_cross(GEN args)
   int c = cmprr(gel(args, l1), gel(args, l2));
   if (c < 0) return l2;/*Sorted already, so it only loops back at the end.*/
   while (l2-l1 > 1) {
-	long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
-	int c = cmprr(gel(args, l1), gel(args, l));
-	if (c < 0) l1 = l;
-	else l2 = l;
+    long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
+    int c = cmprr(gel(args, l1), gel(args, l));
+    if (c < 0) l1 = l;
+    else l2 = l;
   }
   return l1;
 }
@@ -1538,28 +1540,28 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
   if (c1 == 0) return -1;/*Equal*/
   if (c1 < 0) {/*In block from 1 to ind*/
     l1 = 1;
-	int cind = tolcmp(gel(args, ind), arg, tol);
+    int cind = tolcmp(gel(args, ind), arg, tol);
     if (cind < 0) return (ind%na) + 1;/*Make sure we overflow back to 1 if ind=na. This also covers if ind=1.*/
     if (cind == 0) return -ind;
-	l2 = ind;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
+    l2 = ind;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
   }
   else {/*In block from ind+1 to na.*/
-	if (ind == na) return 1;/*Strictly increasing, so we can insert at the start.*/
-	l1 = ind + 1;
-	int cind = tolcmp(gel(args, l1), arg, tol);
-	if (cind > 0) return l1;
-	if (cind == 0) return -l1;
-	int cend = tolcmp(gel(args, na), arg, tol);
-	if (cend < 0) return 1;/*We can insert it at the start. This also covers if l1=na.*/
-	if (cend == 0) return -na;
-	l2 = na;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
+    if (ind == na) return 1;/*Strictly increasing, so we can insert at the start.*/
+    l1 = ind + 1;
+    int cind = tolcmp(gel(args, l1), arg, tol);
+    if (cind > 0) return l1;
+    if (cind == 0) return -l1;
+    int cend = tolcmp(gel(args, na), arg, tol);
+    if (cend < 0) return 1;/*We can insert it at the start. This also covers if l1=na.*/
+    if (cend == 0) return -na;
+    l2 = na;/*We are strictly between args[l1] and args[l2], and l1<l2.*/
   }
   while (l2 - l1 > 1) {
-	long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
-	int c = tolcmp(gel(args, l), arg, tol);
-	if (c > 0) {l2 = l;continue;}
-	if (c == 0) return -l;
-	l1 = l;
+    long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
+    int c = tolcmp(gel(args, l), arg, tol);
+    if (c > 0) {l2 = l;continue;}
+    if (c == 0) return -l;
+    l1 = l;
   }
   return l2;
 }
@@ -1581,49 +1583,49 @@ edgepairing(GEN U, GEN tol)
   GEN unpair = vectrunc_init(2*lU - 1), pair = zero_zv(lenU);/*Unpair stores the unpaired edges, pair stores the paired edges*/
   for (i = 1; i < lU; i++) {/*Try to pair the ith side.*/
     GEN act = gel(kact, i);
-	if (gequal0(act)) { pair[i] = i; continue; }/*oo side, go next (we say it is paired with itself)*/
-	if (pair[i]) continue;/*We have already paired this side, so move on.*/
-	GEN v1 = klein_act_i(act, gel(vcors, i));/*Image of the ith vertex.*/
-	GEN v1arg = argmod_complex(v1, tol);/*Argument*/
-	long v1pair = args_search(vargs, cross, v1arg, tol), v1loc, foundv1;
-	if (v1pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v1 is on the side.*/
-	  v1pair = -v1pair;
-	  v1loc = normbound_whichside(gel(sides, v1pair), v1, tol);
-	  if (v1loc) foundv1 = 0;/*Sadly, they are not equal.*/
-	  else foundv1 = 1;
-	}
-	else {/*We didn't find it.*/
-	  foundv1 = 0;
-	  v1loc = normbound_whichside(gel(sides, v1pair), v1, tol);
-	}
-	long i2;
-	if (i == 1) i2 = lenU;
-	else i2 = i-1;/*i2 is the previous vertex, also on the ith side.*/
-	GEN v2 = klein_act_i(act, gel(vcors, i2));/*Image of the second (i-1 st) vertex.*/
-	GEN v2arg = argmod_complex(v2, tol);/*Argument*/
-	long v2pair = args_search(vargs, cross, v2arg, tol), v2loc, foundv2;
-	if (v2pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v2 is on the side.*/
-	  v2pair = -v2pair;
-	  v2loc = normbound_whichside(gel(sides, v2pair), v2, tol);
-	  if (v2loc) foundv2 = 0;/*Sadly, they are not equal.*/
-	  else foundv2 = 1;
-	}
-	else {/*We didn't find it.*/
-	  foundv2 = 0;
-	  v2loc = normbound_whichside(gel(sides, v2pair), v2, tol);
-	}
-	if (foundv1) {/*v1 paired*/
-	  if (foundv2) {/*Both vertices were paired!*/
-		pair[i] = v2pair;
-		pair[v2pair] = i;
-		continue;
-	  }
-	  vectrunc_append(unpair, mkvecsmall4(i, i2, v2pair, v2loc));/*Add the data for v2.*/
-	  continue;
-	}
-	/*v1 is unpaired*/
-	vectrunc_append(unpair, mkvecsmall4(i, i, v1pair, v1loc));/*Add the data for v1.*/
-	if (!foundv2) vectrunc_append(unpair, mkvecsmall4(i, i2, v2pair, v2loc));/*Add the data for v2.*/
+    if (gequal0(act)) { pair[i] = i; continue; }/*oo side, go next (we say it is paired with itself)*/
+    if (pair[i]) continue;/*We have already paired this side, so move on.*/
+    GEN v1 = klein_act_i(act, gel(vcors, i));/*Image of the ith vertex.*/
+    GEN v1arg = argmod_complex(v1, tol);/*Argument*/
+    long v1pair = args_search(vargs, cross, v1arg, tol), v1loc, foundv1;
+    if (v1pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v1 is on the side.*/
+      v1pair = -v1pair;
+      v1loc = normbound_whichside(gel(sides, v1pair), v1, tol);
+      if (v1loc) foundv1 = 0;/*Sadly, they are not equal.*/
+      else foundv1 = 1;
+    }
+    else {/*We didn't find it.*/
+      foundv1 = 0;
+      v1loc = normbound_whichside(gel(sides, v1pair), v1, tol);
+    }
+    long i2;
+    if (i == 1) i2 = lenU;
+    else i2 = i-1;/*i2 is the previous vertex, also on the ith side.*/
+    GEN v2 = klein_act_i(act, gel(vcors, i2));/*Image of the second (i-1 st) vertex.*/
+    GEN v2arg = argmod_complex(v2, tol);/*Argument*/
+    long v2pair = args_search(vargs, cross, v2arg, tol), v2loc, foundv2;
+    if (v2pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v2 is on the side.*/
+      v2pair = -v2pair;
+      v2loc = normbound_whichside(gel(sides, v2pair), v2, tol);
+      if (v2loc) foundv2 = 0;/*Sadly, they are not equal.*/
+      else foundv2 = 1;
+    }
+    else {/*We didn't find it.*/
+      foundv2 = 0;
+      v2loc = normbound_whichside(gel(sides, v2pair), v2, tol);
+    }
+    if (foundv1) {/*v1 paired*/
+      if (foundv2) {/*Both vertices were paired!*/
+        pair[i] = v2pair;
+        pair[v2pair] = i;
+        continue;
+      }
+      vectrunc_append(unpair, mkvecsmall4(i, i2, v2pair, v2loc));/*Add the data for v2.*/
+      continue;
+    }
+    /*v1 is unpaired*/
+    vectrunc_append(unpair, mkvecsmall4(i, i, v1pair, v1loc));/*Add the data for v1.*/
+    if (!foundv2) vectrunc_append(unpair, mkvecsmall4(i, i2, v2pair, v2loc));/*Add the data for v2.*/
   }
   if (lg(unpair) == 1) return gerepilecopy(av, pair);/*All sides paired*/
   return gerepilecopy(av, unpair);
@@ -1640,104 +1642,104 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
   long lG = lg(G), i, j = lG;
   GEN Gstart = cgetg(2*lG - 1, t_VEC), Gadd;/*Make the vector with G and its inverses.*/
   for (i = 1; i < lG; i++) {
-	gel(Gstart, i) = gel(G, i);
-	gel(Gstart, j) = Xinv(X, gel(G, i));
-	j++;
+    gel(Gstart, i) = gel(G, i);
+    gel(Gstart, j) = Xinv(X, gel(G, i));
+    j++;
   }
   /*Start by initializing U and Gadd by reducing the elements of Gstart*/
   if (!U) {/*No U is passed in.*/
-	U = normbound(X, Gstart, Xtoklein, gdat);
-	if (!U) return gc_NULL(av);/*No valid isometric circles.*/
-	GEN del = normbound_get_spair(U), g;/*The deleted sides*/
-	long ldel = lg(del);
-	Gadd = vectrunc_init(ldel);
-	for (i = 1; i<ldel; i++) {
-	  g = red_elt(X, U, Xinv(X, gel(Gstart, del[i])), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x^-1 for each deleted side x.*/
-	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
-	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
-	}
+    U = normbound(X, Gstart, Xtoklein, gdat);
+    if (!U) return gc_NULL(av);/*No valid isometric circles.*/
+    GEN del = normbound_get_spair(U), g;/*The deleted sides*/
+    long ldel = lg(del);
+    Gadd = vectrunc_init(ldel);
+    for (i = 1; i<ldel; i++) {
+      g = red_elt(X, U, Xinv(X, gel(Gstart, del[i])), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x^-1 for each deleted side x.*/
+      if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+      vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
+    }
   }
   else {/*U is passed in, so just initialize Gadd by reducing each element.*/
     lG = lg(Gstart);
-	Gadd = vectrunc_init(lG);
-	GEN g;
-	for (i = 1; i < lG; i++) {
-	  g = red_elt(X, U, gel(Gstart, i), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x. No need to do the inverse, as our list includes all inverses of elements so we just hit it later.*/
-	  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
-	  vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
-	}
+    Gadd = vectrunc_init(lG);
+    GEN g;
+    for (i = 1; i < lG; i++) {
+      g = red_elt(X, U, gel(Gstart, i), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x. No need to do the inverse, as our list includes all inverses of elements so we just hit it later.*/
+      if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+      vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
+    }
   }
   for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we last tried to add.*/
     while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
-	  GEN Unew = normbound_append(X, U, Gadd, Xtoklein, gdat);
-	  if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
-		lG = lg(Gadd);
-		GEN Gnew = vectrunc_init(lG), g;
-		for (i = 1; i < lG; i++) {
-		  g = red_elt(X, U, Xinv(X, gel(Gadd, i)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce g.*/
-		  if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
-		  vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
-		}
-		Gadd = Gnew;
-		continue;/*Try again!*/
-	  }
-	  GEN del = normbound_get_spair(Unew);/*The deleted sides*/
-	  long ldel = lg(del), ind;
-	  GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
-	  for (i = 1; i<ldel; i++) {
-		ind = del[i];
-		if (ind > 0) g = red_elt(X, Unew, Xinv(X, gel(Uelts, ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from U*/
-		else g = red_elt(X, Unew, Xinv(X, gel(Gadd, -ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from Gadd*/
-	    if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
-	    vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
-	  }
-	  Gadd = Gnew;
-	  U = Unew;/*Update U*/
-	}
-	/*At this point, <G> = <U[1]>_(no-inverse). Now we have to check if there is a side pairing.*/
-	GEN unpair = edgepairing(U, tol);
-	if (typ(unpair) == t_VECSMALL) {/*All paired up!*/
-	  gel(U, 8) = unpair;
-	  return gerepilecopy(av, U);
-	}
-	GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
-	GEN kact = normbound_get_kact(U);
-	GEN elts = normbound_get_elts(U);
-	long lunp = lg(unpair), lenU = lg(elts)-1;
-	Gadd = vectrunc_init(lunp);/*For each entry [gind, vind, gv side, location] in unpair, we will find a new element intersecting inside U.*/
-	for (i = 1; i < lunp; i++) {
-	  GEN dat = gel(unpair, i);
-	  GEN v = gel(vcors, dat[2]);
-	  long gind = dat[1];/*The index of g*/
-	  if (!toleq(normcr(v), gen_1, tol)) {/*Interior vertex.*/
-	    if (dat[4] == -1) {/*gv is INSIDE U, so since gv is on I(g^-1), we add in g^-1.*/
-		  vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
-		  continue;
-		}
-	    if (dat[4] == 0) {/*gv is on another side. We need to see if it is I(g^-1) or not.*/
-		  long gvind = dat[3];/*The side that gv is on.*/
-		  GEN endptimg = klein_act_i(gel(kact, gind), gel(vcors, smodss(gind - 2, lenU) + 1));/*Find the image of the first vertex of the side gind.*/
-		  if (toleq(endptimg, gel(vcors, gvind), tol)) {/*gv is on I(g^-1) which is part of U.*/
-			/*Let the element of the side after gdind be w (so v is the intersection). Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
-			vectrunc_append(Gadd, Xmul(X, gel(elts, gind%lenU + 1), Xinv(X, gel(elts, gind))));
-		  }
-		  else {/*gv is on a side that is NOT I(g^-1), so adding in g^-1 gives us a new side of U.*/
-			vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
-		  }
-		  continue;
-		}
-	    /*Now dat[4]=1, i.e. gv is outside of U. We reduce g with respect to v to get Wg, where Wgv is strictly closer to the origin than v is. Therefore I(Wg) encloses v, so will delete the vertex v and change U. This is the case described by John Voight.*/
-		vectrunc_append(Gadd, red_elt(X, U, stoi(gind), v, Xtoklein, Xmul, 0, gdat));/*Add the reduction in.*/
-		continue;
-	  }
-	  /*We have an infinite vertex.*/
-	  if (gequal0(gel(elts, dat[3]))) {/*gv is on an infinite side, so g^-1 gives a new side of U.*/
-		vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
-		continue;
-	  }
-	  /*gv is strictly inside I(w). Any interior point v' on I(g) close enough to v has gv' inside I(w) as well, so wgv' is closer to the origin, hence v' is inside I(wg). Thus we can add in wg to Gadd and envelop the vertex v.*/
-	  vectrunc_append(Gadd, Xmul(X, gel(elts, dat[3]), gel(elts, gind)));
-	}
+      GEN Unew = normbound_append(X, U, Gadd, Xtoklein, gdat);
+      if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
+        lG = lg(Gadd);
+        GEN Gnew = vectrunc_init(lG), g;
+        for (i = 1; i < lG; i++) {
+          g = red_elt(X, U, Xinv(X, gel(Gadd, i)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce g.*/
+          if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+          vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
+        }
+        Gadd = Gnew;
+        continue;/*Try again!*/
+      }
+      GEN del = normbound_get_spair(Unew);/*The deleted sides*/
+      long ldel = lg(del), ind;
+      GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
+      for (i = 1; i<ldel; i++) {
+        ind = del[i];
+        if (ind > 0) g = red_elt(X, Unew, Xinv(X, gel(Uelts, ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from U*/
+        else g = red_elt(X, Unew, Xinv(X, gel(Gadd, -ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from Gadd*/
+        if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
+        vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
+      }
+      Gadd = Gnew;
+      U = Unew;/*Update U*/
+    }
+    /*At this point, <G> = <U[1]>_(no-inverse). Now we have to check if there is a side pairing.*/
+    GEN unpair = edgepairing(U, tol);
+    if (typ(unpair) == t_VECSMALL) {/*All paired up!*/
+      gel(U, 8) = unpair;
+      return gerepilecopy(av, U);
+    }
+    GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
+    GEN kact = normbound_get_kact(U);
+    GEN elts = normbound_get_elts(U);
+    long lunp = lg(unpair), lenU = lg(elts)-1;
+    Gadd = vectrunc_init(lunp);/*For each entry [gind, vind, gv side, location] in unpair, we will find a new element intersecting inside U.*/
+    for (i = 1; i < lunp; i++) {
+      GEN dat = gel(unpair, i);
+      GEN v = gel(vcors, dat[2]);
+      long gind = dat[1];/*The index of g*/
+      if (!toleq(normcr(v), gen_1, tol)) {/*Interior vertex.*/
+        if (dat[4] == -1) {/*gv is INSIDE U, so since gv is on I(g^-1), we add in g^-1.*/
+          vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+          continue;
+        }
+        if (dat[4] == 0) {/*gv is on another side. We need to see if it is I(g^-1) or not.*/
+          long gvind = dat[3];/*The side that gv is on.*/
+          GEN endptimg = klein_act_i(gel(kact, gind), gel(vcors, smodss(gind - 2, lenU) + 1));/*Find the image of the first vertex of the side gind.*/
+          if (toleq(endptimg, gel(vcors, gvind), tol)) {/*gv is on I(g^-1) which is part of U.*/
+            /*Let the element of the side after gdind be w (so v is the intersection). Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
+            vectrunc_append(Gadd, Xmul(X, gel(elts, gind%lenU + 1), Xinv(X, gel(elts, gind))));
+          }
+          else {/*gv is on a side that is NOT I(g^-1), so adding in g^-1 gives us a new side of U.*/
+            vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+          }
+          continue;
+        }
+        /*Now dat[4]=1, i.e. gv is outside of U. We reduce g with respect to v to get Wg, where Wgv is strictly closer to the origin than v is. Therefore I(Wg) encloses v, so will delete the vertex v and change U. This is the case described by John Voight.*/
+        vectrunc_append(Gadd, red_elt(X, U, stoi(gind), v, Xtoklein, Xmul, 0, gdat));/*Add the reduction in.*/
+        continue;
+      }
+      /*We have an infinite vertex.*/
+      if (gequal0(gel(elts, dat[3]))) {/*gv is on an infinite side, so g^-1 gives a new side of U.*/
+        vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+        continue;
+      }
+      /*gv is strictly inside I(w). Any interior point v' on I(g) close enough to v has gv' inside I(w) as well, so wgv' is closer to the origin, hence v' is inside I(wg). Thus we can add in wg to Gadd and envelop the vertex v.*/
+      vectrunc_append(Gadd, Xmul(X, gel(elts, dat[3]), gel(elts, gind)));
+    }
   }
 }
 
@@ -1757,25 +1759,25 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind + 1, t_VECSMALL);
   for (;;) {
-	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
-	  GEN gact = Xtoklein(X, g);
-	  z = klein_act_i(gact, zorig);
-	}
-	long outside = normbound_outside(U, z, tol);
-	if (outside <= 0) {/*We are inside or on the boundary.*/
-	  GEN gact = Xtoklein(X, g);
-	  z = klein_act_i(gact, zorig);
-	  outside = normbound_outside(U, z, tol);
-	  if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
-	}
+    if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
+      GEN gact = Xtoklein(X, g);
+      z = klein_act_i(gact, zorig);
+    }
+    long outside = normbound_outside(U, z, tol);
+    if (outside <= 0) {/*We are inside or on the boundary.*/
+      GEN gact = Xtoklein(X, g);
+      z = klein_act_i(gact, zorig);
+      outside = normbound_outside(U, z, tol);
+      if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
+    }
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
-	if (ind > maxind) {/*Make decomp longer*/
-	  maxind = maxind<<1;/*Double it.*/
-	  decomp = vecsmall_lengthen(decomp, maxind);
-	}
-	decomp[ind] = outside;
-	ind++;
+    if (ind > maxind) {/*Make decomp longer*/
+      maxind = maxind<<1;/*Double it.*/
+      decomp = vecsmall_lengthen(decomp, maxind);
+    }
+    decomp[ind] = outside;
+    ind++;
   }
   decomp = vecsmall_shorten(decomp, ind - 1);/*Shorten it. We also need to reverse it, since decomp goes in the reverse order to what it needs to be.*/
   return gerepilecopy(av, mkvec2(g, vecsmall_reverse(decomp)));
@@ -1792,28 +1794,28 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
   GEN zorig = z;
   GEN gklein;
   if (typ(g) == t_INT) {/*Retrieve it.*/
-	long gind = itos(g);
-	gklein = gel(kact, gind);
-	g = gel(elts, gind);
+    long gind = itos(g);
+    gklein = gel(kact, gind);
+    g = gel(elts, gind);
   }
   else gklein = Xtoklein(X, g);/*Compute it.*/
   z = klein_act_i(gklein, z);/*Starting point.*/
   long ind = 1;
   for (;;) {
-	if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
-	  GEN gact = Xtoklein(X, g);
-	  z = klein_act_i(gact, zorig);
-	}
-	long outside = normbound_outside(U, z, tol);
-	if (outside <= 0) {/*We are inside or on the boundary.*/
-	  GEN gact = Xtoklein(X, g);
-	  z = klein_act_i(gact, zorig);
-	  outside = normbound_outside(U, z, tol);
-	  if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
-	}
+    if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
+      GEN gact = Xtoklein(X, g);
+      z = klein_act_i(gact, zorig);
+    }
+    long outside = normbound_outside(U, z, tol);
+    if (outside <= 0) {/*We are inside or on the boundary.*/
+      GEN gact = Xtoklein(X, g);
+      z = klein_act_i(gact, zorig);
+      outside = normbound_outside(U, z, tol);
+      if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
+    }
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
-	ind++;
+    ind++;
   }
   if (flag == 0) return gerepilecopy(av, g);
   if (flag == 1) return gerepilecopy(av, z);
@@ -1869,9 +1871,9 @@ minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xt
   for (i = 1; i < lgcyc; i++) {
     GEN cyc = gel(cycles, i), g;
     if (cyc[1] < 0) {/*Minimal cycle that was the middle of a side. We update it to be positive now.*/
-	  cyc[1] = -cyc[1];
-	  g = gel(G, cyc[1]);
-	}
+      cyc[1] = -cyc[1];
+      g = gel(G, cyc[1]);
+    }
     else {
       g = Xid;
       for (j = 1; j < lg(cyc); j++) g = Xmul(X, gel(G, cyc[j]), g);/*Multiply on the left by G[cyc[j]]*/
@@ -1900,7 +1902,7 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
   GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xtrace, Xistriv);/*The minimal cycles and their types.*/
   long nfixed = 0, lgcyc = lg(gel(mcyc, 1)), i;/*The number of fixed sides, and number of cycles+1*/
   for (i = 1; i < lgcyc; i++) {
-	if (lg(gmael(mcyc, 1, i)) == 2 && gel(mcyc, 2)[i] == 2) nfixed++;
+    if (lg(gmael(mcyc, 1, i)) == 2 && gel(mcyc, 2)[i] == 2) nfixed++;
   }/*Fixed sides MUST correspond to length 1 cycles with order 2.*/
   GEN elts = normbound_get_elts(U);
   long genus=((lg(elts) - 1 + nfixed)/2 - lgcyc + 2)/2;
@@ -1922,8 +1924,8 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
   gel(rvec, 1) = stoi(genus);
   gel(rvec, 2) = cgetg(lgell, t_VECSMALL);
   for (i = 1; i < lgell; i++) {
-	gel(rvec, 2)[i] = gel(mcyc, 2)[firstell];
-	firstell++;
+    gel(rvec, 2)[i] = gel(mcyc, 2)[firstell];
+    firstell++;
   }
   gel(rvec, 3) = stoi(s);
   return gerepileupto(av, rvec);
@@ -1978,7 +1980,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GE
     GEN repind = gen_0, cycle;/*repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.*/
     /*Now we look for a common term.*/
     for (i = 1; i < naccident; i++) {/*Each step we solve the relation.*/
-	  long lr = lg(r);
+      long lr = lg(r);
       for (j = indrep; j < lr; j++) {/*Trying to replace index j. We stop once we find one replacable.*/
         torep = r[j];/*What we try to replace.*/
         long mtorep = -torep, l, m;/*The inverse.*/
@@ -2162,22 +2164,22 @@ word_substitute(GEN word, long ind, GEN repl, GEN invrepl)
   long newind = 1, j;
   for (i = 1; i < lgword; i++){/*Make the new word*/
     switch (replaceplaces[i]) {
-	  case 0:/*Move this index to the new word.*/
-	    newword[newind] = word[i];
-		newind++;
+      case 0:/*Move this index to the new word.*/
+        newword[newind] = word[i];
+        newind++;
         break;
-	  case 1:
-	    for (j = 1; j < lrepl; j++) {
+      case 1:
+        for (j = 1; j < lrepl; j++) {
           newword[newind] = repl[j];
           newind++;
         }
-		break;
-	  default:/*Case -1, add in invrepl.*/
-	    for (j = 1; j < lrepl; j++) {
+        break;
+      default:/*Case -1, add in invrepl.*/
+        for (j = 1; j < lrepl; j++) {
           newword[newind] = invrepl[j];
           newind++;
         }
-	}
+    }
   }
   return gerepileupto(av, word_collapse(newword));/*Collapse the finalword.*/
 }
@@ -2201,7 +2203,7 @@ word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN
   long inew = 1;
   for (i = 1; i < lold; i++) {
     GEN repl = gel(Ptrans, oldword[i]);/*What to sub in.*/
-	long lrepl = lg(repl), j;
+    long lrepl = lg(repl), j;
     for (j = 1; j < lrepl; j++) { newword[inew] = repl[j]; inew++; }
   }
   return gerepileupto(av, word_collapse(newword));
@@ -2212,9 +2214,9 @@ word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN
 
 /*ALGEBRA REQUIREMENTS: UPDATE THIS!
 Let
-	F be a totally real number field
-	A a quaternion algebra over F split at a unique real place
-	O be an order in A
+    F be a totally real number field
+    A a quaternion algebra over F split at a unique real place
+    O be an order in A
 We can compute the fundamental domain of groups that live between O^1 and N{B^{\times}}(O)^+, i.e. berween the units of norm 1, and the elements of the normalizer with positive norm at the unique split real place.
 Inputs to most methods are named "X", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with afuchinit.
 */
@@ -2225,37 +2227,37 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, and is stored as a lazy vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-	[O, Oinv, Oconj, Omultable, Onormdat, type, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres]]
+    [O, Oinv, Oconj, Omultable, Onormdat, type, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres]]
 
 O, Oinv
-	The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
+    The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
 Oconj
-	Conjugates of the elements of O. To conjugate an element x of A, it suffices to compute Oconj*x.
+    Conjugates of the elements of O. To conjugate an element x of A, it suffices to compute Oconj*x.
 Omultable
-	To multiply elements of O more quickly.
+    To multiply elements of O more quickly.
 Onormdat
-	Decomposition used to compute norms of elements more quickly.
+    Decomposition used to compute norms of elements more quickly.
 type
-	Which symmetric space we want to compute.	
+    Which symmetric space we want to compute.   
 A
-	The algebra	
+    The algebra 
 Onormreal
-	Used to compute real approximations to norms of elements, which is much more efficient when deg(F)>1.
+    Used to compute real approximations to norms of elements, which is much more efficient when deg(F)>1.
 kleinmats
-	O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
+    O[,i] is sent to embmats[i] which acts on the unit disc/Klein model.
 qfmats
-	For supply into afuch_make_qf: they help make the quadratic form Q_{z, 0}(g), where if g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A).
+    For supply into afuch_make_qf: they help make the quadratic form Q_{z, 0}(g), where if g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A).
 gdat
-	Geometric data.
+    Geometric data.
 fdomdat
-	[area, C, R, epsilon, passes]: Constants used specifically for computing the fundamental domain. Area is the area of the domain, C is the optimal constant for finding elements of norm 1, R is the radius used to pick random points, epsilon is the growth rate of R (in case we stagnate), and passes is the "expected" number of times we generate new points.
+    [area, C, R, epsilon, passes]: Constants used specifically for computing the fundamental domain. Area is the area of the domain, C is the optimal constant for finding elements of norm 1, R is the radius used to pick random points, epsilon is the growth rate of R (in case we stagnate), and passes is the "expected" number of times we generate new points.
 fdom
-	Fundamental domain, if computed.
+    Fundamental domain, if computed.
 sig
-	Signature, if computed.
+    Signature, if computed.
 presentation
-	Presentation, if computed.
-	
+    Presentation, if computed.
+    
 */
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
@@ -2279,8 +2281,8 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   gel(AX, 4) = Omultable(A, O, Oinv);
   GEN Onorm = Onorm_makemat(A, O, AOconj);
   if (nF >= 5) {/*More efficient to use the Cholesky norm.*/
-	gel(AX, 5) = Onorm_makechol(F, Onorm);
-	if (gequal0(gel(AX, 5))) gel(AX, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
+    gel(AX, 5) = Onorm_makechol(F, Onorm);
+    if (gequal0(gel(AX, 5))) gel(AX, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
   }
   else gel(AX, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
   gel(AX, 6) = type;/*TO DO*/
@@ -2290,15 +2292,15 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   obj_insert(AX, afuch_KLEINMATS, kleinmats);/*Make sure p is safe.*/
   GEN qfm = afuch_make_qfmats(kleinmats);
   for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
-	for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(F, gcoeff(Onorm, i, j));
+    for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(F, gcoeff(Onorm, i, j));
   }
   gel(qfm, 5) = Onorm;
   obj_insert(AX, afuch_QFMATS, qfm);
   obj_insert(AX, afuch_GDAT, gdat);
   obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
   if (flag) {
-	afuchfdom(AX);
-	if (flag == 2) { afuchsignature(AX); afuchpresentation(AX); }
+    afuchfdom(AX);
+    if (flag == 2) { afuchsignature(AX); afuchpresentation(AX); }
   }
   return gerepilecopy(av, AX);
 }
@@ -2363,7 +2365,7 @@ afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec)
   long l, i;
   GEN klein = cgetg_copy(m2r, &l);
   for (i = 1; i < l; i++) {
-	gel(klein, i) = m2r_to_klein(gel(m2r, i), p);
+    gel(klein, i) = m2r_to_klein(gel(m2r, i), p);
   }
   return gerepileupto(av, klein);
 }
@@ -2387,26 +2389,26 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   long lO = lg(O), i, j;
   GEN mats = cgetg(lO, t_VEC);/*To store the 2x2 matrices.*/
   for (i = 1; i < lO; i++) {
-	GEN x = algbasisto1ijk(A, gel(O, i));/*ith basis element in the form e+fi+gj+hk*/
-	for (j=1; j<=4; j++) gel(x, j) = gsubst(gel(x, j), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
-	if (apos) {/*e+fi+gj+hk -> [e+fsqrt(a), b(g+hsqrt(a));g-hsqrt(a), e-fsqrt(a)*/
-	  GEN frta = gmul(gel(x, 2), rt);/*f*sqrt(a)*/
-	  GEN hrta = gmul(gel(x, 4), rt);/*h*sqrt(a)*/
-	  GEN topl = gtofp(gadd(gel(x, 1), frta), prec);/*e+f*sqrt(a)*/
-	  GEN topr = gtofp(gmul(gadd(gel(x, 3), hrta), bval), prec);/*b(g+h*sqrt(a))*/
-	  GEN botl = gtofp(gsub(gel(x, 3), hrta), prec);/*g-h*sqrt(a)*/
-	  GEN botr = gtofp(gsub(gel(x, 1), frta), prec);/*e-f*sqrt(a)*/
-	  gel(mats, i) = mkmat22(topl, topr, botl, botr);
-	  continue;
-	}
-	/*e+fi+gj+hk -> [e+g*sqrt(b), a(f-h*sqrt(b));f+h*sqrt(b), e-g*sqrt(b)]*/
-	GEN grtb = gmul(gel(x, 3), rt);/*g*sqrt(b)*/
-	GEN hrtb = gmul(gel(x, 4), rt);/*h*sqrt(b)*/
-	GEN topl = gtofp(gadd(gel(x, 1), grtb), prec);/*e+g*sqrt(b)*/
-	GEN topr = gtofp(gmul(gsub(gel(x, 2), hrtb), aval), prec);/*a(f-h*sqrt(b))*/
-	GEN botl = gtofp(gadd(gel(x, 2), hrtb), prec);/*f+h*sqrt(b)*/
-	GEN botr = gtofp(gsub(gel(x, 1), grtb), prec);/*e-g*sqrt(b)*/
-	gel(mats, i) = mkmat22(topl, topr, botl, botr);
+    GEN x = algbasisto1ijk(A, gel(O, i));/*ith basis element in the form e+fi+gj+hk*/
+    for (j=1; j<=4; j++) gel(x, j) = gsubst(gel(x, j), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
+    if (apos) {/*e+fi+gj+hk -> [e+fsqrt(a), b(g+hsqrt(a));g-hsqrt(a), e-fsqrt(a)*/
+      GEN frta = gmul(gel(x, 2), rt);/*f*sqrt(a)*/
+      GEN hrta = gmul(gel(x, 4), rt);/*h*sqrt(a)*/
+      GEN topl = gtofp(gadd(gel(x, 1), frta), prec);/*e+f*sqrt(a)*/
+      GEN topr = gtofp(gmul(gadd(gel(x, 3), hrta), bval), prec);/*b(g+h*sqrt(a))*/
+      GEN botl = gtofp(gsub(gel(x, 3), hrta), prec);/*g-h*sqrt(a)*/
+      GEN botr = gtofp(gsub(gel(x, 1), frta), prec);/*e-f*sqrt(a)*/
+      gel(mats, i) = mkmat22(topl, topr, botl, botr);
+      continue;
+    }
+    /*e+fi+gj+hk -> [e+g*sqrt(b), a(f-h*sqrt(b));f+h*sqrt(b), e-g*sqrt(b)]*/
+    GEN grtb = gmul(gel(x, 3), rt);/*g*sqrt(b)*/
+    GEN hrtb = gmul(gel(x, 4), rt);/*h*sqrt(b)*/
+    GEN topl = gtofp(gadd(gel(x, 1), grtb), prec);/*e+g*sqrt(b)*/
+    GEN topr = gtofp(gmul(gsub(gel(x, 2), hrtb), aval), prec);/*a(f-h*sqrt(b))*/
+    GEN botl = gtofp(gadd(gel(x, 2), hrtb), prec);/*f+h*sqrt(b)*/
+    GEN botr = gtofp(gsub(gel(x, 1), grtb), prec);/*e-g*sqrt(b)*/
+    gel(mats, i) = mkmat22(topl, topr, botl, botr);
   }
   return gerepilecopy(av, mats);
 }
@@ -2422,20 +2424,20 @@ afuch_make_qfmats(GEN kleinmats)
   GEN M2 = zeromatcopy(n, n);
   GEN Mconst = zeromatcopy(n, n);
   for (i = 1; i < lk; i++) {
-	GEN rEi = gmael3(kleinmats, i, 1, 1), imEi = gmael3(kleinmats, i, 1, 2);/*real and imaginary parts of Ei*/
-	GEN rFi = gmael3(kleinmats, i, 2, 1), imFi = gmael3(kleinmats, i, 2, 2);/*real and imaginary parts of Fi*/
-	for (j = i; j < lk; j++) {
-	  GEN rEj = gmael3(kleinmats, j, 1, 1), imEj = gmael3(kleinmats, j, 1, 2);/*real and imaginary parts of Ej*/
-	  GEN rFj = gmael3(kleinmats, j, 2, 1), imFj = gmael3(kleinmats, j, 2, 2);/*real and imaginary parts of Fj*/
-	  GEN t = addrr(mulrr(rEi, rEj), mulrr(imEi, imEj));
-	  gcoeff(Msq, i, j) = t;/*rEi*rEj+imEi+imEj*/
-	  t = addrr(addrr(mulrr(rEi, rFj), mulrr(rEj, rFi)), addrr(mulrr(imEi, imFj), mulrr(imEj, imFi)));
-	  gcoeff(M1, i, j) = t;/*rEi*rFj+rEj*rFi+imEi*imFj+imEj*imFi*/
-	  t = subrr(addrr(mulrr(rEi, imFj), mulrr(rEj, imFi)), addrr(mulrr(imEi, rFj), mulrr(imEj, rFi)));
-	  gcoeff(M2, i, j) = t;/*rEi*imFj+rEj*imFi-imEi*rFj-imEj*rFi*/
-	  t = addrr(mulrr(rFi, rFj), mulrr(imFi, imFj));
-	  gcoeff(Mconst, i, j) = t;/*rFi*rFj+imFi*imFj*/
-	}
+    GEN rEi = gmael3(kleinmats, i, 1, 1), imEi = gmael3(kleinmats, i, 1, 2);/*real and imaginary parts of Ei*/
+    GEN rFi = gmael3(kleinmats, i, 2, 1), imFi = gmael3(kleinmats, i, 2, 2);/*real and imaginary parts of Fi*/
+    for (j = i; j < lk; j++) {
+      GEN rEj = gmael3(kleinmats, j, 1, 1), imEj = gmael3(kleinmats, j, 1, 2);/*real and imaginary parts of Ej*/
+      GEN rFj = gmael3(kleinmats, j, 2, 1), imFj = gmael3(kleinmats, j, 2, 2);/*real and imaginary parts of Fj*/
+      GEN t = addrr(mulrr(rEi, rEj), mulrr(imEi, imEj));
+      gcoeff(Msq, i, j) = t;/*rEi*rEj+imEi+imEj*/
+      t = addrr(addrr(mulrr(rEi, rFj), mulrr(rEj, rFi)), addrr(mulrr(imEi, imFj), mulrr(imEj, imFi)));
+      gcoeff(M1, i, j) = t;/*rEi*rFj+rEj*rFi+imEi*imFj+imEj*imFi*/
+      t = subrr(addrr(mulrr(rEi, imFj), mulrr(rEj, imFi)), addrr(mulrr(imEi, rFj), mulrr(imEj, rFi)));
+      gcoeff(M2, i, j) = t;/*rEi*imFj+rEj*imFi-imEi*rFj-imEj*rFi*/
+      t = addrr(mulrr(rFi, rFj), mulrr(imFi, imFj));
+      gcoeff(Mconst, i, j) = t;/*rFi*rFj+imFi*imFj*/
+    }
   }
   return gerepilecopy(av, mkvec5(Msq, M1, M2, Mconst, gen_0));
 }
@@ -2447,10 +2449,10 @@ Omultable(GEN A, GEN O, GEN Oinv)
   long n = lg(O), i, j;
   GEN M = cgetg(n, t_VEC);
   for (i = 1; i < n; i++) {
-	gel(M, i) = cgetg(n, t_MAT);
-	for (j = 1; j < n; j++) {
-	  gmael(M, i, j) = QM_QC_mul(Oinv, algmul(A, gel(O, i), gel(O, j)));/*Move it back to O*/
-	}
+    gel(M, i) = cgetg(n, t_MAT);
+    for (j = 1; j < n; j++) {
+      gmael(M, i, j) = QM_QC_mul(Oinv, algmul(A, gel(O, i), gel(O, j)));/*Move it back to O*/
+    }
   }
   return M;
 }
@@ -2466,18 +2468,18 @@ Onorm_makechol(GEN F, GEN Onorm)
   GEN vecs = vectrunc_init(5);
   for (i = 1; i <= n; i++) {
     if (gequal0(gcoeff(M, i, i))) {
-	  for (j = i + 1; j <= n; j++) if (!gequal0(gcoeff(M, i, j))) return gc_const(av, gen_0);/*Bad! Not sure this will ever trigger though.*/
-	  continue;
-	}
-	GEN v = cgetg(n + 1, t_VEC);
-	for (j = 1; j < i; j++) gel(v, j) = gen_0;
-	gel(v, i) = gcoeff(M, i, i);
+      for (j = i + 1; j <= n; j++) if (!gequal0(gcoeff(M, i, j))) return gc_const(av, gen_0);/*Bad! Not sure this will ever trigger though.*/
+      continue;
+    }
+    GEN v = cgetg(n + 1, t_VEC);
+    for (j = 1; j < i; j++) gel(v, j) = gen_0;
+    gel(v, i) = gcoeff(M, i, i);
     for (j = i + 1; j <= n; j++) gel(v, j) = nfdiv(F, gcoeff(M, i, j), gel(v, i));/*M[i,j]=M[i,j]/M[i,i]*/
     for (j = i + 1; j <= n; j++) {
       for (k = j; k <= n; k++) gcoeff(M, j, k)=nfsub(F, gcoeff(M, j, k), nfmul(F, gcoeff(M, i, j), gel(v, k)));/*M[j,k]=M[j,k]-M[i,i]*M[i,j]*M[i,k];*/
     }
-	vecsmalltrunc_append(inds, i);
-	vectrunc_append(vecs, v);
+    vecsmalltrunc_append(inds, i);
+    vectrunc_append(vecs, v);
   }
   return gerepilecopy(av, mkvec2(inds, vecs));
 }
@@ -2490,10 +2492,10 @@ Onorm_makemat(GEN A, GEN O, GEN AOconj)
   long lO = lg(O), i, j;
   GEN M = cgetg(lO, t_MAT);
   for (i = 1; i < lO; i++) {
-	gel(M, i) = cgetg(lO, t_COL);
-	for (j = 1; j < i; j++) gmael(M, i, j) = algtobasis(F, gdivgs(lift(algtrace(A, algmul(A, gel(O, i), gel(AOconj, j)), 0)), 2));
-	gmael(M, i, i) = algtobasis(F, algnorm(A, gel(O, i), 0));
-	for (j = i + 1; j < lO; j++) gmael(M, i, j) = gen_0;
+    gel(M, i) = cgetg(lO, t_COL);
+    for (j = 1; j < i; j++) gmael(M, i, j) = algtobasis(F, gdivgs(lift(algtrace(A, algmul(A, gel(O, i), gel(AOconj, j)), 0)), 2));
+    gmael(M, i, i) = algtobasis(F, algnorm(A, gel(O, i), 0));
+    for (j = i + 1; j < lO; j++) gmael(M, i, j) = gen_0;
   }
   return M;
 }
@@ -2509,7 +2511,7 @@ Onorm_toreal(GEN A, GEN Onorm)
   GEN rt = gel(nf_get_roots(F), split);
   GEN Onormreal = zeromatcopy(n, n);
   for (i = 1; i <= n; i++) {
-	for (j = i; j <=n; j++) gcoeff(Onormreal, i, j) = gsubst(lift(basistoalg(F, gcoeff(Onorm, i, j))), Fvar, rt);
+    for (j = i; j <=n; j++) gcoeff(Onormreal, i, j) = gsubst(lift(basistoalg(F, gcoeff(Onorm, i, j))), Fvar, rt);
   }
   return gerepilecopy(av, Onormreal);
 }
@@ -2535,9 +2537,9 @@ afucharea(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
     GEN Np = idealnorm(F, gcoeff(Olevel_fact, i, 1));/*Norm of the prime*/
     GEN Npexp = gcoeff(Olevel_fact, i, 2);/*Exponent*/
     if (equali1(Npexp)) {
-	  elevpart = mulii(elevpart, addis(Np, 1));/*Times N(p)+1*/
-	  continue;
-	}
+      elevpart = mulii(elevpart, addis(Np, 1));/*Times N(p)+1*/
+      continue;
+    }
     GEN Npem1 = powii(Np, gsubgs(Npexp, 1));/*Np^{e-1}*/
     GEN Npe = mulii(Npem1, Np);/*Np^e*/
     elevpart = mulii(elevpart, addii(Npe, Npem1));
@@ -2621,54 +2623,54 @@ afuchfdom_i(GEN X)
     pass++;
     if (DEBUGLEVEL > 0) pari_printf("Pass %d with %d random points in the ball of radius %P.8f\n", pass, N - 1, R);
     GEN elts = vectrunc_init(N);
-	GEN oosides = nU ? normbound_get_infinite(U) : NULL;
-	long noo = nU ? lg(oosides) - 1 : 0, i;
-	if (noo) {/*Looking near infinite sides*/
-	  if (DEBUGLEVEL > 0) pari_printf("%d infinite sides\n", noo);
-	  long iside = 0;
-	  GEN Uvargs = normbound_get_vargs(U);
-	  for (i = 1; i < N; i++){
-		iside++;
-		if (iside > noo) iside = 1;
-		long sind = oosides[iside];
-		GEN ang2 = gel(Uvargs, sind), ang1;
-		if (sind == 1) ang1 = gel(Uvargs, nU);
-		else ang1 = gel(Uvargs, sind - 1);
-		if (cmprr(ang1, ang2) > 0) ang2 = addrr(ang2, twopi);/*We loop past zero.*/
-		GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
-		GEN found = afuchfindelts_i(X, z, C, 1);
-		if (!found) return gc_NULL(av);/*Precision too low.*/
-		if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
-	  }
-	}
-	else {
-	  for (i = 1; i < N; i++){
-	    GEN z = hdiscrandom(R, prec);
-		GEN found = afuchfindelts_i(X, z, C, 1);
-		if (!found) return gc_NULL(av);/*Precision too low.*/
-		if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
-	  }
-	}
+    GEN oosides = nU ? normbound_get_infinite(U) : NULL;
+    long noo = nU ? lg(oosides) - 1 : 0, i;
+    if (noo) {/*Looking near infinite sides*/
+      if (DEBUGLEVEL > 0) pari_printf("%d infinite sides\n", noo);
+      long iside = 0;
+      GEN Uvargs = normbound_get_vargs(U);
+      for (i = 1; i < N; i++){
+        iside++;
+        if (iside > noo) iside = 1;
+        long sind = oosides[iside];
+        GEN ang2 = gel(Uvargs, sind), ang1;
+        if (sind == 1) ang1 = gel(Uvargs, nU);
+        else ang1 = gel(Uvargs, sind - 1);
+        if (cmprr(ang1, ang2) > 0) ang2 = addrr(ang2, twopi);/*We loop past zero.*/
+        GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
+        GEN found = afuchfindelts_i(X, z, C, 1);
+        if (!found) return gc_NULL(av);/*Precision too low.*/
+        if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
+      }
+    }
+    else {
+      for (i = 1; i < N; i++){
+        GEN z = hdiscrandom(R, prec);
+        GEN found = afuchfindelts_i(X, z, C, 1);
+        if (!found) return gc_NULL(av);/*Precision too low.*/
+        if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
+      }
+    }
     if (DEBUGLEVEL > 0) pari_printf("%d elements found\n", lg(elts) - 1);
-	U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
-	if (!U) {
-	  nU = 0;
-	  if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has 0 sides\n\n");
-	  R = gadd(R, epsilon);/*Update R, maybe it was too small.*/
-	  gerepileall(av_mid, 1, &R);
-	  U = NULL;
-	  continue;
-	}
-	long newnU = lg(normbound_get_elts(U)) - 1;
+    U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    if (!U) {
+      nU = 0;
+      if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has 0 sides\n\n");
+      R = gadd(R, epsilon);/*Update R, maybe it was too small.*/
+      gerepileall(av_mid, 1, &R);
+      U = NULL;
+      continue;
+    }
+    long newnU = lg(normbound_get_elts(U)) - 1;
     if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has %d sides\n\n", newnU);
-	GEN Uarea = normbound_get_area(U);
+    GEN Uarea = normbound_get_area(U);
     if (gcmp(Uarea, areabound) < 0) break;/*Done*/
     if (pass > 1 && nU == newnU) R = gadd(R, epsilon);/*Updating R if we didn't change the number of sides.*/
-	nU = newnU;
+    nU = newnU;
     if (gc_needed(av, 2)) {
-	  if (DEBUGLEVEL > 0) pari_printf("Garbage collection.\n");
-	  gerepileall(av_mid, 2, &U, &R);
-	}
+      if (DEBUGLEVEL > 0) pari_printf("Garbage collection.\n");
+      gerepileall(av_mid, 2, &U, &R);
+    }
   }
   obj_insert(X, afuch_FDOM, U);
   return gerepileupto(av, U);
@@ -2684,14 +2686,14 @@ afuchfdom(GEN X)
   int precinc = 0;
   for (;;) {
     U = afuchfdom_i(X);
-	if (U) break;/*Success!*/
-	pari_warn(warner, "Increasing precision");
-	precinc = 1;
-	afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+    if (U) break;/*Success!*/
+    pari_warn(warner, "Increasing precision");
+    precinc = 1;
+    afuch_moreprec(X, 1);/*Increase the precision by 1.*/
   }
   if (precinc) {
-	GEN tol = gdat_get_tol(afuch_get_gdat(X));
-	pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+    GEN tol = gdat_get_tol(afuch_get_gdat(X));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
   }
   return gerepileupto(av, U);
 }
@@ -2788,7 +2790,7 @@ afuchmul(GEN X, GEN g1, GEN g2)
   GEN g = ZC_Z_mul(ZM_ZC_mul(gel(T, 1), g2), gel(g1, 1));
   long lg1 = lg(g1), i;
   for (i = 2; i < lg1; i++) {
-	g = ZC_add(g, ZC_Z_mul(ZM_ZC_mul(gel(T, i), g2), gel(g1, i)));
+    g = ZC_add(g, ZC_Z_mul(ZM_ZC_mul(gel(T, i), g2), gel(g1, i)));
   }
   return gerepileupto(av, g);
 }
@@ -2813,10 +2815,10 @@ afuchnorm_chol(GEN F, GEN chol, GEN g)
   long n = lg(g), i, j;
   GEN s = gen_0;
   for (i = 1; i <= 4; i++) {
-	GEN t = gel(g, inds[i]);
-	for (j = inds[i] + 1; j < n; j++) t = nfadd(F, t, nfmul(F, gmael(coefs, i, j), gel(g, j)));
-	t = nfsqr(F, t);
-	s = nfadd(F, s, nfmul(F, gmael(coefs, i, inds[i]), t));
+    GEN t = gel(g, inds[i]);
+    for (j = inds[i] + 1; j < n; j++) t = nfadd(F, t, nfmul(F, gmael(coefs, i, j), gel(g, j)));
+    t = nfsqr(F, t);
+    s = nfadd(F, s, nfmul(F, gmael(coefs, i, inds[i]), t));
   }
   return gerepileupto(av, s);
 }
@@ -2831,11 +2833,11 @@ afuchnorm_mat(GEN F, GEN Onorm, GEN g)
   for (i = 1; i < lg - 1; i++) gel(twog, i) = shifti(gel(g, i), 1);/*2g, except the last term which is uninitialized as we don't need it.*/
   GEN s = gen_0;
   for (i = 1; i < lg; i++) {
-	GEN t = gen_0;
-	for (j = 1; j < i; j++) t = nfadd(F, t, nfmul(F, gcoeff(Onorm, j, i), gel(twog, j)));
-	t = nfadd(F, t, nfmul(F, gcoeff(Onorm, i, i), gel(g, i)));
-	t = nfmul(F, t, gel(g, i));
-	s = nfadd(F, s, t);
+    GEN t = gen_0;
+    for (j = 1; j < i; j++) t = nfadd(F, t, nfmul(F, gcoeff(Onorm, j, i), gel(twog, j)));
+    t = nfadd(F, t, nfmul(F, gcoeff(Onorm, i, i), gel(g, i)));
+    t = nfmul(F, t, gel(g, i));
+    s = nfadd(F, s, t);
   }
   return gerepileupto(av, s);
 }
@@ -2857,8 +2859,8 @@ afuchtoklein(GEN X, GEN g)
   GEN B = mulcri(gmael(embs, 1, 2), gel(g, 2));
   long lg = lg(g), i;
   for (i = 2; i < lg; i++) {
-	A = addcrcr(A, mulcri(gmael(embs, i, 1), gel(g, i)));
-	B = addcrcr(B, mulcri(gmael(embs, i, 2), gel(g, i)));
+    A = addcrcr(A, mulcri(gmael(embs, i, 1), gel(g, i)));
+    B = addcrcr(B, mulcri(gmael(embs, i, 2), gel(g, i)));
   }
   return gerepilecopy(av, mkvec2(A, B));
 }
@@ -2914,32 +2916,32 @@ static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
   GEN found = cgetg(maxelts + 1, t_VEC);
   GEN F = alg_get_center(afuch_get_alg(X));
   if (nf_get_degree(F) == 1) {/*Over Q, so no real approximation required.*/
-	for (i = 1; i < lv; i++) {
-	  GEN norm = afuchnorm_fast(X, gel(v, i));
-	  if (!gequal(norm, gen_1)) continue;/*The norm was not 1.*/
-	  if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
-	  gel(found, ind) = gel(v, i);
-	  ind++;
-	  if (ind <= maxelts) continue;/*We can find more*/
-	  if (!nomax) break;/*We have it the maximum return vector.*/
-	  maxelts = 2*maxelts;/*Double and continue.*/
-	  found = vec_lengthen(found, maxelts);
+    for (i = 1; i < lv; i++) {
+      GEN norm = afuchnorm_fast(X, gel(v, i));
+      if (!gequal(norm, gen_1)) continue;/*The norm was not 1.*/
+      if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
+      gel(found, ind) = gel(v, i);
+      ind++;
+      if (ind <= maxelts) continue;/*We can find more*/
+      if (!nomax) break;/*We have it the maximum return vector.*/
+      maxelts = 2*maxelts;/*Double and continue.*/
+      found = vec_lengthen(found, maxelts);
     }  
   }
   else{/*Compute the real norm first.*/
     for (i = 1; i < lv; i++) {
-	  GEN realnorm = afuchnorm_real(X, gel(v, i));
-	  if (!toleq(realnorm, gen_1, lowtol)) continue;/*Norm not 1 up to tolerance.*/
-	  if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
-	  GEN norm = afuchnorm_fast(X, gel(v, i));
-	  norm = basistoalg(F, norm);
-	  if (!gequal(norm, gen_1)) continue;/*The norm was close to 1 but not equal.*/
-	  gel(found, ind) = gel(v, i);
-	  ind++;
-	  if (ind <= maxelts) continue;/*We can find more*/
-	  if (!nomax) break;/*We have it the maximum return vector.*/
-	  maxelts = 2*maxelts;/*Double and continue.*/
-	  found = vec_lengthen(found, maxelts);
+      GEN realnorm = afuchnorm_real(X, gel(v, i));
+      if (!toleq(realnorm, gen_1, lowtol)) continue;/*Norm not 1 up to tolerance.*/
+      if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
+      GEN norm = afuchnorm_fast(X, gel(v, i));
+      norm = basistoalg(F, norm);
+      if (!gequal(norm, gen_1)) continue;/*The norm was close to 1 but not equal.*/
+      gel(found, ind) = gel(v, i);
+      ind++;
+      if (ind <= maxelts) continue;/*We can find more*/
+      if (!nomax) break;/*We have it the maximum return vector.*/
+      maxelts = 2*maxelts;/*Double and continue.*/
+      found = vec_lengthen(found, maxelts);
     }
   }
   found = vec_shorten(found, ind - 1);
@@ -3152,7 +3154,7 @@ algorderdisc(GEN A, GEN O, int reduced, int factored)
             if (!reduced && !factored) return gerepilecopy(av, I);
             GEN fact = idealfactor(F, I);
             if (!reduced && factored) return gerepileupto(av, fact);/*From now on, we want it reduced*/
-			long lp = lg(gel(fact, 1)), i;
+            long lp = lg(gel(fact, 1)), i;
             for (i = 1; i < lp; i++) gcoeff(fact, i, 2) = shifti(gcoeff(fact, i, 2), -1);/*Divide by 2*/
             if (factored) return gerepilecopy(av, fact);
             return gerepileupto(av, idealfactorback(F, fact, NULL, 0));
@@ -3172,8 +3174,8 @@ algorderlevel(GEN A, GEN O, int factored)
   pari_sp av = avma;
   GEN F = alg_get_center(A);
   if (gequal1(O)) {/*Diagonal identity, so level 1.*/
-	if (factored) return idealfactor(F, gen_1);
-	return gen_1;
+    if (factored) return idealfactor(F, gen_1);
+    return gen_1;
   }
   GEN Odisc = algorderdisc(A, O, 0, 0);
   GEN Adisc = idealpows(F, algreduceddisc(A), 2);

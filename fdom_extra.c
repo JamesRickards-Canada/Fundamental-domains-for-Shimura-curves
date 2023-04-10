@@ -14,7 +14,10 @@
 
 /*STATIC DECLARATIONS*/
 
+/*SECTION 1: VISUALIZATION*/
+/*SECTION 2: TUNING*/
 
+/*MAIN BODY*/
 
 /*SECTION 1: VISUALIZATION*/
 
@@ -104,7 +107,7 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
 
 
 
-
+/*SECTION 2: TUNING*/
 
 
 
