@@ -103,6 +103,7 @@ GEN afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchfdom(GEN X);
+GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchredelt(GEN X, GEN U, GEN g, GEN z);
 

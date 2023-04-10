@@ -138,6 +138,7 @@ static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN
 static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
 /*2: PRESENTATION*/
+static GEN presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 static void presentation_update(GEN words, long ind, GEN repl);
 static GEN word_collapse(GEN word);
 static GEN word_inv(GEN word);
@@ -1929,7 +1930,7 @@ A word is a vecsmall, which is taken in reference to a list of elements G. A neg
 */
 
 /*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].*/
-GEN
+static GEN
 presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
 {
   pari_sp av = avma;
@@ -2265,7 +2266,7 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
   if (flag) {
 	afuchfdom(AX);
-	if (flag == 2) afuchsignature(AX);
+	if (flag == 2) { afuchsignature(AX); afuchpresentation(AX); }
   }
   return gerepilecopy(av, AX);
 }
@@ -2600,6 +2601,20 @@ afuchfdom(GEN X)
   U = afuchfdom_i(X);
   if (!U) pari_err_PREC("afuchfdom, recompile the number field and algebra with more precision.");
   return gerepileupto(av, U);
+}
+
+/*Presentation*/
+GEN
+afuchpresentation(GEN X)
+{
+  pari_sp av = avma;
+  GEN pres = afuch_get_pres(X);
+  if (pres) return pres;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+  obj_insert(X, afuch_PRES, pres);
+  return gerepileupto(av, pres);
 }
 
 /*Signature*/
