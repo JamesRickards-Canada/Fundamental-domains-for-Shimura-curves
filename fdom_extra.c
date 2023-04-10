@@ -73,6 +73,15 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
     }
     pari_fprintf(f, "\\pgfpathclose\n\\pgfusepath{stroke, fill}\n\\end{pgfscope}\n");
   }
+  else if (model == 2) {/*Klein model*/
+    GEN first = gel(vertices, nsides);/*The lower point on the first arc.*/
+    pari_fprintf(f, "\\pgfpathmoveto{\\pgfqpoint{%P.8fin}{%P.8fin}}\n", gmul(real_i(first), radius), gmul(imag_i(first), radius));/*First point*/
+    for (i = 1; i <= nsides; i++) {/*Each side*/
+	  GEN ver = gel(vertices, i);
+      pari_fprintf(f, "\\pgfpathlineto{\\pgfqpoint{%P.8fin}{%P.8fin}}\n", gmul(real_i(ver), radius), gmul(imag_i(ver), radius));
+    }
+    pari_fprintf(f, "\\pgfpathclose\n\\pgfusepath{stroke, fill}\n\\end{pgfscope}\n");
+  }
   /*End*/
   pari_fprintf(f, "\\end{pgfpicture}\n\\end{document}");
   fclose(f);
