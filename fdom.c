@@ -1,14 +1,15 @@
 /*TO DO
-1. How to input groups between O^1 and the full positive normalizer group?
+1. How to input groups between O^1 and the full positive normalizer group? (i.e. type in afuchinit).
 2. forqfvec with flag=2.
 3. afuch_make_qf: I must symmetrize the matrix for use in qfminim, but this really shouldn't be necessary.
 4. Update constants used for finding the optimal C.
 5. Fincke pohst with pruning?
-6. hdisc_randomarc: make sure ang1>ang2? (or other way around, w/e)
-7. Type in afuchinit.
 8. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
 9. Check for >> or << instead of *2 or /2.
 10. Make testing cases with b>0 not a>0.
+11. Do we want the debug level here to be the same as for algebras? Currently it is.
+12. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
+13. alg_changeorder may have a better successor with the updated quaternion algebra methods.
 */
 
 /*
@@ -148,6 +149,7 @@ static GEN word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
+static void afuch_moreprec(GEN X, long inc);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
@@ -192,6 +194,16 @@ static long algsplitoo(GEN A);
 /*3: ALGEBRA ORDER METHODS*/
 static GEN algd(GEN A, GEN a);
 static GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
+
+/*3: CHANGING ORDER METHODS, WHICH WERE DELETED FROM LIBPARI*/
+static GEN alg_changeorder(GEN al, GEN ord);
+static GEN elementabsmultable(GEN mt, GEN x);
+static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
+static GEN algbasismultable(GEN al, GEN x);
+static GEN algtracebasis(GEN al);
+static GEN elementabsmultable_Z(GEN mt, GEN x);
+static GEN FpM_trace(GEN x, GEN p);
+static GEN ZM_trace(GEN x);
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
@@ -2297,6 +2309,57 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   return gerepilecopy(av, AX);
 }
 
+/*Updates X to have precision prec+inc. Does not initialize the fundamental domain, signature, or precision: this will typically be triggered when we find that we don't have enough precision for qfminim when computing the fundamental domain.*/
+static void
+afuch_moreprec(GEN X, long inc)
+{
+  pari_sp av = avma, av2;
+  if (inc < 0) inc = 1;
+  GEN old_gdat = afuch_get_gdat(X);
+  long old_prec = lg(gdat_get_tol(old_gdat));
+  av2 = avma;
+  GEN old_A = afuch_get_alg(X);
+  GEN old_nf = alg_get_center(old_A);
+  long nF = nf_get_degree(old_nf);
+  GEN old_rnf = alg_get_splittingfield(old_A);
+  GEN aut = alg_get_aut(old_A);
+  GEN hi = alg_get_hasse_i(old_A);
+  GEN hf = alg_get_hasse_f(old_A);
+  GEN b = alg_get_b(old_A);/*The basic data*/
+  long new_prec = old_prec + inc;/*The new precision*/
+  GEN new_nf = nfinit(nf_get_pol(old_nf), new_prec);/*Recompile the number field*/
+  GEN new_rnf = rnfinit(new_nf, rnf_get_pol(old_rnf));/*Recompile the rnf*/
+  GEN bden = Q_denom(lift(b));
+  GEN new_A;/*The new algebra.*/
+  if (!isint1(bden)) {/*b has a denominator. We use alg_complete, but this MAY change the value of b, so we run it until it does not.*/
+    do {
+      new_A = alg_complete(new_rnf, aut, hf, hi, 0);/*Remake the algebra.*/
+    } while (!gequal(alg_get_b(new_A), b));/*Sometimes this changes b, so we loop until it doesn't.*/
+  }
+  else new_A = alg_cyclic(new_rnf, aut, b, 0);/*Initialize with alg_cyclic*/
+  GEN basis_want = alg_get_basis(old_A);
+  GEN basis_dontwant = alg_get_invbasis(new_A);
+  GEN basis_change = QM_mul(basis_dontwant, basis_want);
+  new_A = alg_changeorder(new_A, basis_change);/*Correct the basis to the old one*/
+  new_A = gerepileupto(av2, new_A);
+  /*We have the new algebra*/
+  obj_insert(X, afuch_A, new_A);
+  GEN O = afuch_get_O(X);
+  GEN AOconj = QM_mul(O, afuch_get_Oconj(X));
+  GEN Onorm = Onorm_makemat(new_A, O, AOconj);
+  if (nF > 1) obj_insert(X, afuch_ONORMREAL, Onorm_toreal(new_A, Onorm));/*No need to store approximate if n=1.*/
+  GEN p = gtocr(gdat_get_p(old_gdat), new_prec);
+  GEN gdat = gdat_initialize(p, new_prec);
+  GEN kleinmats = afuch_make_kleinmats(new_A, O, p, new_prec);
+  obj_insert(X, afuch_KLEINMATS, kleinmats);
+  GEN qfm = afuch_make_qfmats(kleinmats);
+  gel(qfm, 5) = gcopy(gel(afuch_get_qfmats(X), 5));/*This part was exact, so we can copy it over.*/
+  obj_insert(X, afuch_QFMATS, qfm);
+  obj_insert(X, afuch_GDAT, gdat);
+  obj_insert(X, afuch_FDOMDAT, afuchfdomdat_init(new_A, O, new_prec));
+  set_avma(av);
+}
+
 /*Returns a vector v of pairs [A, B] such that O[,i] is sent to v[i] acting on the Klein model..*/
 static GEN
 afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec)
@@ -2617,15 +2680,25 @@ afuchfdom_i(GEN X)
   return gerepileupto(av, U);
 }
 
-/*Returns the fundamental domain, raising an error if there is not enough precision.*/
+/*Returns the fundamental domain, recomputing X to more accuracy if the precision is too low.*/
 GEN
 afuchfdom(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
   if (U) return U;
-  U = afuchfdom_i(X);
-  if (!U) pari_err_PREC("afuchfdom, recompile the number field and algebra with more precision.");
+  int precinc = 0;
+  for (;;) {
+    U = afuchfdom_i(X);
+	if (U) break;/*Success!*/
+	pari_warn(warner, "Increasing precision");
+	precinc = 1;
+	afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+  }
+  if (precinc) {
+	GEN tol = gdat_get_tol(afuch_get_gdat(X));
+	pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+  }
   return gerepileupto(av, U);
 }
 
@@ -3117,5 +3190,119 @@ algorderlevel(GEN A, GEN O, int factored)
   if(factored) return gerepilecopy(av, fact);
   return gerepileupto(av, idealfactorback(F, fact, NULL, 0));
 }
+
+
+
+/*3: CHANGING ORDER METHODS, WHICH WERE DELETED FROM LIBPARI*/
+
+/*Here because it was deleted from libpari*/
+static GEN
+alg_changeorder(GEN al, GEN ord)
+{
+  GEN al2, mt, iord, mtx;
+  long i, n;
+  pari_sp av = avma;
+
+  if (!gequal0(gel(al, 10)))
+    pari_err_DOMAIN("alg_changeorder","characteristic","!=", gen_0, gel(al, 10));
+  n = alg_get_absdim(al);
+
+  iord = QM_inv(ord);
+  al2 = shallowcopy(al);
+
+  gel(al2, 7) = RgM_mul(gel(al2, 7), ord);
+
+  gel(al2, 8) = RgM_mul(iord, gel(al, 8));
+
+  mt = cgetg(n + 1,t_VEC);
+  gel(mt, 1) = matid(n);
+  for (i = 2; i <= n; i++) {
+    mtx = algbasismultable(al,gel(ord, i));
+    gel(mt, i) = RgM_mul(iord, RgM_mul(mtx, ord));
+  }
+  gel(al2, 9) = mt;
+
+  gel(al2, 11) = algtracebasis(al2);
+
+  return gerepilecopy(av, al2);
+}
+
+static GEN
+elementabsmultable(GEN mt, GEN x)
+{
+  GEN d, z = elementabsmultable_Z(mt, Q_remove_denom(x, &d));
+  return (z && d)? ZM_Z_div(z, d): z;
+}
+static GEN
+elementabsmultable_Fp(GEN mt, GEN x, GEN p)
+{
+  GEN z = elementabsmultable_Z(mt, x);
+  return z? FpM_red(z, p): z;
+}
+static GEN
+algbasismultable(GEN al, GEN x)
+{
+  pari_sp av = avma;
+  GEN z, p = alg_get_char(al), mt = alg_get_multable(al);
+  z = signe(p)? elementabsmultable_Fp(mt, x, p): elementabsmultable(mt, x);
+  if (!z)
+  {
+    long D = lg(mt) - 1;
+    set_avma(av); return zeromat(D, D);
+  }
+  return gerepileupto(av, z);
+}
+
+static GEN
+algtracebasis(GEN al)
+{
+  pari_sp av = avma;
+  GEN mt = alg_get_multable(al), p = alg_get_char(al);
+  long i, l = lg(mt);
+  GEN v = cgetg(l, t_VEC);
+  if (signe(p)) for (i = 1; i < l; i++) gel(v, i) = FpM_trace(gel(mt, i), p);
+  else          for (i = 1; i < l; i++) gel(v, i) = ZM_trace(gel(mt, i));
+  return gerepileupto(av,v);
+}
+
+static GEN
+elementabsmultable_Z(GEN mt, GEN x)
+{
+  long i, l = lg(x);
+  GEN z = NULL;
+  for (i = 1; i < l; i++)
+  {
+    GEN c = gel(x, i);
+    if (signe(c))
+    {
+      GEN M = ZM_Z_mul(gel(mt, i), c);
+      z = z? ZM_add(z, M): M;
+    }
+  }
+  return z;
+}
+
+static GEN
+FpM_trace(GEN x, GEN p)
+{
+  long i, lx = lg(x);
+  GEN t;
+  if (lx < 3) return lx == 1? gen_0: gcopy(gcoeff(x, 1, 1));
+  t = gcoeff(x, 1, 1);
+  for (i = 2; i < lx; i++) t = Fp_add(t, gcoeff(x, i, i), p);
+  return t;
+}
+
+static GEN
+ZM_trace(GEN x)
+{
+  long i, lx = lg(x);
+  GEN t;
+  if (lx < 3) return lx == 1? gen_0: gcopy(gcoeff(x, 1, 1));
+  t = gcoeff(x, 1, 1);
+  for (i = 2; i < lx; i++) t = addii(t, gcoeff(x, i, i));
+  return t;
+}
+
 
 

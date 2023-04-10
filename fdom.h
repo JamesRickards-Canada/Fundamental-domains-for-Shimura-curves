@@ -74,27 +74,12 @@ afuch_get_pres(GEN X){return obj_check(X, afuch_PRES);}
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
-/*1: LINES AND ARCS*/
 /*1: MATRIX ACTION ON GEOMETRY*/
 GEN klein_act_i(GEN M, GEN z);
 GEN klein_act(GEN M, GEN z, long prec);
 GEN pgl_act(GEN M, GEN z);
 
-/*1: TRANSFER BETWEEN MODELS*/
-/*1: DISTANCES/AREAS*/
-/*1: OPERATIONS ON COMPLEX REALS*/
-/*1: TOLERANCE*/
-
-
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
-
-/*2: NORMALIZED BOUNDARY*/
-/*2: NORMALIZED BOUNDARY APPENDING*/
-/*2: NORMALIZED BOUNDARY ANGLES*/
-/*2: NORMALIZED BASIS*/
-/*2: NORMALIZED BOUNDARY REDUCTION*/
-/*2: CYCLES AND SIGNATURE*/
-/*2: PRESENTATION*/
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
@@ -108,8 +93,6 @@ GEN afuchsignature(GEN X);
 GEN afuchredelt(GEN X, GEN g, GEN z);
 GEN afuchword(GEN X, GEN g);
 
-/*3: ALGEBRA BASIC AUXILLARY METHODS*/
-
 /*3: FINDING ELEMENTS*/
 GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts);
 GEN afuchqf(GEN X, GEN z);
@@ -122,3 +105,4 @@ GEN algmulvec(GEN A, GEN G, GEN L);
 /*3: ALGEBRA ORDER METHODS*/
 int algisorder(GEN A, GEN O);
 GEN algorderlevel(GEN A, GEN O, int factored);
+

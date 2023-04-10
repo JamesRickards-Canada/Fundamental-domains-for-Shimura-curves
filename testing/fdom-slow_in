@@ -1,45 +1,21 @@
 \r fdom;
 
-\\For testing if two quaternion algebras were initialized in the same way (precision may differ, but must have same fields, a and b, and maximal ideal. Probably only need to test the splitting field, algb, and the basis, but will do more tests just to be sure.
-equalalg(A, B)={
-  my(LA, LB, KA, KB);
-  if(alghassei(A)!=alghassei(B),print("oo ramification differs");return(0));\\infinite ramification
-  if(algbasis(A)!=algbasis(B),print("Basis differs");return(0));\\Basis
-  if(A[11]!=B[11],print("Traces of basis elements differ");return(0));\\Traces of the basis
-  if(algb(A)!=algb(B),print("b differs");return(0));\\b
-  LA=algsplittingfield(A);
-  LB=algsplittingfield(B);
-  if(LA.pol!=LB.pol,print("a differs");return(0));\\a, from L=K(x^2-a)
-  if(LA.zk!=LB.zk,print("L pseudobasis differs");return(0));\\L pseudobasis
-  KA=LA.nf;
-  KB=LB.nf;
-  if(KA.pol!=KB.pol,print("Centre pol differs");return(0));
-  if(KA.zk!=KB.zk,print("Centre different Z-basis");return(0));
-  print("Equal algebras");
-  return(1);
-}
-
 testalgfdom(L)={
-  my(errrtol, F, A, U, Aold, iseq, P, g, word, newg, geod);
-  errtol=10^-19;
+  my(F, A, X, U, S, P, g, word, newword);
   for(i=1,#L,
     for(j=1,#L[i][1],
       F=nfinit(L[i][1][j]);
 	  A=alginit(F, L[i][2][j]);
-	  printf("%Pd\n", algnormdisc(A));
-	  printf("%P.38g\n", algfdomarea(A));\\Areas to 38 sig figs, the default precision
-	  U=algfdom(A);
-	  if(algfdomorder(U)!=matid(4*F.r1),print("Order is wrong!"));
-	  Aold=A;
-	  A=algfdomalg(U);
-	  iseq=equalalg(A, Aold);
-	  print(algfdomsignature(U));\\Invariant.
-	  P=algfdompresentation(U);
+	  X=afuchinit(A, , , , 0);
+	  U=afuchfdom(X);
+	  S=afuchsignature(X);
+	  print(S);\\Invariant.
+	  P=afuchpresentation(X);
 	  g=algmulvec(A, U[1], vector(5+random(15), k, (2*random(2)-1)*(random(#U[1])+1)));\\Random norm 1 element.
-	  word=algfdomword(g, P, U);
+	  word=afuchword(X, g);
 	  newg=algmulvec(A, P[1], word);
 	  if(newg==g || newg==-g,print("Passed word test"),print("Failed word test"));
-	  if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));\\No error should be raised if this works.
+	  \\if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));\\No error should be raised if this works.
     );
   );
 }
