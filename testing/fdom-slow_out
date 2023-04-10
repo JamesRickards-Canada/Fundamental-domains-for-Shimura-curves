@@ -25,6 +25,8 @@ Passed word test
 Passed word test
 [3, Vecsmall([2, 2, 2, 2]), 0]
 Passed word test
+  *** afuchfdom: Warning: Increasing precision.
+  *** afuchfdom: Warning: Precision increased to 5, i.e. \p57.
 [4, Vecsmall([2, 2]), 0]
 Passed word test
 [3, Vecsmall([3, 3, 3, 3, 3, 3]), 0]
@@ -35,18 +37,13 @@ Passed word test
 Passed word test
 [5, Vecsmall([3, 3, 3, 3]), 0]
 Passed word test
-145
-117.28612573401894756927201964243477433
-  *** algfdom: Warning: Increasing precision.
-  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
-Equal algebras
+  *** afuchfdom: Warning: Increasing precision.
+  *** afuchfdom: Warning: Precision increased to 5, i.e. \p57.
 [9, Vecsmall([3, 3, 3, 3]), 0]
 Passed word test
-29
-30.997047515419293286164748048357761790
-  *** algfdom: Warning: Increasing precision.
-  *** algfdom: Warning: Precision increased to 5, i.e. \p57. If U=output, then update the algebra to the correct precision with A=algfdomalg(U), and update the number field with F=algcenter(A). If the original values of a and b in A had denominators, then the new algebra will have cleared them (and hence have different a and b).
-Equal algebras
+  *** afuchfdom: Warning: Increasing precision.
+  *** afuchfdom: Warning: Increasing precision.
+  *** afuchfdom: Warning: Precision increased to 6, i.e. \p77.
 [2, Vecsmall([3, 3, 5, 5]), 0]
 Passed word test
 Mat(5)

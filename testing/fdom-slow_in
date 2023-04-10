@@ -58,27 +58,27 @@ O1bas=[[1, 0]~, [5*x, 0]~, [4*x + 1/2, 1/2]~, [17/4*x, 1/4*x]~];\\Level 5
 O1=algorderalgtomatrix(A, O1bas);
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-U=algfdom(A, O1);
-print(algfdomsignature(U));
-P=algfdompresentation(U);
+X=afuchinit(A, O1, , , 2);
+print(afuchsignature(X));
+P=afuchpresentation(X);
 print(length(P[1]));
 
 O1bas=[[1, 0]~, [97*x, 0]~, [57*x + 1/2, 1/2]~, [265/4*x, 1/4*x]~];\\Level 97
 O1=algorderalgtomatrix(A, O1bas);
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-U=algfdom(A, O1);
-print(algfdomsignature(U));
-P=algfdompresentation(U);
+X=afuchinit(A, O1, , , 2);
+print(afuchsignature(X));
+P=afuchpresentation(X);
 print(length(P[1]));
 
 O1bas=[[1, 0]~, [120*x, 0]~, [96*x + 1/2, 1/2]~, [97/4*x, 1/4*x]~];\\Level 120
 O1=algorderalgtomatrix(A, O1bas);
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-U=algfdom(A, O1);
-print(algfdomsignature(U));
-P=algfdompresentation(U);
+X=afuchinit(A, O1, , , 2);
+print(afuchsignature(X));
+P=afuchpresentation(X);
 print(length(P[1]));
 
 setrand(1);
@@ -88,9 +88,9 @@ O1bas=[[1, 0]~, [x - 1, 0]~, [1/2*x - 1/2, 1]~, [19/21*x, 1/210*x + 1/10]~];\\Le
 O1=algorderalgtomatrix(A, O1bas);
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-U=algfdom(A, O1);
-print(algfdomsignature(U));
-P=algfdompresentation(U);
+X=afuchinit(A, O1, , , 2);
+print(afuchsignature(X));
+P=afuchpresentation(X);
 print(length(P[1]));
 
 
@@ -103,9 +103,9 @@ O1bas=[[1, 0]~, [(-1/4*y - 1/4)*x - 1/2, 0]~, [-5/2*x + (-5/2*y + 5/2), 0]~, [-y
 O1=algorderalgtomatrix(A, O1bas);
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-U=algfdom(A, O1);
-print(algfdomsignature(U));
-P=algfdompresentation(U);
+X=afuchinit(A, O1, , , 2);
+print(afuchsignature(X));
+P=afuchpresentation(X);
 print(length(P[1]));
 
 setrand(1);
@@ -116,7 +116,7 @@ O1bas=[[1, 0]~, [33*x, 0]~, [(y^2 + 2*y + 30)*x, 0]~, [(y + 14)*x, 0]~, [y, 0]~,
 O1=algorderalgtomatrix(A, O1bas);
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
-U=algfdom(A, O1);
-print(algfdomsignature(U));
-P=algfdompresentation(U);
+X=afuchinit(A, O1, , , 2);
+print(afuchsignature(X));
+P=afuchpresentation(X);
 print(length(P[1]));
