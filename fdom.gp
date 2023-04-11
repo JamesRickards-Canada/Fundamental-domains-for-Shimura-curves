@@ -43,8 +43,14 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 \\fdom_extra.c
 
 \\SECTION 1: VISUALIZATION
-	install("afuchfdom_latex","vGrD1,L,D1,L,D1,L,D1,L,", ,fdom_library);
+	install("afuchfdom_latex","vGrD1,L,D1,L,D1,L,D1,L,",,fdom_library);
 	addhelp(afuchfdom_latex,"Inputs: U, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain U to a LaTeX document in plots/build/filename.tex. If model=0, use the upper half plane model, if model=1, use the unit disc model, and if model=2, use the Klein model. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra. NOTE: displaying in the Klein model is not suggested, as points are closer to the unit disc, and it does not show up very well.");
+
+\\SECTION 2: TUNING
+
+	\\2: BEST C
+	install("tune_bestC","GGLD300,L,p",,fdom_library);
+	addhelp(tune_bestC,"tune_bestC(X, scale, ntrials, {mintime=300}): Computes the optimal C value based on heuristics. We use ntrials values of C in a range [Cmin, Cmin*scale^(1/2n)] to compute A, B, where the total time taken is A+B*C^{2n}. We solve for the optimal C based on this. We return [A, B, C, R^2], with the R^2 value for the A, B regression.");
 
 default(parisize, "4096M");\\Must come at the end
 

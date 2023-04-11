@@ -63,7 +63,6 @@ static GEN m2r_to_klein(GEN M, GEN p);
 
 /*1: DISTANCES/AREA*/
 static GEN hdiscradius(GEN area, long prec);
-static GEN hdiscrandom(GEN R, long prec);
 static GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 
 /*1: OPERATIONS ON COMPLEX REALS*/
@@ -174,7 +173,6 @@ static GEN afuchtrace(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
 static GEN afuch_make_qf(GEN X, GEN z);
-static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
@@ -511,7 +509,7 @@ hdiscradius(GEN area, long prec)
 }
 
 /*Returns a random point z in the Klein model, uniform inside the ball of radius R. See page 19 of Page (before section 2.5).*/
-static GEN
+GEN
 hdiscrandom(GEN R, long prec)
 {
   pari_sp av = avma;
@@ -2901,7 +2899,7 @@ afuch_make_qf(GEN X, GEN z)
 }
 
 /*Finds the norm 1 elements such that Q_{z, 0}(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. In theory we might occationally miss one if a lot of cancellation happens, since we first check the norm by its real approximation (which is significantly faster), though the tolerance should be low enough that this does not happen. NOTE: we find element in the basis of O, NOT back to A.*/
-static GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
+GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
   GEN lowtol = gdat_get_lowtol(afuch_get_gdat(X));

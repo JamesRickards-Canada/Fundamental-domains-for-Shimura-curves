@@ -87,6 +87,9 @@ GEN klein_to_plane(GEN z, GEN p, GEN tol);
 GEN plane_to_disc(GEN z, GEN p);
 GEN plane_to_klein(GEN z, GEN p);
 
+/*1: DISTANCES/AREAS*/
+GEN hdiscrandom(GEN R, long prec);
+
 /*SECTION 2: FUNDAMENTAL DOMAIN GEOMETRY*/
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
@@ -103,7 +106,7 @@ GEN afuchword(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
 GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts);
-GEN afuchqf(GEN X, GEN z);
+GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts);
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);
@@ -120,3 +123,7 @@ GEN algorderlevel(GEN A, GEN O, int factored);
 /*SECTION 1: VISUALIZATION*/
 void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, int open);
 
+/*SECTION 2: TUNING*/
+
+/*2: BEST C*/
+GEN tune_bestC(GEN X, GEN scale, long ntrials, long mintesttime);

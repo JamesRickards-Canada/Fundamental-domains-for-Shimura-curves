@@ -17,6 +17,14 @@
 /*SECTION 1: VISUALIZATION*/
 /*SECTION 2: TUNING*/
 
+/*2: BEST C*/
+static GEN tune_bestC_givenAB(long n, GEN A, GEN B, long prec);
+static GEN tune_time(GEN X, GEN Cset, long mintesttime, long prec);
+
+/*2: REGRESSIONS*/
+static GEN OLS(GEN X, GEN y, int retrsqr);
+static GEN rsquared(GEN X, GEN y, GEN fit);
+
 /*MAIN BODY*/
 
 /*SECTION 1: VISUALIZATION*/
@@ -106,11 +114,125 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
 }
 
 
-
 /*SECTION 2: TUNING*/
 
+/*2: BEST C*/
 
+/*Finds and returns the optimal C for a given algebra. Actually, returns [A, B, C, R^2]. We do ntrials trials in a range [Cmin, scale^(1/2n)*Cmin], where this is centred at the conjectural best C value.*/
+GEN
+tune_bestC(GEN X, GEN scale, long ntrials, long mintesttime)
+{
+  pari_sp av = avma;
+  GEN Cbest = afuch_get_bestC(X);
+  GEN A = afuch_get_alg(X);
+  GEN nf = alg_get_center(A);
+  long n = nf_get_degree(nf), twon = n << 1, fourn = twon << 1;
+  long prec = lg(gdat_get_tol(afuch_get_gdat(X))), i;
+  GEN scalefact = gpow(scale, gdivgs(gen_1, fourn), prec);
+  GEN Cmin = gdiv(Cbest, scalefact);
+  GEN Cmax = gmul(Cbest, scalefact);
+  if (ntrials <= 1) ntrials = 2;/*Make sure it's at least 2.*/
+  GEN blen = gdivgs(gsub(Cmax, Cmin), ntrials - 1);/*length.*/
+  GEN Clist = cgetg(ntrials + 1, t_VEC);
+  GEN C = Cmin;
+  gel(Clist, 1) = C;
+  for (i = 2; i <= ntrials; i++) {
+    C = gadd(C, blen);
+    gel(Clist, i) = C;
+  }
+  GEN times = tune_time(X, Clist, mintesttime, prec);/*Executing the computation*/
+  GEN Xdata = cgetg(ntrials + 1, t_MAT);
+  for (i = 1; i <= ntrials; i++) gel(Xdata, i) = mkcol2(gen_1, gpowgs(gel(Clist, i), twon));/*The X data*/
+  GEN reg = OLS(Xdata, times, 1);
+  GEN Aco = gmael(reg, 1, 1), Bco = gmael(reg, 1, 2);
+  if(gsigne(Aco) == -1 || gsigne(Bco) == -1) pari_err(e_MISC, "One of A, B are negative! This is not correct.");
+  C = tune_bestC_givenAB(n, Aco, Bco, prec);
+  return gerepilecopy(av, mkvec4(Aco, Bco, C, gel(reg, 2)));/*[A, B, C, R^2].*/
+}
 
+/*Returns the unique real solution >n to (2n-1)C^2n-2n^2c^(2n-1)=A/B, which should be the optimal value of C to use for a given algebra.*/
+static GEN
+tune_bestC_givenAB(long n, GEN A, GEN B, long prec)
+{
+  pari_sp av = avma;
+  long twon = n << 1;
+  long var = fetch_var(), i;/*The temporary variable number*/
+  GEN P = cgetg(twon + 3, t_POL);
+  P[1] = evalvarn(var);
+  gel(P, 2) = gdiv(gneg(A), B);/*Constant coefficient.*/
+  for (i = 3; i <= twon;i++) gel(P, i)=gen_0;/*0's in the middle. P[i] corresp to x^(i-2)*/
+  gel(P, twon + 1) = stoi(-twon*n);
+  gel(P, twon + 2) = stoi(twon - 1);
+  P = normalizepol(P);/*Normalize it in place.*/
+  GEN rts = realroots(P, mkvec2(stoi(n), mkoo()), prec);/*Real roots in [n, oo)*/
+  delete_var();/*Delete the variable.*/
+  if (lg(rts) != 2) pari_err(e_MISC, "Could not find exactly one real root in [n, oo)!");
+  return gerepilecopy(av, gel(rts, 1));
+}
 
+/*Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.*/
+static GEN
+tune_time(GEN X, GEN Cset, long mintesttime, long prec)
+{
+  pari_sp av = avma, av2;
+  GEN R = afuch_get_R(X);
+  long lgCset = lg(Cset), i;
+  GEN avgtimes = cgetg(lgCset, t_COL);
+  pari_timer T;
+  timer_start(&T);
+  for (i = 1; i < lgCset; i++){
+    long t = 0, tries = 0;
+    timer_delay(&T);
+    while (t < mintesttime) {/*Make sure we do at least mintesttime per test*/
+      av2 = avma;
+      tries++;
+      GEN z = hdiscrandom(R, prec);
+	  GEN elts = afuchfindelts_i(X, z, gel(Cset, i), 0);
+      if(!elts) pari_err_PREC("Precision too low");
+      t=timer_get(&T);
+      set_avma(av2);
+    }
+    gel(avgtimes, i) = rdivss(t, 1000*tries, prec);
+    if (i%10 == 0) pari_printf("%d test cases done.\n", i);
+  }
+  return gerepilecopy(av, avgtimes);
+}
 
+/*2: REGRESSIONS*/
+
+/*Perform ordinary least squares regression. X is a matrix whose columns are the parameters, and y is a column vector of results. Must include linear term as first variable of X.
+The formula is B=Bhat=(X*X^T)^(-1)Xy, for the ordinary least squares regression for y=X^T*B+error (formula differs to Wikipedia due to X here being the transpose of what they define there.
+Returns [best fit, R^2]*/
+static GEN
+OLS(GEN X, GEN y, int retrsqr)
+{
+  pari_sp av = avma;
+  if (typ(y) != t_COL) y = gtocol(y);
+  if (lg(y) != lg(X)) pari_err_TYPE("The inputs must have the same length.", mkvec2(X, y));
+  GEN Xy = RgM_RgC_mul(X, y);
+  GEN XTX = RgM_multosym(X, shallowtrans(X));/*X*X^T, which is symmetric*/
+  GEN fit = RgM_solve(XTX, Xy);/*Best fit.*/
+  if (!fit) pari_err(e_MISC, "Could not compute matrix inverse. Error with given data or with precision?");
+  if (!retrsqr) return gerepileupto(av, fit);
+  GEN rsqr = rsquared(X, y, fit);
+  return gerepilecopy(av, mkvec2(fit, rsqr));
+}
+
+/*Given inputs for OLS and the proposed linear fit, this returns the R^2 value of the regression.*/
+static GEN
+rsquared(GEN X, GEN y, GEN fit)
+{
+  pari_sp av = avma;
+  long n = lg(y) - 1, i;/*Number of observations*/
+  GEN predicted = RgV_RgM_mul(shallowtrans(fit), X);/*1xn matrix of the fitted values.*/
+  GEN yavg = gen_0;
+  for (i = 1; i <= n; i++) yavg = gadd(yavg, gel(y, i));
+  yavg = gdivgs(yavg, n);/*Average value of y*/
+  GEN sstot=gen_0, ssres=gen_0;
+  for (i = 1; i <= n; i++) {
+    sstot = gadd(sstot, gsqr(gsub(gel(y, i), yavg)));
+    ssres = gadd(ssres, gsqr(gsub(gel(y, i), gel(predicted, i))));
+  }
+  return gerepileupto(av, gsubsg(1, gdiv(ssres, sstot)));
+}
 
