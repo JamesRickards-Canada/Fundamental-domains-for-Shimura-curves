@@ -215,20 +215,15 @@ tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fnam
   GEN oneovertwon = mkfracss(1, n << 1), oneovern = (n == 1)? gen_1: mkfracss(1, n);
   long lgAset = lg(Aset);
   GEN Xdat = vectrunc_init(lgAset), Cdat = coltrunc_init(lgAset), lastX = gen_0, firstX = NULL;
-  long triespertrial = 3, i;
+  long i;
   for (i = 1; i < lgAset; i++) {
     GEN A = gel(Aset, i);
 	GEN X = afuchinit(A, NULL, gen_0, NULL, 0, prec);
-    GEN C = NULL;
-	long trial;
-    for (trial = 1; trial <= triespertrial; trial++) {
-      pari_CATCH (CATCH_ALL) {
-        C = NULL;
-        pari_printf("Error in algebra %d trial %d, retrying\n", i, trial);
-      }
-      pari_TRY {C = tune_bestC(X, scale, ntrials, mintesttime);} pari_ENDCATCH
-      if(C) break;
+    GEN C;
+    pari_CATCH (CATCH_ALL) {
+      C = NULL;
     }
+    pari_TRY {C = tune_bestC(X, scale, ntrials, mintesttime);} pari_ENDCATCH
     if (!C) {
       pari_printf("Algebra %d skipped due to error.\n", i);
       continue;
