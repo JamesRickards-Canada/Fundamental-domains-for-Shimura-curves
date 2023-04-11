@@ -246,6 +246,7 @@ tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fnam
 	GEN Cavg = gdivgs(S, lgC - 1);
 	GEN var = gen_0;
 	for (i = 1; i < lgC; i++) var = gadd(var, gsqr(gsub(gel(Cdat, i), Cavg)));
+	var = gdivgs(var, lgC - 1);
 	return gerepilecopy(av, mkvec2(Cavg, var));
   }
   GEN reg = OLS_nointercept(Xdat, Cdat, 1);
