@@ -176,7 +176,6 @@ static GEN afuch_make_qf(GEN X, GEN z);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
-static GEN algdiscnorm(GEN A);
 static GEN alggeta(GEN A);
 static GEN voidalgmul(void *A, GEN x, GEN y);
 static GEN algramifiedplacesf(GEN A);
@@ -2563,7 +2562,7 @@ afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
   GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
   GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
   GEN npart;
-  double npart_d[9] = {0, 2.8304840896, 0.9331764427, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
+  double npart_d[9] = {0, 2.8304840896, 0.9687536224, 0.9097513831, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
   if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
   else npart = gen_1;
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
@@ -3002,7 +3001,7 @@ algconj(GEN A, GEN x)
 }
 
 /*Returns the norm to Q of the discriminant of A*/
-static GEN
+GEN
 algdiscnorm(GEN A)
 {
   pari_sp av=avma;

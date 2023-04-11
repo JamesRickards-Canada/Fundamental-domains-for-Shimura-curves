@@ -51,7 +51,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	\\2: BEST C
 	install("tune_bestC","GGLD300,L,p",,fdom_library);
 	addhelp(tune_bestC,"tune_bestC(X, scale, ntrials, {mintime=300}): Computes the optimal C value based on heuristics. We use ntrials values of C in a range [Cmin, Cmin*scale^(1/2n)] to compute A, B, where the total time taken is A+B*C^{2n}. We solve for the optimal C based on this. We return [A, B, C, R^2], with the R^2 value for the A, B regression.");
+	install("tune_bestC_range","GGLLsD1,L,D1,L,p",,fdom_library);
+	addhelp(tune_bestC_range,"tune_bestC_range(Aset, scale, ntrials, mintesttime, fname, {compile=1}, {WSL=1}): for the set of algebras Aset assumed to be of the same degree and suitable for afuchinit, computes the optimal C for all the algebras. We save the data to plots/build/fname.dat, and perform regression on the data. If compile=1 we compile a plot, and display it if WSL=1. The return value is [trend, R^2]; trend will be the approximation to C_n as in my paper.");
 
 default(parisize, "4096M");\\Must come at the end
-
 

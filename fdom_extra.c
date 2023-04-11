@@ -19,11 +19,14 @@
 
 /*2: BEST C*/
 static GEN tune_bestC_givenAB(long n, GEN A, GEN B, long prec);
+static void tune_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata);
 static GEN tune_time(GEN X, GEN Cset, long mintesttime, long prec);
 
-/*2: REGRESSIONS*/
+/*2: REGRESSIONS AND PLOTS*/
 static GEN OLS(GEN X, GEN y, int retrsqr);
+static GEN OLS_nointercept(GEN X, GEN y, int retrsqr);
 static GEN rsquared(GEN X, GEN y, GEN fit);
+static void plot_compile(char *fname, int WSL);
 
 /*MAIN BODY*/
 
@@ -170,6 +173,84 @@ tune_bestC_givenAB(long n, GEN A, GEN B, long prec)
   return gerepilecopy(av, gel(rts, 1));
 }
 
+/*Prepares a basic latex plot of the data.*/
+static void
+tune_bestC_plot(GEN reg, GEN Cmin, GEN Cmax, long n, char *fdata)
+{
+  pari_sp av = avma;
+  if (!pari_is_dir("plots/build")) {/*Checking the directory*/
+      int s = system("mkdir -p plots/build");
+      if (s == -1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *plotmake = stack_sprintf("plots/build/%s_plotter.tex", fdata);
+  FILE *f = fopen(plotmake, "w");
+  long invpower = n;
+  pari_fprintf(f, "\\documentclass{article}\n\\usepackage{amsmath, amssymb, pgfplots}\n  \\usepgfplotslibrary{external}\n  \\tikzexternalize\n");
+  pari_fprintf(f, "  \\pgfplotsset{compat=1.16}\n\\begin{document}\n\\tikzsetnextfilename{%s}\n\\begin{tikzpicture}\n  \\begin{axis}", fdata);
+  pari_fprintf(f, "[xlabel=$\\text{disc}(F)$, ylabel=$\\text{C}/\\text{Nm}_{F/\\mathbb{Q}}(\\mathfrak{D})^{1/%d}$,\n", invpower << 1);
+  pari_fprintf(f, "    xmin=0, ymin=0,\n");
+  pari_fprintf(f, "    scatter/classes={a={mark=o}}, clip mode=individual,]\n");
+  pari_fprintf(f, "    \\addplot[scatter, blue, only marks, mark size=0.9]\n      table[x=x,y=y,col sep=space]{%s.dat};\n", fdata);
+  pari_fprintf(f, "    \\addplot[red, ultra thick, samples=1000, domain=%Pf:%Pf]{%Pf*(x)^(1/%d)}", Cmin, Cmax, gel(reg, 1), invpower);
+  pari_fprintf(f, ";%%R^2=%Pf\n  \\end{axis}\n\\end{tikzpicture}\n\\end{document}", gel(reg, 2));
+  fclose(f);
+  set_avma(av);
+}
+
+/*Does tune_bestC for all algebras in Aset, where we assume n=deg(F) is fixed, and we regress along disc(F).*/
+GEN
+tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fname, int compile, int WSL, long prec)
+{
+  pari_sp av = avma;
+  if (!pari_is_dir("plots/build")) {/*Checking the directory*/
+    int s = system("mkdir -p plots/build");
+    if (s == -1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  char *fname_full = stack_sprintf("plots/build/%s.dat", fname);
+  FILE *f = fopen(fname_full, "w");
+  pari_fprintf(f, "x y rsqr\n");
+
+  GEN nf = alg_get_center(gel(Aset, 1));
+  long n = nf_get_degree(nf);
+  GEN oneovertwon = mkfracss(1, n << 1), oneovern = (n == 1)? gen_1: mkfracss(1, n);
+  long lgAset = lg(Aset);
+  GEN Xdat = vectrunc_init(lgAset), Cdat = coltrunc_init(lgAset), lastX = gen_0, firstX = NULL;
+  long triespertrial = 3, i;
+  for (i = 1; i < lgAset; i++) {
+    GEN A = gel(Aset, i);
+	GEN X = afuchinit(A, NULL, gen_0, NULL, 0, prec);
+    GEN C = NULL;
+	long trial;
+    for (trial = 1; trial <= triespertrial; trial++) {
+      pari_CATCH (CATCH_ALL) {
+        C = NULL;
+        pari_printf("Error in algebra %d trial %d, retrying\n", i, trial);
+      }
+      pari_TRY {C = tune_bestC(X, scale, ntrials, mintesttime);} pari_ENDCATCH
+      if(C) break;
+    }
+    if (!C) {
+      pari_printf("Algebra %d skipped due to error.\n", i);
+      continue;
+    }
+    nf = alg_get_center(A);
+    GEN nfdisc = nf_get_disc(nf);
+    GEN Adisc = algdiscnorm(A);
+    gel(C, 3) = gdiv(gel(C, 3), gpow(Adisc, oneovertwon, prec));
+    pari_fprintf(f, "%Pd %Pf %Pf\n", nfdisc, gel(C, 3), gel(C, 4));
+    if(!firstX) firstX = nfdisc;
+    lastX = nfdisc;
+    vectrunc_append(Xdat, gpow(nfdisc, oneovern, prec));
+    vectrunc_append(Cdat, gel(C, 3));
+    pari_printf("Algebra %d done.\n", i);
+  }
+  fclose(f);
+  GEN reg = OLS_nointercept(Xdat, Cdat, 1);
+  tune_bestC_plot(reg, firstX, lastX, n, fname);
+  if(compile) plot_compile(fname, WSL);
+  return gerepilecopy(av, reg);
+}
+
 /*Computes the average time to find algsmallnormelts(A, C, 0, z) for all C in Cset, and returns it as a column vector.*/
 static GEN
 tune_time(GEN X, GEN Cset, long mintesttime, long prec)
@@ -198,7 +279,8 @@ tune_time(GEN X, GEN Cset, long mintesttime, long prec)
   return gerepilecopy(av, avgtimes);
 }
 
-/*2: REGRESSIONS*/
+
+/*2: REGRESSIONS AND PLOTS*/
 
 /*Perform ordinary least squares regression. X is a matrix whose columns are the parameters, and y is a column vector of results. Must include linear term as first variable of X.
 The formula is B=Bhat=(X*X^T)^(-1)Xy, for the ordinary least squares regression for y=X^T*B+error (formula differs to Wikipedia due to X here being the transpose of what they define there.
@@ -215,6 +297,26 @@ OLS(GEN X, GEN y, int retrsqr)
   if (!fit) pari_err(e_MISC, "Could not compute matrix inverse. Error with given data or with precision?");
   if (!retrsqr) return gerepileupto(av, fit);
   GEN rsqr = rsquared(X, y, fit);
+  return gerepilecopy(av, mkvec2(fit, rsqr));
+}
+
+/*Performs OLS where we have one independant variable and assume the intercept is 0 (so y=ax). The formua is now sum(x*y)/sum(x^2).*/
+static GEN
+OLS_nointercept(GEN X, GEN y, int retrsqr)
+{
+  pari_sp av = avma;
+  GEN xysum = gen_0, xsqrsum = gen_0;
+  long lX = lg(X), i;
+  if (lX != lg(y)) pari_err_TYPE("The inputs must have the same length.", mkvec2(X, y));
+  for (i = 1; i < lX; i++) {
+    xysum = gadd(xysum, gmul(gel(X, i), gel(y, i)));
+    xsqrsum = gadd(xsqrsum, gsqr(gel(X, i)));
+  }
+  GEN fit = gdiv(xysum, xsqrsum);
+  if (!retrsqr) return gerepileupto(av, fit);
+  GEN M = cgetg(lX, t_MAT);
+  for (i = 1; i < lX; i++) gel(M, i) = mkcol2(gen_1, gel(X, i));
+  GEN rsqr = rsquared(M, y, mkcol2(gen_0, fit));
   return gerepilecopy(av, mkvec2(fit, rsqr));
 }
 
@@ -235,4 +337,24 @@ rsquared(GEN X, GEN y, GEN fit)
   }
   return gerepileupto(av, gsubsg(1, gdiv(ssres, sstot)));
 }
+
+/*Assumes plots/build/fname_plotter.tex points to a file making a plot. This compiles the plot, and views it if WSL=1. If there isn't enough memory, something like lualatex -shell-escape NAME_plotter.tex works.*/
+static void
+plot_compile(char *fname, int WSL)
+{
+  pari_sp av = avma;
+  char *line = stack_sprintf("(cd ./plots/build && pdflatex --interaction=batchmode -shell-escape %s_plotter.tex)", fname);/*Build*/
+  int s = system(line);
+  if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  line = stack_sprintf("mv -f ./plots/build/%s.pdf ./plots/", fname);/*Move the file*/
+  s = system(line);
+  if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  if (WSL) {
+    line = stack_sprintf("cmd.exe /C start plots/%s.pdf", fname);/*Open the file*/
+    s = system(line);
+    if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
+  }
+  set_avma(av);
+}
+
 

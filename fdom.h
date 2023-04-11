@@ -111,6 +111,7 @@ GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts);
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);
 GEN algbasisto1ijk(GEN A, GEN x);
+GEN algdiscnorm(GEN A);
 GEN algmulvec(GEN A, GEN G, GEN L);
 
 /*3: ALGEBRA ORDER METHODS*/
@@ -127,3 +128,4 @@ void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int comp
 
 /*2: BEST C*/
 GEN tune_bestC(GEN X, GEN scale, long ntrials, long mintesttime);
+GEN tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fname, int compile, int WSL, long prec);
