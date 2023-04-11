@@ -114,7 +114,7 @@ static GEN normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN 
 static GEN normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, GEN gdat);
 
 /*2: NORMALIZED BOUNDARY ANGLES*/
-static int cmp_icircangle(void *nul, GEN c1, GEN c2);
+static int cmp_icircangle(void *tol, GEN c1, GEN c2);
 static long args_find_cross(GEN args);
 static long args_search(GEN args, long ind, GEN arg, GEN tol);
 
@@ -965,7 +965,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
 {
   GEN tol = gdat_get_tol(gdat);
   long prec=lg(tol);
-  GEN order = gen_indexsort(C, NULL, &cmp_icircangle);/*Order the sides by initial angle.*/
+  GEN order = gen_indexsort(C, &tol, &cmp_icircangle);/*Order the sides by initial angle.*/
   long lc = lg(C), maxsides = 2*lc, istart = normbound_icircs_bigr(C, order);/*Largest r value index (wrt order).*/
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
   GEN vcors = cgetg(maxsides, t_VEC);/*Stores coordinates of the vertices.*/
@@ -1231,7 +1231,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
     Unext = Unext%lenU + 1;
   }
   GEN Uelts = normbound_get_elts(U), Ukact = normbound_get_kact(U);
-  GEN order = gen_indexsort(Cnew, NULL, &cmp_icircangle);/*Order the new sides by initial angle.*/
+  GEN order = gen_indexsort(Cnew, &tol, &cmp_icircangle);/*Order the new sides by initial angle.*/
   long Cbestr = normbound_icircs_bigr(Cnew, order);/*Biggest r value of the new sides*/
   long rbigind;/*Stores the largest r value index, which is either U[1], or Cnew[Cbestr].*/
   if (tolcmp(gmael3(Cnew, order[Cbestr], 3, 3), gmael(Usides, 1, 3), tol) > 0) rbigind = -Cbestr;/*Negative to indicate C*/
@@ -1391,7 +1391,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
       case 1:
         if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
         vecsmalltrunc_append(deleted, Ctype[elts[found]]);
-        absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
+		absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
         found--;
         continue;
       case 0:
@@ -1508,9 +1508,14 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 
 /*2: NORMALIZED BOUNDARY ANGLES*/
 
-/*Used for sorting C by initial angles.*/
+/*Used for sorting C by initial angles, then terminal angles, by radius (larger r comes first).*/
 static int
-cmp_icircangle(void *nul, GEN c1, GEN c2){return cmprr(gmael(c1, 3, 6), gmael(c2, 3, 6));}
+cmp_icircangle(void *tol, GEN c1, GEN c2)
+{
+  int comp1 = tolcmp(gmael(c1, 3, 6), gmael(c2, 3, 6), *((GEN*)tol));
+  if (comp1) return comp1;
+  return tolcmp(gmael(c2, 3, 3), gmael(c1, 3, 3), *((GEN*)tol));/*If initial points are =, we want the larger r to come first, as this will envelop the other side.*/
+}
 
 /*Assuming there is a unique index i such that args[i]>args[i+1], we return i. No need for tolerance. We assume that #args>=2.*/
 static long
@@ -1667,7 +1672,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
     }
   }
   for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we last tried to add.*/
-    while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
+	while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
       GEN Unew = normbound_append(X, U, Gadd, Xtoklein, gdat);
       if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
         lG = lg(Gadd);
@@ -2562,9 +2567,9 @@ afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
   GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
   GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
   GEN npart;
-  double npart_d[9] = {0, 2.8304840896, 0.9687536224, 0.9343741738, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
+  double npart_d[9] = {0, 2.0852162894, 0.9687536224, 0.9343741738, 0.9734563346, 1.0195386113, 1.0184814342, 0.9942555240, 0.9644002039};
   if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
-  else npart = gen_1;
+  else npart = real_1(prec);/*1 seems to be a reasonably safe choice, though hard to say for sure.*/
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
   if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
   return best;

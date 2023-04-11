@@ -240,6 +240,14 @@ tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fnam
     pari_printf("Algebra %d done.\n", i);
   }
   fclose(f);
+  if (n == 1) {/*nfdisc=1, so no regression: just do average and variance.*/
+	GEN S = vecsum(Cdat);
+	long lgC = lg(Cdat);
+	GEN Cavg = gdivgs(S, lgC - 1);
+	GEN var = gen_0;
+	for (i = 1; i < lgC; i++) var = gadd(var, gsqr(gsub(gel(Cdat, i), Cavg)));
+	return gerepilecopy(av, mkvec2(Cavg, var));
+  }
   GEN reg = OLS_nointercept(Xdat, Cdat, 1);
   tune_bestC_plot(reg, firstX, lastX, n, fname);
   if(compile) plot_compile(fname, WSL);
@@ -294,6 +302,8 @@ OLS(GEN X, GEN y, int retrsqr)
   GEN rsqr = rsquared(X, y, fit);
   return gerepilecopy(av, mkvec2(fit, rsqr));
 }
+
+GEN oln(GEN X, GEN y){return OLS_nointercept(X, y, 1);}
 
 /*Performs OLS where we have one independant variable and assume the intercept is 0 (so y=ax). The formua is now sum(x*y)/sum(x^2).*/
 static GEN
