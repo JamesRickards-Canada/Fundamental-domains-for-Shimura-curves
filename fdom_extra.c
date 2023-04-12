@@ -391,8 +391,8 @@ plot_compile(char *fname, int WSL)
 INLINE void
 step(GEN x, GEN y, GEN inc, long k)
 {
-  if (!signe(gel(y,k))) /* x[k+1..] = 0 */
-    gel(x,k) = addiu(gel(x,k), 1); /* leading coeff > 0 */
+  if (!signe(gel(y, k))) /* x[k+1..] = 0 */
+    gel(x,k) = addiu(gel(x, k), 1); /* leading coeff > 0 */
   else
   {
     long i = inc[k];
@@ -405,8 +405,8 @@ step(GEN x, GEN y, GEN inc, long k)
 INLINE GEN
 mulimp(GEN x, GEN y)
 {
-  if (typ(y) == t_INT) return mulii(x,y);
-  return signe(x) ? mulir(x,y): gen_0;
+  if (typ(y) == t_INT) return mulii(x, y);
+  return signe(x) ? mulir(x, y): gen_0;
 }
 
 /* x + y*z, x,z two mp's, y a t_INT */
@@ -482,6 +482,96 @@ norm_aux(GEN xk, GEN yk, GEN zk, GEN vk)
 
 
 /*3: MAIN METHODS*/
+
+
+
+/* Increment the ZV x at step k. If x[k+1]=...=x[n]=0, then we start at x[k]=0 and add 1 every time. Otherwise, we start at the value of x[k] that minimizes (x[k]+partnorms[k])^2 (closest integer to -partnorms[k]), and then do x[k]+1, x[k]-1, x[k]+2, x[k]-2, .... inc is a Vecsmall that tracks the variation from x[k] that we have gone. If we are at x[k]+u, then inc=-2*u (u>0), and if we are at x[k]-u, then inc=2*u+1 (u<=0).*/
+INLINE void
+sv_step(GEN x, GEN partnorms, GEN inc, long k)
+{
+  if (!signe(gel(partnorms, k + 1))) gel(x, k) = addiu(gel(x, k), 1); /*partnorms[k]=0 <==> x[k+1]=...=x[n]=0*/
+  else {
+    long i = inc[k];
+    gel(x, k) = addis(gel(x, k), i),
+    inc[k] = (i > 0)? -1 - i: 1 - i;
+  }
+}
+
+
+/*
+The quadratic form is given by sum_{i=1}^n q_{i,i}(x_i+sum_{j=i+1}^n q_{i,j}*xj)^2
+prune should be a vector of length n, entries real/integer in (0, 1], used to prune the search space.
+*/
+static GEN
+sv_prune(GEN q, GEN C, GEN prune)
+{
+  long N, i;
+  GEN bounds = cgetg_copy(prune, &N);/*N=lg(q) as well.*/
+  for (i = 1; i < N; i++) gel(bounds, i) = gmul(C, gel(prune, i));/*The pruning bounds.*/
+  pari_sp av = avma;
+  long maxv = 2000, found = 0;/*Maximum found vectors, may grow.*/
+  GEN v = cgetg(maxv + 1, t_VEC);/*To store them*/
+  long n = N - 1;
+  /*Page 22 of https://iacr.org/archive/eurocrypt2010/66320257/66320257.pdf claims to give a 40% speedup by carefull tracking the partial sums of q_{i,j}x_j. The matrix partsums accomplishes this. If j>i, then partsums[i, j]=sum_{l>=j}q_{i, l}*x_l IF it has been updated. The key is we don't update everything at every step. Thus the ith term in q(x) is q_ii(x_i+partsums[i, i+1])^2*/
+  GEN partsums = zeromatcopy(n, N);/*Only need n-1 rows and n columsn, but use n/N for convenience: the last row and column is always zero.*/
+  GEN r = cgetg(N, t_VECSMALL);/*For a fixed i, partsums[i, j] is correct from j=r[i] to j=n. If j>n, it is incorrect everywhere, and clearly r[i]>=i+1 for all i. Initially, since x=0, everything is correct.*/
+  for (i = 1; i < N; i++) r[i] = i + 1;
+  GEN x = zerovec(n);/*The vector we are making.*/
+  GEN partnorms = zerovec(N);/*partnorms[i]=sum_{j=i}^n q_{j, j}(x_j+partsums[j, j+1])^2*/
+  GEN inc = const_vecsmall(n, 1);/*Tracks variation from the starting point for x[k].*/
+  long k = n, j;
+  int down = 1;/*down = 1 means the last step was down, 0 means up or k=1 and the same.*/
+  for (;;) {/*Work down the tree until we hit k=1.*/
+    if (gc_needed(av, 2)) {/*Garbage day!*/
+        v = clonefill(v, found, maxv);/*Clone to the heap the already found vectors.*/
+        gerepileall(av, 5, &partsums, &r, &x, &partnorms, &inc);
+    }
+	if (down) {/*We have just gone down, so must initialize inc[k], x[k], partsums[k,], and r[k]*/
+	  inc[k] = 1;
+	  for (j = r[k] - 1; j > k; j--) {/*Update the row from right to left*/
+	    gcoeff(partsums, k, j) = addmulimp(gcoeff(partsums, k, j + 1), gel(x, j), gcoeff(q, k, j));
+	  }
+	  r[k] = k + 1;/*Whole row is correct.*/
+	  gel(x, k) = mpround(mpneg(gcoeff(partsums, k, k + 1)));/*Smallest possible value for x_k+sum_{j=k+1}^n q_{i, j}x_j*/
+	}
+	else sv_step(x, partnorms, inc, k);/*We went up, so increment x[k].*/
+	GEN nextnorm = norm_aux(gel(x, k), gel(partnorms, k + 1), gcoeff(partsums, k, k + 1), gcoeff(q, k, k));/*Next norm*/
+	if (mpgreaterthan(nextnorm, gel(bounds, k))) {
+	  sv_step(x, partnorms, inc, k);/*If we are too big, then increasing x once MIGHT still give a valid x. Increasing it twice 100% won't.*/
+	  nextnorm = norm_aux(gel(x, k), gel(partnorms, k + 1), gcoeff(partsums, k, k + 1), gcoeff(q, k, k));/*Next norm*/
+	  if (mpgreaterthan(nextnorm, gel(bounds, k))) {/*We have run out of steam at this level, go on to the next one.*/
+	    long next = k + 1;
+	    if (next > n) break;/*Done!*/
+	    for (j = k - 1; j > 0; j--) {/*Update r[j]*/
+	      if (r[j] == k) r[j] = next;
+	      else break;/*As soon as r[j]>k, it is true for the rest of the j's to 1.*/
+	    }
+	    k = next;
+	    down = 0;/*Going up!*/
+	    continue;
+	  }
+	}
+	gel(partnorms, k) = nextnorm;/*Still valid!*/
+	if (k > 1) { k--; down = 1; continue; }/*Go down the tree.*/
+	/*Now, there is a solution to add.*/
+	down = 0;/*Want to stay here and just increment.*/
+	if (!signe(gel(partnorms, 1))) continue;/*Exclude 0.*/
+	found++;
+	gel(v, found) = leafcopy(x);
+	if (found != maxv) continue;/*Still room.*/
+	maxv <<= 1;/*Double the size*/
+    GEN vnew = clonefill(vec_lengthen(v, maxv), found, maxv);
+    if (isclone(v)) gunclone(v);
+    v = vnew;
+  }
+  setlg(v, found + 1);
+  settyp(v, t_MAT);
+  if (isclone(v)) {GEN p1 = v; v = gcopy(v); gunclone(p1); }
+  return v;
+}
+
+
+
 
 
 /* q is the Cholesky decomposition of a quadratic form
@@ -562,6 +652,7 @@ smallvectors_prune(GEN q, GEN C)
       }
     }
     while (k > 1);
+	output(x);
     if (!signe(gel(x, 1)) && !signe(gel(y, 1))) continue; /* exclude 0 */
 
     av1 = avma;
@@ -602,7 +693,7 @@ fp_prune(GEN M, GEN C, long PREC)
   pari_sp av = avma;
   long prec = PREC;
   long lM = lg(M);
-  if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1,t_MAT));
+  if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
   GEN U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
   if (lg(U) != lM) return gc_NULL(av);
   GEN R = qf_apply_RgM(M, U);/*U~*M*U*/
@@ -639,6 +730,7 @@ fp_prune(GEN M, GEN C, long PREC)
   U = Uperm;
   R = Rperm;
   GEN res = NULL;
+  /*
   pari_CATCH(e_PREC) { }
   pari_TRY {
     GEN q = gaussred_from_QR(R, gprecision(Vnorm));
@@ -651,6 +743,15 @@ fp_prune(GEN M, GEN C, long PREC)
   gel(z, 2) = gcopy(gel(res, 2));
   gel(z, 3) = ZM_mul(U, gel(res,3));
   return gerepileupto(av, z);
+  */
+  GEN prune = const_vec(lM - 1, gen_1);/*No funny business, just normal Fincke-Pohst.*/
+  pari_CATCH(e_PREC) { }
+  pari_TRY {
+    GEN q = gaussred_from_QR(R, gprecision(Vnorm));
+    if (q) res = sv_prune(q, C, prune);
+  } pari_ENDCATCH;
+  if (!res) return gc_NULL(av);
+  return gerepileupto(av, ZM_mul(U, res));
 }
 
 
