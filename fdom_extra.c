@@ -28,6 +28,19 @@ static GEN OLS_nointercept(GEN X, GEN y, int retrsqr);
 static GEN rsquared(GEN X, GEN y, GEN fit);
 static void plot_compile(char *fname, int WSL);
 
+/*SECTION 3: FINCKE POHST PRUNING TESTING*/
+
+/*3: SUPPORTING METHODS TO FINCKE POHST*/
+static int check_bound(GEN B, GEN xk, GEN yk, GEN zk, GEN vk);
+static GEN clonefill(GEN S, long s, long t);
+static int mplessthan(GEN x, GEN y);
+static int mpgreaterthan(GEN x, GEN y);
+static GEN norm_aux(GEN xk, GEN yk, GEN zk, GEN vk);
+
+/*3: MAIN METHODS*/
+static GEN smallvectors_prune(GEN q, GEN C);
+
+
 /*MAIN BODY*/
 
 /*SECTION 1: VISUALIZATION*/
@@ -362,5 +375,292 @@ plot_compile(char *fname, int WSL)
   }
   set_avma(av);
 }
+
+
+
+
+
+/*SECTION 3: FINCKE POHST PRUNING TESTING*/
+
+/*3: SUPPORTING METHODS TO FINCKE POHST*/
+
+/* increment ZV x, by incrementing cell of index k. Initial value x0[k] was
+ * chosen to minimize qf(x) for given x0[1..k-1] and x0[k+1,..] = 0
+ * The last nonzero entry must be positive and goes through x0[k]+1,2,3,...
+ * Others entries go through: x0[k]+1,-1,2,-2,...*/
+INLINE void
+step(GEN x, GEN y, GEN inc, long k)
+{
+  if (!signe(gel(y,k))) /* x[k+1..] = 0 */
+    gel(x,k) = addiu(gel(x,k), 1); /* leading coeff > 0 */
+  else
+  {
+    long i = inc[k];
+    gel(x,k) = addis(gel(x,k), i),
+    inc[k] = (i > 0)? -1-i: 1-i;
+  }
+}
+
+/* x a t_INT, y  t_INT or t_REAL */
+INLINE GEN
+mulimp(GEN x, GEN y)
+{
+  if (typ(y) == t_INT) return mulii(x,y);
+  return signe(x) ? mulir(x,y): gen_0;
+}
+
+/* x + y*z, x,z two mp's, y a t_INT */
+INLINE GEN
+addmulimp(GEN x, GEN y, GEN z)
+{
+  if (!signe(y)) return x;
+  if (typ(z) == t_INT) return mpadd(x, mulii(y, z));
+  return mpadd(x, mulir(y, z));
+}
+
+/* yk + vk * (xk + zk)^2 < B + epsilon */
+static int
+check_bound(GEN B, GEN xk, GEN yk, GEN zk, GEN vk)
+{
+  pari_sp av = avma;
+  int f = mpgreaterthan(norm_aux(xk,yk,zk,vk), B);
+  return gc_bool(av, !f);
+}
+
+static GEN
+clonefill(GEN S, long s, long t)
+{ /* initialize to dummy values */
+  GEN T = S, dummy = cgetg(1, t_STR);
+  long i;
+  for (i = s+1; i <= t; i++) gel(S,i) = dummy;
+  S = gclone(S); if (isclone(T)) gunclone(T);
+  return S;
+}
+
+/* 1 if we are "sure" that x < y, up to few rounding errors, i.e.
+ * x < y - epsilon. More precisely :
+ * - sign(x - y) < 0
+ * - lgprec(x-y) > 3 || expo(x - y) - expo(x) > -24 */
+static int
+mplessthan(GEN x, GEN y)
+{
+  pari_sp av = avma;
+  GEN z = mpsub(x, y);
+  set_avma(av);
+  if (typ(z) == t_INT) return (signe(z) < 0);
+  if (signe(z) >= 0) return 0;
+  if (realprec(z) > LOWDEFAULTPREC) return 1;
+  return ( expo(z) - mpexpo(x) > -24 );
+}
+
+/* 1 if we are "sure" that x > y, up to few rounding errors, i.e.
+ * x > y + epsilon */
+static int
+mpgreaterthan(GEN x, GEN y)
+{
+  pari_sp av = avma;
+  GEN z = mpsub(x, y);
+  set_avma(av);
+  if (typ(z) == t_INT) return (signe(z) > 0);
+  if (signe(z) <= 0) return 0;
+  if (realprec(z) > LOWDEFAULTPREC) return 1;
+  return ( expo(z) - mpexpo(x) > -24 );
+}
+
+/* yk + vk * (xk + zk)^2 */
+static GEN
+norm_aux(GEN xk, GEN yk, GEN zk, GEN vk)
+{
+  GEN t = mpadd(xk, zk);
+  if (typ(t) == t_INT) { /* probably gen_0, avoid loss of accuracy */
+    yk = addmulimp(yk, sqri(t), vk);
+  } else {
+    yk = mpadd(yk, mpmul(sqrr(t), vk));
+  }
+  return yk;
+}
+
+
+/*3: MAIN METHODS*/
+
+
+/* q is the Cholesky decomposition of a quadratic form
+ * Enumerate vectors whose norm is less than BORNE (Algo 2.5.7),
+ * minimal vectors if BORNE = NULL (implies check = NULL).
+ * If (check != NULL) consider only vectors passing the check, and assumes
+ *   we only want the smallest possible vectors */
+static GEN
+smallvectors_prune(GEN q, GEN C)
+{
+  long N = lg(q), n = N - 1, i, j, k, s, stockmax;
+  pari_sp av, av1;
+  GEN inc, S, x, y, z, v, p1, alpha;
+  GEN norme1, normax1, borne1, borne2;
+
+  alpha = dbltor(0.95);
+  normax1 = gen_0;
+
+  v = cgetg(N, t_VEC);
+  inc = const_vecsmall(n, 1);
+
+  av = avma;
+  stockmax = 2000;
+  S = cgetg(stockmax + 1, t_VEC);
+  x = cgetg(N, t_COL);
+  y = cgetg(N, t_COL);
+  z = cgetg(N, t_COL);
+  for (i = 1; i< N; i++) {
+    gel(v, i) = gcoeff(q, i, i);
+    gel(x, i) = gel(y, i) = gel(z, i) = gen_0;
+  }
+  borne1 = C;
+  if (gsigne(borne1) <= 0) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
+  if (typ(borne1) != t_REAL) {
+    long prec = nbits2prec(gexpo(borne1) + 10);
+    borne1 = gtofp(borne1, maxss(prec, DEFAULTPREC));
+  }
+  borne2 = mulrr(borne1, alpha);
+  s = 0; k = n;
+  for(;; step(x, y, inc, k)) {/* main */
+	 /* x (supposedly) small vector, ZV.
+     * For all t >= k, we have
+     *   z[t] = sum_{j > t} q[t,j] * x[j]
+     *   y[t] = sum_{i > t} q[i,i] * (x[i] + z[i])^2
+     *        = 0 <=> x[i]=0 for all i>t */
+    do {
+      int skip = 0;
+      if (k > 1) {
+        long l = k-1;
+        av1 = avma;
+        p1 = mulimp(gel(x, k), gcoeff(q, l, k));
+        for (j = k + 1; j < N; j++) p1 = addmulimp(p1, gel(x, j), gcoeff(q, l, j));
+        gel(z, l) = gerepileuptoleaf(av1, p1);
+
+        av1 = avma;
+        p1 = norm_aux(gel(x, k), gel(y, k), gel(z, k), gel(v, k));
+        gel(y, l) = gerepileuptoleaf(av1, p1);
+        /* skip the [x_1,...,x_skipfirst,0,...,0] */
+        if (mplessthan(borne1, gel(y, l))) skip = 1;
+        else /* initial value, minimizing (x[l] + z[l])^2, hence qf(x) for
+                the given x[1..l-1] */
+          gel(x, l) = mpround(mpneg(gel(z, l)));
+        k = l;
+      }
+      for(;; step(x,y,inc,k)) { /* at most 2n loops */
+        if (!skip) {
+          if (check_bound(borne1, gel(x, k), gel(y, k), gel(z, k), gel(v, k))) break;
+          step(x, y, inc, k);
+          if (check_bound(borne1, gel(x, k), gel(y, k), gel(z, k), gel(v, k))) break;
+        }
+        skip = 0; inc[k] = 1;
+        if (++k > n) goto END;
+      }
+
+      if (gc_needed(av,2)) {
+        S = clonefill(S, s, stockmax);
+        gerepileall(av, 6, &x, &y, &z, &normax1, &borne1, &borne2);
+      }
+    }
+    while (k > 1);
+    if (!signe(gel(x, 1)) && !signe(gel(y, 1))) continue; /* exclude 0 */
+
+    av1 = avma;
+    norme1 = norm_aux(gel(x, 1), gel(y, 1), gel(z, 1), gel(v, 1));
+    if (mpgreaterthan(norme1, borne1)) { set_avma(av1); continue; /* main */ }
+
+    norme1 = gerepileuptoleaf(av1, norme1);
+    if (mpcmp(norme1, normax1) > 0) normax1 = norme1;
+    if (++s > stockmax) continue; /* too many vectors: no longer remember */
+    gel(S, s) = leafcopy(x);
+    if (s != stockmax) continue; /* still room, get next vector */
+    stockmax <<= 1;
+    GEN Snew = clonefill(vec_lengthen(S,stockmax), s, stockmax);
+    if (isclone(S)) gunclone(S);
+    S = Snew;
+  }
+END:
+  if (s < stockmax) stockmax = s;
+  setlg(S, stockmax + 1);
+  settyp(S, t_MAT);
+  if (isclone(S)) { p1 = S; S = gcopy(S); gunclone(p1); }
+  return mkvec3(utoi(s << 1), borne1, S);
+}
+
+GEN
+qfminim_prune(GEN M, GEN C, long prec)
+{
+  GEN res = fp_prune(M, C, prec);
+  if (!res) pari_err_PREC("qfminim");
+  return res;
+}
+
+
+/*Solve q(x)=x~*M*x <= C, M is positive definite with real entries. We only require M to be upper triangular. We use pruning. This is mostly a copy of fincke_pohst from bibli1.c. For some reason, this is 2-3 times as fast WITHOUT changing anything else, i.e. the smallvector method.*/
+GEN
+fp_prune(GEN M, GEN C, long PREC)
+{
+  pari_sp av = avma;
+  long prec = PREC;
+  long lM = lg(M);
+  if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1,t_MAT));
+  GEN U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
+  if (lg(U) != lM) return gc_NULL(av);
+  GEN R = qf_apply_RgM(M, U);/*U~*M*U*/
+  long i = gprecision(R), j;
+  if (i) prec = i;
+  else {
+    prec = DEFAULTPREC + nbits2extraprec(gexpo(R));
+    if (prec < PREC) prec = PREC;
+  }
+  R = qfgaussred_positive(R);
+  if (!R) return gc_NULL(av);
+  for (i = 1; i < lM; i++) {
+    GEN s = gsqrt(gcoeff(R, i, i), prec);
+    gcoeff(R, i, i) = s;
+    for (j = i + 1; j < lM; j++) gcoeff(R, i, j) = gmul(s, gcoeff(R, i, j));
+  }
+  /* now R~ * R = a in LLL basis */
+  GEN Rinv = RgM_inv_upper(R);
+  if (!Rinv) return gc_NULL(av);
+  GEN Rinvtrans = shallowtrans(Rinv);
+  GEN V = lll(Rinvtrans);
+  if (lg(V) != lM) return gc_NULL(av);
+
+  Rinvtrans = RgM_mul(Rinvtrans, V);
+  V = ZM_inv(shallowtrans(V), NULL);
+  R = RgM_mul(R, V);
+  U = ZM_mul(U, V);
+
+  GEN Vnorm = cgetg(lM, t_VEC);
+  for (j = 1; j < lM; j++) gel(Vnorm,j) = gnorml2(gel(Rinvtrans, j));
+  GEN Rperm = cgetg(lM, t_MAT);
+  GEN Uperm = cgetg(lM, t_MAT), perm = indexsort(Vnorm);
+  for (i = 1; i < lM; i++) { Uperm[lM - i] = U[perm[i]]; Rperm[lM - i] = R[perm[i]]; }
+  U = Uperm;
+  R = Rperm;
+  GEN res = NULL;
+  pari_CATCH(e_PREC) { }
+  pari_TRY {
+    GEN q = gaussred_from_QR(R, gprecision(Vnorm));
+    if (q) res = smallvectors_prune(q, C);
+  } pari_ENDCATCH;
+  if (!res) return gc_NULL(av);
+  
+  GEN z = cgetg(4,t_VEC);
+  gel(z, 1) = gcopy(gel(res, 1));
+  gel(z, 2) = gcopy(gel(res, 2));
+  gel(z, 3) = ZM_mul(U, gel(res,3));
+  return gerepileupto(av, z);
+}
+
+
+
+
+
+
+
+
+
+
 
 
