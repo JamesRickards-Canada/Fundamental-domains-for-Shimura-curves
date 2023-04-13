@@ -51,8 +51,8 @@ avgtime(fil, alg, order, case, N)={
 default(parisize, "4096M");\\4 GB of memory.
 
 \\Details
-testspercase=5;
-Ntests=26;
+testspercase=3;
+Ntests=34;
 tno=1;
 
 \\Starting the file
@@ -161,6 +161,16 @@ A=alginit(F, [-104*y^4 + 116*y^3 + 672*y^2 - 660*y - 867, y^2 - y - 10]);\\Ramif
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 343.48079679248406073858234323855898197
 \p38
 
+F=nfinit(y^5 - 5*y^3 + 4*y - 1);
+A=alginit(F, [16*y^4 - 20*y^3 - 56*y^2 + 64*y - 31, -1]);\\Ramified above 7 and 59
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 728.84949563283203132333326482460490553
+
+\p57
+F=nfinit(y^5 - 2*y^4 - 5*y^3 + 9*y^2 + 5*y - 7);
+A=alginit(F, [8*y^4 - 104*y^3 + 164*y^2 + 188*y - 615, y - 11]);\\Ramified above 5 and 7
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 829.38046054770541495413785318578876548
+\p38
+
 \p77
 F=nfinit(y^6-y^5-7*y^4+2*y^3+7*y^2-2*y-1);
 A=alginit(F, [-y^5 + 2*y^4 + 3*y^3 - y^2 - 12, 244*y^5 - 192*y^4 - 1396*y^3 - 596*y^2 + 696*y - 291]);
@@ -172,6 +182,18 @@ A=alginit(F, [4*y^4 - 12*y^3 + 12*y - 47, -1]);
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 198.96753472735357176930074760770184933
 
 \p96
+F=nfinit(y^6 - 6*y^4 - y^3 + 8*y^2 + y - 2);
+A=alginit(F, [-252*y^5 + 176*y^4 + 1048*y^3 - 196*y^2 - 834*y - 627, y^5 - 4*y^3 - y^2 + 2*y - 24]);\\Ramified above 2
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 714.18872991607966287717426246554032234
+\p38
+
+\p57
+F=nfinit(y^6 - 6*y^4 + 8*y^2 - y - 1);
+A=alginit(F, [-28*y^5 + 64*y^4 + 52*y^3 - 268*y^2 + 84*y - 67, y^4 - y^3 - 4*y^2 + 2*y - 6]);\\Ramified above 13
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 326.72563597333849680011491186106829978
+\p38
+
+\p96
 F=nfinit(y^7 - y^6 - 6*y^5 + 4*y^4 + 10*y^3 - 4*y^2 - 4*y + 1);
 A=alginit(F, [-627*y^6 - 4180*y^5 + 9614*y^4 + 18601*y^3 - 21109*y^2 - 18183*y + 627, 1045*y^6 - 2926*y^5 + 2299*y^4 + 2926*y^3 - 11077*y^2 - 836*y - 23198]);\\Unramified
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 15.70796326794802006809187444602
@@ -180,6 +202,25 @@ avgtime(fil, A, 0, tno, testspercase);tno++;\\area 15.70796326794802006809187444
 F=nfinit(y^7 - 8*y^5 + 19*y^3 - y^2 - 13*y + 1);
 A=alginit(F, [-4*y^5 + y^4 + 20*y^3 - 2*y^2 - 16*y - 3, -10*y^6 - 2*y^5 + 58*y^4 + 21*y^3 - 74*y^2 - 20*y - 15]);\\Unramified
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 138.23007675794148146897200035709829535
+
+F=nfinit(y^7 - 7*y^5 + 13*y^3 - 5*y - 1);
+A=alginit(F, [4*y^6 - 20*y^4 - 8*y^3 + 20*y^2 + 12*y - 27, -1]);\\Ramified above 3, 11
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 1361.3568165555770700005059216922265252
+
+\p57
+F=nfinit(y^7 - 2*y^6 - 6*y^5 + 8*y^4 + 12*y^3 - 5*y^2 - 6*y - 1);
+A=alginit(F, [-4*y^6 + 18*y^5 - 11*y^4 - 37*y^3 + 25*y^2 + 22*y - 1, -21*y^6 + 17*y^5 + 176*y^4 - 20*y^3 - 400*y^2 - 183*y - 33]);
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 238.76104167282428612316089712924221924
+\p38
+
+F=nfinit(y^8 - 4*y^7 - y^6 + 17*y^5 - 5*y^4 - 23*y^3 + 6*y^2 + 9*y - 1);
+A=alginit(F, [-16*y^7 + 68*y^6 - 20*y^5 - 204*y^4 + 168*y^3 + 120*y^2 - 140*y - 3, -1]);\\Ramified above 19
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 422.23005264246821124937542704619344205
+
+F=nfinit(y^8 - 2*y^7 - 7*y^6 + 11*y^5 + 14*y^4 - 18*y^3 - 8*y^2 + 9*y - 1);
+A=alginit(F, [-12*y^7 + 16*y^6 + 76*y^5 - 48*y^4 - 96*y^3 + 28*y^2 + 16*y - 35, -1]);\\Ramified above 11
+avgtime(fil, A, 0, tno, testspercase);tno++;\\area 423.06781068342548944634012072981623082
+
 
 
 \\End of tests
