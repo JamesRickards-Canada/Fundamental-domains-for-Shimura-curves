@@ -542,8 +542,8 @@ sv_prune(GEN q, GEN C, GEN prune)
 	  if (mpgreaterthan(nextnorm, gel(bounds, k))) {/*We have run out of steam at this level, go on to the next one.*/
 	    long next = k + 1;
 	    if (next > n) break;/*Done!*/
-	    for (j = k - 1; j > 0; j--) {/*Update r[j]*/
-	      if (r[j] == k) r[j] = next;
+	    for (j = k; j > 0; j--) {/*Update r[j]*/
+	      if (r[j] <= next) r[j] = next + 1;
 	      else break;/*As soon as r[j]>k, it is true for the rest of the j's to 1.*/
 	    }
 	    k = next;
