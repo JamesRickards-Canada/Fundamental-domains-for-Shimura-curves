@@ -9,7 +9,7 @@
 10. Make testing cases with b>0 not a>0.
 11. Do we want the debug level here to be the same as for algebras? Currently it is.
 12. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
-13. alg_changeorder may have a better successor with the updated quaternion algebra methods.
+13. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
 */
 
 /*
@@ -187,7 +187,7 @@ static GEN algd(GEN A, GEN a);
 static GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
 
 /*3: CHANGING ORDER METHODS, WHICH WERE DELETED FROM LIBPARI*/
-static GEN alg_changeorder(GEN al, GEN ord);
+static GEN my_alg_changeorder(GEN al, GEN ord);
 static GEN elementabsmultable(GEN mt, GEN x);
 static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
 static GEN algbasismultable(GEN al, GEN x);
@@ -2338,7 +2338,7 @@ afuch_moreprec(GEN X, long inc)
   GEN basis_want = alg_get_basis(old_A);
   GEN basis_dontwant = alg_get_invbasis(new_A);
   GEN basis_change = QM_mul(basis_dontwant, basis_want);
-  new_A = alg_changeorder(new_A, basis_change);/*Correct the basis to the old one*/
+  new_A = my_alg_changeorder(new_A, basis_change);/*Correct the basis to the old one*/
   new_A = gerepileupto(av2, new_A);
   /*We have the new algebra*/
   obj_insert(X, afuch_A, new_A);
@@ -3207,14 +3207,14 @@ algorderlevel(GEN A, GEN O, int factored)
 
 /*Here because it was deleted from libpari*/
 static GEN
-alg_changeorder(GEN al, GEN ord)
+my_alg_changeorder(GEN al, GEN ord)
 {
   GEN al2, mt, iord, mtx;
   long i, n;
   pari_sp av = avma;
 
   if (!gequal0(gel(al, 10)))
-    pari_err_DOMAIN("alg_changeorder","characteristic","!=", gen_0, gel(al, 10));
+    pari_err_DOMAIN("my_alg_changeorder","characteristic","!=", gen_0, gel(al, 10));
   n = alg_get_absdim(al);
 
   iord = QM_inv(ord);
