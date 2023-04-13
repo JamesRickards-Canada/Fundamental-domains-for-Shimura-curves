@@ -132,5 +132,5 @@ GEN tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *
 
 /*SECTION 3: FINCKE POHST PRUNING TESTING*/
 /*3: MAIN METHODS*/
-GEN qfminim_prune(GEN M, GEN C, long prec);
-GEN fp_prune(GEN M, GEN C, long PREC);
+GEN qfminim_prune(GEN M, GEN C, int prunetype, long prec);
+GEN fp_prune(GEN M, GEN C, int prunetype, long PREC);

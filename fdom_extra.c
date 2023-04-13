@@ -678,9 +678,9 @@ END:
 }
 
 GEN
-qfminim_prune(GEN M, GEN C, long prec)
+qfminim_prune(GEN M, GEN C, int prunetype, long prec)
 {
-  GEN res = fp_prune(M, C, prec);
+  GEN res = fp_prune(M, C, prunetype, prec);
   if (!res) pari_err_PREC("qfminim");
   return res;
 }
@@ -688,7 +688,7 @@ qfminim_prune(GEN M, GEN C, long prec)
 
 /*Solve q(x)=x~*M*x <= C, M is positive definite with real entries. We only require M to be upper triangular. We use pruning. This is mostly a copy of fincke_pohst from bibli1.c. For some reason, this is 2-3 times as fast WITHOUT changing anything else, i.e. the smallvector method.*/
 GEN
-fp_prune(GEN M, GEN C, long PREC)
+fp_prune(GEN M, GEN C, int prunetype, long PREC)
 {
   pari_sp av = avma;
   long prec = PREC;
@@ -744,7 +744,14 @@ fp_prune(GEN M, GEN C, long PREC)
   gel(z, 3) = ZM_mul(U, gel(res,3));
   return gerepileupto(av, z);
   */
-  GEN prune = const_vec(lM - 1, gen_1);/*No funny business, just normal Fincke-Pohst.*/
+  GEN prune;
+  if (!prunetype) prune = const_vec(lM - 1, gen_1);/*No funny business, just normal Fincke-Pohst.*/
+  else {/*Linear pruning*/
+	GEN con = dbltor(1.05);
+	prune = cgetg(lM, t_VEC);
+	long n = lM - 1;
+	for (i = 1; i < lM; i++) gel(prune, i) = gmin_shallow(gen_1, divrs(mulrs(con, lM - i), n));
+  }
   pari_CATCH(e_PREC) { }
   pari_TRY {
     GEN q = gaussred_from_QR(R, gprecision(Vnorm));
