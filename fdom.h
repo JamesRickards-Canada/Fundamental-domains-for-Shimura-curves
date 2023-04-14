@@ -116,6 +116,12 @@ GEN algmulvec(GEN A, GEN G, GEN L);
 int algisorder(GEN A, GEN O);
 GEN algorderlevel(GEN A, GEN O, int factored);
 
+/*SECTION 4: FINCKE POHST FOR FLAG=2 WITH PRUNING*/
+
+/*4: MAIN FINCKE POHST METHODS*/
+GEN qfminim_prune(GEN M, GEN C, int prunetype, long prec);
+GEN fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC);
+
 
 /*fdom_extra.c methods*/
 
@@ -127,8 +133,3 @@ void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int comp
 /*2: BEST C*/
 GEN tune_bestC(GEN X, GEN scale, long ntrials, long mintesttime);
 GEN tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fname, int compile, int WSL, long prec);
-
-/*SECTION 3: FINCKE POHST PRUNING TESTING*/
-/*3: MAIN METHODS*/
-GEN qfminim_prune(GEN M, GEN C, int prunetype, long prec);
-GEN fp_prune(GEN M, GEN C, int prunetype, long PREC);
