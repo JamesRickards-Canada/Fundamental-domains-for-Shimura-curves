@@ -353,10 +353,9 @@ defp(long prec)
 static GEN
 gdat_initialize(GEN p, long prec)
 {
-  GEN ret = cgetg(4, t_VEC);
+  GEN ret = cgetg(3, t_VEC);
   gel(ret, 1) = deftol(prec);/*Default tolerance*/
-  gel(ret, 2) = deflowtol(prec);/*Lower tolerance value*/
-  gel(ret, 3) = uhp_safe(p, prec);/*Convert p to have real components, and check that it was a valid input.*/
+  gel(ret, 2) = uhp_safe(p, prec);/*Convert p to have real components, and check that it was a valid input.*/
   return ret;
 }
 
@@ -719,7 +718,7 @@ deftol(long prec)
 static GEN
 deflowtol(long prec)
 {
-  return real2n(BITS_IN_LONG/4*(2 - prec), prec);
+  return real2n(-16, prec);
 }
 
 /*Returns -1 if x<y, 0 if x==y, 1 if x>y (x, y are t_REAL/t_INT/t_FRAC). Accounts for the tolerance, so will deem x==y if they are equal up to tol AND at least one is inexact*/
@@ -2918,8 +2917,9 @@ afuch_make_qf(GEN X, GEN z)
 GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
-  GEN lowtol = gdat_get_lowtol(afuch_get_gdat(X));
-  long prec = lg(lowtol);
+  GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  long prec = lg(tol);
+  GEN lowtol = deflowtol(prec);
   GEN M = afuch_make_qf(X, z);
   GEN fp = fincke_pohst(M, C, -1, prec, NULL);/*Calling fincke-pohst, which is basically qfminim0, but returns NULL instead of raising an error.*/
   if(!fp) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/

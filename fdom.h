@@ -8,9 +8,7 @@ enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, a
 INLINE GEN
 gdat_get_tol(GEN gd){return gel(gd, 1);}
 INLINE GEN
-gdat_get_lowtol(GEN gd){return gel(gd, 2);}
-INLINE GEN
-gdat_get_p(GEN gd){return gel(gd, 3);}
+gdat_get_p(GEN gd){return gel(gd, 2);}
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN
