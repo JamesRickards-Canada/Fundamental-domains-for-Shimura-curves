@@ -3357,16 +3357,14 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   GEN prune;
   if (!prunetype) prune = const_vec(lM - 1, gen_1);/*No funny business, just normal Fincke-Pohst.*/
   else {/*Linear pruning*/
-	GEN con = dbltor(1.05);
+	/*GEN con = dbltor(1.05);*/
 	prune = cgetg(lM, t_VEC);
 	long n = lM - 1;
-	for (i = 1; i < lM; i++) gel(prune, i) = gmin_shallow(gen_1, divrs(mulrs(con, lM - i), n));
+	/*for (i = 1; i < lM; i++) gel(prune, i) = gmin_shallow(gen_1, divrs(mulrs(con, lM - i), n));*/
+	for (i = 1; i < lM; i++) gel(prune, i) = rdivss(lM - i, n, prec);
   }
-  pari_CATCH(e_PREC) { }
-  pari_TRY {
-    GEN q = gaussred_from_QR(R, gprecision(Vnorm));
-    if (q) res = smallvectors_prune(q, C, prune);
-  } pari_ENDCATCH;
+  GEN q = gaussred_from_QR(R, gprecision(Vnorm));
+  if (q) res = smallvectors_prune(q, C, prune);
   if (!res) return gc_NULL(av);
   return gerepileupto(av, ZM_mul(U, res));
 }

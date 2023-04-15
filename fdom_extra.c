@@ -275,7 +275,7 @@ tune_time(GEN X, GEN Cset, long mintesttime, long prec)
       GEN z = hdiscrandom(R, prec);
 	  GEN elts = afuchfindelts_i(X, z, gel(Cset, i), 0);
       if(!elts) pari_err_PREC("Precision too low");
-      t=timer_get(&T);
+      t = timer_get(&T);
       set_avma(av2);
     }
     gel(avgtimes, i) = rdivss(t, 1000*tries, prec);
@@ -283,6 +283,31 @@ tune_time(GEN X, GEN Cset, long mintesttime, long prec)
   }
   return gerepilecopy(av, avgtimes);
 }
+
+
+/*2: TIME FOR N ELTS*/
+
+/*Returns the time taken to find nelts non-trivial elements*/
+long
+tune_Nelts(GEN X, GEN C, long nelts, long prec)
+{
+  pari_sp av = avma, av2;
+  GEN R = afuch_get_R(X);
+  long found = 0;
+  pari_timer T;
+  timer_start(&T);
+  while (found < nelts) {
+	av2 = avma;
+	GEN z = hdiscrandom(R, prec);
+	GEN v = afuchfindelts_i(X, z, C, 1);
+	if (!v) pari_err_PREC("Precision is too low, please increase.");
+	if (lg(v) > 1) found++;
+	set_avma(av2);
+  }
+  long t = timer_get(&T);
+  return gc_long(av, t);
+}
+
 
 
 /*2: REGRESSIONS AND PLOTS*/

@@ -54,6 +54,10 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	install("tune_bestC_range","GGLLsD1,L,D1,L,p",,fdom_library);
 	addhelp(tune_bestC_range,"tune_bestC_range(Aset, scale, ntrials, mintesttime, fname, {compile=1}, {WSL=1}): for the set of algebras Aset assumed to be of the same degree and suitable for afuchinit, computes the optimal C for all the algebras. We save the data to plots/build/fname.dat, and perform regression on the data. If compile=1 we compile a plot, and display it if WSL=1. The return value is [trend, R^2]; trend will be the approximation to C_n as in my paper. If the degree of the field is 1 (hence F=Q), then we instead return [C_n, variance].");
 
+	\\2: TIME FOR N ELTS
+	install("tune_Nelts","lGGD100,L,p",,fdom_library);
+	addhelp(tune_Nelts,"tune_Nelts(X, C, {nelts=100}): Computes the time taken to find nelts elements with the given value of C.");
+
 	\\3: FINCKE POHST PRUNING TESTING
 	install(qfminim_prune,"GGLp",,fdom_library);
 	addhelp(qfminim_prune,"Testing pruning with Fincke-Pohst.");

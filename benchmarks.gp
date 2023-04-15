@@ -44,7 +44,7 @@ avgtime(fil, A, Or, case, N)={
 default(parisize, "4096M");\\4 GB of memory.
 
 \\Details
-testspercase=3;
+testspercase=1;
 Ntests=34;
 tno=1;
 
