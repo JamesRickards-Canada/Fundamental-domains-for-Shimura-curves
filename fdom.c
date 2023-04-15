@@ -2576,9 +2576,10 @@ afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
   GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
   GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
   GEN npart;
-  double npart_d[9] = {0, 2.0684486886, 0.9687536224, 0.9343741738, 0.9762489285, 1.0144693442, 1.0029620799, 0.9571975869, 0.9173234585};
+  /*double npart_d[9] = {0, 2.0684486886, 0.9687536224, 0.9343741738, 0.9762489285, 1.0144693442, 1.0029620799, 0.9571975869, 0.9173234585};Old values*/
+  double npart_d[9] = {0, 1.8448102591, 0.9438779211, 0.8712944051, 0.9032590125, 0.9500103630, 1.004278416, 1.034858529, 1.041423423};
   if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
-  else npart = real_1(prec);/*1 seems to be a reasonably safe choice, though hard to say for sure.*/
+  else npart = gtofp(dbltor(1.05), prec);/*Seems to be a reasonably safe choice, though hard to say for sure.*/
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
   if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
   return best;
@@ -2931,9 +2932,8 @@ GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
   long prec = lg(tol);
   GEN lowtol = deflowtol(prec);
   GEN M = afuch_make_qf(X, z);
-  GEN fp = fincke_pohst(M, C, -1, prec, NULL);/*Calling fincke-pohst, which is basically qfminim0, but returns NULL instead of raising an error.*/
-  if(!fp) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
-  GEN v = gel(fp, 3);
+  GEN v = fincke_pohst_prune(M, C, 1, prec);
+  if(!v) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
   int nomax, ind = 1, lv = lg(v), i;
   if (maxelts) nomax = 0;
   else {nomax = 1;maxelts = 10;}
