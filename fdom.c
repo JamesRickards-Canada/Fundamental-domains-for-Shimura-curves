@@ -1074,8 +1074,8 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
           found--;
           continue;
         }
-        int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found - 1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
-        if (supercede) {
+        int ignore = angle_onarc(gel(vargs, found), gel(lastcirc, 7), iptarg, tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
+        if (!ignore) {
           vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
           absind--;
           found--;
@@ -1464,8 +1464,8 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
           found--;
           continue;
         }
-        int supercede = angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(vargs, found-1), tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
-        if (supercede) {
+        int ignore = angle_onarc(gel(vargs, found), gel(lastcirc, 7), iptarg, tol);/*We are in phase 2, and we either miss the side to the left (so ignore and move on), or to the right (supercede previous edge).*/
+        if (!ignore) {
           if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
           vecsmalltrunc_append(deleted, Ctype[elts[found]]);
           absind--;
