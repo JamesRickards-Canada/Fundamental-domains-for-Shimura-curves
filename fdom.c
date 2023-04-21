@@ -1087,6 +1087,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
         vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
         found--;
         if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+		  phase2 = 1;
           normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
           continue;
         }
@@ -1480,6 +1481,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
         if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
         found--;
         if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+		  phase2 = 1;
           normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
           continue;
         }
