@@ -297,6 +297,9 @@ tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec
   GEN Cn = Cmin;
   GEN Cnadd = gdivgs(gsub(Cmax, Cmin), tests - 1);
   GEN times = cgetg(tests + 1, t_VECSMALL);
+  FILE *f = fopen("data_in/Cn_timings.dat", "a");
+  pari_fprintf(f, "Testing n=%d, %d trials per algebra, %d values of C between %P.8f and %P.8f\n", n, testsperalg, tests, Cmin, Cmax);
+  pari_printf("Testing n=%d, %d trials per algebra, %d values of C between %P.8f and %P.8f\n", n, testsperalg, tests, Cmin, Cmax);
   pari_timer T;
   timer_start(&T);
   av1 = avma;
@@ -313,7 +316,6 @@ tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec
       if (gcmpgs(C, n + 2) <= 0) C = stoi(n + 2);
 	  av3 = avma;
 	  for (k = 1; k <= testsperalg; k++) {
-		pari_printf("%P.8f %d %d %d\n", C, i, j, k);
 	    timer_delay(&T);
 	    GEN X = afuchinit(A, NULL, NULL, NULL, 0, prec);
 	    gmael3(X, 7, 6, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
@@ -325,8 +327,10 @@ tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec
 	}
 	times[i] = t;
 	pari_printf("The value C_n=%P.8f took %d time.\n", Cn, t);
+	pari_fprintf(f, "%P.8f %d\n", Cn, t);
 	Cn = gerepileupto(av1, gadd(Cn, Cnadd));
   }
+  fclose(f);
   Cn = Cmin;
   GEN Cs = cgetg(tests + 1, t_VEC);
   for (i = 1; i <= tests; i++) {
