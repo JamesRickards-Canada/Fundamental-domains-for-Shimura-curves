@@ -285,6 +285,58 @@ tune_time(GEN X, GEN Cset, long mintesttime, long prec)
 }
 
 
+/*We have pre-stored algebras of degree n in "data_in/fdom_Cn.dat". We compute the time to compute the fundamental domains of the algebras, where each test is repeated testsperalg times, with the range of C_n's.*/
+GEN
+tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
+{
+  pari_sp av = avma, av1, av2, av3;
+  if (n <= 0 || n >= 9) pari_err(e_MISC, "n must be between 1 and 8.");
+  GEN dat = gel(gp_readvec_file("data_in/fdom_Cn.dat"), n);
+  long ldat = lg(gel(dat, 1)), i, j, k;
+  if (tests <= 1) tests = 2;
+  GEN Cn = Cmin;
+  GEN Cnadd = gdivgs(gsub(Cmax, Cmin), tests - 1);
+  GEN times = cgetg(tests + 1, t_VECSMALL);
+  pari_timer T;
+  timer_start(&T);
+  av1 = avma;
+  for (i = 1; i <= tests; i++) {
+	long t = 0;
+	av2 = avma;
+	for (j  = 1; j < ldat; j++) {
+	  GEN F = nfinit(gmael(dat, 1, j), prec);
+	  GEN A = alginit(F, gmael(dat, 2, j), 0, 1);
+      GEN Adisc = algdiscnorm(A);/*Norm to Q of disc(A)*/
+	  GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
+      GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
+	  GEN C = gmul(Cn, discpartroot);
+      if (gcmpgs(C, n + 2) <= 0) C = stoi(n + 2);
+	  av3 = avma;
+	  for (k = 1; k <= testsperalg; k++) {
+		pari_printf("%P.8f %d %d %d\n", C, i, j, k);
+	    timer_delay(&T);
+	    GEN X = afuchinit(A, NULL, NULL, NULL, 0, prec);
+	    gmael3(X, 7, 6, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
+	    afuchfdom(X);
+	    t = t + timer_delay(&T);
+		set_avma(av3);
+	  }
+	  set_avma(av2);
+	}
+	times[i] = t;
+	pari_printf("The value C_n=%P.8f took %d time.\n", Cn, t);
+	Cn = gerepileupto(av1, gadd(Cn, Cnadd));
+  }
+  Cn = Cmin;
+  GEN Cs = cgetg(tests + 1, t_VEC);
+  for (i = 1; i <= tests; i++) {
+	gel(Cs, i) = Cn;
+	Cn = gadd(Cn, Cnadd);
+  }
+  return gerepilecopy(av, mkvec2(Cs, times));
+}
+
+
 /*2: TIME FOR N ELTS*/
 
 /*Returns the time taken to find nelts non-trivial elements*/

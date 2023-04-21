@@ -2271,7 +2271,7 @@ presentation
     
 */
 
-/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group.*/
+/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
 GEN
 afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
 {
@@ -2599,7 +2599,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
   GEN R = hdiscradius(gpow(area, gamma, prec), prec);/*Setting R*/
   GEN epsilon = mkfracss(1, 6), passes;
   if (nf_get_degree(alg_get_center(A)) == 1) passes = gen_2;
-  else passes = stoi(12);
+  else passes = stoi(8);
   return gerepilecopy(av, mkvec5(area, C, R, epsilon, passes));
 }
 
@@ -2620,7 +2620,7 @@ afuchfdom_i(GEN X)
   GEN R = afuch_get_R(X);/*Starting radius for finding points. Will increase if not sufficient.*/
   GEN epsilon = afuch_get_epsilon(X);
   long n = nf_get_degree(alg_get_center(afuch_get_alg(X)));
-  GEN passes = afuch_get_passes(X);/*Based on heuristics, we choose the number of points at each stage to expect to finish after this number of passes.*/
+  GEN passes = afuch_get_passes(X);/*Based on heuristics, we choose the number of points at each stage to expect to finish after this number of passes. Well, that would be true if the probability that we find a point that is there is 1, which it isn't since we are pruning.*/
   long N = 1 + itos(gceil(gdiv(gsqr(area), gmul(gmul(shiftr(twopi, 2), gsubgs(C, n)), passes))));/*Area^2/(8*Pi*(C-n)*#Passes)*/
   if (N < 3) N = 3;/*Make sure N>=2; I think it basically always should be, but this guarantees it.*/
   if (DEBUGLEVEL > 0) pari_printf("Initial constants:\n   C=%P.8f\n   N=%d\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N - 1, R, area);
@@ -3340,20 +3340,6 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   U = Uperm;
   R = Rperm;
   GEN res = NULL;
-  /*
-  pari_CATCH(e_PREC) { }
-  pari_TRY {
-    GEN q = gaussred_from_QR(R, gprecision(Vnorm));
-    if (q) res = smallvectors_prune(q, C);
-  } pari_ENDCATCH;
-  if (!res) return gc_NULL(av);
-  
-  GEN z = cgetg(4,t_VEC);
-  gel(z, 1) = gcopy(gel(res, 1));
-  gel(z, 2) = gcopy(gel(res, 2));
-  gel(z, 3) = ZM_mul(U, gel(res,3));
-  return gerepileupto(av, z);
-  */
   GEN prune;
   if (!prunetype) prune = const_vec(lM - 1, gen_1);/*No funny business, just normal Fincke-Pohst.*/
   else {/*Linear pruning*/

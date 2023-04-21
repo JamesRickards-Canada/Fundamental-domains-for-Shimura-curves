@@ -43,19 +43,21 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 \\fdom_extra.c
 
 \\SECTION 1: VISUALIZATION
-	install("afuchfdom_latex","vGrD1,L,D1,L,D1,L,D1,L,",,fdom_library);
+	install(afuchfdom_latex,"vGrD1,L,D1,L,D1,L,D1,L,",,fdom_library);
 	addhelp(afuchfdom_latex,"Inputs: U, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain U to a LaTeX document in plots/build/filename.tex. If model=0, use the upper half plane model, if model=1, use the unit disc model, and if model=2, use the Klein model. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra. NOTE: displaying in the Klein model is not suggested, as points are closer to the unit disc, and it does not show up very well.");
 
 \\SECTION 2: TUNING
 
 	\\2: BEST C
-	install("tune_bestC","GGLD300,L,p",,fdom_library);
+	install(tune_bestC,"GGLD300,L,p",,fdom_library);
 	addhelp(tune_bestC,"tune_bestC(X, scale, ntrials, {mintime=300}): Computes the optimal C value based on heuristics. We use ntrials values of C in a range [Cmin, Cmin*scale^(1/2n)] to compute A, B, where the total time taken is A+B*C^{2n}. We solve for the optimal C based on this. We return [A, B, C, R^2], with the R^2 value for the A, B regression.");
-	install("tune_bestC_range","GGLLsD1,L,D1,L,p",,fdom_library);
+	install(tune_bestC_range,"GGLLsD1,L,D1,L,p",,fdom_library);
 	addhelp(tune_bestC_range,"tune_bestC_range(Aset, scale, ntrials, mintesttime, fname, {compile=1}, {WSL=1}): for the set of algebras Aset assumed to be of the same degree and suitable for afuchinit, computes the optimal C for all the algebras. We save the data to plots/build/fname.dat, and perform regression on the data. If compile=1 we compile a plot, and display it if WSL=1. The return value is [trend, R^2]; trend will be the approximation to C_n as in my paper. If the degree of the field is 1 (hence F=Q), then we instead return [C_n, variance].");
+	install(tune_Cnrange,"LGGD4,L,D20,L,p",,fdom_library);
+	addhelp(tune_Cnrange,"tune_Cnrange(n, Cmin, Cmax, {testsperalg=4}, {tests=20}): For the degree n (between 1 and 8), we compute the fundamental domains for a range of algebras with C_n between Cmin and Cmax. We return the values of C_n and the total time taken for each one. This is used to determine the best value of C_n.");
 
 	\\2: TIME FOR N ELTS
-	install("tune_Nelts","lGGD100,L,p",,fdom_library);
+	install(tune_Nelts,"lGGD100,L,p",,fdom_library);
 	addhelp(tune_Nelts,"tune_Nelts(X, C, {nelts=100}): Computes the time taken to find nelts elements with the given value of C.");
 
 	\\3: FINCKE POHST PRUNING TESTING
