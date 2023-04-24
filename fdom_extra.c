@@ -321,6 +321,7 @@ tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec
 	    gmael3(X, 7, 6, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
 	    afuchfdom(X);
 	    t = t + timer_delay(&T);
+		obj_free(X);/*Kill it off.*/
 		set_avma(av3);
 	  }
 	  set_avma(av2);

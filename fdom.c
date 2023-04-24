@@ -1582,7 +1582,7 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 
 /*2: NORMALIZED BASIS*/
 
-/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv is on side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.*/
+/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.*/
 static GEN
 edgepairing(GEN U, GEN tol)
 {
@@ -1716,9 +1716,8 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
       return gerepilecopy(av, U);
     }
     GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
-    GEN kact = normbound_get_kact(U);
     GEN elts = normbound_get_elts(U);
-    long lunp = lg(unpair), lenU = lg(elts)-1;
+    long lunp = lg(unpair), lenU = lg(elts) - 1;
     Gadd = vectrunc_init(lunp);/*For each entry [gind, vind, gv side, location] in unpair, we will find a new element intersecting inside U.*/
     for (i = 1; i < lunp; i++) {
       GEN dat = gel(unpair, i);
@@ -1731,13 +1730,15 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
         }
         if (dat[4] == 0) {/*gv is on another side. We need to see if it is I(g^-1) or not.*/
           long gvind = dat[3];/*The side that gv is on.*/
-          GEN endptimg = klein_act_i(gel(kact, gind), gel(vcors, smodss(gind - 2, lenU) + 1));/*Find the image of the first vertex of the side gind.*/
-          if (toleq(endptimg, gel(vcors, gvind), tol)) {/*gv is on I(g^-1) which is part of U.*/
-            /*Let the element of the side after gdind be w (so v is the intersection). Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
-            vectrunc_append(Gadd, Xmul(X, gel(elts, gind%lenU + 1), Xinv(X, gel(elts, gind))));
+          if (Xistriv(X, Xmul(X, gel(elts, gind), gel(elts, gvind)))) {/*gv is on I(g^-1) which is part of U.*/
+            /*Let the element of the side intersecting gind at v gdind be w. Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
+			long wind;
+			if (gind == dat[2]) wind = gind%lenU + 1;
+			else wind = dat[2];
+            vectrunc_append(Gadd, Xmul(X, gel(elts, wind), gel(elts, gvind)));/*gel(elts, gvind) = g^-1, or at least they have the same isometric circle*/
           }
           else {/*gv is on a side that is NOT I(g^-1), so adding in g^-1 gives us a new side of U.*/
-            vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+			vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
           }
           continue;
         }
@@ -2579,7 +2580,7 @@ afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
   GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
   GEN npart;
   /*double npart_d[9] = {0, 2.0684486886, 0.9687536224, 0.9343741738, 0.9762489285, 1.0144693442, 1.0029620799, 0.9571975869, 0.9173234585};Old values*/
-  double npart_d[9] = {0, 1.8448102591, 0.9438779211, 0.8712944051, 0.9032590125, 0.9500103630, 1.004278416, 1.034858529, 1.041423423};
+  double npart_d[9] = {0, 2.5, 1.325, 1.21, 0.9032590125, 0.9500103630, 1.004278416, 1.034858529, 1.041423423};
   if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
   else npart = gtofp(dbltor(1.05), prec);/*Seems to be a reasonably safe choice, though hard to say for sure.*/
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/

@@ -25,6 +25,8 @@ Passed word test
 Passed word test
 [3, Vecsmall([2, 2, 2, 2]), 0]
 Passed word test
+  *** afuchfdom: Warning: Increasing precision.
+  *** afuchfdom: Warning: Precision increased to 5, i.e. \p57.
 [4, Vecsmall([2, 2]), 0]
 Passed word test
 [3, Vecsmall([3, 3, 3, 3, 3, 3]), 0]
