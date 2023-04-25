@@ -290,7 +290,7 @@ GEN
 tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
 {
   pari_sp av = avma, av1, av2, av3;
-  if (n <= 0 || n >= 9) pari_err(e_MISC, "n must be between 1 and 8.");
+  if (n <= 0 || n >= 10) pari_err(e_MISC, "n must be between 1 and 9.");
   GEN dat = gel(gp_readvec_file("data_in/fdom_Cn.dat"), n);
   long ldat = lg(gel(dat, 1)), i, j, k;
   if (tests <= 1) tests = 2;

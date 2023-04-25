@@ -2581,7 +2581,7 @@ afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
   GEN npart;
   double npart_d[9] = {0, 2.5, 1.325, 1.21, 1.21, 1.35, 1.4, 1.44, 1.041423423};
   if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
-  else npart = gtofp(dbltor(1.05), prec);/*Seems to be a reasonably safe choice, though hard to say for sure.*/
+  else npart = gtofp(dbltor(1.6), prec);/*Seems to be a reasonably safe choice, though hard to say for sure.*/
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
   if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
   return best;
