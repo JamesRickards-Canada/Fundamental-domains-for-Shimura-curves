@@ -129,11 +129,5 @@ GEN fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC);
 void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, int open);
 
 /*SECTION 2: TUNING*/
-
-/*2: BEST C*/
-GEN tune_bestC(GEN X, GEN scale, long ntrials, long mintesttime);
-GEN tune_bestC_range(GEN Aset, GEN scale, long ntrials, long mintesttime, char *fname, int compile, int WSL, long prec);
-GEN tune_Cnrange(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);
-
-/*2: TIME FOR N ELTS*/
+GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);
 long tune_Nelts(GEN X, GEN C, long nelts, long prec);

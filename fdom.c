@@ -2891,18 +2891,6 @@ afuchtrace(GEN X, GEN g)
 
 /*3: FINDING ELEMENTS*/
 
-
-/*Returns afuch_make_qf(X, z) for a random z, for testing purposes.*/
-GEN afuch_qf(GEN X)
-{
-  pari_sp av = avma;
-  long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
-  GEN z = hdiscrandom(afuch_get_R(X), prec);
-  return gerepileupto(av, afuch_make_qf(X, z));
-}
-
-
-
 /*Returns the quadratic form Q_{z, 0}(g). If g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A). We output the symmetric matrix M, such that g~*M*g=Q_{z, 0}(g).*/
 static GEN
 afuch_make_qf(GEN X, GEN z)
