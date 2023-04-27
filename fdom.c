@@ -1,12 +1,6 @@
 /*TO DO
 1. How to input groups between O^1 and the full positive normalizer group? (i.e. type in afuchinit).
-2. forqfvec with flag=2.
-3. afuch_make_qf: I must symmetrize the matrix for use in qfminim, but this really shouldn't be necessary.
-4. Update constants used for finding the optimal C.
-5. Fincke pohst with pruning?
 8. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
-9. Check for >> or << instead of *2 or /2.
-10. Make testing cases with b>0 not a>0.
 11. Do we want the debug level here to be the same as for algebras? Currently it is.
 12. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
 13. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
@@ -157,7 +151,7 @@ static GEN afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec);
 static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
-static GEN afuchfdom_i(GEN X);
+static GEN afuchfdom_i(GEN X, GEN *startingset);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
@@ -721,7 +715,7 @@ subrcr(GEN r, GEN z)
 static GEN
 deftol(long prec)
 {
-  return real2n(BITS_IN_LONG/2*(2 - prec), prec);
+  return real2n((BITS_IN_LONG >> 1)*(2 - prec), prec);
 }
 
 /*Lower tolerance. Useful if we may have more precision loss and are OK with the larger range (e.g. we have a slow routine to check exact equality, and use this to sift down to a smaller set).*/
@@ -1931,8 +1925,8 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
     if (lg(gmael(mcyc, 1, i)) == 2 && gel(mcyc, 2)[i] == 2) nfixed++;
   }/*Fixed sides MUST correspond to length 1 cycles with order 2.*/
   GEN elts = normbound_get_elts(U);
-  long genus=((lg(elts) - 1 + nfixed)/2 - lgcyc + 2)/2;
-  /*2*g+t+s+1_{t+s>0}=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as / rounds down in C. We are actually overcounting by 1 if t+s=0 and there are no accidental cycles, but this is impossible as there is >=1 cycle.*/
+  long genus = (((lg(elts) - 1 + nfixed) >> 1) - lgcyc + 2) >> 1;
+  /*2*g+t+s+1_{t+s>0}=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as >> 1 rounds down in C. We are actually overcounting by 1 if t+s=0 and there are no accidental cycles, but this is impossible as there is >=1 cycle.*/
   long s, firstell = lgcyc;/*s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.*/
   int foundlastpar = 0;
   for (i = 1; i < lgcyc; i++) {
@@ -2138,9 +2132,9 @@ word_collapse(GEN word)
     long next1 = i + 2;/*Next entry with 1*/
     while (last1 > 0 && next1 < lgword) {
       if (word[last1] != -word[next1]) break;/*Maximum collapsing achieved.*/
-      H[last1]=0;
-      H[next1]=0;
-      newlg-=2;/*2 less entries*/
+      H[last1] = 0;
+      H[next1] = 0;
+      newlg -= 2;/*2 less entries*/
       while (last1 > 0 && H[last1] == 0) last1--;/*Going backwards*/
       next1++;/*Going forwards. We are guaranteed that next1=lgword or H[next1]=1.*/
     }
@@ -2620,9 +2614,9 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-/*Computes the fundamental domain, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low.*/
+/*Computes the fundamental domain, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
 static GEN
-afuchfdom_i(GEN X)
+afuchfdom_i(GEN X, GEN *startingset)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
@@ -2639,10 +2633,13 @@ afuchfdom_i(GEN X)
   if (N < 3) N = 3;/*Make sure N>=2; I think it basically always should be, but this guarantees it.*/
   if (DEBUGLEVEL > 0) pari_printf("Initial constants:\n   C=%P.8f\n   N=%d\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N - 1, R, area);
   pari_sp av_mid = avma;
-  GEN firstelt = afuchfindelts_i(X, gtocr(gen_0, prec), C, 1);/*This may find an element with large radius, a good start.*/
-  if (!firstelt) return gc_NULL(av);/*Precision too low.*/
+  GEN firstelts = *startingset;
+  if (!firstelts) {/*No starting set passed.*/
+	firstelts = afuchfindelts_i(X, gtocr(gen_0, prec), C, 1);/*This may find an element with large radius, a good start.*/
+    if (!firstelts) return gc_NULL(av);/*Precision too low.*/
+  }
   GEN U = NULL;
-  if (lg(firstelt) > 1) U = normbound(X, firstelt, &afuchtoklein, gdat);/*Start off the boundary.*/
+  if (lg(firstelts) > 1) U = normbound(X, firstelts, &afuchtoklein, gdat);/*Start off the boundary.*/
   long nU = U ? lg(normbound_get_elts(U)) - 1 : 0;/*Number of sides.*/
   long pass = 0;
   for (;;) {
@@ -2665,7 +2662,10 @@ afuchfdom_i(GEN X)
         if (cmprr(ang1, ang2) > 0) ang2 = addrr(ang2, twopi);/*We loop past zero.*/
         GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
         GEN found = afuchfindelts_i(X, z, C, 1);
-        if (!found) return gc_NULL(av);/*Precision too low.*/
+        if (!found) {/*Precision too low.*/
+		  *startingset = gerepilecopy(av, normbound_get_elts(U));
+		  return NULL;
+		}
         if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
       }
     }
@@ -2673,7 +2673,11 @@ afuchfdom_i(GEN X)
       for (i = 1; i < N; i++){
         GEN z = hdiscrandom(R, prec);
         GEN found = afuchfindelts_i(X, z, C, 1);
-        if (!found) return gc_NULL(av);/*Precision too low.*/
+        if (!found) {/*Precision too low.*/
+		  if (!U) return gc_NULL(av);
+		  *startingset = gerepilecopy(av, normbound_get_elts(U));
+		  return NULL;
+		}
         if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
       }
     }
@@ -2710,12 +2714,22 @@ afuchfdom(GEN X)
   GEN U = afuch_get_fdom(X);
   if (U) return U;
   int precinc = 0;
+  GEN startingset = NULL;
   for (;;) {
-    U = afuchfdom_i(X);
+    U = afuchfdom_i(X, &startingset);
     if (U) break;/*Success!*/
     pari_warn(warner, "Increasing precision");
     precinc = 1;
     afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+	if (startingset) {/*We did find some elements, so we save them (after removing the 0's).*/
+	  long ls = lg(startingset), i;
+	  GEN newstart = vectrunc_init(ls);
+	  for (i = 1; i < ls; i++) {
+		GEN elt = gel(startingset, i);
+		if (!gequal0(elt)) vectrunc_append(newstart, elt);
+	  }
+	  startingset = newstart;
+	}
   }
   if (precinc) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
