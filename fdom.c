@@ -1582,7 +1582,8 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 
 /*2: NORMALIZED BASIS*/
 
-/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.*/
+/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.
+*/
 static GEN
 edgepairing(GEN U, GEN tol)
 {
@@ -1682,6 +1683,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
       vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
     }
   }
+  GEN unpair = gen_0, unpairtol = tol;/*Adjusting tolerance for edge pairing, in case we lose too much tolerance.*/
   for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we last tried to add.*/
 	while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
       GEN Unew = normbound_append(X, U, Gadd, Xtoklein, gdat);
@@ -1710,11 +1712,21 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
       U = Unew;/*Update U*/
     }
     /*At this point, <G> = <U[1]>_(no-inverse). Now we have to check if there is a side pairing.*/
-    GEN unpair = edgepairing(U, tol);
-    if (typ(unpair) == t_VECSMALL) {/*All paired up!*/
-      gel(U, 8) = unpair;
+    GEN newunpair = edgepairing(U, unpairtol);
+    if (typ(newunpair) == t_VECSMALL) {/*All paired up!*/
+      gel(U, 8) = newunpair;
       return gerepilecopy(av, U);
     }
+	/*Typically our tolerance is good enough, but in rare cases (e.g.: F=nfinit(y^3 - y^2 - 4*y + 1); A=alginit(F, [16*y^2 - 48*y - 5, 264*y^2 - 880*y - 821]); elt1=[292266712979,11224175772635,19761120255325,2858856075355,9063381984802,3524132002710,20505994302672,18181504506668,13053164032091,16489355539407,5374462579812,-22448351545240]~; elt2=[-477262530497,-18328732946074,-32269300054888,-4668423819984,-14800223317337,-5754798895964,-33485656406450,-29689836243799,-21315414378062,-26926609156642,-8776331674561,36657465892164]~) the isometic circles are so close to being equal that we lose just enough tolerance.*/
+	if (gequal(unpair, newunpair)) {/*In this case, we likely have hit an infinite loop with a true side pairing that was missed due to tolerance. We decrease the tolerance.*/
+	  unpairtol = shiftr(unpairtol, 1);
+	  newunpair = edgepairing(U, unpairtol);
+	  if (typ(newunpair) == t_VECSMALL) {/*All paired up!*/
+        gel(U, 8) = newunpair;
+        return gerepilecopy(av, U);
+      }
+	}
+	unpair = newunpair;
     GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
     GEN elts = normbound_get_elts(U);
     long lunp = lg(unpair), lenU = lg(elts) - 1;
@@ -2581,7 +2593,7 @@ afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
   GEN npart;
   double npart_d[9] = {0, 2.5, 1.325, 1.21, 1.21, 1.35, 1.4, 1.44, 1.5};
   if (n <= 8) npart = gtofp(dbltor(npart_d[n]), prec);
-  else npart = gtofp(gadd(dbltor(1.5), gmulsg(n - 8, dbltor(0.05))), prec);/*Seems to be a reasonably safe choice, though hard to say for sure.*/
+  else npart = gtofp(gadd(dbltor(1.5), gmulsg(n - 8, dbltor(0.05))), prec);/*Seems to be a reasonably good choice, though hard to say for sure.*/
   GEN best = gerepileupto(av, gmul(npart, discpartroot));/*npart*disc(F)^(1/n)*N_F/Q(algebra disc)^(1/2n)*/
   if (gcmpgs(best, n) <= 0) best = gerepileupto(av, gaddsg(n, gen_2));/*Make sure best>n. If it is not, then we just add 2 (I doubt this will ever occur, but maybe in a super edge case).*/
   return best;
