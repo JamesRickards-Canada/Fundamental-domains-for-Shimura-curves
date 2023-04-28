@@ -3094,6 +3094,28 @@ algbasisto1ijk(GEN A, GEN x)
   return gerepileupto(av, algalgto1ijk(A, xalg));
 }
 
+/*Given x=[e, f, g, h], returns x in the algebra representation.*/
+GEN
+alg1ijktoalg(GEN A, GEN x)
+{
+  pari_sp av = avma;
+  GEN L = alg_get_splittingfield(A);/*L=F(i),*/
+  long Lvar = rnf_get_varn(L);
+  GEN Lx = pol_x(Lvar);/*x*/
+  GEN e1 = gadd(gel(x, 1), gmul(gel(x, 2), Lx));/*e+fi*/
+  GEN e2 = gsub(gel(x, 3), gmul(gel(x, 4), Lx));/*g-hi*/
+  return gerepilecopy(av, mkcol2(e1, e2));
+}
+
+/*Given x=[e, f, g, h], returns x in the basis representation.*/
+GEN
+alg1ijktobasis(GEN A, GEN x)
+{
+  pari_sp av = avma;
+  GEN xalg = alg1ijktoalg(A, x);
+  return gerepileupto(av, algalgtobasis(A, xalg));
+}
+
 /*Returns the conjugate of the element x in basis form. Not particularly fast.*/
 static GEN
 algconj(GEN A, GEN x)

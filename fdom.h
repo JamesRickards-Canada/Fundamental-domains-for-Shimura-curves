@@ -115,6 +115,8 @@ GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts);
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);
 GEN algbasisto1ijk(GEN A, GEN x);
+GEN alg1ijktoalg(GEN A, GEN x);
+GEN alg1ijktobasis(GEN A, GEN x);
 GEN algdiscnorm(GEN A);
 GEN algmulvec(GEN A, GEN G, GEN L);
 

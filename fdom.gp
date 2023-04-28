@@ -33,6 +33,14 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchfindelts,"afuchfindelts(X, {z}, {C}, {maxelts=1}: finds the elements of norm 1 for which Q_{z, 0}(g)<=C, which will happen if gz is close to 0. Returns at most maxelts, unless this is set to 0 when it returns all elements found. If C is not passed, we use the default value which attemps to minimize the expected time to find an element (when we run it with random points, stopping once the first non-trivial element is found). If z is not passed we pick a uniformly random point from a ball of radius large enough so that we expect it to be random with respect to the fundamental domain.");
 
 	\\3: ALGEBRA HELPER METHODS
+	install(alg1ijktoalg,"GG",,fdom_library);
+	addhelp(alg1ijktoalg,"alg1ijktoalg(A, g): Returns what g=[e, f, g, h]=e+fi+gj+hk is in the algebraic representation.");
+	install(alg1ijktobasis,"GG",,fdom_library);
+	addhelp(alg1ijktobasis,"alg1ijktobasis(A, g): Returns what g=[e, f, g, h]=e+fi+gj+hk is in the basis representation.");
+	install(algalgto1ijk,"GG","algalgto1ijk",fdom_library);
+	addhelp(algalgto1ijk,"algalgto1ijk(A, g): Returns what g is in the 1ijk representation.");
+	install(algbasisto1ijk,"GG",,fdom_library);
+	addhelp(algbasisto1ijk,"algbasisto1ijk(A, g): Returns what g is in the 1ijk representation.");
 	install(algmulvec,"GGG",,fdom_library);
 	addhelp(algmulvec,"algmulvec(A, G, L): returns G[L[1]]*G[L[2]]*...*G[L[n]]. If an index is negative, we take the inverse of that element.");
 	install(algisorder,"iGG",,fdom_library);
