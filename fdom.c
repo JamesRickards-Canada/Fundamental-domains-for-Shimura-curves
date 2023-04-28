@@ -4,6 +4,8 @@
 11. Do we want the debug level here to be the same as for algebras? Currently it is.
 12. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
 13. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
+14. Input the trace_F/Q(nrd(g)/nm) part to the methods, and have a method for finding n non-trivial elements (instead of our current gp-accessible method).
+15. Don't check if in normalizer for primes dividing the discriminant.
 */
 
 /*
@@ -168,7 +170,7 @@ static GEN afuchtoklein(GEN X, GEN g);
 static GEN afuchtrace(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
-static GEN afuch_make_qf(GEN X, GEN z);
+static GEN afuch_make_qf(GEN X, GEN nm, GEN z);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
@@ -180,6 +182,8 @@ static long algsplitoo(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
 static GEN algd(GEN A, GEN a);
+static int alginnormalizer(GEN A, GEN O, GEN x);
+static GEN algorderconj(GEN A, GEN O, GEN x);
 static GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
 
 /*SECTION 4: FINCKE POHST FOR FLAG=2 WITH PRUNING*/
@@ -2295,6 +2299,7 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   GEN F = alg_get_center(A);
   long nF = nf_get_degree(F);
   if (!O) O = matid(4*nF);
+  else O = hnf(O);/*Make sure it is in Hermite normal form.*/
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
@@ -2621,7 +2626,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-/*Computes the fundamental domain, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
+/*Computes the fundamental domain for O^1, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
 static GEN
 afuchfdom_i(GEN X, GEN *startingset)
 {
@@ -2642,7 +2647,7 @@ afuchfdom_i(GEN X, GEN *startingset)
   pari_sp av_mid = avma;
   GEN firstelts = *startingset;
   if (!firstelts) {/*No starting set passed.*/
-	firstelts = afuchfindelts_i(X, gtocr(gen_0, prec), C, 1);/*This may find an element with large radius, a good start.*/
+	firstelts = afuchfindelts_i(X, gen_1, gtocr(gen_0, prec), C, 1);/*This may find an element with large radius, a good start.*/
     if (!firstelts) return gc_NULL(av);/*Precision too low.*/
   }
   GEN U = NULL;
@@ -2668,7 +2673,7 @@ afuchfdom_i(GEN X, GEN *startingset)
         else ang1 = gel(Uvargs, sind - 1);
         if (cmprr(ang1, ang2) > 0) ang2 = addrr(ang2, twopi);/*We loop past zero.*/
         GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
-        GEN found = afuchfindelts_i(X, z, C, 1);
+        GEN found = afuchfindelts_i(X, gen_1, z, C, 1);
         if (!found) {/*Precision too low.*/
 		  *startingset = gerepilecopy(av, normbound_get_elts(U));
 		  return NULL;
@@ -2679,7 +2684,7 @@ afuchfdom_i(GEN X, GEN *startingset)
     else {
       for (i = 1; i < N; i++){
         GEN z = hdiscrandom(R, prec);
-        GEN found = afuchfindelts_i(X, z, C, 1);
+        GEN found = afuchfindelts_i(X, gen_1, z, C, 1);
         if (!found) {/*Precision too low.*/
 		  if (!U) return gc_NULL(av);
 		  *startingset = gerepilecopy(av, normbound_get_elts(U));
@@ -2784,7 +2789,7 @@ afuchfdom(GEN X)
   return gerepileupto(av, U);
 }
 
-
+/*TO DO*/
 static GEN
 afuch_makeunitelts(GEN X)
 {
@@ -2792,6 +2797,7 @@ afuch_makeunitelts(GEN X)
   return ghalf;
 }
 
+/*TO DO*/
 static GEN
 afuch_makeALelts(GEN x)
 {
@@ -2978,9 +2984,9 @@ afuchtrace(GEN X, GEN g)
 
 /*3: FINDING ELEMENTS*/
 
-/*Returns the quadratic form Q_{z, 0}(g). If g has norm 1, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A). We output the symmetric matrix M, such that g~*M*g=Q_{z, 0}(g).*/
+/*Returns the quadratic form Q_{z, 0}^nm(g). If g has norm nm and is in the normalizer of O, then Q_{z, 0}(g)=cosh(d(gz, 0))+n-1 (n=deg(F), F is the centre of A). We output the symmetric matrix M, such that g~*M*g=Q_{z, 0}^nm(g).*/
 static GEN
-afuch_make_qf(GEN X, GEN z)
+afuch_make_qf(GEN X, GEN nm, GEN z)
 {
   pari_sp av = avma;
   GEN qfmats = afuch_get_qfmats(X);
@@ -2994,34 +3000,53 @@ afuch_make_qf(GEN X, GEN z)
   GEN N2 = rM_upper_r_mul(gel(qfmats, 2), w1);/*M1*w1*/
   GEN N3 = rM_upper_r_mul(gel(qfmats, 3), w2);/*M2*w2*/
   GEN N = rM_upper_add(rM_upper_add(N1, N2), rM_upper_add(N3, gel(qfmats, 4)));/*N1+N2+N3+Mconst*/
-  GEN qfup = RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5));/*The correct qf, in upper triangular form.*/
-  /*return gerepileupto(av, qfup);*/
+  
+  GEN qfup;
+  if (gequal(nm, gen_1)) qfup = RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5));/*The correct qf, in upper triangular form.*/
+  else {/*Norm not 1, so we need to adjust qfmats[5].*/
+	/*This is basically copied from afuchinit. Test it now, will make a better version soon (so we don't recompute it every time).*/
+	long lgO, i, j;
+	GEN A = afuch_get_alg(X), O = afuch_get_O(X), F = alg_get_center(A);
+	GEN AOconj = cgetg_copy(O, &lgO);/*Conjugates of basis of O, written in A.*/
+	for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
+	GEN Onorm = Onorm_makemat(A, O, AOconj);
+	for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
+      for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(F, nfdiv(F, gcoeff(Onorm, i, j), nm));
+    }
+	qfup = RgM_upper_add(rM_upper_r_mul(N, c), Onorm);/*The correct qf, in upper triangular form.*/
+  }
+  
+  
   long n = lg(qfup), i, j;
   for (i = 2; i < n; i++) for (j = 1; j < i; j++) gcoeff(qfup, i, j) = gcoeff(qfup, j, i);/*Make it symmetric, which is required for qfminim FOR NOW.*/
   return gerepilecopy(av, qfup);
 }
 
-/*Finds the norm 1 elements such that Q_{z, 0}(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. In theory we might occationally miss one if a lot of cancellation happens, since we first check the norm by its real approximation (which is significantly faster), though the tolerance should be low enough that this does not happen. NOTE: we find element in the basis of O, NOT back to A.*/
-GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
+/*Finds the norm nm elements of the normalizer such that Q_{z, 0}^nm(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. We use pruning, so there is no guarantee that we find elements that are there (but overall, it is quicker to find elements this way by repeating with different values of z). NOTE: we find element in the basis of O, NOT back to A.*/
+GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
   long prec = lg(tol);
   GEN lowtol = deflowtol(prec);
-  GEN M = afuch_make_qf(X, z);
+  GEN M = afuch_make_qf(X, nm, z);
   GEN v = fincke_pohst_prune(M, C, 1, prec);
   if(!v) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
   int nomax, ind = 1, lv = lg(v), i;
   if (maxelts) nomax = 0;
-  else {nomax = 1;maxelts = 10;}
+  else { nomax = 1; maxelts = 10; }
   GEN found = cgetg(maxelts + 1, t_VEC);
-  GEN F = alg_get_center(afuch_get_alg(X));
+  GEN A = afuch_get_alg(X), O = afuch_get_O(X);
+  GEN F = alg_get_center(A);
+  int checknormalizer = !gequal(nm, gen_1);/*If the norm is 1, no need to check the normalizer.*/
   if (nf_get_degree(F) == 1) {/*Over Q, so no real approximation required.*/
     for (i = 1; i < lv; i++) {
-      GEN norm = afuchnorm_fast(X, gel(v, i));
-      if (!gequal(norm, gen_1)) continue;/*The norm was not 1.*/
-      if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
-      gel(found, ind) = gel(v, i);
+	  GEN elt = gel(v, i);
+      GEN norm = afuchnorm_fast(X, elt);
+      if (!gequal(norm, nm)) continue;/*The norm was not nm.*/
+      if (afuchistriv(X, elt)) continue;/*Ignore trivial elements.*/
+	  if (checknormalizer && !alginnormalizer(A, O, elt)) continue;/*Correct norm, but not in normalizer.*/
+      gel(found, ind) = elt;
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
       if (!nomax) break;/*We have it the maximum return vector.*/
@@ -3030,14 +3055,24 @@ GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
     }  
   }
   else{/*Compute the real norm first.*/
+    GEN realnm;
+	if (gequal(nm, gen_1)) realnm = gen_1;
+	else {
+      long split = algsplitoo(A);
+      long Fvar = nf_get_varn(F);
+      GEN rt = gel(nf_get_roots(F), split);
+	  realnm = gsubst(nm, Fvar, rt);
+	}
     for (i = 1; i < lv; i++) {
-      GEN realnorm = afuchnorm_real(X, gel(v, i));
-      if (!toleq(realnorm, gen_1, lowtol)) continue;/*Norm not 1 up to tolerance.*/
-      if (afuchistriv(X, gel(v, i))) continue;/*Ignore trivial elements.*/
-      GEN norm = afuchnorm_fast(X, gel(v, i));
+	  GEN elt = gel(v, i);
+      GEN realnorm = afuchnorm_real(X, elt);
+      if (!toleq(realnorm, realnm, lowtol)) continue;/*Norm not nm up to tolerance.*/
+      if (afuchistriv(X, elt)) continue;/*Ignore trivial elements.*/
+      GEN norm = afuchnorm_fast(X, elt);
       norm = basistoalg(F, norm);
-      if (!gequal(norm, gen_1)) continue;/*The norm was close to 1 but not equal.*/
-      gel(found, ind) = gel(v, i);
+      if (!gequal(norm, nm)) continue;/*The norm was close to nm but not equal.*/
+	  if (checknormalizer && !alginnormalizer(A, O, elt)) continue;/*Correct norm, but not in normalizer.*/
+      gel(found, ind) = elt;
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
       if (!nomax) break;/*We have it the maximum return vector.*/
@@ -3050,7 +3085,7 @@ GEN afuchfindelts_i(GEN X, GEN z, GEN C, long maxelts)
 }
 
 /*Safe version of afuchfindelts_i, where we also translate elements back to A. Will auto-set C, and can take z to be random from a ball of the default radius.*/
-GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
+GEN afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts)
 {
   pari_sp av = avma;
   long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
@@ -3058,7 +3093,7 @@ GEN afuchfindelts(GEN X, GEN z, GEN C, long maxelts)
   if (!z) zsafe = hdiscrandom(afuch_get_R(X), prec);
   else zsafe = gtocr(z, prec);
   if (!C) C = afuch_get_bestC(X);
-  GEN r = afuchfindelts_i(X, zsafe, C, maxelts);
+  GEN r = afuchfindelts_i(X, nm, zsafe, C, maxelts);
   if (!r) pari_err_PREC("Precision too low for Fincke Pohst");
   GEN Or = afuch_get_O(X);
   long lr, i;
@@ -3242,6 +3277,16 @@ algd(GEN A, GEN a)
   return gerepileupto(av, nfM_det(alg_get_center(A), M));
 }
 
+/*Returns 1 if x is in the normalizer of O, 0 if not.*/
+static int
+alginnormalizer(GEN A, GEN O, GEN x)
+{
+  pari_sp av = avma;
+  GEN O2 = algorderconj(A, O, x);
+  if (gequal(O, O2)) return gc_int(av, 1);
+  return gc_int(av, 0);
+}
+
 /*Checks if O is an order.*/
 int
 algisorder(GEN A, GEN O)
@@ -3256,6 +3301,18 @@ algisorder(GEN A, GEN O)
     }
   }
   return gc_int(av, 1);
+}
+
+/*Returns the order formed by conjugating O by x. The columns are written in terms of the stored basis of A.*/
+static GEN
+algorderconj(GEN A, GEN O, GEN x)
+{
+  pari_sp av = avma;
+  long n, i;
+  GEN xinv = alginv(A, x);
+  GEN Oconj = cgetg_copy(O, &n);
+  for (i = 1; i < n; i++) gel(Oconj, i) = algmul(A, x, algmul(A, gel(O, i), xinv));
+  return gerepileupto(av, hnf(Oconj));
 }
 
 /*Given an order O in A, returns the discriminant of the order, which is disc(algebra)*level*/

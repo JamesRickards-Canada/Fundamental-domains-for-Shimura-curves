@@ -29,8 +29,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
 
 	\\3: FINDING ELEMENTS
-	install(afuchfindelts,"GDGDGD1,L,",,fdom_library);
-	addhelp(afuchfindelts,"afuchfindelts(X, {z}, {C}, {maxelts=1}: finds the elements of norm 1 for which Q_{z, 0}(g)<=C, which will happen if gz is close to 0. Returns at most maxelts, unless this is set to 0 when it returns all elements found. If C is not passed, we use the default value which attemps to minimize the expected time to find an element (when we run it with random points, stopping once the first non-trivial element is found). If z is not passed we pick a uniformly random point from a ball of radius large enough so that we expect it to be random with respect to the fundamental domain.");
+	install(afuchfindelts,"GD1,G,DGDGD1,L,",,fdom_library);
+	addhelp(afuchfindelts,"afuchfindelts(X, {nm=1}, {z}, {C}, {maxelts=1}: finds the elements of the normalizer of norm nm for which Q_{z, 0}^nm(g)<=C, which will happen if gz is close to 0. Returns at most maxelts, unless this is set to 0 when it returns all elements found. If C is not passed, we use the default value which attemps to minimize the expected time to find an element (when we run it with random points, stopping once the first non-trivial element is found). If z is not passed we pick a uniformly random point from a ball of radius large enough so that we expect it to be random with respect to the fundamental domain.");
 
 	\\3: ALGEBRA HELPER METHODS
 	install(alg1ijktoalg,"GG",,fdom_library);
