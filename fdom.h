@@ -1,74 +1,80 @@
 /*fdom.c methods*/
 
-enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES};
+enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES, afuch_TYPE, afuch_O1ELTS, afuch_UNITELTS, afuch_ALELTS};
 
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
 /*1: GEOMETRIC DATA*/
 INLINE GEN
-gdat_get_tol(GEN gd){return gel(gd, 1);}
+gdat_get_tol(GEN gd) { return gel(gd, 1); }
 INLINE GEN
-gdat_get_p(GEN gd){return gel(gd, 2);}
+gdat_get_p(GEN gd) { return gel(gd, 2); }
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN
-normbound_get_elts(GEN U){return gel(U, 1);}
+normbound_get_elts(GEN U) { return gel(U, 1); }
 INLINE GEN
-normbound_get_sides(GEN U){return gel(U, 2);}
+normbound_get_sides(GEN U) { return gel(U, 2); }
 INLINE GEN
-normbound_get_vcors(GEN U){return gel(U, 3);}
+normbound_get_vcors(GEN U) { return gel(U, 3); }
 INLINE GEN
-normbound_get_vargs(GEN U){return gel(U, 4);}
+normbound_get_vargs(GEN U) { return gel(U, 4); }
 INLINE long
-normbound_get_cross(GEN U){return itos(gel(U, 5));}
+normbound_get_cross(GEN U) { return itos(gel(U, 5)); }
 INLINE GEN
-normbound_get_kact(GEN U){return gel(U, 6);}
+normbound_get_kact(GEN U) { return gel(U, 6); }
 INLINE GEN
-normbound_get_area(GEN U){return gel(U, 7);}
+normbound_get_area(GEN U) { return gel(U, 7); }
 INLINE GEN
-normbound_get_spair(GEN U){return gel(U, 8);}
+normbound_get_spair(GEN U) { return gel(U, 8); }
 INLINE GEN
-normbound_get_infinite(GEN U){return gel(U, 9);}
+normbound_get_infinite(GEN U) { return gel(U, 9); }
 
 /*3: ARITHMETIC FUCHSIAN GROUPS*/
 INLINE GEN
-afuch_get_O(GEN X){return gel(X, 1);}
+afuch_get_O(GEN X) { return gel(X, 1); }
 INLINE GEN
-afuch_get_Oinv(GEN X){return gel(X, 2);}
+afuch_get_Oinv(GEN X) { return gel(X, 2); }
 INLINE GEN
-afuch_get_Oconj(GEN X){return gel(X, 3);}
+afuch_get_Oconj(GEN X) { return gel(X, 3); }
 INLINE GEN
-afuch_get_Omultable(GEN X){return gel(X, 4);}
+afuch_get_Omultable(GEN X) { return gel(X, 4); }
 INLINE GEN
-afuch_get_Onormdat(GEN X){return gel(X, 5);}
+afuch_get_Onormdat(GEN X) { return gel(X, 5); }
 INLINE GEN
-afuch_get_type(GEN X){return gel(X, 6);}
+afuch_get_alg(GEN X) { return obj_check(X, afuch_A); }
 INLINE GEN
-afuch_get_alg(GEN X){return gmael(X, 7, afuch_A);}
+afuch_get_Onormreal(GEN X) { return obj_check(X, afuch_ONORMREAL); }
 INLINE GEN
-afuch_get_Onormreal(GEN X){return obj_check(X, afuch_ONORMREAL);}
+afuch_get_kleinmats(GEN X) { return obj_check(X, afuch_KLEINMATS); }
 INLINE GEN
-afuch_get_kleinmats(GEN X){return obj_check(X, afuch_KLEINMATS);}
+afuch_get_qfmats(GEN X) { return obj_check(X, afuch_QFMATS); }
 INLINE GEN
-afuch_get_qfmats(GEN X){return obj_check(X, afuch_QFMATS);}
+afuch_get_gdat(GEN X) { return obj_check(X, afuch_GDAT); }
 INLINE GEN
-afuch_get_gdat(GEN X){return obj_check(X, afuch_GDAT);}
+afuch_get_area(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 1) : NULL; }
 INLINE GEN
-afuch_get_area(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 1) : NULL;}
+afuch_get_bestC(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 2) : NULL; }
 INLINE GEN
-afuch_get_bestC(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 2) : NULL;}
+afuch_get_R(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 3) : NULL; }
 INLINE GEN
-afuch_get_R(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 3) : NULL;}
+afuch_get_epsilon(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 4) : NULL; }
 INLINE GEN
-afuch_get_epsilon(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 4) : NULL;}
+afuch_get_passes(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 5) : NULL; }
 INLINE GEN
-afuch_get_passes(GEN X){GEN fdomdat = obj_check(X, afuch_FDOMDAT);return fdomdat? gel(fdomdat, 5) : NULL;}
+afuch_get_fdom(GEN X) { return obj_check(X, afuch_FDOM); }
 INLINE GEN
-afuch_get_fdom(GEN X){return obj_check(X, afuch_FDOM);}
+afuch_get_sig(GEN X) { return obj_check(X, afuch_SIG); }
 INLINE GEN
-afuch_get_sig(GEN X){return obj_check(X, afuch_SIG);}
+afuch_get_pres(GEN X) { return obj_check(X, afuch_PRES); }
 INLINE GEN
-afuch_get_pres(GEN X){return obj_check(X, afuch_PRES);}
+afuch_get_type(GEN X) { GEN ty = obj_check(X, afuch_TYPE); if(ty) return ty; return gen_0; }
+INLINE GEN
+afuch_get_O1elts(GEN X) { return obj_check(X, afuch_O1ELTS); }
+INLINE GEN
+afuch_get_unitelts(GEN X) { return obj_check(X, afuch_UNITELTS); }
+INLINE GEN
+afuch_get_ALelts(GEN X) { return obj_check(X, afuch_ALELTS); }
 
 /*SECTION 1: GEOMETRIC METHODS*/
 

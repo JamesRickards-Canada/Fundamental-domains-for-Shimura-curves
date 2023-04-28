@@ -35,7 +35,7 @@ avgtime(fil, A, Or, case, N)={
 	times[i]=gettime()/1000;
   );
   dat=avg_stdev(times);
-  dom=X[7][7];
+  dom=X[6][7];
   st=strprintf("%4d   %2d   %P9.3f %8d %P12.3f %P14.3f", case, #dom[1][1]/4, dom[7], #dom[1], dat[1], dat[2]);
   filewrite(fil, st);
   print(st);

@@ -152,6 +152,8 @@ static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 static GEN afuchfdom_i(GEN X, GEN *startingset);
+static GEN afuch_makeunitelts(GEN X);
+static GEN afuch_makeALelts(GEN x);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
@@ -2247,7 +2249,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, and is stored as a lazy vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-    [O, Oinv, Oconj, Omultable, Onormdat, type, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres]]
+    [O, Oinv, Oconj, Omultable, Onormdat, [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, type, O1elts, unitelts, ALelts]]
 
 O, Oinv
     The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
@@ -2256,9 +2258,7 @@ Oconj
 Omultable
     To multiply elements of O more quickly.
 Onormdat
-    Decomposition used to compute norms of elements more quickly.
-type
-    Which symmetric space we want to compute.   
+    Decomposition used to compute norms of elements more quickly. 
 A
     The algebra 
 Onormreal
@@ -2277,7 +2277,14 @@ sig
     Signature, if computed.
 presentation
     Presentation, if computed.
-    
+type
+    Which symmetric space we want to compute. 0 is O^1, 1 is totally positive reduced norm, 2 is AL(O), 3 is N_{B^{\times}}(O) (i.e. 1 and 2).
+O1elts
+	Elements forming a normalized boundary for O^1. We only store this if type!=1, as if you then want to change the type, it is useful to have this on hand.
+unitelts
+	For each generator of the group of totally real units, we store one element with this norm. Only intitialized when we are computing a fundamental domain with these elements.
+ALelts
+    For each generator of the Atkin Lehner group, we store one element with this norm. Only intitialized when we are computing a fundamental domain with these elements.
 */
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
@@ -2291,7 +2298,7 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
-  GEN Oinv, AX = obj_init(6, 9);
+  GEN Oinv, AX = obj_init(5, 13);
   gel(AX, 1) = O;
   gel(AX, 2) = Oinv = QM_inv(O);/*Inverse*/
   long lgO = lg(O), i, j;
@@ -2305,7 +2312,6 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
     if (gequal0(gel(AX, 5))) gel(AX, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
   }
   else gel(AX, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
-  gel(AX, 6) = type;/*TO DO*/
   obj_insert(AX, afuch_A, A);
   if (nF > 1) obj_insert(AX, afuch_ONORMREAL, Onorm_toreal(A, Onorm));/*No need to store approximate if n=1.*/
   GEN kleinmats = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);
@@ -2318,6 +2324,7 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   obj_insert(AX, afuch_QFMATS, qfm);
   obj_insert(AX, afuch_GDAT, gdat);
   obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
+  obj_insert(AX, afuch_TYPE, type);
   if (flag) {
     afuchfdom(AX);
     if (flag == 2) { afuchsignature(AX); afuchpresentation(AX); }
@@ -2702,7 +2709,6 @@ afuchfdom_i(GEN X, GEN *startingset)
       gerepileall(av_mid, 2, &U, &R);
     }
   }
-  obj_insert(X, afuch_FDOM, U);
   return gerepileupto(av, U);
 }
 
@@ -2735,7 +2741,62 @@ afuchfdom(GEN X)
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
     pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
   }
+  GEN Gtype = afuch_get_type(X);
+  if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
+  long type = itos(Gtype);
+  if (!type) {/*Looking for O^1 only.*/
+	obj_insert(X, afuch_FDOM, U);
+	return gerepileupto(av, U);
+  }
+  GEN unitelts, ALelts, O1elts = normbound_get_elts(U);
+  obj_insert(X, afuch_O1ELTS, O1elts);/*Store the norm 1 elements.*/
+  if (type%2 == 1) {
+	unitelts = obj_check(X, afuch_UNITELTS);
+	if (!unitelts) {
+	  unitelts = afuch_makeunitelts(X);
+	  obj_insert(X, afuch_UNITELTS, unitelts);
+	}
+  }
+  if (type > 1) {
+	ALelts = obj_check(X, afuch_ALELTS);
+	if (!ALelts) {
+	  ALelts = afuch_makeALelts(X);
+	  obj_insert(X, afuch_ALELTS, ALelts);
+	}
+  }
+  GEN S;/*Stores the elements to add*/
+  switch (type) {
+	case 1:
+	  S = unitelts;
+	  break;
+	case 2:
+	  S = ALelts;
+	  break;
+	case 3:/*case 3*/
+	  S = shallowconcat(unitelts, ALelts);
+	  break;
+	default:
+	  S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
+  }
+  S = shallowconcat(S, O1elts);
+  U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+  obj_insert(X, afuch_FDOM, U);
   return gerepileupto(av, U);
+}
+
+
+static GEN
+afuch_makeunitelts(GEN X)
+{
+  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
+  return ghalf;
+}
+
+static GEN
+afuch_makeALelts(GEN x)
+{
+  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
+  return ghalf;
 }
 
 /*Presentation*/
