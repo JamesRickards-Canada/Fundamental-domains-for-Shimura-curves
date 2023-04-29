@@ -3016,8 +3016,8 @@ afuch_make_qf(GEN X, GEN nm, GEN z)
 	long split = algsplitoo(A);
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
-	GEN invrealnm = invr(gsubst(nm, Fvar, rt));
-	c = mulrr(c, invrealnm);
+	GEN realnm = gsubst(nm, Fvar, rt);
+	c = mpdiv(c, realnm);
 	qfup = RgM_upper_add(rM_upper_r_mul(N, c), Onorm);/*The correct qf, in upper triangular form.*/
   }
   
