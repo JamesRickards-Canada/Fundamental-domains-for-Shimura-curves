@@ -161,6 +161,7 @@ static GEN afuch_makeALelts(GEN x);
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
 static GEN afuchid(GEN X);
+static int afuchinnormalizer(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchnorm_fast(GEN X, GEN g);
@@ -184,8 +185,6 @@ static long algsplitoo(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
 static GEN algd(GEN A, GEN a);
-static int alginnormalizer(GEN A, GEN O, GEN x);
-static GEN algorderconj(GEN A, GEN O, GEN x);
 static GEN algorderdisc(GEN A, GEN O, int reduced, int factored);
 
 /*SECTION 4: FINCKE POHST FOR FLAG=2 WITH PRUNING*/
@@ -2301,7 +2300,6 @@ afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
   GEN F = alg_get_center(A);
   long nF = nf_get_degree(F);
   if (!O) O = matid(4*nF);
-  else O = hnf(O);/*Make sure it is in Hermite normal form.*/
   if (!type) type = gen_0;
   if (!p) p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
@@ -2904,6 +2902,24 @@ afuchid(GEN X)
   return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X))) - 1, 1);
 }
 
+/*Returns 1 if the element g (in O) is in the normalizer of O, 0 if not.*/
+static int
+afuchinnormalizer(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  long lO = lg(afuch_get_O(X)), i;
+  GEN O1 = cgetg(lO, t_MAT), O2 = cgetg(lO, t_MAT);
+  GEN v = col_ei(lO - 1, 1);
+  gel(O1, 1) = g, gel(O2, 1) = g;/*O1=gO, O2=Og*/
+  for (i = 2; i < lO; i++) {/*Form the conjugate matrix*/
+	gel(v, i - 1) = gen_0;
+	gel(v, i) = gen_1;
+	gel(O1, i) = afuchmul(X, g, v);
+	gel(O2, i) = afuchmul(X, v, g);
+  }
+  return gc_int(av, gequal(hnf(O1), hnf(O2)));
+}
+
 /*Returns 1 if g is a scalar, i.e. g==conj(g).*/
 static int
 afuchistriv(GEN X, GEN g)
@@ -3058,7 +3074,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
   if (maxelts) nomax = 0;
   else { nomax = 1; maxelts = 10; }
   GEN found = cgetg(maxelts + 1, t_VEC);
-  GEN A = afuch_get_alg(X), O = afuch_get_O(X);
+  GEN A = afuch_get_alg(X);
   GEN F = alg_get_center(A);
   int checknormalizer = !gequal1(nm);/*If the norm is 1, no need to check the normalizer.*/
   if (nf_get_degree(F) == 1) {/*Over Q, so no real approximation required.*/
@@ -3067,7 +3083,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
       GEN norm = afuchnorm_fast(X, elt);
       if (!gequal(norm, nm)) continue;/*The norm was not nm.*/
       if (afuchistriv(X, elt)) continue;/*Ignore trivial elements.*/
-	  if (checknormalizer && !alginnormalizer(A, O, elt)) continue;/*Correct norm, but not in normalizer.*/
+	  if (checknormalizer && !afuchinnormalizer(X, elt)) continue;/*Correct norm, but not in normalizer.*/
       gel(found, ind) = elt;
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
@@ -3094,7 +3110,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
       GEN norm = afuchnorm_fast(X, elt);
       norm = basistoalg(F, norm);
       if (!gequal(norm, nm)) continue;/*The norm was close to nm but not equal.*/
-	  if (checknormalizer && !alginnormalizer(A, O, elt)) continue;/*Correct norm, but not in normalizer.*/
+	  if (checknormalizer && !afuchinnormalizer(X, elt)) continue;/*Correct norm, but not in normalizer.*/
       gel(found, ind) = elt;
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
@@ -3320,16 +3336,6 @@ algd(GEN A, GEN a)
   return gerepileupto(av, nfM_det(alg_get_center(A), M));
 }
 
-/*Returns 1 if x is in the normalizer of O, 0 if not.*/
-static int
-alginnormalizer(GEN A, GEN O, GEN x)
-{
-  pari_sp av = avma;
-  GEN O2 = algorderconj(A, O, x);
-  if (gequal(O, O2)) return gc_int(av, 1);
-  return gc_int(av, 0);
-}
-
 /*Checks if O is an order.*/
 int
 algisorder(GEN A, GEN O)
@@ -3344,18 +3350,6 @@ algisorder(GEN A, GEN O)
     }
   }
   return gc_int(av, 1);
-}
-
-/*Returns the order formed by conjugating O by x. The columns are written in terms of the stored basis of A.*/
-static GEN
-algorderconj(GEN A, GEN O, GEN x)
-{
-  pari_sp av = avma;
-  long n, i;
-  GEN xinv = alginv(A, x);
-  GEN Oconj = cgetg_copy(O, &n);
-  for (i = 1; i < n; i++) gel(Oconj, i) = algmul(A, x, algmul(A, gel(O, i), xinv));
-  return gerepileupto(av, hnf(Oconj));
 }
 
 /*Given an order O in A, returns the discriminant of the order, which is disc(algebra)*level*/
