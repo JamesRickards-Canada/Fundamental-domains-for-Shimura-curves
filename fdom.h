@@ -109,7 +109,7 @@ GEN afuchredelt(GEN X, GEN g, GEN z);
 GEN afuchword(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
-GEN afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts);
+GEN afuchfindelts(GEN X, GEN nm, long N);
 GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts);
 
 /*3: ALGEBRA HELPER METHODS*/

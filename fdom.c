@@ -3013,6 +3013,11 @@ afuch_make_qf(GEN X, GEN nm, GEN z)
 	for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
       for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(F, nfdiv(F, gcoeff(Onorm, i, j), nm));
     }
+	long split = algsplitoo(A);
+    long Fvar = nf_get_varn(F);
+    GEN rt = gel(nf_get_roots(F), split);
+	GEN invrealnm = invr(gsubst(nm, Fvar, rt));
+	c = mulrr(c, invrealnm);
 	qfup = RgM_upper_add(rM_upper_r_mul(N, c), Onorm);/*The correct qf, in upper triangular form.*/
   }
   
@@ -3084,22 +3089,31 @@ GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts)
   return gerepilecopy(av, found);
 }
 
-/*Safe version of afuchfindelts_i, where we also translate elements back to A. Will auto-set C, and can take z to be random from a ball of the default radius.*/
-GEN afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts)
+/*Finds N non-trivial elements with the given norm nm, by searching around random points.*/
+GEN afuchfindelts(GEN X, GEN nm, long N)
 {
-  pari_sp av = avma;
+  pari_sp av = avma, av2;
   long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
-  GEN zsafe;
-  if (!z) zsafe = hdiscrandom(afuch_get_R(X), prec);
-  else zsafe = gtocr(z, prec);
-  if (!C) C = afuch_get_bestC(X);
-  GEN r = afuchfindelts_i(X, nm, zsafe, C, maxelts);
-  if (!r) pari_err_PREC("Precision too low for Fincke Pohst");
+  GEN R = afuch_get_R(X);
+  GEN C = afuch_get_bestC(X);
+  GEN ret = cgetg(N + 1, t_VEC);
+  long skip = 0, found = 0, i;
+  while (found < N) {
+	av2 = avma;
+	GEN z = hdiscrandom(R, prec);
+	GEN E = afuchfindelts_i(X, nm, z, C, 1);
+	if (!E) {/*Precision too low, we allow up to 20 exceptions before failing.*/
+	  skip++;
+	  if (skip > 20) pari_err_PREC("Precision too low for Fincke Pohst");
+	  continue;
+	}
+	if (lg(E) == 1) { set_avma(av2); continue; }
+	found++;
+	gel(ret, found) = gel(E, 1);
+  }
   GEN Or = afuch_get_O(X);
-  long lr, i;
-  GEN rshift = cgetg_copy(r, &lr);
-  for (i = 1; i < lr; i++) gel(rshift, i) = RgM_RgC_mul(Or, gel(r, i));
-  return gerepileupto(av, rshift);
+  for (i = 1; i <= N; i++) gel(ret, i) = QM_QC_mul(Or, gel(ret, i));
+  return gerepilecopy(av, ret);
 }
 
 
