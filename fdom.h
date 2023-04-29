@@ -109,8 +109,7 @@ GEN afuchredelt(GEN X, GEN g, GEN z);
 GEN afuchword(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
-GEN afuchfindelts(GEN X, GEN nm, long N);
-GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts);
+GEN afuchfindelts(GEN X, GEN nm, long N, GEN C);
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algalgto1ijk(GEN A, GEN x);
@@ -138,4 +137,3 @@ void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int comp
 
 /*SECTION 2: TUNING*/
 GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);
-long tune_Nelts(GEN X, GEN C, long nelts, long prec);

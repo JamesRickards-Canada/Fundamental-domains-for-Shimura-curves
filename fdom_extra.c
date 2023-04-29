@@ -165,27 +165,6 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
   return gerepilecopy(av, mkvec2(Cs, times));
 }
 
-/*Returns the time taken to find nelts non-trivial elements*/
-long
-tune_Nelts(GEN X, GEN C, long nelts, long prec)
-{
-  pari_sp av = avma, av2;
-  GEN R = afuch_get_R(X);
-  long found = 0;
-  pari_timer T;
-  timer_start(&T);
-  while (found < nelts) {
-	av2 = avma;
-	GEN z = hdiscrandom(R, prec);
-	GEN v = afuchfindelts_i(X, z, C, 1);
-	if (!v) pari_err_PREC("Precision is too low, please increase.");
-	if (lg(v) > 1) found++;
-	set_avma(av2);
-  }
-  long t = timer_get(&T);
-  return gc_long(av, t);
-}
-
 
 
 

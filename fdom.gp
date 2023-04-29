@@ -29,8 +29,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
 
 	\\3: FINDING ELEMENTS
-	install(afuchfindelts,"GD1,G,D1,L,",,fdom_library);
-	addhelp(afuchfindelts,"afuchfindelts(X, {nm=1}, {N=1}: find N non-trivial elements of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z and the default C. Elements found may be equal.");
+	install(afuchfindelts,"GD1,G,D1,L,DG",,fdom_library);
+	addhelp(afuchfindelts,"afuchfindelts(X, {nm=1}, {N=1}, {C=default}: find N non-trivial elements of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z. Elements found may be equal.");
 
 	\\3: ALGEBRA HELPER METHODS
 	install(alg1ijktoalg,"GG",,fdom_library);
@@ -64,8 +64,6 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	\\2: BEST C
 	install(tune_Cn,"LGGD4,L,D20,L,p",,fdom_library);
 	addhelp(tune_Cn,"tune_Cn(n, Cmin, Cmax, {testsperalg=4}, {tests=20}): For the degree n (between 1 and 9), we compute the fundamental domains for a range of algebras with C_n between Cmin and Cmax. We return the values of C_n and the total time taken for each one. This is used to determine the best value of C_n.");
-	install(tune_Nelts,"lGGD100,L,p",,fdom_library);
-	addhelp(tune_Nelts,"tune_Nelts(X, C, {nelts=100}): Computes the time taken to find nelts elements with the given value of C.");
 
 default(parisize, "4096M");\\Must come at the end
 
