@@ -166,4 +166,3 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
 }
 
 
-

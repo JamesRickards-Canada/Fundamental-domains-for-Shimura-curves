@@ -3206,7 +3206,8 @@ GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
 	realnm = gsubst(nm, Fvar, rt);
-	C = mpdiv(C, realnm);
+	/*I used to have this next line in, but it seems to actually be bad in some cases.*/
+	/*C = mpdiv(C, realnm);*/
 	if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
   }
   GEN ret = cgetg(N + 1, t_VEC);
