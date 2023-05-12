@@ -1,6 +1,6 @@
 /*fdom.c methods*/
 
-enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES, afuch_TYPE, afuch_O1ELTS, afuch_UNITELTS, afuch_ALELTS};
+enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES, afuch_SAVEDELTS};
 
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
@@ -42,6 +42,8 @@ afuch_get_Omultable(GEN X) { return gel(X, 4); }
 INLINE GEN
 afuch_get_Onormdat(GEN X) { return gel(X, 5); }
 INLINE GEN
+afuch_get_type(GEN X) { return gel(X, 6); }
+INLINE GEN
 afuch_get_alg(GEN X) { return obj_check(X, afuch_A); }
 INLINE GEN
 afuch_get_Onormreal(GEN X) { return obj_check(X, afuch_ONORMREAL); }
@@ -68,13 +70,7 @@ afuch_get_sig(GEN X) { return obj_check(X, afuch_SIG); }
 INLINE GEN
 afuch_get_pres(GEN X) { return obj_check(X, afuch_PRES); }
 INLINE GEN
-afuch_get_type(GEN X) { GEN ty = obj_check(X, afuch_TYPE); if(ty) return ty; return gen_0; }
-INLINE GEN
-afuch_get_O1elts(GEN X) { return obj_check(X, afuch_O1ELTS); }
-INLINE GEN
-afuch_get_unitelts(GEN X) { return obj_check(X, afuch_UNITELTS); }
-INLINE GEN
-afuch_get_ALelts(GEN X) { return obj_check(X, afuch_ALELTS); }
+afuch_get_savedelts(GEN X) { return obj_check(X, afuch_SAVEDELTS); }
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
