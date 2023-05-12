@@ -108,6 +108,9 @@ GEN afuchsignature(GEN X);
 GEN afuchredelt(GEN X, GEN g, GEN z);
 GEN afuchword(GEN X, GEN g);
 
+/*3: NON NORM 1 METHODS*/
+GEN bnf_make_unitnorms(GEN B, long split, long prec);
+
 /*3: FINDING ELEMENTS*/
 GEN afuchfindelts(GEN X, GEN nm, long N, GEN C);
 

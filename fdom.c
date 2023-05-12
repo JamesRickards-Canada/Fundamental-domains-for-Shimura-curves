@@ -6,6 +6,7 @@
 13. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
 14. Input the trace_F/Q(nrd(g)/nm) part to the methods, and have a method for finding n non-trivial elements (instead of our current gp-accessible method).
 15. Don't check if in normalizer for primes dividing the discriminant.
+16. Figure out what to do with converting to and from orders. In particular, afuchfindelts auto converts back, but we don't want that in the normalizer section.
 */
 
 /*
@@ -155,7 +156,9 @@ static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 static GEN afuchfdom_i(GEN X, GEN *startingset);
-static GEN afuch_makeunitelts(GEN X);
+
+/*3: NON NORM 1 METHODS*/
+static GEN afuch_makeunitelts(GEN X, GEN unitnorms);
 static GEN afuch_makeALelts(GEN x);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
@@ -2781,7 +2784,7 @@ afuchfdom(GEN X)
   if (type%2 == 1) {
 	unitelts = obj_check(X, afuch_UNITELTS);
 	if (!unitelts) {
-	  unitelts = afuch_makeunitelts(X);
+	  unitelts = afuch_makeunitelts(X, NULL);
 	  obj_insert(X, afuch_UNITELTS, unitelts);
 	}
   }
@@ -2810,22 +2813,6 @@ afuchfdom(GEN X)
   U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
   obj_insert(X, afuch_FDOM, U);
   return gerepileupto(av, U);
-}
-
-/*TO DO*/
-static GEN
-afuch_makeunitelts(GEN X)
-{
-  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
-  return ghalf;
-}
-
-/*TO DO*/
-static GEN
-afuch_makeALelts(GEN x)
-{
-  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
-  return ghalf;
 }
 
 /*Presentation*/
@@ -2886,6 +2873,87 @@ afuchword(GEN X, GEN g)
 }
 
 
+/*3: NON NORM 1 METHODS*/
+
+
+GEN afuchunitgrp(GEN X)
+{
+  return afuch_makeunitelts(X, NULL);
+}
+
+/*Returns a vector of generators for F^{x}O^{unit norm}/F^{x}O^1, which is a (multiplicative) F_2 vector space. We can pass in unitnorms, which is the first entry of bnf_make_unitnorms.*/
+static GEN
+afuch_makeunitelts(GEN X, GEN unitnorms)
+{
+  pari_sp av = avma;
+  if (!unitnorms) {
+	GEN A = afuch_get_alg(X);
+	GEN F = alg_get_center(A);
+	long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
+	GEN B = Buchall(F, 0, prec);
+	unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
+  }
+  long lu, i;
+  GEN elts = cgetg_copy(unitnorms, &lu), Oinv = afuch_get_Oinv(X);
+  for (i = 1; i < lu; i++) {
+	GEN elt = gel(afuchfindelts(X, gel(unitnorms, i), 1, NULL), 1);
+	gel(elts, i) = QM_QC_mul(Oinv, elt);/*TO DO: No more QM_QC_mul once I fix this order transport business.*/
+  }
+  return gerepilecopy(av, elts);
+}
+
+/*TO DO*/
+static GEN
+afuch_makeALelts(GEN x)
+{
+  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
+  return ghalf;
+}
+
+/*
+Let U be the unit group of B, which is a totally real number field. This method returns [v, uneg] where:
+v is a basis for the totally positive units in U/U^2
+uneg is a unit with sigma_i(nm)>0 if and only if i!=split, if it exists. If it does not exist, this entry is 0.
+It is not possible for both uneg=0 and v to be empty, as v is empty <==> the generating basis of U is a basis of U/U^2 ==> uneg exists.
+*/
+GEN
+bnf_make_unitnorms(GEN B, long split, long prec)
+{
+  pari_sp av = avma;
+  GEN F = bnf_get_nf(B);
+  GEN units = gel(bnfunits(B, NULL), 1);/*The n units: first n-1 are infinite order, last one is -1.*/
+  long lu = lg(units), i, j;
+  for (i = 1; i < lu; i++) gel(units, i) = lift(basistoalg(F, nffactorback(F, gel(units, i), NULL)));/*Now we have the units in algebraic form.*/
+  GEN rts = nf_get_roots(F);
+  GEN signs = cgetg(lu, t_MAT);/*Stores the signs of each unit at each place.*/
+  for (i = 1; i < lu; i++) {
+	GEN sgn = cgetg(lu, t_VECSMALL), un = gel(units, i);
+	for (j = 1; j < lu; j++) sgn[j] = (1 - signe(poleval(un, gel(rts, j)))) >> 1;/*0 for sign 1, 1 for sign -1*/
+	gel(signs, i) = sgn;
+  }
+  GEN ker = Flm_ker(signs, 2);/*Basis for the kernel, i.e. totally positive units.*/
+  GEN vecei = vecsmall_ei(lu - 1, split);/*Positive outside of the split place, where negative.*/
+  GEN left = Flm_Flc_invimage(signs, vecei, 2);/*Element giving this sign distribution, if it exists.*/
+  GEN uneg;
+  if (left) {
+	uneg = gen_1;
+	for (i = 1; i < lu; i++) if (left[i]) uneg = nfmul(F, uneg, gel(units, i));/*Multiply out the element.*/
+	uneg = lift(basistoalg(F, uneg));
+  }
+  else uneg = gen_0;/*All units that are positive outside of split are positive at split too.*/
+  long lv = lg(ker);
+  GEN v = cgetg(lv, t_VEC);
+  for (i = 1; i < lv; i++) {
+	GEN elt = gen_1;
+	GEN pat = gel(ker, i);
+	for (j = 1; j < lu; j++) if (pat[j]) elt = nfmul(F, elt, gel(units, j));/*Multiply out the element.*/
+	gel(v, i) = lift(basistoalg(F, elt));
+  }
+  return gerepilecopy(av, mkvec2(v, uneg));
+}
+
+
+
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
 /*Conjugation formatted for the input of an afuch, for use in the geometry section. Since we work in O, entries are all in Z. We use this in place of alginv as well, to avoid a potential costly scaling.*/
@@ -2929,7 +2997,7 @@ afuchistriv(GEN X, GEN g)
   return gc_int(av, ZV_equal(g, gconj));
 }
 
-/*algmul for elements written in terms of the basis of O.*/
+/*algmul for elements of O written in terms of the basis of O.*/
 static GEN
 afuchmul(GEN X, GEN g1, GEN g2)
 {
