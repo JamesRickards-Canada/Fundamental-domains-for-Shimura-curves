@@ -1093,7 +1093,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
         vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
         found--;
         if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
+          phase2 = 1;
           normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
           continue;
         }
@@ -1407,7 +1407,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
       case 1:
         if (newU == found) newU = 0;/*The last side was the only new one, and we are deleting it.*/
         vecsmalltrunc_append(deleted, Ctype[elts[found]]);
-		absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
+        absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
         found--;
         continue;
       case 0:
@@ -1487,7 +1487,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
         if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
         found--;
         if(phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
-		  phase2 = 1;
+          phase2 = 1;
           normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);
           continue;
         }
@@ -1691,7 +1691,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
   }
   GEN unpair = gen_0, unpairtol = tol;/*Adjusting tolerance for edge pairing, in case we lose too much tolerance.*/
   for (;;) {/*We have passed to U, and must see if it has changed or not. Gadd is the set of elements we last tried to add.*/
-	while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
+    while (lg(Gadd) > 1) {/*Continue reducing elements and recomputing the boundary until stable.*/
       GEN Unew = normbound_append(X, U, Gadd, Xtoklein, gdat);
       if (!Unew) {/*The boundary did not change, so we must check every element of Gadd against U.*/
         lG = lg(Gadd);
@@ -1723,16 +1723,16 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
       gel(U, 8) = newunpair;
       return gerepilecopy(av, U);
     }
-	/*Typically our tolerance is good enough, but in rare cases (e.g.: F=nfinit(y^3 - y^2 - 4*y + 1); A=alginit(F, [16*y^2 - 48*y - 5, 264*y^2 - 880*y - 821]); elt1=[292266712979,11224175772635,19761120255325,2858856075355,9063381984802,3524132002710,20505994302672,18181504506668,13053164032091,16489355539407,5374462579812,-22448351545240]~; elt2=[-477262530497,-18328732946074,-32269300054888,-4668423819984,-14800223317337,-5754798895964,-33485656406450,-29689836243799,-21315414378062,-26926609156642,-8776331674561,36657465892164]~) the isometic circles are so close to being equal that we lose just enough tolerance.*/
-	if (gequal(unpair, newunpair)) {/*In this case, we likely have hit an infinite loop with a true side pairing that was missed due to tolerance. We decrease the tolerance.*/
-	  unpairtol = shiftr(unpairtol, 1);
-	  newunpair = edgepairing(U, unpairtol);
-	  if (typ(newunpair) == t_VECSMALL) {/*All paired up!*/
+    /*Typically our tolerance is good enough, but in rare cases (e.g.: F=nfinit(y^3 - y^2 - 4*y + 1); A=alginit(F, [16*y^2 - 48*y - 5, 264*y^2 - 880*y - 821]); elt1=[292266712979,11224175772635,19761120255325,2858856075355,9063381984802,3524132002710,20505994302672,18181504506668,13053164032091,16489355539407,5374462579812,-22448351545240]~; elt2=[-477262530497,-18328732946074,-32269300054888,-4668423819984,-14800223317337,-5754798895964,-33485656406450,-29689836243799,-21315414378062,-26926609156642,-8776331674561,36657465892164]~) the isometic circles are so close to being equal that we lose just enough tolerance.*/
+    if (gequal(unpair, newunpair)) {/*In this case, we likely have hit an infinite loop with a true side pairing that was missed due to tolerance. We decrease the tolerance.*/
+      unpairtol = shiftr(unpairtol, 1);
+      newunpair = edgepairing(U, unpairtol);
+      if (typ(newunpair) == t_VECSMALL) {/*All paired up!*/
         gel(U, 8) = newunpair;
         return gerepilecopy(av, U);
       }
-	}
-	unpair = newunpair;
+    }
+    unpair = newunpair;
     GEN vcors = normbound_get_vcors(U);/*Vertex coordinates.*/
     GEN elts = normbound_get_elts(U);
     long lunp = lg(unpair), lenU = lg(elts) - 1;
@@ -1750,13 +1750,13 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
           long gvind = dat[3];/*The side that gv is on.*/
           if (Xistriv(X, Xmul(X, gel(elts, gind), gel(elts, gvind)))) {/*gv is on I(g^-1) which is part of U.*/
             /*Let the element of the side intersecting gind at v gdind be w. Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
-			long wind;
-			if (gind == dat[2]) wind = gind%lenU + 1;
-			else wind = dat[2];
+            long wind;
+            if (gind == dat[2]) wind = gind%lenU + 1;
+            else wind = dat[2];
             vectrunc_append(Gadd, Xmul(X, gel(elts, wind), gel(elts, gvind)));/*gel(elts, gvind) = g^-1, or at least they have the same isometric circle*/
           }
           else {/*gv is on a side that is NOT I(g^-1), so adding in g^-1 gives us a new side of U.*/
-			vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
+            vectrunc_append(Gadd, Xinv(X, gel(elts, gind)));
           }
           continue;
         }
@@ -2290,7 +2290,7 @@ sig
 presentation
     Presentation, if computed.
 savedelts
-	[O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
+    [O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
 */
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
@@ -2357,20 +2357,20 @@ afuch_changep(GEN X, GEN p)
   obj_insert(X, afuch_GDAT, gdat);
   GEN U = afuch_get_fdom(X);
   if (U) {/*Recompute the fundamental domain.*/
-	U = normbasis(X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    U = normbasis(X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
     obj_insert(X, afuch_FDOM, U);
-	GEN pres = afuch_get_pres(X);
-	if (pres) {/*Recompute the presentation.*/
-	  pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+    GEN pres = afuch_get_pres(X);
+    if (pres) {/*Recompute the presentation.*/
+      pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
       obj_insert(X, afuch_PRES, pres);
-	}
-	GEN type = afuch_get_type(X);
+    }
+    GEN type = afuch_get_type(X);
     if (gequalgs(type, 3)) {/*Recompute the saved elements.*/
-	  GEN elts = normbound_get_elts(U);
-	  GEN saved = gcopy(afuch_get_savedelts(X));
-	  gel(saved, 1) = elts;
-	  obj_insert(X, afuch_SAVEDELTS, saved);
-	}
+      GEN elts = normbound_get_elts(U);
+      GEN saved = gcopy(afuch_get_savedelts(X));
+      gel(saved, 1) = elts;
+      obj_insert(X, afuch_SAVEDELTS, saved);
+    }
   }
   set_avma(av);
 }
@@ -2520,17 +2520,17 @@ afuch_make_traceqf(GEN X, GEN nm, GEN Onorm)
   long lgO, i, j;
   GEN A = afuch_get_alg(X), F = alg_get_center(A);
   if (!Onorm) {/*Finding Onorm if not passed in.*/
-	GEN O = afuch_get_O(X);
+    GEN O = afuch_get_O(X);
     GEN AOconj = cgetg_copy(O, &lgO);/*Conjugates of basis of O, written in A.*/
     for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
-	Onorm = Onorm_makemat(A, O, AOconj);
+    Onorm = Onorm_makemat(A, O, AOconj);
   }
   GEN nminv = nfinv(F, nm);
   GEN M = cgetg_copy(Onorm, &lgO);
   for (i = 1; i < lgO; i++) {/*Making the traces.*/
-	gel(M, i) = cgetg(lgO, t_COL);
-	for (j = 1; j <= i; j++) gcoeff(M, j, i) = nftrace(F, nfmul(F, gcoeff(Onorm, j, i), nminv));
-	for (j = i + 1; j < lgO; j++) gcoeff(M, j, i) = gen_0;
+    gel(M, i) = cgetg(lgO, t_COL);
+    for (j = 1; j <= i; j++) gcoeff(M, j, i) = nftrace(F, nfmul(F, gcoeff(Onorm, j, i), nminv));
+    for (j = i + 1; j < lgO; j++) gcoeff(M, j, i) = gen_0;
   }
   return gerepileupto(av, M);
 }
@@ -2733,7 +2733,7 @@ afuchfdom_i(GEN X, GEN *startingset)
   pari_sp av_mid = avma;
   GEN firstelts = *startingset;
   if (!firstelts) {/*No starting set passed.*/
-	firstelts = afuchfindelts_i(X, gen_1, gtocr(gen_0, prec), C, 1, NULL, NULL);/*This may find an element with large radius, a good start.*/
+    firstelts = afuchfindelts_i(X, gen_1, gtocr(gen_0, prec), C, 1, NULL, NULL);/*This may find an element with large radius, a good start.*/
     if (!firstelts) return gc_NULL(av);/*Precision too low.*/
   }
   GEN U = NULL;
@@ -2761,9 +2761,9 @@ afuchfdom_i(GEN X, GEN *startingset)
         GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
         GEN found = afuchfindelts_i(X, gen_1, z, C, 1, NULL, NULL);
         if (!found) {/*Precision too low.*/
-		  *startingset = gerepilecopy(av, normbound_get_elts(U));
-		  return NULL;
-		}
+          *startingset = gerepilecopy(av, normbound_get_elts(U));
+          return NULL;
+        }
         if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
       }
     }
@@ -2772,10 +2772,10 @@ afuchfdom_i(GEN X, GEN *startingset)
         GEN z = hdiscrandom(R, prec);
         GEN found = afuchfindelts_i(X, gen_1, z, C, 1, NULL, NULL);
         if (!found) {/*Precision too low.*/
-		  if (!U) return gc_NULL(av);
-		  *startingset = gerepilecopy(av, normbound_get_elts(U));
-		  return NULL;
-		}
+          if (!U) return gc_NULL(av);
+          *startingset = gerepilecopy(av, normbound_get_elts(U));
+          return NULL;
+        }
         if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
       }
     }
@@ -2813,7 +2813,7 @@ afuchfdom(GEN X)
   GEN allelts = obj_check(X, afuch_SAVEDELTS);
   if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
     pari_err(e_MISC,"TO DO: I can just call the norm basis right away and win.");
-	U = normbasis(X, NULL, gel(allelts, 1), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+    U = normbasis(X, NULL, gel(allelts, 1), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
   }
   int precinc = 0;
   GEN startingset = NULL;
@@ -2823,15 +2823,15 @@ afuchfdom(GEN X)
     pari_warn(warner, "Increasing precision");
     precinc = 1;
     afuch_moreprec(X, 1);/*Increase the precision by 1.*/
-	if (startingset) {/*We did find some elements, so we save them (after removing the 0's).*/
-	  long ls = lg(startingset), i;
-	  GEN newstart = vectrunc_init(ls);
-	  for (i = 1; i < ls; i++) {
-		GEN elt = gel(startingset, i);
-		if (!gequal0(elt)) vectrunc_append(newstart, elt);
-	  }
-	  startingset = newstart;
-	}
+    if (startingset) {/*We did find some elements, so we save them (after removing the 0's).*/
+      long ls = lg(startingset), i;
+      GEN newstart = vectrunc_init(ls);
+      for (i = 1; i < ls; i++) {
+        GEN elt = gel(startingset, i);
+        if (!gequal0(elt)) vectrunc_append(newstart, elt);
+      }
+      startingset = newstart;
+    }
   }
   if (precinc) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
@@ -2841,8 +2841,8 @@ afuchfdom(GEN X)
   if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
   long type = itos(Gtype);
   if (!type) {/*Looking for O^1 only.*/
-	obj_insert(X, afuch_FDOM, U);
-	return gerepileupto(av, U);
+    obj_insert(X, afuch_FDOM, U);
+    return gerepileupto(av, U);
   }
   
   /*TO DO: FIX THIS PART.*/
@@ -2850,22 +2850,22 @@ afuchfdom(GEN X)
   GEN ALelts, normelts, O1elts = normbound_get_elts(U);
   GEN unitelts = afuch_makeunitelts(X, NULL);
   if (type > 1) {
-	ALelts = afuch_makeALelts(X);
-	if (type == 3) normelts = afuch_makenormelts(X);
+    ALelts = afuch_makeALelts(X);
+    if (type == 3) normelts = afuch_makenormelts(X);
   }
   GEN S;/*Stores the elements to add*/
   switch (type) {
-	case 1:
-	  S = unitelts;
-	  break;
-	case 2:
-	  S = shallowconcat(unitelts, ALelts);
-	  break;
-	case 3:/*case 3*/
-	  S = shallowconcat(shallowconcat(unitelts, ALelts), normelts);/*TO DO: shallowconcatvec???*/
-	  break;
-	default:
-	  S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
+    case 1:
+      S = unitelts;
+      break;
+    case 2:
+      S = shallowconcat(unitelts, ALelts);
+      break;
+    case 3:/*case 3*/
+      S = shallowconcat(shallowconcat(unitelts, ALelts), normelts);/*TO DO: shallowconcatvec???*/
+      break;
+    default:
+      S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
   }
   S = shallowconcat(S, O1elts);
   U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
@@ -2956,17 +2956,17 @@ afuch_makeunitelts(GEN X, GEN unitnorms)
 {
   pari_sp av = avma;
   if (!unitnorms) {
-	GEN A = afuch_get_alg(X);
-	GEN F = alg_get_center(A);
-	long prec = afuch_get_prec(X);
-	GEN B = Buchall(F, 0, prec);
-	unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
+    GEN A = afuch_get_alg(X);
+    GEN F = alg_get_center(A);
+    long prec = afuch_get_prec(X);
+    GEN B = Buchall(F, 0, prec);
+    unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
   }
   long lu, i;
   GEN elts = cgetg_copy(unitnorms, &lu), Oinv = afuch_get_Oinv(X);
   for (i = 1; i < lu; i++) {
-	GEN elt = gel(afuchfindelts(X, gel(unitnorms, i), 1, NULL), 1);
-	gel(elts, i) = QM_QC_mul(Oinv, elt);/*TO DO: No more QM_QC_mul once I fix this order transport business.*/
+    GEN elt = gel(afuchfindelts(X, gel(unitnorms, i), 1, NULL), 1);
+    gel(elts, i) = QM_QC_mul(Oinv, elt);/*TO DO: No more QM_QC_mul once I fix this order transport business.*/
   }
   return gerepilecopy(av, elts);
 }
@@ -3004,27 +3004,27 @@ bnf_make_unitnorms(GEN B, long split, long prec)
   GEN rts = nf_get_roots(F);
   GEN signs = cgetg(lu, t_MAT);/*Stores the signs of each unit at each place.*/
   for (i = 1; i < lu; i++) {
-	GEN sgn = cgetg(lu, t_VECSMALL), un = gel(units, i);
-	for (j = 1; j < lu; j++) sgn[j] = (1 - signe(poleval(un, gel(rts, j)))) >> 1;/*0 for sign 1, 1 for sign -1*/
-	gel(signs, i) = sgn;
+    GEN sgn = cgetg(lu, t_VECSMALL), un = gel(units, i);
+    for (j = 1; j < lu; j++) sgn[j] = (1 - signe(poleval(un, gel(rts, j)))) >> 1;/*0 for sign 1, 1 for sign -1*/
+    gel(signs, i) = sgn;
   }
   GEN ker = Flm_ker(signs, 2);/*Basis for the kernel, i.e. totally positive units.*/
   GEN vecei = vecsmall_ei(lu - 1, split);/*Positive outside of the split place, where negative.*/
   GEN left = Flm_Flc_invimage(signs, vecei, 2);/*Element giving this sign distribution, if it exists.*/
   GEN uneg;
   if (left) {
-	uneg = gen_1;
-	for (i = 1; i < lu; i++) if (left[i]) uneg = nfmul(F, uneg, gel(units, i));/*Multiply out the element.*/
-	uneg = lift(basistoalg(F, uneg));
+    uneg = gen_1;
+    for (i = 1; i < lu; i++) if (left[i]) uneg = nfmul(F, uneg, gel(units, i));/*Multiply out the element.*/
+    uneg = lift(basistoalg(F, uneg));
   }
   else uneg = gen_0;/*All units that are positive outside of split are positive at split too.*/
   long lv = lg(ker);
   GEN v = cgetg(lv, t_VEC);
   for (i = 1; i < lv; i++) {
-	GEN elt = gen_1;
-	GEN pat = gel(ker, i);
-	for (j = 1; j < lu; j++) if (pat[j]) elt = nfmul(F, elt, gel(units, j));/*Multiply out the element.*/
-	gel(v, i) = lift(basistoalg(F, elt));
+    GEN elt = gen_1;
+    GEN pat = gel(ker, i);
+    for (j = 1; j < lu; j++) if (pat[j]) elt = nfmul(F, elt, gel(units, j));/*Multiply out the element.*/
+    gel(v, i) = lift(basistoalg(F, elt));
   }
   return gerepilecopy(av, mkvec2(v, uneg));
 }
@@ -3057,10 +3057,10 @@ afuchinnormalizer(GEN X, GEN g)
   GEN v = col_ei(lO - 1, 1);
   gel(O1, 1) = g, gel(O2, 1) = g;/*O1=gO, O2=Og*/
   for (i = 2; i < lO; i++) {/*Form the conjugate matrix*/
-	gel(v, i - 1) = gen_0;
-	gel(v, i) = gen_1;
-	gel(O1, i) = afuchmul(X, g, v);
-	gel(O2, i) = afuchmul(X, v, g);
+    gel(v, i - 1) = gen_0;
+    gel(v, i) = gen_1;
+    gel(O1, i) = afuchmul(X, g, v);
+    gel(O2, i) = afuchmul(X, v, g);
   }
   return gc_int(av, gequal(hnf(O1), hnf(O2)));
 }
@@ -3190,15 +3190,15 @@ afuch_make_qf(GEN X, GEN nm, GEN z, GEN tracepart, GEN realnm)
   if (gequal1(nm)) qfup = RgM_upper_add(rM_upper_r_mul(N, c), gel(qfmats, 5));/*The correct qf, in upper triangular form.*/
   else {/*Norm not 1, so we need to adjust qfmats[5].*/
     if (!tracepart) tracepart = afuch_make_traceqf(X, nm, NULL);/*Find Tr_{F/Q}(nrd(g)/nm).*/
-	if (!realnm) {
-	  GEN A = afuch_get_alg(X), F = alg_get_center(A);
-	  long split = algsplitoo(A);
+    if (!realnm) {
+      GEN A = afuch_get_alg(X), F = alg_get_center(A);
+      long split = algsplitoo(A);
       long Fvar = nf_get_varn(F);
       GEN rt = gel(nf_get_roots(F), split);
-	  realnm = gsubst(nm, Fvar, rt);
-	}
-	c = mpdiv(c, realnm);
-	qfup = RgM_upper_add(rM_upper_r_mul(N, c), tracepart);/*The correct qf, in upper triangular form.*/
+      realnm = gsubst(nm, Fvar, rt);
+    }
+    c = mpdiv(c, realnm);
+    qfup = RgM_upper_add(rM_upper_r_mul(N, c), tracepart);/*The correct qf, in upper triangular form.*/
   }
   long n = lg(qfup), i, j;
   for (i = 2; i < n; i++) for (j = 1; j < i; j++) gcoeff(qfup, i, j) = gcoeff(qfup, j, i);/*Make it symmetric, which is required for qfminim.*/
@@ -3224,11 +3224,11 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
   int checknormalizer = !gequal1(nm);/*If the norm is 1, no need to check the normalizer.*/
   if (nf_get_degree(F) == 1) {/*Over Q, so no real approximation required.*/
     for (i = 1; i < lv; i++) {
-	  GEN elt = gel(v, i);
+      GEN elt = gel(v, i);
       GEN norm = afuchnorm_fast(X, elt);
       if (!gequal(norm, nm)) continue;/*The norm was not nm.*/
       if (afuchistriv(X, elt)) continue;/*Ignore trivial elements.*/
-	  if (checknormalizer && !afuchinnormalizer(X, elt)) continue;/*Correct norm, but not in normalizer.*/
+      if (checknormalizer && !afuchinnormalizer(X, elt)) continue;/*Correct norm, but not in normalizer.*/
       gel(found, ind) = elt;
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
@@ -3239,23 +3239,23 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
   }
   else {
     if (!realnm) {/*Compute the real norm first.*/
-	  if (gequal1(nm)) realnm = gen_1;
-	  else {
+      if (gequal1(nm)) realnm = gen_1;
+      else {
         long split = algsplitoo(A);
         long Fvar = nf_get_varn(F);
         GEN rt = gel(nf_get_roots(F), split);
-	    realnm = gsubst(nm, Fvar, rt);
-	  }
-	}
+        realnm = gsubst(nm, Fvar, rt);
+      }
+    }
     for (i = 1; i < lv; i++) {
-	  GEN elt = gel(v, i);
+      GEN elt = gel(v, i);
       GEN realnorm = afuchnorm_real(X, elt);
       if (!toleq(realnorm, realnm, lowtol)) continue;/*Norm not nm up to tolerance.*/
       if (afuchistriv(X, elt)) continue;/*Ignore trivial elements.*/
       GEN norm = afuchnorm_fast(X, elt);
       norm = basistoalg(F, norm);
       if (!gequal(norm, nm)) continue;/*The norm was close to nm but not equal.*/
-	  if (checknormalizer && !afuchinnormalizer(X, elt)) continue;/*Correct norm, but not in normalizer.*/
+      if (checknormalizer && !afuchinnormalizer(X, elt)) continue;/*Correct norm, but not in normalizer.*/
       gel(found, ind) = elt;
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
@@ -3277,31 +3277,31 @@ GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
   if (!C) C = afuch_get_bestC(X);
   GEN tracepart = NULL, realnm = NULL;
   if (!gequal1(nm)) {/*Set the trace part and real norm here, AND update C*/
-	tracepart = afuch_make_traceqf(X, nm, NULL);/*Find Tr_{F/Q}(nrd(g)/nm).*/
-	GEN A = afuch_get_alg(X), F = alg_get_center(A);
-	long split = algsplitoo(A);
+    tracepart = afuch_make_traceqf(X, nm, NULL);/*Find Tr_{F/Q}(nrd(g)/nm).*/
+    GEN A = afuch_get_alg(X), F = alg_get_center(A);
+    long split = algsplitoo(A);
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
-	realnm = gsubst(nm, Fvar, rt);
-	/*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner???
-	C = mpdiv(C, realnm);
-	if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
-	*/
+    realnm = gsubst(nm, Fvar, rt);
+    /*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner???
+    C = mpdiv(C, realnm);
+    if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
+    */
   }
   GEN ret = cgetg(N + 1, t_VEC);
   long skip = 0, found = 0, i;
   while (found < N) {
-	av2 = avma;
-	GEN z = hdiscrandom(R, prec);
-	GEN E = afuchfindelts_i(X, nm, z, C, 1, tracepart, realnm);
-	if (!E) {/*Precision too low, we allow up to 20 exceptions before failing.*/
-	  skip++;
-	  if (skip > 20) pari_err_PREC("Precision too low for Fincke Pohst");
-	  continue;
-	}
-	if (lg(E) == 1) { set_avma(av2); continue; }
-	found++;
-	gel(ret, found) = gel(E, 1);
+    av2 = avma;
+    GEN z = hdiscrandom(R, prec);
+    GEN E = afuchfindelts_i(X, nm, z, C, 1, tracepart, realnm);
+    if (!E) {/*Precision too low, we allow up to 20 exceptions before failing.*/
+      skip++;
+      if (skip > 20) pari_err_PREC("Precision too low for Fincke Pohst");
+      continue;
+    }
+    if (lg(E) == 1) { set_avma(av2); continue; }
+    found++;
+    gel(ret, found) = gel(E, 1);
   }
   GEN O = afuch_get_O(X);
   for (i = 1; i <= N; i++) gel(ret, i) = QM_QC_mul(O, gel(ret, i));
@@ -3683,11 +3683,11 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   GEN prune;
   if (!prunetype) prune = const_vec(lM - 1, gen_1);/*No funny business, just normal Fincke-Pohst.*/
   else {/*Linear pruning*/
-	/*GEN con = dbltor(1.05);*/
-	prune = cgetg(lM, t_VEC);
-	long n = lM - 1;
-	/*for (i = 1; i < lM; i++) gel(prune, i) = gmin_shallow(gen_1, divrs(mulrs(con, lM - i), n));*/
-	for (i = 1; i < lM; i++) gel(prune, i) = rdivss(lM - i, n, prec);
+    /*GEN con = dbltor(1.05);*/
+    prune = cgetg(lM, t_VEC);
+    long n = lM - 1;
+    /*for (i = 1; i < lM; i++) gel(prune, i) = gmin_shallow(gen_1, divrs(mulrs(con, lM - i), n));*/
+    for (i = 1; i < lM; i++) gel(prune, i) = rdivss(lM - i, n, prec);
   }
   GEN q = gaussred_from_QR(R, gprecision(Vnorm));
   if (q) res = smallvectors_prune(q, C, prune);
@@ -3723,40 +3723,40 @@ smallvectors_prune(GEN q, GEN C, GEN prune)
         v = clonefill(v, found, maxv);/*Clone to the heap the already found vectors.*/
         gerepileall(av, 5, &partsums, &r, &x, &partnorms, &inc);
     }
-	if (down) {/*We have just gone down, so must initialize inc[k], x[k], partsums[k,], and r[k]*/
-	  inc[k] = 1;
-	  for (j = r[k] - 1; j > k; j--) {/*Update the row from right to left*/
-	    gcoeff(partsums, k, j) = addmulimp(gcoeff(partsums, k, j + 1), gel(x, j), gcoeff(q, k, j));
-	  }
-	  r[k] = k + 1;/*Whole row is correct.*/
-	  gel(x, k) = mpround(mpneg(gcoeff(partsums, k, k + 1)));/*Smallest possible value for x_k+sum_{j=k+1}^n q_{i, j}x_j*/
-	}
-	else sv_step(x, partnorms, inc, k);/*We went up, so increment x[k].*/
-	GEN nextnorm = norm_aux(gel(x, k), gel(partnorms, k + 1), gcoeff(partsums, k, k + 1), gcoeff(q, k, k));/*Next norm*/
-	if (mpgreaterthan(nextnorm, gel(bounds, k))) {
-	  sv_step(x, partnorms, inc, k);/*If we are too big, then increasing x once MIGHT still give a valid x. Increasing it twice 100% won't.*/
-	  nextnorm = norm_aux(gel(x, k), gel(partnorms, k + 1), gcoeff(partsums, k, k + 1), gcoeff(q, k, k));/*Next norm*/
-	  if (mpgreaterthan(nextnorm, gel(bounds, k))) {/*We have run out of steam at this level, go on to the next one.*/
-	    long next = k + 1;
-	    if (next > n) break;/*Done!*/
-	    for (j = k; j > 0; j--) {/*Update r[j]*/
-	      if (r[j] <= next) r[j] = next + 1;
-	      else break;/*As soon as r[j]>k, it is true for the rest of the j's to 1.*/
-	    }
-	    k = next;
-	    down = 0;/*Going up!*/
-	    continue;
-	  }
-	}
-	gel(partnorms, k) = nextnorm;/*Still valid!*/
-	if (k > 1) { k--; down = 1; continue; }/*Go down the tree.*/
-	/*Now, there is a solution to add.*/
-	down = 0;/*Want to stay here and just increment.*/
-	if (!signe(gel(partnorms, 1))) continue;/*Exclude 0.*/
-	found++;
-	gel(v, found) = leafcopy(x);
-	if (found != maxv) continue;/*Still room.*/
-	maxv <<= 1;/*Double the size*/
+    if (down) {/*We have just gone down, so must initialize inc[k], x[k], partsums[k,], and r[k]*/
+      inc[k] = 1;
+      for (j = r[k] - 1; j > k; j--) {/*Update the row from right to left*/
+        gcoeff(partsums, k, j) = addmulimp(gcoeff(partsums, k, j + 1), gel(x, j), gcoeff(q, k, j));
+      }
+      r[k] = k + 1;/*Whole row is correct.*/
+      gel(x, k) = mpround(mpneg(gcoeff(partsums, k, k + 1)));/*Smallest possible value for x_k+sum_{j=k+1}^n q_{i, j}x_j*/
+    }
+    else sv_step(x, partnorms, inc, k);/*We went up, so increment x[k].*/
+    GEN nextnorm = norm_aux(gel(x, k), gel(partnorms, k + 1), gcoeff(partsums, k, k + 1), gcoeff(q, k, k));/*Next norm*/
+    if (mpgreaterthan(nextnorm, gel(bounds, k))) {
+      sv_step(x, partnorms, inc, k);/*If we are too big, then increasing x once MIGHT still give a valid x. Increasing it twice 100% won't.*/
+      nextnorm = norm_aux(gel(x, k), gel(partnorms, k + 1), gcoeff(partsums, k, k + 1), gcoeff(q, k, k));/*Next norm*/
+      if (mpgreaterthan(nextnorm, gel(bounds, k))) {/*We have run out of steam at this level, go on to the next one.*/
+        long next = k + 1;
+        if (next > n) break;/*Done!*/
+        for (j = k; j > 0; j--) {/*Update r[j]*/
+          if (r[j] <= next) r[j] = next + 1;
+          else break;/*As soon as r[j]>k, it is true for the rest of the j's to 1.*/
+        }
+        k = next;
+        down = 0;/*Going up!*/
+        continue;
+      }
+    }
+    gel(partnorms, k) = nextnorm;/*Still valid!*/
+    if (k > 1) { k--; down = 1; continue; }/*Go down the tree.*/
+    /*Now, there is a solution to add.*/
+    down = 0;/*Want to stay here and just increment.*/
+    if (!signe(gel(partnorms, 1))) continue;/*Exclude 0.*/
+    found++;
+    gel(v, found) = leafcopy(x);
+    if (found != maxv) continue;/*Still room.*/
+    maxv <<= 1;/*Double the size*/
     GEN vnew = clonefill(vec_lengthen(v, maxv), found, maxv);
     if (isclone(v)) gunclone(v);
     v = vnew;
