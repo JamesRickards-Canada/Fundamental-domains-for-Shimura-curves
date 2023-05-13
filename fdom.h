@@ -95,7 +95,7 @@ GEN hdiscrandom(GEN R, long prec);
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
-GEN afuchinit(GEN A, GEN O, GEN type, GEN p, int makefdom, long prec);
+GEN afuchinit(GEN A, GEN O, GEN type, int flag, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchfdom(GEN X);

@@ -31,7 +31,7 @@ avgtime(fil, A, Or, case, N)={
   times=vector(N);
   for(i=1,N,
 	gettime();
-	if(Or, X=afuchinit(A, Or, , , 1), X=afuchinit(A, , , , 1));
+	if(Or, X=afuchinit(A, Or, , 1), X=afuchinit(A, , , 1));
 	times[i]=gettime()/1000;
   );
   dat=avg_stdev(times);

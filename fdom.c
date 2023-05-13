@@ -2046,7 +2046,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GE
   if (ellind < lgcyc) {
     ngens--;/*One less generator.*/
     long lr = lg(r), irel = 0, rind = 0;/*r[rind] shares an index with cyc[irel].*/
-    for (i = ellind; i < lgcyc; i++) {/*Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A, , I/2);*/
+    for (i = ellind; i < lgcyc; i++) {/*Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A);p=I/2*/
       long maxj = (lg(gel(cyc, i)) - 1)/cyctype[i];/*Since the elliptic relation is repeated cyctype[i] times, we only need to check the first grouping of indices.*/
       for (j = 1; j <= maxj; j++) {
         long ind = gel(cyc, i)[j], mind = -ind, rinc;
@@ -2294,14 +2294,14 @@ savedelts
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
 GEN
-afuchinit(GEN A, GEN O, GEN type, GEN p, int flag, long prec)
+afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
 {
   pari_sp av = avma;
   GEN F = alg_get_center(A);
   long nF = nf_get_degree(F);
-  if (!O) O = matid(4*nF);
+  if (!O) O = matid(nF << 2);
   if (!type) type = gen_0;
-  if (!p) p = defp(prec);
+  GEN p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
   GEN Oinv, AX = obj_init(6, 10);
   gel(AX, 1) = O;
