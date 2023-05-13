@@ -150,7 +150,7 @@ static GEN Onorm_makemat(GEN A, GEN O, GEN AOconj);
 static GEN Onorm_toreal(GEN A, GEN Onorm);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
-static GEN afucharea(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec);
+static GEN afuchO1area(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec);
 static GEN afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec);
 static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
@@ -928,7 +928,7 @@ argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
 
 /*NORMALIZED BOUNDARY FORMATTING
 A normalized boundary is represented by U, where
-U=[elts, sides, vcors, vargs, crossind, kact, area, spair, deleted]
+U=[elts, sides, vcors, vargs, crossind, kact, area, spair, infinite]
 elts
     Elements of Gamma whose isometric circles give the sides of the normalied boundary. An infinite side corresponds to the element 0. Elements cannot be stored as type t_INT.
 sides
@@ -2576,7 +2576,7 @@ Onorm_toreal(GEN A, GEN Onorm)
 
 /*Returns the area of the fundamental domain of Q, computed to computeprec (Olevel is the output of algorderlevel(A, O, 1)). Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.*/
 static GEN
-afucharea(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
+afuchO1area(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
 {
   pari_sp av = avma;
   long bits = bit_accuracy(computeprec);
@@ -2635,7 +2635,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
   pari_sp av = avma;
   GEN F = alg_get_center(A);
   GEN Olevel_fact = algorderlevel(A, O, 1);
-  GEN area = afucharea(A, O, Olevel_fact, 3, prec);
+  GEN area = afuchO1area(A, O, Olevel_fact, 3, prec);
   GEN Olevel_nofact = idealfactorback(F, Olevel_fact, NULL, 0);
   GEN C = afuchbestC(A, O, Olevel_nofact, prec);
   GEN gamma = gtofp(dbltor(2.1), prec);
@@ -2649,6 +2649,31 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
+/*Returns the area of X. X can either be afuchinit or the fdom.*/
+GEN
+afucharea(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  return gerepilecopy(av, normbound_get_area(U));
+}
+
+/*Returns the elements giving the side for the fundamental domain of X.*/
+GEN
+afuchelts(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  GEN elts = normbound_get_elts(U);
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) return gerepilecopy(av, elts);
+  long i, le = lg(elts);
+  for (i = 1; i < le; i++) gel(elts, i) = QM_QC_mul(O, gel(elts, i));
+  return gerepilecopy(av, elts);
+}
+
 /*Computes the fundamental domain for O^1, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
 static GEN
 afuchfdom_i(GEN X, GEN *startingset)
@@ -2657,7 +2682,7 @@ afuchfdom_i(GEN X, GEN *startingset)
   GEN gdat = afuch_get_gdat(X);
   long prec = lg(gdat_get_tol(gdat));
   GEN twopi = Pi2n(1, prec);
-  GEN area = afuch_get_area(X);
+  GEN area = afuch_get_O1area(X);
   GEN areabound = addrr(area, shiftr(area, -1));/*area*1.5*/
   GEN C = afuch_get_bestC(X);/*Optimally chosen value of C*/
   GEN R = afuch_get_R(X);/*Starting radius for finding points. Will increase if not sufficient.*/
@@ -2839,6 +2864,16 @@ afuchsignature(GEN X)
   return gerepileupto(av, sig);
 }
 
+/*Returns the side pairing for X. X can either be afuchinit or the fdom.*/
+GEN
+afuchspair(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  return gerepilecopy(av, normbound_get_spair(U));
+}
+
 /*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element. ASSUMES O=IDENTITY*/
 GEN
 afuchredelt(GEN X, GEN g, GEN z)
@@ -2885,7 +2920,7 @@ afuch_makeunitelts(GEN X, GEN unitnorms)
   if (!unitnorms) {
 	GEN A = afuch_get_alg(X);
 	GEN F = alg_get_center(A);
-	long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
+	long prec = afuch_get_prec(X);
 	GEN B = Buchall(F, 0, prec);
 	unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
   }
@@ -3199,7 +3234,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
 GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
 {
   pari_sp av = avma, av2;
-  long prec = lg(gdat_get_tol(afuch_get_gdat(X)));
+  long prec = afuch_get_prec(X);
   GEN R = afuch_get_R(X);
   if (!C) C = afuch_get_bestC(X);
   GEN tracepart = NULL, realnm = NULL;
@@ -3210,7 +3245,7 @@ GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
 	realnm = gsubst(nm, Fvar, rt);
-	/*I used to have these next two lines in, but it seems to actually be bad in some cases.
+	/*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner???
 	C = mpdiv(C, realnm);
 	if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
 	*/
@@ -3230,8 +3265,8 @@ GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
 	found++;
 	gel(ret, found) = gel(E, 1);
   }
-  GEN Or = afuch_get_O(X);
-  for (i = 1; i <= N; i++) gel(ret, i) = QM_QC_mul(Or, gel(ret, i));
+  GEN O = afuch_get_O(X);
+  for (i = 1; i <= N; i++) gel(ret, i) = QM_QC_mul(O, gel(ret, i));
   return gerepilecopy(av, ret);
 }
 

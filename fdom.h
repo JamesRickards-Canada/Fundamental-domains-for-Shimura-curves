@@ -54,7 +54,7 @@ afuch_get_qfmats(GEN X) { return obj_check(X, afuch_QFMATS); }
 INLINE GEN
 afuch_get_gdat(GEN X) { return obj_check(X, afuch_GDAT); }
 INLINE GEN
-afuch_get_area(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 1) : NULL; }
+afuch_get_O1area(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 1) : NULL; }
 INLINE GEN
 afuch_get_bestC(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 2) : NULL; }
 INLINE GEN
@@ -71,6 +71,8 @@ INLINE GEN
 afuch_get_pres(GEN X) { return obj_check(X, afuch_PRES); }
 INLINE GEN
 afuch_get_savedelts(GEN X) { return obj_check(X, afuch_SAVEDELTS); }
+INLINE long
+afuch_get_prec(GEN X) { return lg(gdat_get_tol(afuch_get_gdat(X))); }
 
 /*SECTION 1: GEOMETRIC METHODS*/
 
@@ -98,10 +100,13 @@ GEN hdiscrandom(GEN R, long prec);
 GEN afuchinit(GEN A, GEN O, GEN type, int flag, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+GEN afucharea(GEN X);
+GEN afuchelts(GEN X);
 GEN afuchfdom(GEN X);
 GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchredelt(GEN X, GEN g, GEN z);
+GEN afuchspair(GEN X);
 GEN afuchword(GEN X, GEN g);
 
 /*3: NON NORM 1 METHODS*/

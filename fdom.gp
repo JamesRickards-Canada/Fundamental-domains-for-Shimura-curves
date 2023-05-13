@@ -17,12 +17,18 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {flag=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p=Pi/8+0.5*I is sent to 0. The default order O is the stored maximal order in A, and the default type is 0. If flag = 1, also computes the fundamental domain. flag = 2 also computes the presentation and signature.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
+	install(afucharea,"G",,fdom_library);
+	addhelp(afucharea,"afucharea(X): returns the area of X.");
+	install(afuchelts,"G",,fdom_library);
+	addhelp(afuchelts,"afuchelts(X): returns the vector of elements giving the sides of the fundamental domain of X, which generate the group.");
 	install(afuchfdom,"G",,fdom_library);
 	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X. The elements returned are with respect to the basis of O, so you must convert back if you want to use them in A.");
 	install(afuchpresentation,"G",,fdom_library);
 	addhelp(afuchpresentation,"afuchpresentation(X): returns the presentation P of X. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A. P[3] tracks the sides of the fundamental domain in terms of the generators here, used to write an element as a word in these generators.");
 	install(afuchsignature,"G",,fdom_library);
 	addhelp(afuchsignature,"afuchsignature(X): returns the signature of X, i.e. [genus, [lengths of elliptic cycles], # of parabolic cycles].");
+	install(afuchspair,"G",,fdom_library);
+	addhelp(afuchspair,"afuchspair(X): returns S, the side pairing of X. The format is a Vecsmall, where side i is paired with side S[i]. Note that under some conventions, S[i]=i corresponds to there being an extra vertex at the midpoint of the edge (which is fixed), and the pairing is between the two new distinct sides formed.");
 	install(afuchredelt,"GDGD0,G,",,fdom_library);
 	addhelp(afuchredelt,"afuchredelt(X, {g=id}, {z=0}: reduces gz to the fundamental domain, returning [g'g, g'gz, decomp], where g'gz is reduced, and g'=algmulvec(A, U[1], decomp). Except for a set of z of area 0, g'g should be trivial.");
 	install(afuchword,"GG",,fdom_library);
