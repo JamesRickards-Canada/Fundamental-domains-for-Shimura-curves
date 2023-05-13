@@ -7,6 +7,7 @@
 14. Input the trace_F/Q(nrd(g)/nm) part to the methods, and have a method for finding n non-trivial elements (instead of our current gp-accessible method).
 15. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
 16. Figure out what to do with converting to and from orders. In particular, afuchfindelts auto converts back, but we don't want that in the normalizer section.
+17. Add testing for changing p.
 */
 
 /*
@@ -159,8 +160,8 @@ static GEN afuchfdom_i(GEN X, GEN *startingset);
 
 /*3: NON NORM 1 METHODS*/
 static GEN afuch_makeunitelts(GEN X, GEN unitnorms);
-static GEN afuch_makeALelts(GEN x);
-static GEN afuch_makenormelts(GEN x);
+static GEN afuch_makeALelts(GEN X);
+static GEN afuch_makenormelts(GEN X);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
@@ -2337,6 +2338,43 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   return gerepilecopy(av, AX);
 }
 
+/*Updates X to the new value of p.*/
+void
+afuch_changep(GEN X, GEN p)
+{
+  pari_sp av = avma;
+  GEN A = afuch_get_alg(X);
+  GEN O = afuch_get_O(X);
+  long prec = afuch_get_prec(X);
+  p = uhp_safe(p, prec);
+  GEN kleinmats = afuch_make_kleinmats(A, O, p, prec);
+  obj_insert(X, afuch_KLEINMATS, kleinmats);
+  GEN qfm = afuch_make_qfmats(kleinmats);
+  gel(qfm, 5) = gcopy(gel(afuch_get_qfmats(X), 5));/*This part was exact, so we can copy it over.*/
+  obj_insert(X, afuch_QFMATS, qfm);
+  GEN gdat = gcopy(afuch_get_gdat(X));
+  gel(gdat, 2) = p;
+  obj_insert(X, afuch_GDAT, gdat);
+  GEN U = afuch_get_fdom(X);
+  if (U) {/*Recompute the fundamental domain.*/
+	U = normbasis(X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    obj_insert(X, afuch_FDOM, U);
+	GEN pres = afuch_get_pres(X);
+	if (pres) {/*Recompute the presentation.*/
+	  pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+      obj_insert(X, afuch_PRES, pres);
+	}
+	GEN type = afuch_get_type(X);
+    if (gequalgs(type, 3)) {/*Recompute the saved elements.*/
+	  GEN elts = normbound_get_elts(U);
+	  GEN saved = gcopy(afuch_get_savedelts(X));
+	  gel(saved, 1) = elts;
+	  obj_insert(X, afuch_SAVEDELTS, saved);
+	}
+  }
+  set_avma(av);
+}
+
 /*Updates X to have precision prec+inc. Does not initialize the fundamental domain, signature, or precision: this will typically be triggered when we find that we don't have enough precision for qfminim when computing the fundamental domain.*/
 static void
 afuch_moreprec(GEN X, long inc)
@@ -2935,7 +2973,7 @@ afuch_makeunitelts(GEN X, GEN unitnorms)
 
 /*TO DO*/
 static GEN
-afuch_makeALelts(GEN x)
+afuch_makeALelts(GEN X)
 {
   pari_err(e_MISC, "Sorry, this has not yet been implemented.");
   return ghalf;
@@ -2943,7 +2981,7 @@ afuch_makeALelts(GEN x)
 
 /*TO DO*/
 static GEN
-afuch_makenormelts(GEN x)
+afuch_makenormelts(GEN X)
 {
   pari_err(e_MISC, "Sorry, this has not yet been implemented.");
   return ghalf;
@@ -3195,7 +3233,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
       if (!nomax) break;/*We have it the maximum return vector.*/
-      maxelts = 2*maxelts;/*Double and continue.*/
+      maxelts = maxelts << 1;/*Double and continue.*/
       found = vec_lengthen(found, maxelts);
     }  
   }
@@ -3222,7 +3260,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
       if (!nomax) break;/*We have it the maximum return vector.*/
-      maxelts = 2*maxelts;/*Double and continue.*/
+      maxelts = maxelts << 1;/*Double and continue.*/
       found = vec_lengthen(found, maxelts);
     }
   }

@@ -15,6 +15,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	\\3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS
 	install(afuchinit,"GDGDGD1,L,p",,fdom_library);
 	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {flag=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p=Pi/8+0.5*I is sent to 0. The default order O is the stored maximal order in A, and the default type is 0. If flag = 1, also computes the fundamental domain. flag = 2 also computes the presentation and signature.");
+	install(afuch_changep,"vGG",,fdom_library);
+	addhelp(afuch_changep,"afuch_changep(X, p): changes the value of p, i.e. what is sent to 0 under the map from the upper half plane to the unit disc/Klein model. We recompute the fundamental domain and presentation if they were initialized.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
 	install(afucharea,"G",,fdom_library);
@@ -63,7 +65,7 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 
 \\SECTION 1: VISUALIZATION
 	install(afuchfdom_latex,"vGrD1,L,D1,L,D1,L,D1,L,",,fdom_library);
-	addhelp(afuchfdom_latex,"Inputs: U, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain U to a LaTeX document in plots/build/filename.tex. If model=0, use the upper half plane model, if model=1, use the unit disc model, and if model=2, use the Klein model. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra. NOTE: displaying in the Klein model is not suggested, as points are closer to the unit disc, and it does not show up very well.");
+	addhelp(afuchfdom_latex,"Inputs: X, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}.\n Writes the fundamental domain of X to a LaTeX document in plots/build/filename.tex. If model=0, use the upper half plane model, if model=1, use the unit disc model, and if model=2, use the Klein model. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra. NOTE: displaying in the Klein model is not suggested, as points are closer to the unit disc, and it does not show up very well.");
 
 \\SECTION 2: TUNING
 

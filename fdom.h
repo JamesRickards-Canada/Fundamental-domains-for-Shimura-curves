@@ -98,6 +98,7 @@ GEN hdiscrandom(GEN R, long prec);
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
 GEN afuchinit(GEN A, GEN O, GEN type, int flag, long prec);
+void afuch_changep(GEN X, GEN p);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afucharea(GEN X);
