@@ -157,6 +157,7 @@ static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 static GEN afuchfdom_i(GEN X, GEN *startingset);
+static int nextsub(GEN S, long n);
 
 /*3: NON NORM 1 METHODS*/
 static GEN afuch_makeunitelts(GEN X, GEN unitnorms);
@@ -1805,7 +1806,7 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
     if (ind > maxind) {/*Make decomp longer*/
-      maxind = maxind<<1;/*Double it.*/
+      maxind <<= 1;/*Double it.*/
       decomp = vecsmall_lengthen(decomp, maxind);
     }
     decomp[ind] = outside;
@@ -2639,9 +2640,9 @@ afuchO1area(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
   }/*Product of N(p)^e*(1+1/N(p)) over p^e||level.*/
   GEN ar = gmul(gpow(nfdisc(pol), mkfracss(3, 2), computeprec), norm);/*d_F^(3/2)*phi(D)*/
   ar = gmul(ar, elevpart);/*d_F^(3/2)*phi(D)*psi(M)*/
-  long n = nf_get_degree(F), twon = 2*n;
+  long n = nf_get_degree(F), twon = n << 1;
   ar = gmul(ar, zetaval);/*zeta_F(2)*d_F^(3/2)*phi(D)*/
-  ar = gshift(ar, 3 - twon);
+  ar = mpshift(ar, 3 - twon);
   ar = gmul(ar, gpowgs(mppi(computeprec), 1 - twon));/*2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2)*phi(D)*/
   return gerepileupto(av, gtofp(ar, prec));
 }
@@ -2874,6 +2875,123 @@ afuchfdom(GEN X)
   return gerepileupto(av, U);
 }
 
+
+/*Given a totally real number field F (with variable not x), we return [pairs, areas, rprimes], where A=alginit(F, pairs[i]) gives an arithmetic Fuchsian group (with respect to the maximal order) whose area, areas[i], is between Amin and Amax, and the multiset of primes lying above the ramified ideals is rprimes[i]. In fact, we find all such algebras that are split only at the place "split". Can pass Amax as NULL to go from 0 to Amin. Currently, we do not treat Eichler orders here.*/
+GEN
+afuchlist(GEN F, GEN Amin, GEN Amax, long split)
+{
+  pari_sp av = avma, av2;
+  long bits = bit_accuracy(3);
+  GEN pol = nf_get_pol(F);
+  GEN zetaval = lfun(pol, gen_2, bits);/*zeta_F(2)*/
+  long n = nf_get_degree(F), twon = n << 1;
+  GEN ar = gmul(gpow(nfdisc(pol), gdivsg(3, gen_2), 3), zetaval);/*zeta_F(2)*d_F^(3/2)*/
+  ar = mpshift(ar, 3 - twon);
+  ar = gmul(ar, gpowgs(mppi(3), 1 - twon));/*2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2). The area is ar*product of N(p)-1 across the prime ideals dividing D*/
+  if (!Amax) { Amax = Amin; Amin = gen_0; }
+  GEN phimin = gceil(gdiv(Amin, ar));
+  GEN phimax = gfloor(gdiv(Amax, ar));/*The min and max possible values of the product of N(p)-1*/
+  GEN plist = primes0(mkvec2(gen_2, addis(phimax, 1)));/*The possible primes lying above divisors of D in the given area range.*/
+  long lp = lg(plist), i, j;
+  GEN poss_ideal = vectrunc_init(n*lp), poss_norm = vectrunc_init(n*lp);
+  for (i = 1; i < lp; i++) {
+    GEN pdec = idealprimedec(F, gel(plist, i));
+    for (j = 1; j < lg(pdec); j++) {
+      GEN nm = subis(pr_norm(gel(pdec, j)), 1);
+      if (gcmp(nm, phimax) <= 0) {/*It's possible!*/
+	    vectrunc_append(poss_ideal, gel(pdec, j));/*Add the ideal*/
+		vectrunc_append(poss_norm, nm);/*Add the norm*/
+	  }
+    }
+  }
+  GEN order = indexsort(poss_norm);/*Order smallest to largest.*/
+  long par = (n - 1)%2, maxprimes = 0, leno = lg(order) - 1;/*The parity of the number of prime divisors we need.*/
+  GEN pro = gen_1;
+  while (cmpii(pro, phimax) < 0 && maxprimes < leno){/*maxprimes keeps track of the maximal number of prime divisors we can take*/
+    maxprimes++;
+    pro = mulii(pro, gel(poss_norm, order[maxprimes]));
+  }
+  if (maxprimes%2 != par) maxprimes--;/*Make it line up with parity.*/
+  GEN infram = const_vecsmall(n, 1);
+  infram[split] = 0;/*The infinite ramification vector.*/
+  GEN condition = cgetg(4, t_VEC);/*For specifying the algebra by Hasse invariants*/
+  gel(condition, 1) = gen_2;
+  gel(condition, 3) = infram;
+  long maxalg = lp, foundalg = 0;
+  GEN algdat = cgetg(maxalg + 1, t_VEC);/*Stores the data we find.*/
+  long nprime;
+  for (nprime = maxprimes; nprime >= 0; nprime = nprime - 2) {/*Look for all subsets with this number of primes that satisfies the condition.*/
+	gel(condition, 2) = cgetg(3, t_VEC);
+	gmael(condition, 2, 2) = const_vec(nprime, gen_1);/*All the finite places we specify should ramify.*/
+	gmael(condition, 2, 1) = cgetg(nprime + 1, t_VEC);/*To store those primes.*/
+	GEN S = cgetg(nprime + 1, t_VECSMALL);/*Look over nprime element subsets. I could do this more efficiently (in terms of failing a test => we fail the next set), but this is not the bottleneck and should be OK for now.*/
+	for (i = 1; i <= nprime; i++) S[i] = i;
+	for(;;) {
+	  av2 = avma;
+	  pro = gen_1;
+	  for (i = 1; i <= nprime; i++) pro = mulii(pro, gel(poss_norm, order[S[i]]));/*Find the total product.*/
+	  if (cmpii(pro, phimin) < 0) {
+		set_avma(av2);
+		if(nextsub(S, leno)) continue;/*To small, go on.*/
+		break;/*We reached the end.*/
+	  }
+	  if (cmpii(pro, phimax) > 0) {/*To large! Let's skip.*/
+	    i = nprime;
+		while (i > 1) {/*Finding the last block of consecutive numbers.*/
+		  if (S[i] - S[i - 1] != 1) break;
+		  i--;
+		}
+		if (i == 1) break;/*S[1]...S[nprime] is consecutive and too big, so we will always lose from now on.*/
+		S[i - 1]++;
+		for (j = i; j <= nprime; j++) S[j] = S[j - 1] + 1;
+		set_avma(av2);
+		continue;
+	  }
+	  for (i = 1; i <= nprime; i++) gmael3(condition, 2, 1, i) = gel(poss_ideal, order[S[i]]);/*Add these prime ideals to the ramification vector.*/
+	  GEN A = alginit(F, condition, -1, 1);
+	  GEN ab = algab(A);/*The pair [a, b]*/
+	  GEN curarea = gmul(ar, pro);/*The area*/
+	  GEN ramp = cgetg(nprime + 1, t_VEC);
+	  for (i = 1; i <= nprime; i++) gel(ramp, i) = pr_get_p(gel(poss_ideal, order[S[i]]));
+	  ramp = ZV_sort(ramp);
+	  GEN curdat = gerepilecopy(av2, mkvec3(ab, curarea, ramp));/*The data for this algebra.*/
+	  foundalg++;
+	  if (foundalg > maxalg) {/*Lengthen the vector*/
+		maxalg <<= 1;/*Double length*/
+		algdat = vec_lengthen(algdat, maxalg);/*Actually initalize it.*/
+	  }
+	  gel(algdat, foundalg) = curdat;
+	  if(nextsub(S, leno)) continue;/*To small, go on.*/
+	  break;/*We reached the end.*/
+	}
+  }
+  setlg(algdat, foundalg + 1);/*Chop off the end.*/
+  order = indexvecsort(algdat, mkvecsmall(2));/*Sort by area*/
+  long lo = lg(order);
+  GEN rvec = cgetg(4, t_VEC);
+  for (j = 1; j <= 3; j++) {
+    gel(rvec, j) = cgetg(lo, t_VEC);
+    for (i = 1; i < lo; i++) gmael(rvec, j, i) = gcopy(gmael(algdat, order[i], j));
+  }
+  return gerepileupto(av, rvec);
+}
+
+/*Essentially does forsubset_next to S, but by passing in the acutal Vecsmall we can skip large chunks by directly changing it. Returns 1 if we successfully changed it, 0 if we are done.*/
+static int
+nextsub(GEN S, long n)
+{
+  long i, cur = n, j;
+  for (i = lg(S) - 1; i > 0; i--) {
+	if (S[i] < cur) {
+	  S[i]++;
+	  for (j = i + 1; j < lg(S); j++) S[j] = S[j - 1] + 1;
+	  return 1;
+	}
+	cur--;
+  }
+  return 0;
+}
+
 /*Presentation*/
 GEN
 afuchpresentation(GEN X)
@@ -2944,7 +3062,7 @@ afuchword(GEN X, GEN g)
 
 /*3: NON NORM 1 METHODS*/
 
-
+/*TO DO*/
 GEN afuchunitgrp(GEN X)
 {
   return afuch_makeunitelts(X, NULL);
@@ -3233,7 +3351,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
       if (!nomax) break;/*We have it the maximum return vector.*/
-      maxelts = maxelts << 1;/*Double and continue.*/
+      maxelts <<= 1;/*Double and continue.*/
       found = vec_lengthen(found, maxelts);
     }  
   }
@@ -3260,7 +3378,7 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
       ind++;
       if (ind <= maxelts) continue;/*We can find more*/
       if (!nomax) break;/*We have it the maximum return vector.*/
-      maxelts = maxelts << 1;/*Double and continue.*/
+      maxelts <<= 1;/*Double and continue.*/
       found = vec_lengthen(found, maxelts);
     }
   }
@@ -3310,6 +3428,18 @@ GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
 
 
 /*3: ALGEBRA HELPER METHODS*/
+
+/*Returns [a, b] where A=(a, b/F).*/
+GEN
+algab(GEN A)
+{
+  pari_sp av = avma;
+  GEN L = alg_get_splittingfield(A), pol = rnf_get_pol(L);/*L=K(sqrt(a))*/
+  long varn = rnf_get_varn(L);
+  GEN a = gneg(gsubst(pol, varn, gen_0));/*Polynomial is of the form x^2-a, so plug in 0 and negate to get a*/
+  GEN b = lift(alg_get_b(A));
+  return gerepilecopy(av, mkvec2(a, b));
+}
 
 /*Given an element in the algebra representation of A, returns [e, f, g, h], where x=e+fi+gj+hk. e, f, g, h live in the centre of A.*/
 GEN

@@ -113,7 +113,7 @@ Or=algorderalgtomatrix(A, [[1, 0]~, [-y^2 + y + 2, 0]~, [-y, 0]~, [17/2*x - 17/2
 avgtime(fil, A, Or, tno, testspercase);tno++;\\area 452.38934211693022633862064719224841532
 
 F=nfinit(y^3-y^2-4*y+3);
-A=alginit(F, [580*y^2 + 656*y - 2851, -16*y^2 - 16*y + 7]);\\Ramified at 3, 47
+A=alginit(F, [580*y^2 + 656*y - 2851, -16*y^2 - 16*y + 7]);\\Ramified above 3, 47
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 770.73739768069594116950184336457137425
 
 F=nfinit(y^3-5*y+1);
@@ -127,7 +127,7 @@ avgtime(fil, A, 0, tno, testspercase);tno++;\\area 1357.168026350790679015861941
 
 
 F=nfinit(y^4+2*y^3-4*y^2-6*y+1);
-A=alginit(F, [-92*y^3 - 172*y^2 + 352*y + 221, 2*y^3 + 4*y^2 - 7*y - 18]);
+A=alginit(F, [-92*y^3 - 172*y^2 + 352*y + 221, 2*y^3 + 4*y^2 - 7*y - 18]);\\Ramified above 17
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 469.14450293607579027708807856973909737;
 
 F=nfinit(y^4-y^3-3*y^2+y+1);

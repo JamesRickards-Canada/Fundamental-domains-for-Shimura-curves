@@ -25,6 +25,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchelts,"afuchelts(X): returns the vector of elements giving the sides of the fundamental domain of X, which generate the group.");
 	install(afuchfdom,"G",,fdom_library);
 	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X. The elements returned are with respect to the basis of O, so you must convert back if you want to use them in A.");
+	install(afuchlist,"GGDGD1,L,",,fdom_library);
+	addhelp(afuchlist,"afuchlist(F, Amin, {Amax}, {split=1}: given a totally real number field F (with variable not x), we find all possible quaternion algebras over F that are split at the unique real place given by split, for which the area of the fundamental domain is between Amin and Amax. If Amax is not passed, we go from 0 to Amin. The return is [pairs, areas, rprimes], where pairs[i]=[a, b] with A=alginit(F, [a, b]), areas[i] is the corresponding area, and rprimes[i] is the multiset of primes lying above the finite ramified primes of A.");
 	install(afuchpresentation,"G",,fdom_library);
 	addhelp(afuchpresentation,"afuchpresentation(X): returns the presentation P of X. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A. P[3] tracks the sides of the fundamental domain in terms of the generators here, used to write an element as a word in these generators.");
 	install(afuchsignature,"G",,fdom_library);
@@ -41,14 +43,16 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchfindelts,"afuchfindelts(X, {nm=1}, {N=1}, {C=default}: find N non-trivial elements of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z. Elements found may be equal.");
 
 	\\3: ALGEBRA HELPER METHODS
+	install(algab,"G",,fdom_library);
+	addhelp(algab,"algab(A): returns [a, b] where A=(a, b/F).");
 	install(alg1ijktoalg,"GG",,fdom_library);
-	addhelp(alg1ijktoalg,"alg1ijktoalg(A, g): Returns what g=[e, f, g, h]=e+fi+gj+hk is in the algebraic representation.");
+	addhelp(alg1ijktoalg,"alg1ijktoalg(A, g): returns what g=[e, f, g, h]=e+fi+gj+hk is in the algebraic representation.");
 	install(alg1ijktobasis,"GG",,fdom_library);
-	addhelp(alg1ijktobasis,"alg1ijktobasis(A, g): Returns what g=[e, f, g, h]=e+fi+gj+hk is in the basis representation.");
+	addhelp(alg1ijktobasis,"alg1ijktobasis(A, g): returns what g=[e, f, g, h]=e+fi+gj+hk is in the basis representation.");
 	install(algalgto1ijk,"GG","algalgto1ijk",fdom_library);
-	addhelp(algalgto1ijk,"algalgto1ijk(A, g): Returns what g is in the 1ijk representation.");
+	addhelp(algalgto1ijk,"algalgto1ijk(A, g): returns what g is in the 1ijk representation.");
 	install(algbasisto1ijk,"GG",,fdom_library);
-	addhelp(algbasisto1ijk,"algbasisto1ijk(A, g): Returns what g is in the 1ijk representation.");
+	addhelp(algbasisto1ijk,"algbasisto1ijk(A, g): returns what g is in the 1ijk representation.");
 	install(algmulvec,"GGG",,fdom_library);
 	addhelp(algmulvec,"algmulvec(A, G, L): returns G[L[1]]*G[L[2]]*...*G[L[n]]. If an index is negative, we take the inverse of that element.");
 	install(algisorder,"iGG",,fdom_library);

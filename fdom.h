@@ -104,6 +104,7 @@ void afuch_changep(GEN X, GEN p);
 GEN afucharea(GEN X);
 GEN afuchelts(GEN X);
 GEN afuchfdom(GEN X);
+GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
 GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchredelt(GEN X, GEN g, GEN z);
@@ -117,6 +118,7 @@ GEN bnf_make_unitnorms(GEN B, long split, long prec);
 GEN afuchfindelts(GEN X, GEN nm, long N, GEN C);
 
 /*3: ALGEBRA HELPER METHODS*/
+GEN algab(GEN A);
 GEN algalgto1ijk(GEN A, GEN x);
 GEN algbasisto1ijk(GEN A, GEN x);
 GEN alg1ijktoalg(GEN A, GEN x);
