@@ -8,6 +8,7 @@
 15. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
 16. Figure out what to do with converting to and from orders. In particular, afuchfindelts auto converts back, but we don't want that in the normalizer section.
 17. Add testing for changing p.
+18. When initialize by a, b allows for denominators, fix afuchlist to not use this.
 */
 
 /*
@@ -2950,6 +2951,10 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
 	  for (i = 1; i <= nprime; i++) gmael3(condition, 2, 1, i) = gel(poss_ideal, order[S[i]]);/*Add these prime ideals to the ramification vector.*/
 	  GEN A = alginit(F, condition, -1, 1);
 	  GEN ab = algab(A);/*The pair [a, b]*/
+	  for (i = 1; i <= 2; i++) {
+	    GEN den = Q_denom(gel(ab, i));/*Currently, to use alginit(F, ab), ab needs to have no denominator.*/
+	    if (!equali1(den)) gel(ab, i) = gmul(gel(ab, i), sqri(den));/*Scale a/b*/
+	  }
 	  GEN curarea = gmul(ar, pro);/*The area*/
 	  GEN ramp = cgetg(nprime + 1, t_VEC);
 	  for (i = 1; i <= nprime; i++) gel(ramp, i) = pr_get_p(gel(poss_ideal, order[S[i]]));
@@ -2966,14 +2971,7 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
 	}
   }
   setlg(algdat, foundalg + 1);/*Chop off the end.*/
-  order = indexvecsort(algdat, mkvecsmall(2));/*Sort by area*/
-  long lo = lg(order);
-  GEN rvec = cgetg(4, t_VEC);
-  for (j = 1; j <= 3; j++) {
-    gel(rvec, j) = cgetg(lo, t_VEC);
-    for (i = 1; i < lo; i++) gmael(rvec, j, i) = gcopy(gmael(algdat, order[i], j));
-  }
-  return gerepileupto(av, rvec);
+  return gerepileupto(av, vecsort(algdat, mkvecsmall(2)));/*Sort by area*/
 }
 
 /*Essentially does forsubset_next to S, but by passing in the acutal Vecsmall we can skip large chunks by directly changing it. Returns 1 if we successfully changed it, 0 if we are done.*/
@@ -3680,7 +3678,6 @@ algorderlevel(GEN A, GEN O, int factored)
   if(factored) return gerepilecopy(av, fact);
   return gerepileupto(av, idealfactorback(F, fact, NULL, 0));
 }
-
 
 
 /*SECTION 4: FINCKE POHST FOR FLAG=2 WITH PRUNING*/
