@@ -25,6 +25,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchelts,"afuchelts(X): returns the vector of elements giving the sides of the fundamental domain of X, which generate the group.");
 	install(afuchfdom,"G",,fdom_library);
 	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X. The elements returned are with respect to the basis of O, so you must convert back if you want to use them in A.");
+	install(afuchgeodesic,"GG",,fdom_library);
+	addhelp(afuchgeodesic,"afuchgeodesic(X, g): computes the image of the closed geodesic associated to the hyperbolic element g in the fundamental domain (g belongs to X as well). The return is a vector with entries being [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.");
 	install(afuchlist,"GGDGD1,L,",,fdom_library);
 	addhelp(afuchlist,"afuchlist(F, Amin, {Amax}, {split=1}: given a totally real number field F (with variable not x), we find all possible quaternion algebras over F that are split at the unique real place given by split, for which the area of the fundamental domain is between Amin and Amax. If Amax is not passed, we go from 0 to Amin. The return is [[[a, b], area, rprimes]], where A=alginit(F, [a, b]) has area area, and rprimes is the multiset of primes lying above the finite ramified primes of A.");
 	install(afuchpresentation,"G",,fdom_library);

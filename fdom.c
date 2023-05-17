@@ -9,6 +9,7 @@
 16. Figure out what to do with converting to and from orders. In particular, afuchfindelts auto converts back, but we don't want that in the normalizer section.
 17. Add testing for changing p.
 18. When initialize by a, b allows for denominators, fix afuchlist to not use this.
+19. Geodesics that intersect a vertex.
 */
 
 /*
@@ -45,11 +46,10 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*1: LINES AND ARCS*/
 static int angle_onarc(GEN a1, GEN a2, GEN a, GEN tol);
+static GEN line_from_crrcrr(GEN z1, GEN z2, GEN tol);
 static GEN line_int(GEN l1, GEN l2, GEN tol);
 static GEN line_int11(GEN l1, GEN l2, GEN tol);
 static GEN line_line_detNULL(GEN l1, GEN l2, GEN tol);
-static int onseg(GEN l, GEN p, GEN tol);
-static GEN seg_int(GEN l1, GEN l2, GEN tol);
 
 /*1: MATRIX ACTION ON GEOMETRY*/
 static GEN defp(long prec);
@@ -131,6 +131,7 @@ static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN
 static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
 /*2: GEODESICS*/
+static long fdom_intersect_sidesmidpt(long i1, long i2, long n);
 static GEN fdom_intersect(GEN U, GEN geod, GEN tol, long s1);
 static GEN geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol);
 static GEN geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat);
@@ -270,6 +271,21 @@ angle_onarc(GEN a1, GEN a2, GEN a, GEN tol)
   return 3;/*Inside*/
 }
 
+/*Given two complex numbers with real components, this returns the line [a, b, c] through them (signifying ax+by=c), where c=0 or 1.*/
+static GEN
+line_from_crrcrr(GEN z1, GEN z2, GEN tol)
+{
+  pari_sp av = avma;
+  GEN det = line_line_detNULL(z1, z2, tol);/*Still works for our inputs!*/
+  if (!det) {/*det 0, hence 0*/
+    return gerepilecopy(av, mkvec3(gel(z1, 2), negr(gel(z1, 1)), gen_0));
+  }
+  GEN scale = invr(det);
+  GEN a = mulrr(subrr(gel(z2, 2), gel(z1, 2)), scale);
+  GEN b = mulrr(subrr(gel(z1, 1), gel(z2, 1)), scale);
+  return gerepilecopy(av, mkvec3(a, b, gen_1));
+}
+
 /*Returns the intersection of two lines. If parallel/concurrent, returns NULL. We will ensure that all output numbers are COMPLEX with REAL components. This means that 0 is stored as a real number with precision.*/
 static GEN
 line_int(GEN l1, GEN l2, GEN tol)
@@ -305,47 +321,13 @@ line_int11(GEN l1, GEN l2, GEN tol)
   return gerepilecopy(av, mkcomplex(x, y));
 }
 
-/*Given two lines given by a1x+b1y=c1 and a2x+b2y=c2, returns a1b2-a2b1, unless this is within tolerance of 0, when we return NULL. Gerepileupto safe, leaves garbage if NULL.*/
+/*Given two lines given by a1x+b1y=c1 and a2x+b2y=c2, returns a1b2-a2b1, unless this is within tolerance of 0, when we return NULL. Gerepileupto safe, leaves garbage.*/
 static GEN
 line_line_detNULL(GEN l1, GEN l2, GEN tol)
 {
   GEN d = subrr(mulrr(gel(l1, 1), gel(l2, 2)), mulrr(gel(l1, 2), gel(l2, 1)));/*ad-bc*/
   if (toleq0(d, tol)) return NULL;/*d=0 up to tolerance*/
   return d;
-}
-
-/*p is assumed to be on the line segment defined by l; this checks if it is actually on the segment l. Returns 0 if not, 1 if p is in the interior, 2 if p is the start point, and 3 if p is the end point (all up to tolerance tol).*/
-static int
-onseg(GEN l, GEN p, GEN tol)
-{
-  pari_sp av = avma;
-  GEN pstart = gel(l, 4), px = gel(p, 1);
-  int xcmp1 = tolcmp(gel(pstart, 1), px, tol);/*Compare x coeff of starting point and x*/
-  if (!xcmp1) {/*Same x-value*/
-    GEN py = gel(p, 2);
-    int ycmp1 = tolcmp(gel(pstart, 2), py, tol);
-    if (!ycmp1) return gc_int(av, 2);/*We must be the starting point.*/
-    GEN pend = gel(l, 5);/*At this point, the slope must be oo*/
-    int ycmp2 = tolcmp(py, gel(pend, 2), tol);
-    if (!ycmp2) return gc_int(av, 3);/*Since we assume that p is on the line, we must be at endpoint 2 now.*/
-    if (ycmp1 == ycmp2) return gc_int(av, 1);/*Must be between*/
-    return gc_int(av, 0);/*Above or below*/
-  }/*Now we have distinct x-values*/
-  int xcmp2 = tolcmp(px, gel(gel(l, 5), 1), tol);
-  if (xcmp2 == 0) return gc_int(av, 3);/*End point, as the slope cannot be oo as pstartx! = pendx*/
-  if (xcmp1 == xcmp2) return gc_int(av, 1);
-  return gc_int(av, 0);
-}
-
-/*Returns the intersection of two segments. If parallel/concurrent/do not intersect, returns NULL*/
-static GEN 
-seg_int(GEN l1, GEN l2, GEN tol)
-{
-  pari_sp av = avma;
-  GEN ipt = line_int(l1, l2, tol);/*Intersect the lines*/
-  if (!onseg(l1, ipt, tol)) return gc_NULL(av);
-  if (!onseg(l2, ipt, tol)) return gc_NULL(av);
-  return ipt;
 }
 
 
@@ -1211,7 +1193,7 @@ normbound_outside(GEN U, GEN z, GEN tol)
   return gc_long(av, sideind);/*Outside*/
 }
 
-/*Given an isometric circle side, this returns -1 if z is on the same side as the origin, 0 if it is on it, and 1 else*/
+/*Given an isometric circle side, this returns -1 if z is on the same side as the origin, 0 if it is on it, and 1 else. Also used in fdom_intersect, since this works for the inputs there too.*/
 static int
 normbound_whichside(GEN side, GEN z, GEN tol)
 {
@@ -1972,28 +1954,99 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
 
 /*2: GEODESICS*/
 
-/*Given [v1, v2] of complex numbers with r_REAL components, this returns the midpoint.*/
-INLINE GEN
-crcr_midpt(GEN pair)
+/*Assumes 1<=i1,i2<=n. Finds the index halfway between i1 and i2, where we loop around at n.*/
+static long
+fdom_intersect_sidesmidpt(long i1, long i2, long n)
 {
-  GEN s = addcrcr(gel(pair, 1), gel(pair, 2));
-  return mkcomplex(shiftr(gel(s, 1), -1), shiftr(gel(s, 2), -1));
+  if (i2 >= i1) return (i1 + i2) >> 1;
+  long temp = (i1 + i2 + n) >> 1;
+  if (temp > n) return temp - n;
+  return temp;
 }
 
-/*Given a fundamental domain U and a geodesic geod that properly intersects it, we find the two intersections of geod with U, returning [v1, v2, s1, s2], where geod[1] to geod[2] hits v1 on side s1, then v2 on side s2/ If s1 is passed as non-zero, we assume that this is the first side hit. Note that in the return, s1 and s2 are of type t_INT, not longs.*/
+/*Assumes l1=[a, b, 1], returns a*z[1]+b*z[2]-1, which gives the relative distance to the line l1 from the point z*/
+INLINE GEN
+fdom_intersect_dist(GEN l1, GEN z)
+{
+  return subrs(addrr(mulrr(gel(z, 1), gel(l1, 1)), mulrr(gel(z, 2), gel(l1, 2))), 1);
+}
+
+/*Given a fundamental domain U and a geodesic geod that properly intersects it, we find the two intersections of geod with U, returning [s1, s2, v1, v2, [a, b, c]], where geod[1] to geod[2] hits v1 on side s1, then v2 on side s2, and the equation of the geodesic is ax+by=c=0 or 1. If s1 is passed as non-zero, we assume that this is the first side hit. Note that in the return, s1 and s2 are GENS of type t_INT, not longs.*/
 static GEN
 fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
 {
   pari_sp av = avma;
+  pari_printf("entering intersect, s1=%d\n", s1);
+  GEN sides = normbound_get_sides(U);
+  GEN geodeq = gel(geod, 3);
+  if (!signe(gel(geodeq, 3))) {/*Line through origin.*/
+	if (!s1) s1 = normbound_outside(U, gel(geod, 1), tol);
+	long s2 = normbound_outside(U, gel(geod, 2), tol);/*These are automatically correct.*/
+	GEN v1 = line_int(geodeq, gel(sides, s1), tol);
+	GEN v2 = line_int(geodeq, gel(sides, s2), tol);
+	return gerepilecopy(av, mkvec5(stoi(s1), stoi(s2), v1, v2, geodeq));
+  }
+  GEN verts = normbound_get_vcors(U);
+  int forwards, prec = lg(tol);/*Tracks whether the arc goes from v1 to v2 or v2 to v1 counterclockwise around the circle.*/
+  GEN arg1 = argmod_complex(gel(geod, 1), tol), arg2 = argmod_complex(gel(geod, 2), tol);/*Arguments of the vertices of geod*/
+  if (cmprr(arg1, arg2) < 0) {/*arg2 > arg1*/
+	GEN diff = subrr(arg2, arg1);
+	if (cmprr(diff, mppi(prec)) < 0) forwards = 1;/*arg1 -> arg2 length <pi, so correct*/
+	else forwards = 0;
+  }
+  else {/*arg1 > arg2*/
+	GEN diff = subrr(arg1, arg2);
+	if (cmprr(diff, mppi(prec)) < 0) forwards = 0;/*arg2 -> arg1 length <pi, so backwards*/
+	else forwards = 1;
+  }
+  long n = lg(sides) - 1;
   if (!s1) s1 = normbound_outside(U, gel(geod, 1), tol);
   long s2 = normbound_outside(U, gel(geod, 2), tol);
-  /*We use binary midpoints and move along until we have segments inside/outside projecting to the same side.*/
-  /*WATCH OUT FOR INTERSECTING A VERTEX*/
-  
-  return ghalf;
+  long i1, i2, i3 = 0, i4;
+  if (forwards) { i1 = s1; i2 = s2; }
+  else {i1 = s2; i2 = s1; }/*Going from side i1 to i2 counterclockwise now.*/
+  i1 = smodss(i1 - 2, n) + 1;/*Now, the line from vertex i1 to i2 "cuts off" our geodesic.*/
+  output(gel(geod, 1));
+  output(gel(geod, 2));
+  pari_printf("%d %d\n", s1, s2);
+  for (;;) {/*We loop with i1 -> i2 cutting off our geodesic. We eventually find a vertex on the other side, when we stop.*/
+	long i = fdom_intersect_sidesmidpt(i1, i2, n);
+	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
+	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
+	if (whichside == 1) { i3 = i; i4 = i; break; }/*Crossed over*/
+	GEN dist1 = fdom_intersect_dist(geodeq, gel(verts, i));
+	long ip = (i%n) + 1;
+	GEN dist2 = fdom_intersect_dist(geodeq, gel(verts, ip));
+	int ips = tolsigne(dist2, tol);
+	if (ips == 1) { i3 = ip; i4 = ip; break; }/*i+1 crosses over.*/
+	if (!ips) pari_err(e_MISC, "TO DO: GEODESIC INTERSECTING VERTEX.");
+	if (cmprr(dist1, dist2) > 0) {/*vertex i is closer than i+1, so we replace i1 with i*/
+      i1 = i;
+	}
+	else i2 = ip;
+  }
+  while (i3 - i1 > 1) {/*Sort out the first side*/
+	long i = fdom_intersect_sidesmidpt(i1, i3, n);
+	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
+	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
+	if (whichside == 1) i3 = i;
+	else i1 = i;
+  }
+  while (i2 - i4 > 1) {/*Sort out the second side*/
+	long i = fdom_intersect_sidesmidpt(i4, i2, n);
+	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
+	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
+	if (whichside == 1) i4 = i;
+	else i2 = i;
+  }
+  if (forwards) { s1 = i3; s2 = i2; }
+  else { s1 = i2; s2 = i3; }/*Now we have our sides!*/
+  GEN v1 = line_int11(geodeq, gel(sides, s1), tol);
+  GEN v2 = line_int11(geodeq, gel(sides, s2), tol);
+  return gerepilecopy(av, mkvec5(stoi(s1), stoi(s2), v1, v2, geodeq));
 }
 
-/*For a hyperbolic element g, this returns [p1, p2], which are points on the unit circle such that the root geodesic of g goes from p1 to p2. If the action in the Klein model is [A, B], then the formula is the first (attracting, i.e. p2) root is (Imag(A)*I+sqrt(Real(A)^2-1))/conj(B) IF trd(g)>0. If trd(g)<0, then change the +sqrt(...) to -sqrt(...). The other root is the same with the plus/minus swapped.*/
+/*For a hyperbolic element g, this returns [p1, p2, [a, b, c]], where v1 and v2 are the unit circle such that the root geodesic of g goes from p1 to p2, and the equation of this is ax+by=c=0 or 1. If the action in the Klein model is [A, B], then the formula is the first (attracting, i.e. p2) root is (Imag(A)*I+sqrt(Real(A)^2-1))/conj(B) IF trd(g)>0. If trd(g)<0, then change the +sqrt(...) to -sqrt(...). The other root is the same with the plus/minus swapped.*/
 static GEN
 geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol)
 {
@@ -2003,16 +2056,19 @@ geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol)
   GEN toroot = subrs(sqrr(rA), 1);
   if (tolsigne(toroot, tol) <= 0 ) pari_err_TYPE("The element g should be hyperbolic.", g);
   GEN rt = sqrtr(toroot);/*sqrt(rA^2-1)*/
-  GEN root1 = mkcomplex(rt, iA);
-  GEN root2 = mkcomplex(negr(rt), iA);
+  GEN root1 = mkcomplex(rt, iA);/*Choosing + the root*/
+  GEN root2 = mkcomplex(negr(rt), iA);/*Choosing - the root*/
   GEN Bconj = mkcomplex(gmael(M, 2, 1), negr(gmael(M, 2, 2)));/*Conjugate of B*/
   root1 = divcrcr(root1, Bconj);
   root2 = divcrcr(root2, Bconj);
-  if (signe(rA) > 0) return gerepilecopy(av, mkvec2(root2, root1));/*Positive trace*/
-  return gerepilecopy(av, mkvec2(root1, root2));/*Negative trace*/
+  GEN eq = line_from_crrcrr(root1, root2, tol);/*Line equation*/
+  if (signe(rA) > 0) return gerepilecopy(av, mkvec3(root2, root1, eq));/*Positive trace*/
+  return gerepilecopy(av, mkvec3(root1, root2, eq));/*Negative trace*/
+  
+  
 }
 
-/*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, v1, v2, s1, s2], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, and the components are listed in order.*/
+/*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.*/
 static GEN
 geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat)
 {
@@ -2020,7 +2076,9 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
   GEN tol = gdat_get_tol(gdat);
   GEN spair = normbound_get_spair(U), elts = normbound_get_elts(U);
   GEN gstart = geodesic_klein(X, g, Xtoklein, tol);/*Find the initial geodesic.*/
-  GEN midpt = crcr_midpt(gstart);/*This is now the midpoint of the arc.*/
+  GEN midpt = addcrcr(gel(gstart, 1), gel(gstart, 2));
+  gel(midpt, 1) = shiftr(gel(midpt, 1), -1);
+  gel(midpt, 2) = shiftr(gel(midpt, 2), -1);
   GEN red = red_elt(X, U, Xid, midpt, Xtoklein, Xmul, 0, gdat);/*Reduce this to the interior.*/
   g = Xmul(X, Xmul(X, red, g), Xinv(X, red));/*Conjugate g by red, so now the root geodesic of g goes through the interior.*/
   GEN geod = geodesic_klein(X, g, Xtoklein, tol);/*Update the initial geodesic.*/
@@ -2030,13 +2088,16 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
   gel(sides, 1) = vec_prepend(sidestart, g);/*Initialize the container for the sides.*/
   GEN side = sidestart;
   for (;;) {
-	long end = itos(gel(side, 4));/*The side we ended on, */
+	long end = itos(gel(side, 2));/*The side we ended on, */
 	long s1 = spair[end];/*This must be the next side.*/
 	GEN toconj = gel(elts, end);
 	g = Xmul(X, Xmul(X, toconj, g), Xinv(X, toconj));/*Update g*/
+	output(g);
 	geod = geodesic_klein(X, g, Xtoklein, tol);/*New geodesic*/
+	output(geod);
+	output(ghalf);
 	side = fdom_intersect(U, geod, tol, s1);/*Intersections*/
-	if (toleq(gel(sidestart, 1), gel(side, 1), tol) && toleq(gel(sidestart, 2), gel(side, 2), tol)) break;/*Back to the start, so done!*/
+	if (toleq(gel(sidestart, 3), gel(side, 3), tol) && toleq(gel(sidestart, 4), gel(side, 4), tol)) break;/*Back to the start, so done!*/
 	nsides++;/*Now we are an actually new side.*/
 	if (nsides > maxsides) {
 	  maxsides <<= 1;/*Double the sides.*/
@@ -2959,6 +3020,17 @@ afuchfdom(GEN X)
   return gerepileupto(av, U);
 }
 
+/*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.*/
+GEN
+afuchgeodesic(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  GEN gdat = afuch_get_gdat(X);
+  GEN U = afuch_get_fdom(X);
+  if (!U) U = afuchfdom(X);
+  GEN geod = geodesic_fdom(X, U, g, afuchid(X), &afuchtoklein, &afuchmul, &afuchconj, gdat);
+  return gerepileupto(av, geod);
+}
 
 /*Given a totally real number field F (with variable not x), we return [pairs, areas, rprimes], where A=alginit(F, pairs[i]) gives an arithmetic Fuchsian group (with respect to the maximal order) whose area, areas[i], is between Amin and Amax, and the multiset of primes lying above the ramified ideals is rprimes[i]. In fact, we find all such algebras that are split only at the place "split". Can pass Amax as NULL to go from 0 to Amin. Currently, we do not treat Eichler orders here.*/
 GEN
