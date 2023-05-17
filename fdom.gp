@@ -73,7 +73,9 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	install(afuchfdom_latex,"vGrD1,L,D1,L,D1,L,D1,L,",,fdom_library);
 	addhelp(afuchfdom_latex,"afuchfdom_latex(X, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}): writes the fundamental domain of X to a LaTeX document in plots/build/filename.tex. If model=0, use the upper half plane model, if model=1, use the unit disc model, and if model=2, use the Klein model. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to plots/build. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra. NOTE: displaying in the Klein model is not suggested, as points are closer to the unit disc, and it does not show up very well.");
 	install(afuchfdom_python,"vGr",,fdom_library);
-	addhelp(afuchfdom_python,"afuchfdom_python(X, filename): writes the fundamental domain of X to a file fdoms/filename.dat, which can be read by the Python program fdomviewer to visualize the domain. Call 'fdomviewer.py filename' to open the Python application. Requires having both numpy and mathplotlib installed.");
+	addhelp(afuchfdom_python,"afuchfdom_python(X, filename): writes the fundamental domain of X to a file ./fdoms/filename.dat, which can be read by the Python program fdomviewer to visualize the domain. Call 'fdomviewer.py filename' to open the Python application. Requires having both numpy and mathplotlib installed.");
+	install(afuchgeodesic_python,"vGGr",,fdom_library);
+	addhelp(afuchgeodesic_python,"afuchgeodesic_python(X, g, filename): writes the geodesic given by g in the fundamental domain of X to the file ./fdoms/filename.dat, which can be read by the Python program fdomviewer to visualize the domain. We can pass either g as an element of the algebra, or as the output of afuchgeodesic. call 'fdomviewer.py fdomname geodname' to see the geodesic in the fundamental domain.");
 
 \\SECTION 2: TUNING
 

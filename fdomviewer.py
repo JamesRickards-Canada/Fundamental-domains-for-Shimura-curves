@@ -199,7 +199,7 @@ class geodesic(object):
 				self.theta2s.append(data[5])
 				self.radii.append(data[3])
 				self.centres.append([data[1], data[2]])
-			else:#We have a segment. Data is stored as "0 startx starty endx endy"
+			else:#We have a segment. Data is stored as "1 startx starty endx endy"
 				start=[data[1], data[2]]
 				end=[data[3], data[4]]
 				self.sides.append(patches.Polygon(np.array([start, end]), closed=False))

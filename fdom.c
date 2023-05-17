@@ -1206,6 +1206,7 @@ normbound_whichside(GEN side, GEN z, GEN tol)
   return gc_int(av, tolsigne(where, tol));
 }
 
+
 /*2: NORMALIZED BOUNDARY APPENDING*/
 
 /*Initializes the inputs for normbound_append_icircs. G is the set of elements we are forming the normalized boundary for, and U is the necessarily non-trivial current boundary. Returns NULL if the normalized boundary does not change. Not gerepileupto safe, and leaves garbage.*/

@@ -127,12 +127,12 @@ afuchfdom_python(GEN X, char *filename)
   GEN verts = normbound_get_vcors(U);
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
   long prec = lg(tol);
-  GEN arc, radtodeg = divsr(180, mppi(prec)), v1, v2;/*fact=180/Pi*/
+  GEN radtodeg = divsr(180, mppi(prec));
   for (i = 1; i < lp; i++) {
-    arc = gel(arcs, i);
+    GEN arc = gel(arcs, i), v1;
     if (i == 1) v1 = gel(verts, lp - 1);
     else v1 = gel(verts, i - 1);
-    v2 = gel(verts, i);/*The two vertices in the Klein model.*/
+    GEN v2 = gel(verts, i);/*The two vertices in the Klein model.*/
 	v1 = klein_to_disc(v1, tol);
 	v2 = klein_to_disc(v2, tol);
 	GEN xc = gel(arc, 1);
@@ -146,6 +146,49 @@ afuchfdom_python(GEN X, char *filename)
   fclose(f);
   set_avma(av);
 }
+
+/*Writes the geodesic given by g (or the output of afuchgeodesic(X, g)) to fdoms/filename.dat, to be used with the Python program fdomviewer.*/
+void
+afuchgeodesic_python(GEN X, GEN g, char *filename)
+{
+  pari_sp av = avma;
+  if (!pari_is_dir("fdoms")) {/*Checking the directory*/
+    int s = system("mkdir -p fdoms");
+    if (s == -1) pari_err(e_MISC, "ERROR CREATING DIRECTORY fdoms");
+  }
+  char *fullfile = stack_sprintf("fdoms/%s.dat", filename);
+  FILE *f = fopen(fullfile, "w");/*Now we have created the output file f.*/
+  GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  long prec = lg(tol);
+  if (typ(g) == t_COL) g = afuchgeodesic(X, g);
+  GEN radtodeg = divsr(180, mppi(prec));
+  long i, lgeo = lg(g);
+  for (i = 1; i < lgeo; i++) {
+	GEN dat = gel(g, i);/*The geodesic segment.*/
+	GEN v1 = klein_to_disc(gel(dat, 4), tol);
+	GEN v2 = klein_to_disc(gel(dat, 5), tol);
+	GEN eqn = gel(dat, 6);
+	if (gequal1(gel(eqn, 3))) {/*Arc*/
+	  GEN xc = gel(eqn, 1);
+	  GEN yc = gel(eqn, 2);/*The coords of the centre of the circle.*/
+	  GEN centre = mkcomplex(xc, yc);
+	  GEN r = sqrtr(subrs(addrr(sqrr(xc), sqrr(yc)), 1));/*sqrt(xc^2+yc^2-1)=r.*/
+	  GEN ang1 = mulrr(garg(gsub(v1, centre), prec), radtodeg);
+	  GEN ang2 = mulrr(garg(gsub(v2, centre), prec), radtodeg);
+	  GEN diff = gmodgs(subrr(ang2, ang1), 360);
+	  long dir;
+	  if (gcmpgs(diff, 180) > 0) { dir = -1; GEN temp = ang2; ang2 = ang1; ang1 = temp; }
+	  else dir = 1;
+      pari_fprintf(f, "0 %P.20f %P.20f %P.20f %P.20f %P.20f %d\n", xc, yc, r, ang1, ang2, dir);
+	}
+	else {/*Segment through the origin.*/
+	  pari_fprintf(f, "1 %P.20f %P.20f %P.20f %P.20f\n", real_i(v1), imag_i(v1), real_i(v2), imag_i(v2));
+	}
+  }
+  fclose(f);
+  set_avma(av);
+}
+
 
 /*SECTION 2: TUNING*/
 
