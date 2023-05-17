@@ -327,6 +327,7 @@ class operations_manager(object):
 		self.tbox=ax.text(-0.55, 0.95, '', transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=self.tboxprops)
 		self.showtbox=True
 		self.axeson=True
+		self.anim=0
 		self.update_infobox()
 	
 	def keypress(self, event):
@@ -346,14 +347,9 @@ class operations_manager(object):
 				self.geodesics[self.hgeod].highlight(self.geodesics[self.hgeod].curind-1)
 			elif event.key=='a':
 				anim_geod=animated_geodesic(self.geodesics[self.hgeod], self)
-				anim=animation.FuncAnimation(self.ax.figure, anim_geod.animate, frames=anim_geod.nframes, interval=25, blit=True, repeat=False)
+				self.anim=animation.FuncAnimation(self.ax.figure, anim_geod.animate, frames=anim_geod.nframes, interval=25, blit=True, repeat=False)
 				self.hgeod=-1
 				plt.show()
-			#elif event.key=='A':#For saving the animated geodesic
-				#anim_geod=animated_geodesic(self.geodesics[self.hgeod], self)
-				#anim=animation.FuncAnimation(self.ax.figure, anim_geod.animate, frames=anim_geod.nframes, interval=25, blit=True, repeat=False)
-				#anim.save('testinganim.gif')
-				#plt.show()
 		if event.key=='c':
 			self.unitcirc.set_alpha(1-self.unitcirc.get_alpha())
 			self.ax.figure.canvas.draw()
@@ -444,21 +440,14 @@ def initialize(args):
 	geodesics=[]
 	arccolours=['red', 'blue', 'aqua', 'fuchsia', 'chartreuse', 'maroon', 'darkblue', 'teal', 'y']
 	counter=-1
-	isfdom=False
-	for c in args:
-		if c[0]=="f": #Fundamental domain
-			fdom=funddom(ax,'fdoms/'+c+'.dat', unitcirc)
-			isfdom=True
-		else:
-			counter=(counter+1)%len(arccolours)
-			geodesics.append(geodesic(ax,'fdoms/'+c+'.dat', arccolours[counter]))
-
-	#Controls
-	if isfdom:
-		op_man=operations_manager(ax, fdom, geodesics, unitcirc)
-		fdom.add_opman(op_man)
-	else:
-		op_man=operations_manager(ax, 0, geodesics, unitcirc)
+	if len(args) == 0:
+		raise Exception("Sorry, you need to input a fundamental domain.") 
+	fdom=funddom(ax,'fdoms/'+args[0]+'.dat', unitcirc)
+	for c in args[1:]:
+		counter=(counter+1)%len(arccolours)
+		geodesics.append(geodesic(ax,'fdoms/'+c+'.dat', arccolours[counter]))
+	op_man=operations_manager(ax, fdom, geodesics, unitcirc)
+	fdom.add_opman(op_man)
 	for g in geodesics:
 		g.add_opman(op_man)
 	matplotlib.rcParams['keymap.back'].remove('left')
@@ -466,7 +455,7 @@ def initialize(args):
 	fig.canvas.mpl_connect('pick_event', op_man.onclick)
 	fig.canvas.mpl_connect('key_press_event', op_man.keypress)
 
-	fig.canvas.set_window_title(' '.join(args))
+	fig.canvas.manager.set_window_title(' '.join(args))
 	plt.show()
 
 if __name__=='__main__':
