@@ -142,6 +142,7 @@ GEN fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC);
 
 /*SECTION 1: VISUALIZATION*/
 void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, int open);
+void afuchfdom_python(GEN X, char *filename);
 
 /*SECTION 2: TUNING*/
 GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);

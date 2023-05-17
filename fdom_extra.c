@@ -106,6 +106,46 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
   set_avma(av);
 }
 
+/*Writes the fundamental domain corresponding to U to fdoms/filename/dat, to be used with the Python program fdomviewer. We output to the unit disc model.*/
+void
+afuchfdom_python(GEN X, char *filename)
+{
+  pari_sp av = avma;
+  if (!pari_is_dir("fdoms")) {/*Checking the directory*/
+    int s = system("mkdir -p fdoms");
+    if (s == -1) pari_err(e_MISC, "ERROR CREATING DIRECTORY fdoms");
+  }
+  char *fullfile = stack_sprintf("fdoms/%s.dat", filename);
+  FILE *f = fopen(fullfile, "w");/*Now we have created the output file f.*/
+  GEN U = afuchfdom(X);
+  GEN pair = normbound_get_spair(U);
+  pari_fprintf(f, "%d", pair[1]);
+  long i, lp = lg(pair);
+  for (i = 2; i < lp; i++) pari_fprintf(f, " %d", pair[i]);/*Print side pairing.*/
+  pari_fprintf(f, "\n");
+  GEN arcs = normbound_get_sides(U);
+  GEN verts = normbound_get_vcors(U);
+  GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  long prec = lg(tol);
+  GEN arc, radtodeg = divsr(180, mppi(prec)), v1, v2;/*fact=180/Pi*/
+  for (i = 1; i < lp; i++) {
+    arc = gel(arcs, i);
+    if (i == 1) v1 = gel(verts, lp - 1);
+    else v1 = gel(verts, i - 1);
+    v2 = gel(verts, i);/*The two vertices in the Klein model.*/
+	v1 = klein_to_disc(v1, tol);
+	v2 = klein_to_disc(v2, tol);
+	GEN xc = gel(arc, 1);
+	GEN yc = gel(arc, 2);/*The coords of the centre of the isometric circle.*/
+	GEN centre = mkcomplex(xc, yc);
+	GEN r = gel(arc, 3);
+	GEN ang1 = mulrr(garg(gsub(v1, centre), prec), radtodeg);
+	GEN ang2 = mulrr(garg(gsub(v2, centre), prec), radtodeg);
+    pari_fprintf(f, "%P.20f %P.20f %P.20f %P.20f %P.20f\n", xc, yc, r, ang1, ang2);
+  }
+  fclose(f);
+  set_avma(av);
+}
 
 /*SECTION 2: TUNING*/
 
