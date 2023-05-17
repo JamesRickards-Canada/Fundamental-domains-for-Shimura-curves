@@ -76,6 +76,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchfdom_python,"afuchfdom_python(X, filename): writes the fundamental domain of X to a file ./fdoms/filename.dat, which can be read by the Python program fdomviewer to visualize the domain. Call 'fdomviewer.py filename' to open the Python application. Requires having both numpy and mathplotlib installed.");
 	install(afuchgeodesic_python,"vGGr",,fdom_library);
 	addhelp(afuchgeodesic_python,"afuchgeodesic_python(X, g, filename): writes the geodesic given by g in the fundamental domain of X to the file ./fdoms/filename.dat, which can be read by the Python program fdomviewer to visualize the domain. We can pass either g as an element of the algebra, or as the output of afuchgeodesic. call 'fdomviewer.py fdomname geodname' to see the geodesic in the fundamental domain.");
+	install(fdomviewer,"vr",,fdom_library);
+	addhelp(fdomviewer,"fdomviewer(files): assuming the user is using WSL with Python installed in Windows, calls 'fdomviewer.py files' in Python to launch the viewer. Files should be a string of space separated files, the first being the fundamental domain you want to visualize, and the rest being the geodesics.'");
 
 \\SECTION 2: TUNING
 

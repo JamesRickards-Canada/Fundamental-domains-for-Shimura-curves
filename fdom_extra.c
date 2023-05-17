@@ -179,6 +179,9 @@ afuchgeodesic_python(GEN X, GEN g, char *filename)
 	  long dir;
 	  if (gcmpgs(diff, 180) > 0) { dir = -1; GEN temp = ang2; ang2 = ang1; ang1 = temp; }
 	  else dir = 1;
+	  ang1 = gmodgs(ang1, 360);
+	  ang2 = gmodgs(ang2, 360);
+	  if (cmprr(ang2, ang1) < 0) ang2 = addrs(ang2, 360);
       pari_fprintf(f, "0 %P.20f %P.20f %P.20f %P.20f %P.20f %d\n", xc, yc, r, ang1, ang2, dir);
 	}
 	else {/*Segment through the origin.*/
@@ -186,6 +189,18 @@ afuchgeodesic_python(GEN X, GEN g, char *filename)
 	}
   }
   fclose(f);
+  set_avma(av);
+}
+
+/*Launches the Python viewer. Only works with WSL where Python is installed in Windows.*/
+void
+fdomviewer(char *input)
+{
+  pari_sp av = avma;
+  char *command;
+  command = stack_sprintf("cmd.exe /C start py fdomviewer.py %s", input);
+  int s = system(command);
+  if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   set_avma(av);
 }
 
