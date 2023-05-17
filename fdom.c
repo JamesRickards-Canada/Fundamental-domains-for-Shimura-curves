@@ -130,6 +130,11 @@ static GEN minimalcycles(GEN pair);
 static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
+/*2: GEODESICS*/
+static GEN fdom_intersect(GEN U, GEN geod, GEN tol, long s1);
+static GEN geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol);
+static GEN geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat);
+
 /*2: PRESENTATION*/
 static GEN presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 static void presentation_update(GEN words, long ind, GEN repl);
@@ -814,7 +819,7 @@ tolsigne(GEN x, GEN tol)
 Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be extracted. Given a vector of elements, we want to be able to compute the normalized boundary, and the normalized basis. In order to achieve this, we need to pass in various methods to deal with operations in Gamma (that should be memory clean), namely:
     i) Multiply elements of Gamma: format as GEN Xmul(GEN X, GEN g1, GEN g2).
     ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
-    iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2.
+    iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2. Also ensure that A and B are of type t_COMPLEX with t_REAL components, even if one of them is real or even integral.
     iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
     v) Find the exact trace of an element of Gamma: format as Xtrace(GEN X, GEN g).
     vi) Input an element representing the trivial element of X.
@@ -1590,8 +1595,7 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 
 /*2: NORMALIZED BASIS*/
 
-/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.
-*/
+/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.*/
 static GEN
 edgepairing(GEN U, GEN tol)
 {
@@ -1963,6 +1967,85 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
   }
   gel(rvec, 3) = stoi(s);
   return gerepileupto(av, rvec);
+}
+
+
+/*2: GEODESICS*/
+
+/*Given [v1, v2] of complex numbers with r_REAL components, this returns the midpoint.*/
+INLINE GEN
+crcr_midpt(GEN pair)
+{
+  GEN s = addcrcr(gel(pair, 1), gel(pair, 2));
+  return mkcomplex(shiftr(gel(s, 1), -1), shiftr(gel(s, 2), -1));
+}
+
+/*Given a fundamental domain U and a geodesic geod that properly intersects it, we find the two intersections of geod with U, returning [v1, v2, s1, s2], where geod[1] to geod[2] hits v1 on side s1, then v2 on side s2/ If s1 is passed as non-zero, we assume that this is the first side hit. Note that in the return, s1 and s2 are of type t_INT, not longs.*/
+static GEN
+fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
+{
+  pari_sp av = avma;
+  if (!s1) s1 = normbound_outside(U, gel(geod, 1), tol);
+  long s2 = normbound_outside(U, gel(geod, 2), tol);
+  /*We use binary midpoints and move along until we have segments inside/outside projecting to the same side.*/
+  /*WATCH OUT FOR INTERSECTING A VERTEX*/
+  
+  return ghalf;
+}
+
+/*For a hyperbolic element g, this returns [p1, p2], which are points on the unit circle such that the root geodesic of g goes from p1 to p2. If the action in the Klein model is [A, B], then the formula is the first (attracting, i.e. p2) root is (Imag(A)*I+sqrt(Real(A)^2-1))/conj(B) IF trd(g)>0. If trd(g)<0, then change the +sqrt(...) to -sqrt(...). The other root is the same with the plus/minus swapped.*/
+static GEN
+geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol)
+{
+  pari_sp av = avma;
+  GEN M = Xtoklein(X, g);/*Move to the Klein model.*/
+  GEN rA = gmael(M, 1, 1), iA = gmael(M, 1, 2);/*real/imaginary parts of A*/
+  GEN toroot = subrs(sqrr(rA), 1);
+  if (tolsigne(toroot, tol) <= 0 ) pari_err_TYPE("The element g should be hyperbolic.", g);
+  GEN rt = sqrtr(toroot);/*sqrt(rA^2-1)*/
+  GEN root1 = mkcomplex(rt, iA);
+  GEN root2 = mkcomplex(negr(rt), iA);
+  GEN Bconj = mkcomplex(gmael(M, 2, 1), negr(gmael(M, 2, 2)));/*Conjugate of B*/
+  root1 = divcrcr(root1, Bconj);
+  root2 = divcrcr(root2, Bconj);
+  if (signe(rA) > 0) return gerepilecopy(av, mkvec2(root2, root1));/*Positive trace*/
+  return gerepilecopy(av, mkvec2(root1, root2));/*Negative trace*/
+}
+
+/*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, v1, v2, s1, s2], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, and the components are listed in order.*/
+static GEN
+geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat)
+{
+  pari_sp av = avma;
+  GEN tol = gdat_get_tol(gdat);
+  GEN spair = normbound_get_spair(U), elts = normbound_get_elts(U);
+  GEN gstart = geodesic_klein(X, g, Xtoklein, tol);/*Find the initial geodesic.*/
+  GEN midpt = crcr_midpt(gstart);/*This is now the midpoint of the arc.*/
+  GEN red = red_elt(X, U, Xid, midpt, Xtoklein, Xmul, 0, gdat);/*Reduce this to the interior.*/
+  g = Xmul(X, Xmul(X, red, g), Xinv(X, red));/*Conjugate g by red, so now the root geodesic of g goes through the interior.*/
+  GEN geod = geodesic_klein(X, g, Xtoklein, tol);/*Update the initial geodesic.*/
+  GEN sidestart = fdom_intersect(U, geod, tol, 0);/*First intersection*/
+  long maxsides = 20, nsides = 1;
+  GEN sides = cgetg(maxsides + 1, t_VEC);
+  gel(sides, 1) = vec_prepend(sidestart, g);/*Initialize the container for the sides.*/
+  GEN side = sidestart;
+  for (;;) {
+	long end = itos(gel(side, 4));/*The side we ended on, */
+	long s1 = spair[end];/*This must be the next side.*/
+	GEN toconj = gel(elts, end);
+	g = Xmul(X, Xmul(X, toconj, g), Xinv(X, toconj));/*Update g*/
+	geod = geodesic_klein(X, g, Xtoklein, tol);/*New geodesic*/
+	side = fdom_intersect(U, geod, tol, s1);/*Intersections*/
+	if (toleq(gel(sidestart, 1), gel(side, 1), tol) && toleq(gel(sidestart, 2), gel(side, 2), tol)) break;/*Back to the start, so done!*/
+	nsides++;/*Now we are an actually new side.*/
+	if (nsides > maxsides) {
+	  maxsides <<= 1;/*Double the sides.*/
+	  sides = vec_lengthen(sides, maxsides);
+	}
+	gel(sides, nsides) = vec_prepend(side, g);
+  }
+  setlg(sides, nsides + 1);
+  return gerepilecopy(av, sides);
 }
 
 
