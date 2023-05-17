@@ -1976,7 +1976,6 @@ static GEN
 fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
 {
   pari_sp av = avma;
-  pari_printf("entering intersect, s1=%d\n", s1);
   GEN sides = normbound_get_sides(U);
   GEN geodeq = gel(geod, 3);
   if (!signe(gel(geodeq, 3))) {/*Line through origin.*/
@@ -2006,9 +2005,6 @@ fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
   if (forwards) { i1 = s1; i2 = s2; }
   else {i1 = s2; i2 = s1; }/*Going from side i1 to i2 counterclockwise now.*/
   i1 = smodss(i1 - 2, n) + 1;/*Now, the line from vertex i1 to i2 "cuts off" our geodesic.*/
-  output(gel(geod, 1));
-  output(gel(geod, 2));
-  pari_printf("%d %d\n", s1, s2);
   for (;;) {/*We loop with i1 -> i2 cutting off our geodesic. We eventually find a vertex on the other side, when we stop.*/
 	long i = fdom_intersect_sidesmidpt(i1, i2, n);
 	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
@@ -2020,19 +2016,19 @@ fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
 	int ips = tolsigne(dist2, tol);
 	if (ips == 1) { i3 = ip; i4 = ip; break; }/*i+1 crosses over.*/
 	if (!ips) pari_err(e_MISC, "TO DO: GEODESIC INTERSECTING VERTEX.");
-	if (cmprr(dist1, dist2) > 0) {/*vertex i is closer than i+1, so we replace i1 with i*/
-      i1 = i;
+	if (cmprr(dist1, dist2) > 0) {/*vertex i is closer than i+1, so we replace i2 with i*/
+      i2 = i;
 	}
-	else i2 = ip;
+	else i1 = ip;
   }
-  while (i3 - i1 > 1) {/*Sort out the first side*/
+  while (smodss(i3 - i1, n) > 1) {/*Sort out the first side*/
 	long i = fdom_intersect_sidesmidpt(i1, i3, n);
 	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
 	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
 	if (whichside == 1) i3 = i;
 	else i1 = i;
   }
-  while (i2 - i4 > 1) {/*Sort out the second side*/
+  while (smodss(i2 - i4, n) > 1) {/*Sort out the second side*/
 	long i = fdom_intersect_sidesmidpt(i4, i2, n);
 	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
 	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
@@ -2092,10 +2088,7 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
 	long s1 = spair[end];/*This must be the next side.*/
 	GEN toconj = gel(elts, end);
 	g = Xmul(X, Xmul(X, toconj, g), Xinv(X, toconj));/*Update g*/
-	output(g);
 	geod = geodesic_klein(X, g, Xtoklein, tol);/*New geodesic*/
-	output(geod);
-	output(ghalf);
 	side = fdom_intersect(U, geod, tol, s1);/*Intersections*/
 	if (toleq(gel(sidestart, 3), gel(side, 3), tol) && toleq(gel(sidestart, 4), gel(side, 4), tol)) break;/*Back to the start, so done!*/
 	nsides++;/*Now we are an actually new side.*/
