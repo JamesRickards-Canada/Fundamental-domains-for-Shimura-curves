@@ -3303,6 +3303,53 @@ bnf_make_unitnorms(GEN B, long split, long prec)
   return gerepilecopy(av, mkvec2(v, uneg));
 }
 
+/*
+We make the possible norms for Atkin-Lehner elements. Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here).
+*/
+GEN
+AL_make_norms(GEN B, long split, GEN idfact, long prec)
+{
+  pari_sp av = avma;
+  GEN unitnorms = bnf_make_unitnorms(B, split, prec);/*We need this too, and this is why we saved a uneg if it existed.*/
+  GEN F = bnf_get_nf(B);
+  long nF = nf_get_degree(F);
+  GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
+  gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
+  GEN C = Buchray(B, modulus, 4);/*Compute the ray class field without generators.*/
+  GEN orders = gel(bnr_get_clgp(C), 2);/*Odd orders we don't care about, only even, so let's modify this.*/
+  long lo = lg(orders), i;
+  GEN ordmod = cgetg(lo, t_VECSMALL);
+  for (i = 1; i < lo; i++) {
+	if (mod2(gel(orders, i))) ordmod[i] = 1;/*Everything is a square for this generator.*/
+	else ordmod[i] = 2;
+  }
+  long li = lg(gel(idfact, 1)), j;
+  GEN ideals = cgetg(li, t_VEC);/*Stores the ideals unfactored.*/
+  for (i = 1; i < li; i++) gel(ideals, i) = idealfactorback(F, row(idfact, i), NULL, 0);
+  GEN alphas = cgetg_copy(ideals, &li);
+  GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the alphas and the e_i's mod ordmod[i] since we care about whether we are in C^2 or not.*/
+  for (i = 1; i < li; i++) {
+	GEN prin = bnrisprincipal(C, gel(ideals, i), 1);/*Compute [ei, alpha]*/
+	gel(alphas, i) = gel(prin, 2);/*Store alpha*/
+	GEN col = cgetg(lo, t_VECSMALL);
+	for (j = 1; j < lo; j++) col[j] = smodis(gmael(prin, 1, j), ordmod[j]);
+	gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
+  }/*A product of the ideals is in C^2 if and only if the corresponding linear combination of the columns of mat is 0 in F_2.*/
+  GEN ker = Flm_ker(mat, 2);/*A basis for the ideals.*/
+  long lk = lg(ker);
+  GEN newalphas = cgetg(lk, t_VEC);
+  for (i = 1; i < lk; i++) {
+	GEN pattern = gel(ker, i);
+	GEN alph = gen_1;
+	for (j = 1; j < li; j++) {
+	  if (pattern[j] == 1) alph = nfmul(F, alph, gel(alphas, j));
+	}
+	alph = Q_primpart(alph);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
+	gel(newalphas, i) = lift(basistoalg(F, alph));
+  }
+  return gerepilecopy(av, newalphas);
+}
+
 
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
