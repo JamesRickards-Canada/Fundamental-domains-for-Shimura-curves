@@ -2827,7 +2827,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-/*Returns the area of X. X can either be afuchinit or the fdom.*/
+/*Returns the area of X.*/
 GEN
 afucharea(GEN X)
 {
@@ -3189,7 +3189,7 @@ afuchsignature(GEN X)
   return gerepileupto(av, sig);
 }
 
-/*Returns the side pairing for X. X can either be afuchinit or the fdom.*/
+/*Returns the side pairing for X.*/
 GEN
 afuchspair(GEN X)
 {
@@ -3197,23 +3197,6 @@ afuchspair(GEN X)
   GEN U = afuch_get_fdom(X);
   if (!U) U = afuchfdom(X);
   return gerepilecopy(av, normbound_get_spair(U));
-}
-
-/*Reduces gz to the normalized boundary, returning [g'g, g'gz, decomp] where g'gz is inside the normalized boundary. Can supply g=NULL, which defaults it to the identity element. ASSUMES O=IDENTITY*/
-GEN
-afuchredelt(GEN X, GEN g, GEN z)
-{
-  pari_sp av = avma;
-  GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
-  GEN gdat = afuch_get_gdat(X);
-  GEN tol = gdat_get_tol(gdat);
-  GEN zsafe = gtocr(z, lg(tol));/*Make sure z has the appropriate formatting.*/
-  if(!g) g = afuchid(X);
-  GEN r = red_elt_decomp(X, U, g, zsafe, &afuchtoklein, &afuchmul, gdat);/*[g'g, decomp].*/
-  GEN gact = afuchtoklein(X, gel(r, 1));
-  GEN zimg = klein_act_i(gact, zsafe);
-  return gerepilecopy(av, mkvec3(gel(r, 1), zimg, gel(r, 2)));
 }
 
 /*Writing an element as a word in the presentation. We do not reduce wrt the generators.*/
@@ -3224,7 +3207,16 @@ afuchword(GEN X, GEN g)
   GEN U = afuch_get_fdom(X);
   if (!U) U = afuchfdom(X);
   GEN P = afuch_get_pres(X);
-  if (!P) P = afuchpresentation(X);
+  if (!P) {
+	GEN pre = afuchpresentation(X);
+	cgiv(pre);
+	P = afuch_get_pres(X);/*The return value of afuchpresentation converts back to A from O, which we do not want.*/
+  }
+  GEN O = afuch_get_O(X);
+  if (!gequal1(O)) {
+	GEN Oinv = afuch_get_Oinv(X);
+	g = QM_QC_mul(Oinv, g);/*Convert to in O.*/
+  }
   return gerepileupto(av, word(X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X)));
 }
 

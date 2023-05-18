@@ -108,7 +108,6 @@ GEN afuchgeodesic(GEN X, GEN g);
 GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
 GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
-GEN afuchredelt(GEN X, GEN g, GEN z);
 GEN afuchspair(GEN X);
 GEN afuchword(GEN X, GEN g);
 
