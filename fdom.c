@@ -2921,7 +2921,7 @@ afuchfdom_i(GEN X, GEN *startingset)
       }
     }
     if (DEBUGLEVEL > 0) pari_printf("%d elements found\n", lg(elts) - 1);
-    U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    if (lg(elts) > 1) U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
     if (!U) {
       nU = 0;
       if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has 0 sides\n\n");
