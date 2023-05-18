@@ -2847,9 +2847,10 @@ afuchelts(GEN X)
   GEN elts = normbound_get_elts(U);
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, elts);
-  long i, le = lg(elts);
-  for (i = 1; i < le; i++) gel(elts, i) = QM_QC_mul(O, gel(elts, i));
-  return gerepilecopy(av, elts);
+  long i, le;
+  GEN newelts = cgetg_copy(elts, &le);
+  for (i = 1; i < le; i++) gel(newelts, i) = QM_QC_mul(O, gel(elts, i));
+  return gerepileupto(av, newelts);
 }
 
 /*Computes the fundamental domain for O^1, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
@@ -3022,8 +3023,20 @@ afuchgeodesic(GEN X, GEN g)
   GEN gdat = afuch_get_gdat(X);
   GEN U = afuch_get_fdom(X);
   if (!U) U = afuchfdom(X);
+  GEN O = afuch_get_O(X);
+  int isO = !gequal1(O);
+  if (isO) {/*Convert g to in O*/
+	GEN Oinv = afuch_get_Oinv(X);
+	g = QM_QC_mul(Oinv, g);
+  }
+  output(g);
   GEN geod = geodesic_fdom(X, U, g, afuchid(X), &afuchtoklein, &afuchmul, &afuchconj, gdat);
-  return gerepileupto(av, geod);
+  output(geod);
+  if (!isO) return gerepileupto(av, geod);/*No conversion necessary*/
+  output(ghalf);
+  long i, lgeo = lg(geod);
+  for (i = 1; i < lgeo; i++) gmael(geod, i, 1) = QM_QC_mul(O, gmael(geod, i, 1));/*Convert back.*/
+  return gerepilecopy(av, geod);
 }
 
 /*Given a totally real number field F (with variable not x), we return [pairs, areas, rprimes], where A=alginit(F, pairs[i]) gives an arithmetic Fuchsian group (with respect to the maximal order) whose area, areas[i], is between Amin and Amax, and the multiset of primes lying above the ramified ideals is rprimes[i]. In fact, we find all such algebras that are split only at the place "split". Can pass Amax as NULL to go from 0 to Amin. Currently, we do not treat Eichler orders here.*/
