@@ -2833,7 +2833,7 @@ afucharea(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   return gerepilecopy(av, normbound_get_area(U));
 }
 
@@ -2843,7 +2843,7 @@ afuchelts(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   GEN elts = normbound_get_elts(U);
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, elts);
@@ -2944,13 +2944,13 @@ afuchfdom_i(GEN X, GEN *startingset)
   return gerepileupto(av, U);
 }
 
-/*Returns the fundamental domain, recomputing X to more accuracy if the precision is too low.*/
-GEN
+/*Computes and stores the fundamental domain, recomputing X to more accuracy if the precision is too low.*/
+void
 afuchfdom(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (U) return U;/*We already have U!*/
+  if (U) return;/*We already have U!*/
   GEN allelts = obj_check(X, afuch_SAVEDELTS);
   if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
     pari_err(e_MISC,"TO DO: I can just call the norm basis right away and win.");
@@ -2961,7 +2961,7 @@ afuchfdom(GEN X)
   for (;;) {
     U = afuchfdom_i(X, &startingset);
     if (U) break;/*Success!*/
-    pari_warn(warner, "Increasing precision");
+    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
     precinc = 1;
     afuch_moreprec(X, 1);/*Increase the precision by 1.*/
     if (startingset) {/*We did find some elements, so we save them (after removing the 0's).*/
@@ -2976,14 +2976,15 @@ afuchfdom(GEN X)
   }
   if (precinc) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
-    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+    if (DEBUGLEVEL > 0) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
   }
   GEN Gtype = afuch_get_type(X);
   if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
   long type = itos(Gtype);
   if (!type) {/*Looking for O^1 only.*/
     obj_insert(X, afuch_FDOM, U);
-    return gerepileupto(av, U);
+	set_avma(av);
+    return;
   }
   
   /*TO DO: FIX THIS PART.*/
@@ -3012,7 +3013,7 @@ afuchfdom(GEN X)
   U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
   obj_insert(X, afuch_FDOM, U);
   if (type == 3) obj_insert(X, afuch_SAVEDELTS, mkvec4(O1elts, unitelts, ALelts, normelts));
-  return gerepileupto(av, U);
+  set_avma(av);
 }
 
 /*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.*/
@@ -3022,7 +3023,7 @@ afuchgeodesic(GEN X, GEN g)
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
   GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   GEN O = afuch_get_O(X);
   int isO = !gequal1(O);
   if (isO) {/*Convert g to in O*/
@@ -3160,7 +3161,7 @@ afuchpresentation(GEN X)
   GEN pres = afuch_get_pres(X);
   if (!pres) {
     GEN U = afuch_get_fdom(X);
-    if (!U) U = afuchfdom(X);
+    if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
     pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
     obj_insert(X, afuch_PRES, pres);
   }
@@ -3183,7 +3184,7 @@ afuchsignature(GEN X)
   GEN sig = afuch_get_sig(X);/*Already computed.*/
   if (sig) return sig;
   GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   sig = signature(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
   obj_insert(X, afuch_SIG, sig);
   return gerepileupto(av, sig);
@@ -3195,7 +3196,7 @@ afuchspair(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   return gerepilecopy(av, normbound_get_spair(U));
 }
 
@@ -3205,7 +3206,7 @@ afuchword(GEN X, GEN g)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   GEN P = afuch_get_pres(X);
   if (!P) {
 	GEN pre = afuchpresentation(X);

@@ -117,7 +117,8 @@ afuchfdom_python(GEN X, char *filename)
   }
   char *fullfile = stack_sprintf("fdoms/%s.dat", filename);
   FILE *f = fopen(fullfile, "w");/*Now we have created the output file f.*/
-  GEN U = afuchfdom(X);
+  GEN U = afuch_get_fdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   GEN pair = normbound_get_spair(U);
   pari_fprintf(f, "%d", pair[1]);
   long i, lp = lg(pair);

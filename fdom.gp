@@ -23,8 +23,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afucharea,"afucharea(X): returns the area of the computed fundamental domain of X.");
 	install(afuchelts,"G",,fdom_library);
 	addhelp(afuchelts,"afuchelts(X): returns the vector of elements giving the sides of the fundamental domain of X, which generate the group.");
-	install(afuchfdom,"G",,fdom_library);
-	addhelp(afuchfdom,"afuchfdom(X): returns the fundamental domain of X. The elements returned are with respect to the basis of O, so you must convert back if you want to use them in A.");
+	install(afuchfdom,"vG",,fdom_library);
+	addhelp(afuchfdom,"afuchfdom(X): computes and stores the fundamental domain of X.");
 	install(afuchgeodesic,"GG",,fdom_library);
 	addhelp(afuchgeodesic,"afuchgeodesic(X, g): computes the image of the closed geodesic associated to the hyperbolic element g in the fundamental domain (g belongs to X as well). The return is a vector with entries being [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.");
 	install(afuchlist,"GGDGD1,L,",,fdom_library);
