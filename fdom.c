@@ -3030,11 +3030,8 @@ afuchgeodesic(GEN X, GEN g)
 	GEN Oinv = afuch_get_Oinv(X);
 	g = QM_QC_mul(Oinv, g);
   }
-  output(g);
   GEN geod = geodesic_fdom(X, U, g, afuchid(X), &afuchtoklein, &afuchmul, &afuchconj, gdat);
-  output(geod);
   if (!isO) return gerepileupto(av, geod);/*No conversion necessary*/
-  output(ghalf);
   long i, lgeo = lg(geod);
   for (i = 1; i < lgeo; i++) gmael(geod, i, 1) = QM_QC_mul(O, gmael(geod, i, 1));/*Convert back.*/
   return gerepilecopy(av, geod);
