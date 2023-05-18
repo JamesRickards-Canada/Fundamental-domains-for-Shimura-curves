@@ -3158,12 +3158,21 @@ afuchpresentation(GEN X)
 {
   pari_sp av = avma;
   GEN pres = afuch_get_pres(X);
-  if (pres) return pres;
-  GEN U = afuch_get_fdom(X);
-  if (!U) U = afuchfdom(X);
-  pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
-  obj_insert(X, afuch_PRES, pres);
-  return gerepileupto(av, pres);
+  if (!pres) {
+    GEN U = afuch_get_fdom(X);
+    if (!U) U = afuchfdom(X);
+    pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+    obj_insert(X, afuch_PRES, pres);
+  }
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) return gerepileupto(av, pres);/*O=1, no conversion necessary.*/
+  GEN Opres = cgetg(4, t_VEC);
+  long lgen, i;
+  gel(Opres, 1) = cgetg_copy(gel(pres, 1), &lgen);
+  for (i = 1; i < lgen; i++) gmael(Opres, 1, i) = QM_QC_mul(O, gmael(pres, 1, i));
+  gel(Opres, 2) = gcopy(gel(pres, 2));
+  gel(Opres, 3) = gcopy(gel(pres, 3));
+  return gerepileupto(av, Opres);
 }
 
 /*Signature*/
