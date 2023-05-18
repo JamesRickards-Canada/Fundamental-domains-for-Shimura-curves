@@ -39,8 +39,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. The format is a Vecsmall v, corresponding to the product of P[1][|v[i]|]^{sign(v[i])}, where P is the presentation. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
 
 	\\3: FINDING ELEMENTS
-	install(afuchfindelts,"GD1,G,D1,L,DG",,fdom_library);
-	addhelp(afuchfindelts,"afuchfindelts(X, {nm=1}, {N=1}, {C=default}: find N non-trivial elements of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z. Elements found may be equal.");
+	install(afuchfindoneelt,"GD1,G,DG",,fdom_library);
+	addhelp(afuchfindoneelt,"afuchfindoneelt(X, {nm=1}, {C=default}: returns one non-trivial element of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z.");
 
 	\\3: ALGEBRA HELPER METHODS
 	install(algab,"G",,fdom_library);

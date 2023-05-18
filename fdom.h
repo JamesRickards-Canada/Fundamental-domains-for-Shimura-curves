@@ -115,7 +115,7 @@ GEN afuchword(GEN X, GEN g);
 GEN bnf_make_unitnorms(GEN B, long split, long prec);
 
 /*3: FINDING ELEMENTS*/
-GEN afuchfindelts(GEN X, GEN nm, long N, GEN C);
+GEN afuchfindoneelt(GEN X, GEN nm, GEN C);
 
 /*3: ALGEBRA HELPER METHODS*/
 GEN algab(GEN A);

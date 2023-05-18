@@ -6,7 +6,6 @@
 13. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
 14. Input the trace_F/Q(nrd(g)/nm) part to the methods, and have a method for finding n non-trivial elements (instead of our current gp-accessible method).
 15. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
-16. Figure out what to do with converting to and from orders. In particular, afuchfindelts auto converts back, but we don't want that in the normalizer section.
 17. Add testing for changing p.
 18. When initialize by a, b allows for denominators, fix afuchlist to not use this.
 19. Geodesics that intersect a vertex.
@@ -186,7 +185,8 @@ static GEN afuchtrace(GEN X, GEN g);
 
 /*3: FINDING ELEMENTS*/
 static GEN afuch_make_qf(GEN X, GEN nm, GEN z, GEN tracepart, GEN realnm);
-static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN realnm);
+static GEN afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN realnm);
+static GEN afuchfindoneelt_i(GEN X, GEN nm, GEN C);
 
 /*3: ALGEBRA HELPER METHODS*/
 static GEN algconj(GEN A, GEN x);
@@ -2874,7 +2874,7 @@ afuchfdom_i(GEN X, GEN *startingset)
   pari_sp av_mid = avma;
   GEN firstelts = *startingset;
   if (!firstelts) {/*No starting set passed.*/
-    firstelts = afuchfindelts_i(X, gen_1, gtocr(gen_0, prec), C, 1, NULL, NULL);/*This may find an element with large radius, a good start.*/
+    firstelts = afuchfindelts(X, gen_1, gtocr(gen_0, prec), C, 1, NULL, NULL);/*This may find an element with large radius, a good start.*/
     if (!firstelts) return gc_NULL(av);/*Precision too low.*/
   }
   GEN U = NULL;
@@ -2900,7 +2900,7 @@ afuchfdom_i(GEN X, GEN *startingset)
         else ang1 = gel(Uvargs, sind - 1);
         if (cmprr(ang1, ang2) > 0) ang2 = addrr(ang2, twopi);/*We loop past zero.*/
         GEN z = hdiscrandom_arc(R, ang1, ang2, prec);
-        GEN found = afuchfindelts_i(X, gen_1, z, C, 1, NULL, NULL);
+        GEN found = afuchfindelts(X, gen_1, z, C, 1, NULL, NULL);
         if (!found) {/*Precision too low.*/
           *startingset = gerepilecopy(av, normbound_get_elts(U));
           return NULL;
@@ -2911,7 +2911,7 @@ afuchfdom_i(GEN X, GEN *startingset)
     else {
       for (i = 1; i < N; i++){
         GEN z = hdiscrandom(R, prec);
-        GEN found = afuchfindelts_i(X, gen_1, z, C, 1, NULL, NULL);
+        GEN found = afuchfindelts(X, gen_1, z, C, 1, NULL, NULL);
         if (!found) {/*Precision too low.*/
           if (!U) return gc_NULL(av);
           *startingset = gerepilecopy(av, normbound_get_elts(U));
@@ -3240,12 +3240,9 @@ afuch_makeunitelts(GEN X, GEN unitnorms)
     unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
   }
   long lu, i;
-  GEN elts = cgetg_copy(unitnorms, &lu), Oinv = afuch_get_Oinv(X);
-  for (i = 1; i < lu; i++) {
-    GEN elt = gel(afuchfindelts(X, gel(unitnorms, i), 1, NULL), 1);
-    gel(elts, i) = QM_QC_mul(Oinv, elt);/*TO DO: No more QM_QC_mul once I fix this order transport business.*/
-  }
-  return gerepilecopy(av, elts);
+  GEN elts = cgetg_copy(unitnorms, &lu);
+  for (i = 1; i < lu; i++) gel(elts, i) = afuchfindoneelt_i(X, gel(unitnorms, i), NULL);
+  return gerepileupto(av, elts);
 }
 
 /*TO DO*/
@@ -3483,7 +3480,8 @@ afuch_make_qf(GEN X, GEN nm, GEN z, GEN tracepart, GEN realnm)
 }
 
 /*Finds the norm nm elements of the normalizer such that Q_{z, 0}^nm(g)<=C. If maxelts is positive, this is the most number of returned elements. We will pick up elements g for which gz is close to 0. We use pruning, so there is no guarantee that we find elements that are there (but overall, it is quicker to find elements this way by repeating with different values of z). NOTE: we find element in the basis of O, NOT back to A. Can supply tracepart/realnm to use in afuch_make_qf (or pass as NULL).*/
-static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN realnm)
+static GEN
+afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN realnm)
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
@@ -3545,8 +3543,9 @@ static GEN afuchfindelts_i(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracep
   return gerepilecopy(av, found);
 }
 
-/*Finds N non-trivial elements with the given norm nm, by searching around random points.*/
-GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
+/*Finds and returns one non-trivial element of the positive normalizer of O with the given norm nm, by searching around random points.*/
+static GEN
+afuchfindoneelt_i(GEN X, GEN nm, GEN C)
 {
   pari_sp av = avma, av2;
   long prec = afuch_get_prec(X);
@@ -3560,29 +3559,35 @@ GEN afuchfindelts(GEN X, GEN nm, long N, GEN C)
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
     realnm = gsubst(nm, Fvar, rt);
-    /*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner???
+    /*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner??? YES I DO!!
     C = mpdiv(C, realnm);
     if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
     */
   }
-  GEN ret = cgetg(N + 1, t_VEC);
-  long skip = 0, found = 0, i;
-  while (found < N) {
+  long skip = 0;
+  for (;;) {
     av2 = avma;
     GEN z = hdiscrandom(R, prec);
-    GEN E = afuchfindelts_i(X, nm, z, C, 1, tracepart, realnm);
+    GEN E = afuchfindelts(X, nm, z, C, 1, tracepart, realnm);
     if (!E) {/*Precision too low, we allow up to 20 exceptions before failing.*/
       skip++;
       if (skip > 20) pari_err_PREC("Precision too low for Fincke Pohst");
       continue;
     }
-    if (lg(E) == 1) { set_avma(av2); continue; }
-    found++;
-    gel(ret, found) = gel(E, 1);
+    if (lg(E) > 1) return gerepilecopy(av, gel(E, 1));
+	set_avma(av2);
   }
+}
+
+/*afuchfindoneelt_i, except we convert the element back to being in A if it was in the order.*/
+GEN
+afuchfindoneelt(GEN X, GEN nm, GEN C)
+{
+  pari_sp av = avma;
   GEN O = afuch_get_O(X);
-  for (i = 1; i <= N; i++) gel(ret, i) = QM_QC_mul(O, gel(ret, i));
-  return gerepilecopy(av, ret);
+  GEN elt = afuchfindoneelt_i(X, nm, C);
+  if (gequal1(O)) return elt;
+  return gerepileupto(av, QM_QC_mul(O, elt));
 }
 
 

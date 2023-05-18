@@ -66,7 +66,7 @@ avgtime(fil, A, 0, tno, testspercase);tno++;\\area 753.9822368615503772310344119
 A=alginit(F, [14820, -343]);\\Ramified at 3, 5, 13, 19
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 1809.5573684677209053544825887689936613
 
-A=alginit(F, [67, 61]);\\Ramified at 63, 67
+A=alginit(F, [67, 61]);\\Ramified at 61, 67
 avgtime(fil, A, 0, tno, testspercase);tno++;\\area 4146.9023027385270747706892659289438071
 
 A=alginit(F, [7975922955, -39733]);\\Ramified at 2, 3, 5, 7, 11, 13
