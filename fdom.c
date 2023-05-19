@@ -166,9 +166,10 @@ static GEN afuchfdom_i(GEN X, GEN *startingset);
 static int nextsub(GEN S, long n);
 
 /*3: NON NORM 1 METHODS*/
-static GEN afuch_makeunitelts(GEN X, GEN unitnorms);
+static GEN afuch_makeunitelts(GEN X);
 static GEN afuch_makeALelts(GEN X);
 static GEN afuch_makenormelts(GEN X);
+static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
@@ -1928,12 +1929,12 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, 
   GEN elts = normbound_get_elts(U);
   long genus = (((lg(elts) - 1 + nfixed) >> 1) - lgcyc + 2) >> 1;
   /*2*g+t+s+1_{t+s>0}=min number of generators. Initially, we have (n+k)/2, where k is the number of sides fixed by the element (nfixed) and n is the number of sides of the fdom (b/c we take one of g and g^(-1) every time). Then each accidental cycle AFTER THE FIRST removes exactly one generator. This gives the formula (if there are no accidental cycles then we are off by 1/2, but okay as >> 1 rounds down in C. We are actually overcounting by 1 if t+s=0 and there are no accidental cycles, but this is impossible as there is >=1 cycle.*/
-  long s, firstell = lgcyc;/*s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.*/
+  long s = 0, firstell = lgcyc;/*s counts the number of parabolic cycles, and firstell is the first index of an elliptic cycle.*/
   int foundlastpar = 0;
   for (i = 1; i < lgcyc; i++) {
     if (!foundlastpar) {
       if (gel(mcyc, 2)[i] == 0) continue;
-      s = i-1;/*Found the last parabolic.*/
+      s = i - 1;/*Found the last parabolic.*/
       foundlastpar = 1;
     }
     if (gel(mcyc, 2)[i] == 1) continue;
@@ -2989,33 +2990,32 @@ afuchfdom(GEN X)
 	set_avma(av);
     return;
   }
-  
-  /*TO DO: FIX THIS PART.*/
-  
-  GEN ALelts, normelts, O1elts = normbound_get_elts(U);
-  GEN unitelts = afuch_makeunitelts(X, NULL);
-  if (type > 1) {
-    ALelts = afuch_makeALelts(X);
-    if (type == 3) normelts = afuch_makenormelts(X);
-  }
-  GEN S;/*Stores the elements to add*/
+  GEN O1elts = normbound_get_elts(U), newelts, S;
   switch (type) {
     case 1:
-      S = unitelts;
+      S = shallowconcat(O1elts, afuch_makeunitelts(X));
       break;
     case 2:
-      S = shallowconcat(unitelts, ALelts);
+	  newelts = afuch_makeALelts(X);
+      S = shallowconcat(O1elts, shallowconcat1(newelts));
       break;
     case 3:/*case 3*/
-      S = shallowconcat(shallowconcat(unitelts, ALelts), normelts);/*TO DO: shallowconcatvec???*/
+      newelts = afuch_makenormelts(X);
+	  S = shallowconcat(O1elts, shallowconcat1(newelts));
       break;
     default:
       S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
   }
-  S = shallowconcat(S, O1elts);
   U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+  GEN elts = normbound_get_elts(U), kact = normbound_get_kact(U);
+  long le = lg(elts), i;
+  for (i = 1; i < le; i++) {/*Due to multiplication, we may have huge elements that can be cut down. We do this now.*/
+    GEN den;
+	gel(elts, i) = Q_primitive_part(gel(elts, i), &den);
+	if (den) gel(kact, i) = afuchtoklein(X, gel(elts, i));/*Recompute this way in case of precision mishaps.*/
+  }
   obj_insert(X, afuch_FDOM, U);
-  if (type == 3) obj_insert(X, afuch_SAVEDELTS, mkvec4(O1elts, unitelts, ALelts, normelts));
+  if (type == 3) obj_insert(X, afuch_SAVEDELTS, shallowconcat(O1elts, newelts));
   set_avma(av);
 }
 
@@ -3224,36 +3224,52 @@ afuchword(GEN X, GEN g)
 
 /*3: NON NORM 1 METHODS*/
 
-/*TO DO*/
-GEN afuchunitgrp(GEN X)
-{
-  return afuch_makeunitelts(X, NULL);
-}
-
 /*Returns a vector of generators for F^{x}O^{unit norm}/F^{x}O^1, which is a (multiplicative) F_2 vector space. We can pass in unitnorms, which is the first entry of bnf_make_unitnorms.*/
 static GEN
-afuch_makeunitelts(GEN X, GEN unitnorms)
+afuch_makeunitelts(GEN X)
 {
   pari_sp av = avma;
-  if (!unitnorms) {
-    GEN A = afuch_get_alg(X);
-    GEN F = alg_get_center(A);
-    long prec = afuch_get_prec(X);
-    GEN B = Buchall(F, 0, prec);
-    unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
-  }
+  GEN A = afuch_get_alg(X);
+  GEN F = alg_get_center(A);
+  long prec = afuch_get_prec(X);
+  GEN B = Buchall(F, 0, prec);
+  GEN unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
   long lu, i;
   GEN elts = cgetg_copy(unitnorms, &lu);
   for (i = 1; i < lu; i++) gel(elts, i) = afuchfindoneelt_i(X, gel(unitnorms, i), NULL);
   return gerepileupto(av, elts);
 }
 
-/*TO DO*/
+/*Returns a vector of generators for AL(O)^+/F^{x}O^1, which is a (multiplicative) F_2 vector space. We can pass in ALnorms, which is the first two entries of AL_make_norms.*/
 static GEN
 afuch_makeALelts(GEN X)
 {
-  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
-  return ghalf;
+  pari_sp av = avma;
+  GEN A = afuch_get_alg(X);
+  GEN F = alg_get_center(A);
+  long prec = afuch_get_prec(X);
+  GEN B = Buchall(F, 0, prec);
+  GEN ram_disc = algramifiedplacesf(A), ramid;
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) ramid = ram_disc;
+  else {/*Incorporate the level of O too*/
+	GEN ram_level = algorderlevel(A, O, 1);
+	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+	ramid = cgetg(lr + llev - 1, t_VEC);
+	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+	for (i = 1; i < llev; i++) {
+	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+	  gel(ramid, i + lr - 1) = theid;
+	}
+  }
+  GEN ALnorms = AL_make_norms(B, algsplitoo(A), ramid, prec);
+  GEN norms1 = gel(ALnorms, 1), norms2 = gel(ALnorms, 2);/*Unit, then AL norms*/
+  long lu, i;
+  GEN elts1 = cgetg_copy(norms1, &lu);
+  for (i = 1; i < lu; i++) gel(elts1, i) = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+  GEN elts2 = cgetg_copy(norms2, &lu);
+  for (i = 1; i < lu; i++) gel(elts2, i) = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+  return gerepilecopy(av, mkvec2(elts1, elts2));
 }
 
 /*TO DO*/
@@ -3309,7 +3325,7 @@ bnf_make_unitnorms(GEN B, long split, long prec)
 /*
 We make the possible norms for Atkin-Lehner elements. Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order).
 */
-GEN
+static GEN
 AL_make_norms(GEN B, long split, GEN ideals, long prec)
 {
   pari_sp av = avma;
