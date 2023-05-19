@@ -3342,7 +3342,14 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 	for (j = 1; j < li; j++) {
 	  if (pattern[j] == 1) alph = nfmul(F, alph, gel(alphas, j));
 	}
-	alph = Q_primpart(alph);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
+	GEN den;
+	alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
+	if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
+	  GEN denfact = Q_factor(den);
+	  for (j = 1; j < lg(gel(denfact, 2)); j++) {
+	    if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
+	  }
+	}
 	gel(newalphas, i) = lift(basistoalg(F, alph));
   }
   /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
