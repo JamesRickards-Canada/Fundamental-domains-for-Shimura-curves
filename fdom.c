@@ -3362,11 +3362,9 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 	for (j = 1; j < lo; j++) col[j] = smodis(gmael(prin, 1, j), ordmod[j]);
 	gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
   }/*A product of the ideals is in C^2 if and only if the corresponding linear combination of the columns of mat is 0 in F_2.*/
-  output(alphas);
-  output(mat);
   GEN ker = Flm_ker(mat, 2);/*A basis for the ideals.*/
   long lk = lg(ker);
-  GEN newalphas = cgetg(lk, t_VEC);
+  GEN newalphas = vectrunc_init(lk);
   for (i = 1; i < lk; i++) {
 	GEN pattern = gel(ker, i);
 	GEN alph = gen_1;
@@ -3381,8 +3379,11 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 	    if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
 	  }
 	}
-	gel(newalphas, i) = lift(basistoalg(F, alph));
+	alph = lift(basistoalg(F, alph));
+	if (gequal1(alph)) continue;/*It is possible to end up with 1, e.g. F=nfinit(y^3 - 104052*y - 12520924), split=1, ideals=idealprimedec(F, 5). Maybe there is a better way to handle this in general? Not sure if alph=1 is the only relation possible.*/
+	gel(newalphas, i) = alph;
   }
+  lk = lg(newalphas);
   /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
   GEN rt = gel(nf_get_roots(F), split);
   GEN swapper = gel(unitnorms, 2);/*This is -1 at the split place, if it exists.*/
@@ -3427,13 +3428,16 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
 	}
   }
   lo = lg(ord2gens);/*The actual generators.*/
+  GEN Borders = gel(bnf_get_clgp(B), 2);/*Orders of the generators of B.*/
+  long lBo = lg(Borders), j;
   GEN imCl = cgetg(lo, t_MAT);/*Find the image in Cl(R)[2], as we only keep a generating set for the survivors.*/
   for (i = 1; i < lo; i++) {
 	GEN Clim = bnfisprincipal0(B, gel(ord2gens, i), 0);
+	for (j = 1; j < lBo; j++) if (!gequal0(gel(Clim, j))) gel(Clim, j) = gen_1;/*We only care about 1 vs 0 for picking up part of the 2-torsion.*/
 	gel(imCl, i) = Clim;
   }
   GEN left = gel(FpM_indexrank(imCl, gen_2), 2);/*Which columns we keep, i.e. do not get destroyed boosting up to CL(R)[2].*/
-  long lgleft = lg(left), j;
+  long lgleft = lg(left);
   GEN alphs = cgetg(lgleft, t_VEC);
   for (i = 1; i < lgleft; i++) {
 	GEN csqr = idealsqr(F, gel(ord2gens, left[i]));/*Principal*/
