@@ -3304,10 +3304,10 @@ bnf_make_unitnorms(GEN B, long split, long prec)
 }
 
 /*
-We make the possible norms for Atkin-Lehner elements. Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here).
+We make the possible norms for Atkin-Lehner elements. Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order).
 */
 GEN
-AL_make_norms(GEN B, long split, GEN idfact, long prec)
+AL_make_norms(GEN B, long split, GEN ideals, long prec)
 {
   pari_sp av = avma;
   GEN unitnorms = bnf_make_unitnorms(B, split, prec);/*We need this too, and this is why we saved a uneg if it existed.*/
@@ -3323,9 +3323,7 @@ AL_make_norms(GEN B, long split, GEN idfact, long prec)
 	if (mod2(gel(orders, i))) ordmod[i] = 1;/*Everything is a square for this generator.*/
 	else ordmod[i] = 2;
   }
-  long li = lg(gel(idfact, 1)), j;
-  GEN ideals = cgetg(li, t_VEC);/*Stores the ideals unfactored.*/
-  for (i = 1; i < li; i++) gel(ideals, i) = idealfactorback(F, row(idfact, i), NULL, 0);
+  long li = lg(ideals), j;
   GEN alphas = cgetg_copy(ideals, &li);
   GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the alphas and the e_i's mod ordmod[i] since we care about whether we are in C^2 or not.*/
   for (i = 1; i < li; i++) {
@@ -3347,7 +3345,24 @@ AL_make_norms(GEN B, long split, GEN idfact, long prec)
 	alph = Q_primpart(alph);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
 	gel(newalphas, i) = lift(basistoalg(F, alph));
   }
-  return gerepilecopy(av, newalphas);
+  /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
+  GEN rt = gel(nf_get_roots(F), split);
+  GEN swapper = gel(unitnorms, 2);/*This is -1 at the split place, if it exists.*/
+  GEN ALnorms = vectrunc_init(lk);/*We either get this many, or one less if swapper=0.*/
+  for (i = 1; i < lk; i++) {
+	GEN nm = gel(newalphas, i);
+	if (signe(poleval(nm, rt)) > 0) {
+	  vectrunc_append(ALnorms, nm);
+	  continue;/*All good!*/
+	}
+	if (gequal0(swapper)) {
+	  swapper = nm;
+	  continue;/*Use this element to swap the rest out.*/
+	}
+	nm = nfmul(F, nm, swapper);
+	vectrunc_append(ALnorms, lift(basistoalg(F, nm)));/*Add it in.*/
+  }
+  return gerepilecopy(av, mkvec3(gel(unitnorms, 1), ALnorms, swapper));
 }
 
 
