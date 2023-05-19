@@ -3323,18 +3323,28 @@ bnf_make_unitnorms(GEN B, long split, long prec)
 }
 
 /*
-We make the possible norms for Atkin-Lehner elements. Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order).
+We make the possible norms for Atkin-Lehner elements, where B=bnfinit(F). Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the vector of maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order). We can also pass in B as the bnr initialized with respect to [1, [1,...,1,0,1,...,1]], where the 0 occurs at the unique split place.
 */
 static GEN
 AL_make_norms(GEN B, long split, GEN ideals, long prec)
 {
   pari_sp av = avma;
+  GEN F, C;
+  long nF;
+  if (nftyp(B) == typ_BNR) {/*We already made the BNR*/
+	C = B;
+	B = bnr_get_bnf(C);
+	F = bnf_get_nf(B);
+	nF = nf_get_degree(F);
+  }
+  else {
+	F = bnf_get_nf(B);
+	nF = nf_get_degree(F);
+	GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
+    gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
+    C = Buchray(B, modulus, nf_INIT);/*Compute the ray class field without generators.*/
+  }
   GEN unitnorms = bnf_make_unitnorms(B, split, prec);/*We need this too, and this is why we saved a uneg if it existed.*/
-  GEN F = bnf_get_nf(B);
-  long nF = nf_get_degree(F);
-  GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
-  gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
-  GEN C = Buchray(B, modulus, 4);/*Compute the ray class field without generators.*/
   GEN orders = gel(bnr_get_clgp(C), 2);/*Odd orders we don't care about, only even, so let's modify this.*/
   long lo = lg(orders), i;
   GEN ordmod = cgetg(lo, t_VECSMALL);
@@ -3352,6 +3362,8 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 	for (j = 1; j < lo; j++) col[j] = smodis(gmael(prin, 1, j), ordmod[j]);
 	gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
   }/*A product of the ideals is in C^2 if and only if the corresponding linear combination of the columns of mat is 0 in F_2.*/
+  output(alphas);
+  output(mat);
   GEN ker = Flm_ker(mat, 2);/*A basis for the ideals.*/
   long lk = lg(ker);
   GEN newalphas = cgetg(lk, t_VEC);
@@ -3391,7 +3403,70 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
   return gerepilecopy(av, mkvec3(gel(unitnorms, 1), ALnorms, swapper));
 }
 
-
+/*
+We make the possible norms for all normalizer elements. Returns [vunit, vAL, vclorder2, uneg], as in AL_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order).
+*/
+GEN
+normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
+{
+  pari_sp av = avma;
+  GEN F = bnf_get_nf(B);
+  long nF = nf_get_degree(F);
+  GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
+  gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
+  GEN C = Buchray(B, modulus, nf_INIT | nf_GEN);/*Compute the ray class field with generators.*/
+  GEN ALnorms = AL_make_norms(C, split, ideals, prec);/*We need this too, and this is why we saved a uneg if it existed.*/
+  GEN orders = gel(bnr_get_clgp(C), 2);/*We want generators for the 2-order part of the class group (and do not care about 1).*/
+  GEN gens = bnr_get_gen_nocheck(C);
+  long lo = lg(orders), i;
+  GEN ord2gens = vectrunc_init(lo);
+  for (i = 1; i < lo; i++) {
+	if (!mod2(gel(orders, i))) {
+	  GEN g = gel(gens, i);
+	  vectrunc_append(ord2gens, idealpows(F, g, itos(gel(orders, i)) >> 1));/*Save the order 2 generators.*/
+	}
+  }
+  lo = lg(ord2gens);/*The actual generators.*/
+  GEN imCl = cgetg(lo, t_MAT);/*Find the image in Cl(R)[2], as we only keep a generating set for the survivors.*/
+  for (i = 1; i < lo; i++) {
+	GEN Clim = bnfisprincipal0(B, gel(ord2gens, i), 0);
+	gel(imCl, i) = Clim;
+  }
+  GEN left = gel(FpM_indexrank(imCl, gen_2), 2);/*Which columns we keep, i.e. do not get destroyed boosting up to CL(R)[2].*/
+  long lgleft = lg(left), j;
+  GEN alphs = cgetg(lgleft, t_VEC);
+  for (i = 1; i < lgleft; i++) {
+	GEN csqr = idealsqr(F, gel(ord2gens, left[i]));/*Principal*/
+	GEN alph = gel(bnrisprincipal(C, csqr, 1), 2);/*Compute [e, alpha], where e=0.*/
+	GEN den;
+	alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
+	if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
+	  GEN denfact = Q_factor(den);
+	  for (j = 1; j < lg(gel(denfact, 2)); j++) {
+	    if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
+	  }
+	}
+	gel(alphs, i) = lift(basistoalg(F, alph));/*Store the scaled alph*/
+  }
+  /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
+  GEN rt = gel(nf_get_roots(F), split);
+  GEN swapper = gel(ALnorms, 3);/*This is -1 at the split place, if it exists.*/
+  GEN normalizernorms = vectrunc_init(lgleft);/*We either get this many, or one less if swapper=0.*/
+  for (i = 1; i < lgleft; i++) {
+	GEN nm = gel(alphs, i);
+	if (signe(poleval(nm, rt)) > 0) {
+	  vectrunc_append(normalizernorms, nm);
+	  continue;/*All good!*/
+	}
+	if (gequal0(swapper)) {
+	  swapper = nm;
+	  continue;/*Use this element to swap the rest out.*/
+	}
+	nm = nfmul(F, nm, swapper);
+	vectrunc_append(normalizernorms, lift(basistoalg(F, nm)));/*Add it in.*/
+  }
+  return gerepilecopy(av, mkvec3(gel(ALnorms, 1), gel(ALnorms, 2), normalizernorms));
+}
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
