@@ -2949,10 +2949,24 @@ afuchfdom(GEN X)
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
   if (U) return;/*We already have U!*/
+  GEN Gtype = afuch_get_type(X);
+  if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
+  long type = itos(Gtype);
   GEN allelts = obj_check(X, afuch_SAVEDELTS);
   if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
-    pari_err(e_MISC,"TO DO: I can just call the norm basis right away and win.");
-    U = normbasis(X, NULL, gel(allelts, 1), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+    GEN S = gel(allelts, 1);/*Norm 1, incluced in everything*/
+	switch (type) {
+	  case 3:
+	    S = shallowconcat(S, gel(allelts, 4));
+      case 2:
+        S = shallowconcat(S, gel(allelts, 3));
+      case 1:
+        S = shallowconcat(S, gel(allelts, 2));
+    }
+    U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+	obj_insert(X, afuch_FDOM, U);
+	set_avma(av);
+	return;
   }
   int precinc = 0;
   GEN startingset = NULL;
@@ -2976,9 +2990,6 @@ afuchfdom(GEN X)
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
     if (DEBUGLEVEL > 0) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
   }
-  GEN Gtype = afuch_get_type(X);
-  if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
-  long type = itos(Gtype);
   if (!type) {/*Looking for O^1 only.*/
     obj_insert(X, afuch_FDOM, U);
 	set_avma(av);
