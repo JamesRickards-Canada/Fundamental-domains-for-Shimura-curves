@@ -3276,7 +3276,7 @@ afuch_makeALelts(GEN X)
 static GEN
 afuch_makenormelts(GEN X)
 {
-  pari_err(e_MISC, "Sorry, this has not yet been implemented.");
+  pari_err(e_MISC, "Sorry, this has not yet been implemented. COMING SOON.");
   return ghalf;
 }
 
