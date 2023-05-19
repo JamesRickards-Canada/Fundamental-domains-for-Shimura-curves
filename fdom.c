@@ -126,8 +126,8 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 
 /*2: CYCLES AND SIGNATURE*/
 static GEN minimalcycles(GEN pair);
-static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
-static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 
 /*2: GEODESICS*/
 static long fdom_intersect_sidesmidpt(long i1, long i2, long n);
@@ -136,7 +136,7 @@ static GEN geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol);
 static GEN geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat);
 
 /*2: PRESENTATION*/
-static GEN presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
 static void presentation_update(GEN words, long ind, GEN repl);
 static GEN word_collapse(GEN word);
 static GEN word_inv(GEN word);
@@ -175,6 +175,7 @@ static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
 static GEN afuchconj(GEN X, GEN g);
 static GEN afuchid(GEN X);
 static int afuchinnormalizer(GEN X, GEN g);
+static int afuchisparabolic(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
 static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchnorm_fast(GEN X, GEN g);
@@ -804,7 +805,7 @@ Let X be a structure, from which Gamma, a discrete subgroup of PSL(2, R), can be
     ii) Invert elements of Gamma: format as GEN Xinv(GEN X, GEN g). We don't actually need the inverse, as long as g*Xinv(X, g) embeds to a constant multiple of the identity we are fine. In particular, we can use conjugation in a quaternion algebra.
     iii) Embed elements of Gamma into PGU(1, 1)^+ that act on the Klein model: format as GEN Xtoklein(GEN X, GEN g). The output should be [A, B], where the corresponding element in PGU(1, 1)^+ is [A, B;conj(B), conj(A)], and |A|^2-|B|^2 is positive. If |A|^2-|B|^2!=1, this is OK, and do not rescale it, as this will be more inefficient and may cause precision loss. If you have a natural embedding into PGL(2, R)^+, then you can use m2r_to_klein, which will ensure that det(M in PGL)=|A|^2-|B|^2. Also ensure that A and B are of type t_COMPLEX with t_REAL components, even if one of them is real or even integral.
     iv) Identify if an element is trivial in Gamma: format as int Xistriv(GEN X, GEN g). Since we are working in PSL, we need to be careful that -g==g, since most representations of elements in X would be for SL. Furthermore, if we do not return the true inverse in Xinv, then we have to account for this.
-    v) Find the exact trace of an element of Gamma: format as Xtrace(GEN X, GEN g).
+    v) Determine if an element of X is parabolic or not: format at int Xisparabolic(GEN X, GEN g) (typically you can compare trd(g)^2 to +/-4*nrd(g)).
     vi) Input an element representing the trivial element of X.
 We do all of our computations in the Klein model.
 */
@@ -1883,7 +1884,7 @@ minimalcycles(GEN pair)
 
 /*Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m. It is returned with the types sorted, i.e. parabolic cycles first, then accidental, then elliptic.*/
 static GEN
-minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN))
 {
   pari_sp av = avma;
   GEN G = normbound_get_elts(U);
@@ -1901,8 +1902,7 @@ minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xt
       for (j = 1; j < lg(cyc); j++) g = Xmul(X, gel(G, cyc[j]), g);/*Multiply on the left by G[cyc[j]]*/
     }
     if (Xistriv(X, g)) { types[i] = 1; continue; }/*Accidental cycle, continue on.*/
-    GEN trd = Xtrace(X, g);/*The trace*/
-    if (gequal(trd, gen_2) || gequal(trd, gen_m2)) { types[i] = 0; continue; }/*Parabolic cycle.*/
+    if (Xisparabolic(X, g)) { types[i] = 0; continue; }/*Parabolic cycle.*/
     long ord=1;
     GEN gpower=g;
     do {/*Finding the order of g*/
@@ -1918,10 +1918,10 @@ minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xt
 
 /*Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).*/
 static GEN
-signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN))
 {
   pari_sp av = avma;
-  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xtrace, Xistriv);/*The minimal cycles and their types.*/
+  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xisparabolic, Xistriv);/*The minimal cycles and their types.*/
   long nfixed = 0, lgcyc = lg(gel(mcyc, 1)), i;/*The number of fixed sides, and number of cycles+1*/
   for (i = 1; i < lgcyc; i++) {
     if (lg(gmael(mcyc, 1, i)) == 2 && gel(mcyc, 2)[i] == 2) nfixed++;
@@ -2113,7 +2113,7 @@ A word is a vecsmall, which is taken in reference to a list of elements G. A neg
 
 /*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].*/
 static GEN
-presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN))
 {
   pari_sp av = avma;
   /*Initially, we start with using the original indices (of U[1]), and transfer over at the very end.*/
@@ -2121,7 +2121,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GE
   GEN elts = normbound_get_elts(U);
   GEN words = cgetg_copy(elts, &lgelts);/*Stores elts[i] as a word in terms of the minimal generators.*/
   for (i = 1; i < lgelts; i++) gel(words, i) = mkvecsmall(i);/*Initially, each entry is just itself.*/
-  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xtrace, Xistriv);/*Minimal cycles by type.*/
+  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xisparabolic, Xistriv);/*Minimal cycles by type.*/
   GEN cyc = gel(mcyc, 1), cyctype = gel(mcyc, 2), pairing = normbound_get_spair(U);/*Cycles, types, pairing*/
   long lgcyc = lg(cyc), ngens = 0;
   for (i = 1; i < lgcyc; i++) {/*The relations are in reverse.*/
@@ -2505,7 +2505,7 @@ afuch_changep(GEN X, GEN p)
     obj_insert(X, afuch_FDOM, U);
     GEN pres = afuch_get_pres(X);
     if (pres) {/*Recompute the presentation.*/
-      pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+      pres = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
       obj_insert(X, afuch_PRES, pres);
     }
     GEN type = afuch_get_type(X);
@@ -3162,7 +3162,7 @@ afuchpresentation(GEN X)
   if (!pres) {
     GEN U = afuch_get_fdom(X);
     if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
-    pres = presentation(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+    pres = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
     obj_insert(X, afuch_PRES, pres);
   }
   GEN O = afuch_get_O(X);
@@ -3185,7 +3185,7 @@ afuchsignature(GEN X)
   if (sig) return sig;
   GEN U = afuch_get_fdom(X);
   if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
-  sig = signature(X, U, afuchid(X), &afuchmul, &afuchtrace, &afuchistriv);
+  sig = signature(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
   obj_insert(X, afuch_SIG, sig);
   return gerepileupto(av, sig);
 }
@@ -3427,6 +3427,20 @@ afuchinnormalizer(GEN X, GEN g)
   return gc_int(av, gequal(hnf(O1), hnf(O2)));
 }
 
+/*Returns 1 if g is parabolic, i.e. trd(g)^2=+/-2nrd(g), and 0 else.*/
+static int
+afuchisparabolic(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  GEN nm = afuchnorm_fast(X, g);
+  GEN tr = afuchtrace(X, g);
+  GEN F = alg_get_center(afuch_get_alg(X));
+  GEN twonm = nfmul(F, nm, stoi(4));/*2*norm*/
+  GEN trsq = nfsqr(F, tr);
+  if (gequal(twonm, trsq) || gequal(twonm, gneg(trsq))) return gc_int(av, 1);
+  return gc_int(av, 0);
+}
+
 /*Returns 1 if g is a scalar, i.e. g==conj(g).*/
 static int
 afuchistriv(GEN X, GEN g)
@@ -3520,7 +3534,7 @@ afuchtoklein(GEN X, GEN g)
   return gerepilecopy(av, mkvec2(A, B));
 }
 
-/*Returns the trace of an element of X. We only use it in the presentation so this is not as efficient as it could be (by saving the traces of a basis).*/
+/*Returns the trace of an element of X. We only use it in afuchisparabolic (which itself is only used in computing minimal cycles), so this is not as efficient as it could be (by saving the traces of a basis).*/
 static GEN
 afuchtrace(GEN X, GEN g)
 {
