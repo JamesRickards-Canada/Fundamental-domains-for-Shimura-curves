@@ -2152,6 +2152,9 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GE
     GEN repind = gen_0, cycle;/*repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.*/
     /*Now we look for a common term.*/
     for (i = 1; i < naccident; i++) {/*Each step we solve the relation.*/
+	  if (gc_needed(av, 2)) {
+		gerepileall(av, 5, &cyc, &cyctype, &H, &words, &r);
+	  }
       long lr = lg(r);
       for (j = indrep; j < lr; j++) {/*Trying to replace index j. We stop once we find one replacable.*/
         torep = r[j];/*What we try to replace.*/
@@ -2181,7 +2184,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xtrace)(GE
       indrep = repind[1];/*The index we replaced.*/
       gel(cyc, repind[2]) = gel(cyc, lastrel);/*Replace the relation we replaced with the last one.*/
       lastrel--;/*One less relation.*/
-      }
+    }
   }
   /*Now we are almost done. If there is an elliptic cycle, we can do one final replacement.*/
   if (ellind < lgcyc) {
