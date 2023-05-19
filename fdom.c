@@ -170,6 +170,7 @@ static GEN afuch_makeunitelts(GEN X);
 static GEN afuch_makeALelts(GEN X);
 static GEN afuch_makenormelts(GEN X);
 static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
+static GEN normalizer_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
@@ -2508,13 +2509,6 @@ afuch_changep(GEN X, GEN p)
       pres = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
       obj_insert(X, afuch_PRES, pres);
     }
-    GEN type = afuch_get_type(X);
-    if (gequalgs(type, 3)) {/*Recompute the saved elements.*/
-      GEN elts = normbound_get_elts(U);
-      GEN saved = gcopy(afuch_get_savedelts(X));
-      gel(saved, 1) = elts;
-      obj_insert(X, afuch_SAVEDELTS, saved);
-    }
   }
   set_avma(av);
 }
@@ -3240,7 +3234,7 @@ afuch_makeunitelts(GEN X)
   return gerepileupto(av, elts);
 }
 
-/*Returns a vector of generators for AL(O)^+/F^{x}O^1, which is a (multiplicative) F_2 vector space. We can pass in ALnorms, which is the first two entries of AL_make_norms.*/
+/*Returns a vector of generators for AL(O)^+/F^{x}O^1, which is a (multiplicative) F_2 vector space.*/
 static GEN
 afuch_makeALelts(GEN X)
 {
@@ -3272,12 +3266,38 @@ afuch_makeALelts(GEN X)
   return gerepilecopy(av, mkvec2(elts1, elts2));
 }
 
-/*TO DO*/
+/*Returns a vector of generators for N_{B^x}(O)^+/F^{x}O^1, which is a (multiplicative) F_2 vector space.*/
 static GEN
 afuch_makenormelts(GEN X)
 {
-  pari_err(e_MISC, "Sorry, this has not yet been implemented. COMING SOON.");
-  return ghalf;
+  pari_sp av = avma;
+  GEN A = afuch_get_alg(X);
+  GEN F = alg_get_center(A);
+  long prec = afuch_get_prec(X);
+  GEN B = Buchall(F, 0, prec);
+  GEN ram_disc = algramifiedplacesf(A), ramid;
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) ramid = ram_disc;
+  else {/*Incorporate the level of O too*/
+	GEN ram_level = algorderlevel(A, O, 1);
+	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+	ramid = cgetg(lr + llev - 1, t_VEC);
+	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+	for (i = 1; i < llev; i++) {
+	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+	  gel(ramid, i + lr - 1) = theid;
+	}
+  }
+  GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
+  GEN norms1 = gel(norms, 1), norms2 = gel(norms, 2), norms3 = gel(norms, 3);/*Unit, then AL norms, then normalizer norms*/
+  long lu, i;
+  GEN elts1 = cgetg_copy(norms1, &lu);
+  for (i = 1; i < lu; i++) gel(elts1, i) = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+  GEN elts2 = cgetg_copy(norms2, &lu);
+  for (i = 1; i < lu; i++) gel(elts2, i) = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+  GEN elts3 = cgetg_copy(norms3, &lu);
+  for (i = 1; i < lu; i++) gel(elts3, i) = afuchfindoneelt_i(X, gel(norms3, i), NULL);
+  return gerepilecopy(av, mkvec3(elts1, elts2, elts3));
 }
 
 /*
@@ -3381,7 +3401,7 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 	}
 	alph = lift(basistoalg(F, alph));
 	if (gequal1(alph)) continue;/*It is possible to end up with 1, e.g. F=nfinit(y^3 - 104052*y - 12520924), split=1, ideals=idealprimedec(F, 5). Maybe there is a better way to handle this in general? Not sure if alph=1 is the only relation possible.*/
-	gel(newalphas, i) = alph;
+	vectrunc_append(newalphas, alph);
   }
   lk = lg(newalphas);
   /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
@@ -3407,7 +3427,7 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 /*
 We make the possible norms for all normalizer elements. Returns [vunit, vAL, vclorder2, uneg], as in AL_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order).
 */
-GEN
+static GEN
 normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
 {
   pari_sp av = avma;
@@ -3470,6 +3490,31 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
 	vectrunc_append(normalizernorms, lift(basistoalg(F, nm)));/*Add it in.*/
   }
   return gerepilecopy(av, mkvec3(gel(ALnorms, 1), gel(ALnorms, 2), normalizernorms));
+}
+
+GEN
+testnormal(GEN X)
+{
+  pari_sp av = avma;
+  GEN A = afuch_get_alg(X);
+  GEN F = alg_get_center(A);
+  long prec = afuch_get_prec(X);
+  GEN B = Buchall(F, 0, prec);
+  GEN ram_disc = algramifiedplacesf(A), ramid;
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) ramid = ram_disc;
+  else {/*Incorporate the level of O too*/
+	GEN ram_level = algorderlevel(A, O, 1);
+	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+	ramid = cgetg(lr + llev - 1, t_VEC);
+	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+	for (i = 1; i < llev; i++) {
+	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+	  gel(ramid, i + lr - 1) = theid;
+	}
+  }
+  GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
+  return gerepileupto(av, norms);
 }
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
