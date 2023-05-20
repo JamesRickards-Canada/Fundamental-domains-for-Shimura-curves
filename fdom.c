@@ -3572,30 +3572,6 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
   return gerepilecopy(av, mkvec3(gel(ALnorms, 1), gel(ALnorms, 2), normalizernorms));
 }
 
-GEN
-testnormal(GEN X)
-{
-  pari_sp av = avma;
-  GEN A = afuch_get_alg(X);
-  GEN F = alg_get_center(A);
-  long prec = afuch_get_prec(X);
-  GEN B = Buchall(F, 0, prec);
-  GEN ram_disc = algramifiedplacesf(A), ramid;
-  GEN O = afuch_get_O(X);
-  if (gequal1(O)) ramid = ram_disc;
-  else {/*Incorporate the level of O too*/
-	GEN ram_level = algorderlevel(A, O, 1);
-	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
-	ramid = cgetg(lr + llev - 1, t_VEC);
-	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
-	for (i = 1; i < llev; i++) {
-	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
-	  gel(ramid, i + lr - 1) = theid;
-	}
-  }
-  GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
-  return gerepileupto(av, norms);
-}
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
@@ -4099,6 +4075,16 @@ algisorder(GEN A, GEN O)
   return gc_int(av, 1);
 }
 
+/*Given a vector of quaternionic elements Oalg in algebraic form given a basis for an order, we convert it to a matrix, whose columns express each basis element in terms of the natural order of A.*/
+GEN
+algorderalgtoorder(GEN A, GEN Oalg)
+{
+  long lO = lg(Oalg), i;
+  GEN M = cgetg(lO, t_MAT);
+  for (i = 1; i < lO; i++) gel(M, i) = algalgtobasis(A, gel(Oalg, i));
+  return M;
+}
+
 /*Given an order O in A, returns the discriminant of the order, which is disc(algebra)*level*/
 static GEN
 algorderdisc(GEN A, GEN O, int reduced, int factored)
@@ -4150,6 +4136,7 @@ algorderlevel(GEN A, GEN O, int factored)
   if(factored) return gerepilecopy(av, fact);
   return gerepileupto(av, idealfactorback(F, fact, NULL, 0));
 }
+
 
 
 /*SECTION 4: FINCKE POHST FOR FLAG=2 WITH PRUNING*/
