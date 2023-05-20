@@ -1,6 +1,6 @@
 /*fdom.c methods*/
 
-enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES, afuch_SAVEDELTS};
+enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES, afuch_SAVEDELTS, afuch_NORMALIZERNORMS};
 
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
@@ -71,6 +71,8 @@ INLINE GEN
 afuch_get_pres(GEN X) { return obj_check(X, afuch_PRES); }
 INLINE GEN
 afuch_get_savedelts(GEN X) { return obj_check(X, afuch_SAVEDELTS); }
+INLINE GEN
+afuch_get_normalizernorms(GEN X) { return obj_check(X, afuch_NORMALIZERNORMS); }
 INLINE long
 afuch_get_prec(GEN X) { return lg(gdat_get_tol(afuch_get_gdat(X))); }
 

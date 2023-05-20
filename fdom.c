@@ -2404,7 +2404,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, and is stored as a lazy vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
 X
-    [O, Oinv, Oconj, Omultable, Onormdat, type [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, savedelts]]
+    [O, Oinv, Oconj, Omultable, Onormdat, type [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, savedelts, normalizernorms]]
 
 O, Oinv
     The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
@@ -2436,6 +2436,8 @@ presentation
     Presentation, if computed.
 savedelts
     [O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
+normalizernorms
+	Only initialized if you call afuchnormalizernorms or initialize with type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
 */
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
@@ -2449,7 +2451,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   if (!type) type = gen_0;
   GEN p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
-  GEN Oinv, AX = obj_init(6, 10);
+  GEN Oinv, AX = obj_init(6, 11);
   gel(AX, 1) = O;
   gel(AX, 2) = Oinv = QM_inv(O);/*Inverse*/
   long lgO = lg(O), i, j;
@@ -2678,7 +2680,7 @@ GEN
 afuch_newtype(GEN X, GEN type)
 {
   pari_sp av = avma;
-  GEN newX = obj_init(6, 10);
+  GEN newX = obj_init(6, 11);
   gel(newX, 1) = afuch_get_O(X);
   gel(newX, 2) = afuch_get_Oinv(X);
   gel(newX, 3) = afuch_get_Oconj(X);
@@ -2693,6 +2695,8 @@ afuch_newtype(GEN X, GEN type)
   obj_insert(newX, afuch_FDOMDAT, obj_check(X, afuch_FDOMDAT));
   GEN saved = afuch_get_savedelts(X);
   if (saved) obj_insert(newX, afuch_SAVEDELTS, saved);
+  GEN NN = afuch_get_normalizernorms(X);
+  if (NN) obj_insert(newX, afuch_NORMALIZERNORMS, NN);
   GEN U = afuch_get_fdom(X);
   if (U) {
 	afuchfdom(newX);
@@ -3313,24 +3317,28 @@ static GEN
 afuch_makenormelts(GEN X)
 {
   pari_sp av = avma;
-  GEN A = afuch_get_alg(X);
-  GEN F = alg_get_center(A);
-  long prec = afuch_get_prec(X);
-  GEN B = Buchall(F, 0, prec);
-  GEN ram_disc = algramifiedplacesf(A), ramid;
-  GEN O = afuch_get_O(X);
-  if (gequal1(O)) ramid = ram_disc;
-  else {/*Incorporate the level of O too*/
-	GEN ram_level = algorderlevel(A, O, 1);
-	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
-	ramid = cgetg(lr + llev - 1, t_VEC);
-	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
-	for (i = 1; i < llev; i++) {
-	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
-	  gel(ramid, i + lr - 1) = theid;
-	}
+  GEN norms = afuch_get_normalizernorms(X);
+  if (!norms) {/*Must make the norms.*/
+    GEN A = afuch_get_alg(X);
+    GEN F = alg_get_center(A);
+    long prec = afuch_get_prec(X);
+    GEN B = Buchall(F, 0, prec);
+    GEN ram_disc = algramifiedplacesf(A), ramid;
+    GEN O = afuch_get_O(X);
+    if (gequal1(O)) ramid = ram_disc;
+    else {/*Incorporate the level of O too*/
+	  GEN ram_level = algorderlevel(A, O, 1);
+	  long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+	  ramid = cgetg(lr + llev - 1, t_VEC);
+	  for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+	  for (i = 1; i < llev; i++) {
+	    GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+	    gel(ramid, i + lr - 1) = theid;
+	  }
+    }
+    norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
+	obj_insert(X, afuch_NORMALIZERNORMS, norms);
   }
-  GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
   GEN norms1 = gel(norms, 1), norms2 = gel(norms, 2), norms3 = gel(norms, 3);/*Unit, then AL norms, then normalizer norms*/
   long lu, i;
   GEN elts1 = cgetg_copy(norms1, &lu);
