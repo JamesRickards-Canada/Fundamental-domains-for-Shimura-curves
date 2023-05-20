@@ -2688,7 +2688,8 @@ afuch_newtype(GEN X, GEN type)
   gel(newX, 5) = afuch_get_Onormdat(X);
   gel(newX, 6) = type;
   obj_insert(newX, afuch_A, afuch_get_alg(X));
-  obj_insert(newX, afuch_ONORMREAL, afuch_get_Onormreal(X));
+  GEN Onormreal = afuch_get_Onormreal(X);
+  if (Onormreal) obj_insert(newX, afuch_ONORMREAL, Onormreal);
   obj_insert(newX, afuch_KLEINMATS, afuch_get_kleinmats(X));
   obj_insert(newX, afuch_QFMATS, afuch_get_qfmats(X));
   obj_insert(newX, afuch_GDAT, afuch_get_gdat(X));
@@ -3191,6 +3192,35 @@ nextsub(GEN S, long n)
 	cur--;
   }
   return 0;
+}
+
+/*Possible norms of normalizer elements.*/
+GEN
+afuchnormalizernorms(GEN X)
+{
+  pari_sp av = avma;
+  GEN NN = afuch_get_normalizernorms(X);
+  if (NN) return gcopy(NN);
+  GEN A = afuch_get_alg(X);
+  GEN F = alg_get_center(A);
+  long prec = afuch_get_prec(X);
+  GEN B = Buchall(F, 0, prec);
+  GEN ram_disc = algramifiedplacesf(A), ramid;
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) ramid = ram_disc;
+  else {/*Incorporate the level of O too*/
+	GEN ram_level = algorderlevel(A, O, 1);
+	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+	ramid = cgetg(lr + llev - 1, t_VEC);
+	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+	for (i = 1; i < llev; i++) {
+	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+	  gel(ramid, i + lr - 1) = theid;
+	}
+  }
+  GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
+  obj_insert(X, afuch_NORMALIZERNORMS, norms);
+  return gerepileupto(av, norms);
 }
 
 /*Presentation*/

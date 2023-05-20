@@ -109,6 +109,7 @@ GEN afuchelts(GEN X);
 void afuchfdom(GEN X);
 GEN afuchgeodesic(GEN X, GEN g);
 GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
+GEN afuchnormalizernorms(GEN X);
 GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchspair(GEN X);
