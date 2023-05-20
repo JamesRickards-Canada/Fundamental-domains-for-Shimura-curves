@@ -133,6 +133,7 @@ GEN algmulvec(GEN A, GEN G, GEN L);
 /*3: ALGEBRA ORDER METHODS*/
 int algisorder(GEN A, GEN O);
 GEN algorderalgtoorder(GEN A, GEN Oalg);
+GEN algordertoorderalg(GEN A, GEN O);
 GEN algorderlevel(GEN A, GEN O, int factored);
 
 /*SECTION 4: FINCKE POHST FOR FLAG=2 WITH PRUNING*/
