@@ -15,6 +15,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	\\3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS
 	install(afuchinit,"GDGDGD1,L,p",,fdom_library);
 	addhelp(afuchinit,"afuchinit(al, {O}, {type}, {flag=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p=Pi/8+0.5*I is sent to 0. The default order O is the stored maximal order in A, and the default type is 0. If flag = 1, also computes the fundamental domain. flag = 2 also computes the presentation and signature.");
+	install(afuch_newtype,"GG",,fdom_library);
+	addhelp(afuch_newtype,"afuch_newtype(X, type): returns a the Fuchsian group X but we change the type. If the fundamental domain was already computed with type=3, this is very efficient, as we do not have to search for new generators.");
 	install(afuch_changep,"vGG",,fdom_library);
 	addhelp(afuch_changep,"afuch_changep(X, p): changes the value of p, i.e. what is sent to 0 under the map from the upper half plane to the unit disc/Klein model. We recompute the fundamental domain and presentation if they were initialized.");
 

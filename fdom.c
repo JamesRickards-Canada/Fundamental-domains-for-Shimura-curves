@@ -2673,6 +2673,37 @@ afuch_make_traceqf(GEN X, GEN nm, GEN Onorm)
   return gerepileupto(av, M);
 }
 
+/*Returns a new Fuchsian group with the same algebra and order, but a new type. This entry will point to some of the data on the heap for the original one, further enforcing the requirement that you do not access and change the components directly.*/
+GEN
+afuch_newtype(GEN X, GEN type)
+{
+  pari_sp av = avma;
+  GEN newX = obj_init(6, 10);
+  gel(newX, 1) = afuch_get_O(X);
+  gel(newX, 2) = afuch_get_Oinv(X);
+  gel(newX, 3) = afuch_get_Oconj(X);
+  gel(newX, 4) = afuch_get_Omultable(X);
+  gel(newX, 5) = afuch_get_Onormdat(X);
+  gel(newX, 6) = type;
+  obj_insert(newX, afuch_A, afuch_get_alg(X));
+  obj_insert(newX, afuch_ONORMREAL, afuch_get_Onormreal(X));
+  obj_insert(newX, afuch_KLEINMATS, afuch_get_kleinmats(X));
+  obj_insert(newX, afuch_QFMATS, afuch_get_qfmats(X));
+  obj_insert(newX, afuch_GDAT, afuch_get_gdat(X));
+  obj_insert(newX, afuch_FDOMDAT, obj_check(X, afuch_FDOMDAT));
+  GEN saved = afuch_get_savedelts(X);
+  if (saved) obj_insert(newX, afuch_SAVEDELTS, saved);
+  GEN U = afuch_get_fdom(X);
+  if (U) {
+	afuchfdom(newX);
+	GEN S = afuch_get_sig(X);
+	if (S) afuchsignature(newX);
+	GEN P = afuch_get_pres(X);
+	if (P) afuchpresentation(newX);
+  }
+  return gerepilecopy(av, newX);
+}
+
 /*Initializes a table to compute multiplication of elements written in terms of O's basis more efficiently.*/
 static GEN
 Omultable(GEN A, GEN O, GEN Oinv)
@@ -3020,7 +3051,7 @@ afuchfdom(GEN X)
 	if (den) gel(kact, i) = afuchtoklein(X, gel(elts, i));/*Recompute this way in case of precision mishaps.*/
   }
   obj_insert(X, afuch_FDOM, U);
-  if (type == 3) obj_insert(X, afuch_SAVEDELTS, shallowconcat(O1elts, newelts));
+  if (type == 3) obj_insert(X, afuch_SAVEDELTS, vec_prepend(newelts, O1elts));
   set_avma(av);
 }
 
