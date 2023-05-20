@@ -1,14 +1,5 @@
 \\Runs the fundamental domain methods across a testing suite to give a series of benchmarks.
 
-/*
-Code to make the algebraic reps for the bases:
-algmakeorderalg(A, ord)={
-  my(n=4*A[1].nf.r1);
-  if(ord==0,ord=matid(n));
-  return(liftall(vector(n, i, algbasistoalg(A, ord[, i]))))
-}
-*/
-
 avg_stdev(v)={
   my(avg, n, va);
   n=#v;
@@ -27,8 +18,8 @@ avgtime(fil, A, Or, case, N)={
 	times[i]=gettime()/1000;
   );
   dat=avg_stdev(times);
-  dom=afuchfdom(X);
-  st=strprintf("%4d   %2d   %P9.3f %8d %P12.3f %P14.3f", case, #dom[1][1]/4, dom[7], #dom[1], dat[1], dat[2]);
+  afuchfdom(X);
+  st=strprintf("%4d   %2d   %P9.3f %8d %P12.3f %P14.3f", case, algcenter(A).r1, afucharea(X), #afuchelts(X), dat[1], dat[2]);
   filewrite(fil, st);
   print(st);
 }
