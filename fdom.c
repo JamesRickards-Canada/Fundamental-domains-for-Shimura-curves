@@ -1982,24 +1982,24 @@ fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
   GEN sides = normbound_get_sides(U);
   GEN geodeq = gel(geod, 3);
   if (!signe(gel(geodeq, 3))) {/*Line through origin.*/
-	if (!s1) s1 = normbound_outside(U, gel(geod, 1), tol);
-	long s2 = normbound_outside(U, gel(geod, 2), tol);/*These are automatically correct.*/
-	GEN v1 = line_int(geodeq, gel(sides, s1), tol);
-	GEN v2 = line_int(geodeq, gel(sides, s2), tol);
-	return gerepilecopy(av, mkvec5(stoi(s1), stoi(s2), v1, v2, geodeq));
+    if (!s1) s1 = normbound_outside(U, gel(geod, 1), tol);
+    long s2 = normbound_outside(U, gel(geod, 2), tol);/*These are automatically correct.*/
+    GEN v1 = line_int(geodeq, gel(sides, s1), tol);
+    GEN v2 = line_int(geodeq, gel(sides, s2), tol);
+    return gerepilecopy(av, mkvec5(stoi(s1), stoi(s2), v1, v2, geodeq));
   }
   GEN verts = normbound_get_vcors(U);
   int forwards, prec = lg(tol);/*Tracks whether the arc goes from v1 to v2 or v2 to v1 counterclockwise around the circle.*/
   GEN arg1 = argmod_complex(gel(geod, 1), tol), arg2 = argmod_complex(gel(geod, 2), tol);/*Arguments of the vertices of geod*/
   if (cmprr(arg1, arg2) < 0) {/*arg2 > arg1*/
-	GEN diff = subrr(arg2, arg1);
-	if (cmprr(diff, mppi(prec)) < 0) forwards = 1;/*arg1 -> arg2 length <pi, so correct*/
-	else forwards = 0;
+    GEN diff = subrr(arg2, arg1);
+    if (cmprr(diff, mppi(prec)) < 0) forwards = 1;/*arg1 -> arg2 length <pi, so correct*/
+    else forwards = 0;
   }
   else {/*arg1 > arg2*/
-	GEN diff = subrr(arg1, arg2);
-	if (cmprr(diff, mppi(prec)) < 0) forwards = 0;/*arg2 -> arg1 length <pi, so backwards*/
-	else forwards = 1;
+    GEN diff = subrr(arg1, arg2);
+    if (cmprr(diff, mppi(prec)) < 0) forwards = 0;/*arg2 -> arg1 length <pi, so backwards*/
+    else forwards = 1;
   }
   long n = lg(sides) - 1;
   if (!s1) s1 = normbound_outside(U, gel(geod, 1), tol);
@@ -2009,34 +2009,34 @@ fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
   else {i1 = s2; i2 = s1; }/*Going from side i1 to i2 counterclockwise now.*/
   i1 = smodss(i1 - 2, n) + 1;/*Now, the line from vertex i1 to i2 "cuts off" our geodesic.*/
   for (;;) {/*We loop with i1 -> i2 cutting off our geodesic. We eventually find a vertex on the other side, when we stop.*/
-	long i = fdom_intersect_sidesmidpt(i1, i2, n);
-	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
-	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
-	if (whichside == 1) { i3 = i; i4 = i; break; }/*Crossed over*/
-	GEN dist1 = fdom_intersect_dist(geodeq, gel(verts, i));
-	long ip = (i%n) + 1;
-	GEN dist2 = fdom_intersect_dist(geodeq, gel(verts, ip));
-	int ips = tolsigne(dist2, tol);
-	if (ips == 1) { i3 = ip; i4 = ip; break; }/*i+1 crosses over.*/
-	if (!ips) pari_err(e_MISC, "TO DO: GEODESIC INTERSECTING VERTEX.");
-	if (cmprr(dist1, dist2) > 0) {/*vertex i is closer than i+1, so we replace i2 with i*/
+    long i = fdom_intersect_sidesmidpt(i1, i2, n);
+    int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
+    if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
+    if (whichside == 1) { i3 = i; i4 = i; break; }/*Crossed over*/
+    GEN dist1 = fdom_intersect_dist(geodeq, gel(verts, i));
+    long ip = (i%n) + 1;
+    GEN dist2 = fdom_intersect_dist(geodeq, gel(verts, ip));
+    int ips = tolsigne(dist2, tol);
+    if (ips == 1) { i3 = ip; i4 = ip; break; }/*i+1 crosses over.*/
+    if (!ips) pari_err(e_MISC, "TO DO: GEODESIC INTERSECTING VERTEX.");
+    if (cmprr(dist1, dist2) > 0) {/*vertex i is closer than i+1, so we replace i2 with i*/
       i2 = i;
-	}
-	else i1 = ip;
+    }
+    else i1 = ip;
   }
   while (smodss(i3 - i1, n) > 1) {/*Sort out the first side*/
-	long i = fdom_intersect_sidesmidpt(i1, i3, n);
-	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
-	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
-	if (whichside == 1) i3 = i;
-	else i1 = i;
+    long i = fdom_intersect_sidesmidpt(i1, i3, n);
+    int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
+    if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
+    if (whichside == 1) i3 = i;
+    else i1 = i;
   }
   while (smodss(i2 - i4, n) > 1) {/*Sort out the second side*/
-	long i = fdom_intersect_sidesmidpt(i4, i2, n);
-	int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
-	if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
-	if (whichside == 1) i4 = i;
-	else i2 = i;
+    long i = fdom_intersect_sidesmidpt(i4, i2, n);
+    int whichside = normbound_whichside(geodeq, gel(verts, i), tol);
+    if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
+    if (whichside == 1) i4 = i;
+    else i2 = i;
   }
   if (forwards) { s1 = i3; s2 = i2; }
   else { s1 = i2; s2 = i3; }/*Now we have our sides!*/
@@ -2087,19 +2087,19 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
   gel(sides, 1) = vec_prepend(sidestart, g);/*Initialize the container for the sides.*/
   GEN side = sidestart;
   for (;;) {
-	long end = itos(gel(side, 2));/*The side we ended on, */
-	long s1 = spair[end];/*This must be the next side.*/
-	GEN toconj = gel(elts, end);
-	g = Xmul(X, Xmul(X, toconj, g), Xinv(X, toconj));/*Update g*/
-	geod = geodesic_klein(X, g, Xtoklein, tol);/*New geodesic*/
-	side = fdom_intersect(U, geod, tol, s1);/*Intersections*/
-	if (toleq(gel(sidestart, 3), gel(side, 3), tol) && toleq(gel(sidestart, 4), gel(side, 4), tol)) break;/*Back to the start, so done!*/
-	nsides++;/*Now we are an actually new side.*/
-	if (nsides > maxsides) {
-	  maxsides <<= 1;/*Double the sides.*/
-	  sides = vec_lengthen(sides, maxsides);
-	}
-	gel(sides, nsides) = vec_prepend(side, g);
+    long end = itos(gel(side, 2));/*The side we ended on, */
+    long s1 = spair[end];/*This must be the next side.*/
+    GEN toconj = gel(elts, end);
+    g = Xmul(X, Xmul(X, toconj, g), Xinv(X, toconj));/*Update g*/
+    geod = geodesic_klein(X, g, Xtoklein, tol);/*New geodesic*/
+    side = fdom_intersect(U, geod, tol, s1);/*Intersections*/
+    if (toleq(gel(sidestart, 3), gel(side, 3), tol) && toleq(gel(sidestart, 4), gel(side, 4), tol)) break;/*Back to the start, so done!*/
+    nsides++;/*Now we are an actually new side.*/
+    if (nsides > maxsides) {
+      maxsides <<= 1;/*Double the sides.*/
+      sides = vec_lengthen(sides, maxsides);
+    }
+    gel(sides, nsides) = vec_prepend(side, g);
   }
   setlg(sides, nsides + 1);
   return gerepilecopy(av, sides);
@@ -2154,9 +2154,9 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
     GEN repind = gen_0, cycle;/*repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.*/
     /*Now we look for a common term.*/
     for (i = 1; i < naccident; i++) {/*Each step we solve the relation.*/
-	  if (gc_needed(av, 2)) {
-		gerepileall(av, 5, &cyc, &cyctype, &H, &words, &r);
-	  }
+      if (gc_needed(av, 2)) {
+        gerepileall(av, 5, &cyc, &cyctype, &H, &words, &r);
+      }
       long lr = lg(r);
       for (j = indrep; j < lr; j++) {/*Trying to replace index j. We stop once we find one replacable.*/
         torep = r[j];/*What we try to replace.*/
@@ -2437,7 +2437,7 @@ presentation
 savedelts
     [O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
 normalizernorms
-	Only initialized if you call afuchnormalizernorms or initialize with type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
+    Only initialized if you call afuchnormalizernorms or initialize with type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
 */
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
@@ -2700,11 +2700,11 @@ afuch_newtype(GEN X, GEN type)
   if (NN) obj_insert(newX, afuch_NORMALIZERNORMS, NN);
   GEN U = afuch_get_fdom(X);
   if (U) {
-	afuchfdom(newX);
-	GEN S = afuch_get_sig(X);
-	if (S) afuchsignature(newX);
-	GEN P = afuch_get_pres(X);
-	if (P) afuchpresentation(newX);
+    afuchfdom(newX);
+    GEN S = afuch_get_sig(X);
+    if (S) afuchsignature(newX);
+    GEN P = afuch_get_pres(X);
+    if (P) afuchpresentation(newX);
   }
   return gerepilecopy(av, newX);
 }
@@ -2991,18 +2991,18 @@ afuchfdom(GEN X)
   GEN allelts = obj_check(X, afuch_SAVEDELTS);
   if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
     GEN S = gel(allelts, 1);/*Norm 1, incluced in everything*/
-	switch (type) {
-	  case 3:
-	    S = shallowconcat(S, gel(allelts, 4));
+    switch (type) {
+      case 3:
+        S = shallowconcat(S, gel(allelts, 4));
       case 2:
         S = shallowconcat(S, gel(allelts, 3));
       case 1:
         S = shallowconcat(S, gel(allelts, 2));
     }
     U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
-	obj_insert(X, afuch_FDOM, U);
-	set_avma(av);
-	return;
+    obj_insert(X, afuch_FDOM, U);
+    set_avma(av);
+    return;
   }
   int precinc = 0;
   GEN startingset = NULL;
@@ -3028,7 +3028,7 @@ afuchfdom(GEN X)
   }
   if (!type) {/*Looking for O^1 only.*/
     obj_insert(X, afuch_FDOM, U);
-	set_avma(av);
+    set_avma(av);
     return;
   }
   GEN O1elts = normbound_get_elts(U), newelts, S;
@@ -3037,12 +3037,12 @@ afuchfdom(GEN X)
       S = shallowconcat(O1elts, afuch_makeunitelts(X));
       break;
     case 2:
-	  newelts = afuch_makeALelts(X);
+      newelts = afuch_makeALelts(X);
       S = shallowconcat(O1elts, shallowconcat1(newelts));
       break;
     case 3:/*case 3*/
       newelts = afuch_makenormelts(X);
-	  S = shallowconcat(O1elts, shallowconcat1(newelts));
+      S = shallowconcat(O1elts, shallowconcat1(newelts));
       break;
     default:
       S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
@@ -3052,8 +3052,8 @@ afuchfdom(GEN X)
   long le = lg(elts), i;
   for (i = 1; i < le; i++) {/*Due to multiplication, we may have huge elements that can be cut down. We do this now.*/
     GEN den;
-	gel(elts, i) = Q_primitive_part(gel(elts, i), &den);
-	if (den) gel(kact, i) = afuchtoklein(X, gel(elts, i));/*Recompute this way in case of precision mishaps.*/
+    gel(elts, i) = Q_primitive_part(gel(elts, i), &den);
+    if (den) gel(kact, i) = afuchtoklein(X, gel(elts, i));/*Recompute this way in case of precision mishaps.*/
   }
   obj_insert(X, afuch_FDOM, U);
   if (type == 3) obj_insert(X, afuch_SAVEDELTS, vec_prepend(newelts, O1elts));
@@ -3071,8 +3071,8 @@ afuchgeodesic(GEN X, GEN g)
   GEN O = afuch_get_O(X);
   int isO = !gequal1(O);
   if (isO) {/*Convert g to in O*/
-	GEN Oinv = afuch_get_Oinv(X);
-	g = QM_QC_mul(Oinv, g);
+    GEN Oinv = afuch_get_Oinv(X);
+    g = QM_QC_mul(Oinv, g);
   }
   GEN geod = geodesic_fdom(X, U, g, afuchid(X), &afuchtoklein, &afuchmul, &afuchconj, gdat);
   if (!isO) return gerepileupto(av, geod);/*No conversion necessary*/
@@ -3104,9 +3104,9 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
     for (j = 1; j < lg(pdec); j++) {
       GEN nm = subis(pr_norm(gel(pdec, j)), 1);
       if (gcmp(nm, phimax) <= 0) {/*It's possible!*/
-	    vectrunc_append(poss_ideal, gel(pdec, j));/*Add the ideal*/
-		vectrunc_append(poss_norm, nm);/*Add the norm*/
-	  }
+        vectrunc_append(poss_ideal, gel(pdec, j));/*Add the ideal*/
+        vectrunc_append(poss_norm, nm);/*Add the norm*/
+      }
     }
   }
   GEN order = indexsort(poss_norm);/*Order smallest to largest.*/
@@ -3126,53 +3126,53 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
   GEN algdat = cgetg(maxalg + 1, t_VEC);/*Stores the data we find.*/
   long nprime;
   for (nprime = maxprimes; nprime >= 0; nprime = nprime - 2) {/*Look for all subsets with this number of primes that satisfies the condition.*/
-	gel(condition, 2) = cgetg(3, t_VEC);
-	gmael(condition, 2, 2) = const_vec(nprime, gen_1);/*All the finite places we specify should ramify.*/
-	gmael(condition, 2, 1) = cgetg(nprime + 1, t_VEC);/*To store those primes.*/
-	GEN S = cgetg(nprime + 1, t_VECSMALL);/*Look over nprime element subsets. I could do this more efficiently (in terms of failing a test => we fail the next set), but this is not the bottleneck and should be OK for now.*/
-	for (i = 1; i <= nprime; i++) S[i] = i;
-	for(;;) {
-	  av2 = avma;
-	  pro = gen_1;
-	  for (i = 1; i <= nprime; i++) pro = mulii(pro, gel(poss_norm, order[S[i]]));/*Find the total product.*/
-	  if (cmpii(pro, phimin) < 0) {
-		set_avma(av2);
-		if(nextsub(S, leno)) continue;/*To small, go on.*/
-		break;/*We reached the end.*/
-	  }
-	  if (cmpii(pro, phimax) > 0) {/*To large! Let's skip.*/
-	    i = nprime;
-		while (i > 1) {/*Finding the last block of consecutive numbers.*/
-		  if (S[i] - S[i - 1] != 1) break;
-		  i--;
-		}
-		if (i == 1) break;/*S[1]...S[nprime] is consecutive and too big, so we will always lose from now on.*/
-		S[i - 1]++;
-		for (j = i; j <= nprime; j++) S[j] = S[j - 1] + 1;
-		set_avma(av2);
-		continue;
-	  }
-	  for (i = 1; i <= nprime; i++) gmael3(condition, 2, 1, i) = gel(poss_ideal, order[S[i]]);/*Add these prime ideals to the ramification vector.*/
-	  GEN A = alginit(F, condition, -1, 1);
-	  GEN ab = algab(A);/*The pair [a, b]*/
-	  for (i = 1; i <= 2; i++) {
-	    GEN den = Q_denom(gel(ab, i));/*Currently, to use alginit(F, ab), ab needs to have no denominator.*/
-	    if (!equali1(den)) gel(ab, i) = gmul(gel(ab, i), sqri(den));/*Scale a/b*/
-	  }
-	  GEN curarea = gmul(ar, pro);/*The area*/
-	  GEN ramp = cgetg(nprime + 1, t_VEC);
-	  for (i = 1; i <= nprime; i++) gel(ramp, i) = pr_get_p(gel(poss_ideal, order[S[i]]));
-	  ramp = ZV_sort(ramp);
-	  GEN curdat = gerepilecopy(av2, mkvec3(ab, curarea, ramp));/*The data for this algebra.*/
-	  foundalg++;
-	  if (foundalg > maxalg) {/*Lengthen the vector*/
-		maxalg <<= 1;/*Double length*/
-		algdat = vec_lengthen(algdat, maxalg);/*Actually initalize it.*/
-	  }
-	  gel(algdat, foundalg) = curdat;
-	  if(nextsub(S, leno)) continue;/*To small, go on.*/
-	  break;/*We reached the end.*/
-	}
+    gel(condition, 2) = cgetg(3, t_VEC);
+    gmael(condition, 2, 2) = const_vec(nprime, gen_1);/*All the finite places we specify should ramify.*/
+    gmael(condition, 2, 1) = cgetg(nprime + 1, t_VEC);/*To store those primes.*/
+    GEN S = cgetg(nprime + 1, t_VECSMALL);/*Look over nprime element subsets. I could do this more efficiently (in terms of failing a test => we fail the next set), but this is not the bottleneck and should be OK for now.*/
+    for (i = 1; i <= nprime; i++) S[i] = i;
+    for(;;) {
+      av2 = avma;
+      pro = gen_1;
+      for (i = 1; i <= nprime; i++) pro = mulii(pro, gel(poss_norm, order[S[i]]));/*Find the total product.*/
+      if (cmpii(pro, phimin) < 0) {
+        set_avma(av2);
+        if(nextsub(S, leno)) continue;/*To small, go on.*/
+        break;/*We reached the end.*/
+      }
+      if (cmpii(pro, phimax) > 0) {/*To large! Let's skip.*/
+        i = nprime;
+        while (i > 1) {/*Finding the last block of consecutive numbers.*/
+          if (S[i] - S[i - 1] != 1) break;
+          i--;
+        }
+        if (i == 1) break;/*S[1]...S[nprime] is consecutive and too big, so we will always lose from now on.*/
+        S[i - 1]++;
+        for (j = i; j <= nprime; j++) S[j] = S[j - 1] + 1;
+        set_avma(av2);
+        continue;
+      }
+      for (i = 1; i <= nprime; i++) gmael3(condition, 2, 1, i) = gel(poss_ideal, order[S[i]]);/*Add these prime ideals to the ramification vector.*/
+      GEN A = alginit(F, condition, -1, 1);
+      GEN ab = algab(A);/*The pair [a, b]*/
+      for (i = 1; i <= 2; i++) {
+        GEN den = Q_denom(gel(ab, i));/*Currently, to use alginit(F, ab), ab needs to have no denominator.*/
+        if (!equali1(den)) gel(ab, i) = gmul(gel(ab, i), sqri(den));/*Scale a/b*/
+      }
+      GEN curarea = gmul(ar, pro);/*The area*/
+      GEN ramp = cgetg(nprime + 1, t_VEC);
+      for (i = 1; i <= nprime; i++) gel(ramp, i) = pr_get_p(gel(poss_ideal, order[S[i]]));
+      ramp = ZV_sort(ramp);
+      GEN curdat = gerepilecopy(av2, mkvec3(ab, curarea, ramp));/*The data for this algebra.*/
+      foundalg++;
+      if (foundalg > maxalg) {/*Lengthen the vector*/
+        maxalg <<= 1;/*Double length*/
+        algdat = vec_lengthen(algdat, maxalg);/*Actually initalize it.*/
+      }
+      gel(algdat, foundalg) = curdat;
+      if(nextsub(S, leno)) continue;/*To small, go on.*/
+      break;/*We reached the end.*/
+    }
   }
   setlg(algdat, foundalg + 1);/*Chop off the end.*/
   return gerepileupto(av, vecsort(algdat, mkvecsmall(2)));/*Sort by area*/
@@ -3184,12 +3184,12 @@ nextsub(GEN S, long n)
 {
   long i, cur = n, j;
   for (i = lg(S) - 1; i > 0; i--) {
-	if (S[i] < cur) {
-	  S[i]++;
-	  for (j = i + 1; j < lg(S); j++) S[j] = S[j - 1] + 1;
-	  return 1;
-	}
-	cur--;
+    if (S[i] < cur) {
+      S[i]++;
+      for (j = i + 1; j < lg(S); j++) S[j] = S[j - 1] + 1;
+      return 1;
+    }
+    cur--;
   }
   return 0;
 }
@@ -3209,14 +3209,14 @@ afuchnormalizernorms(GEN X)
   GEN O = afuch_get_O(X);
   if (gequal1(O)) ramid = ram_disc;
   else {/*Incorporate the level of O too*/
-	GEN ram_level = algorderlevel(A, O, 1);
-	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
-	ramid = cgetg(lr + llev - 1, t_VEC);
-	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
-	for (i = 1; i < llev; i++) {
-	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
-	  gel(ramid, i + lr - 1) = theid;
-	}
+    GEN ram_level = algorderlevel(A, O, 1);
+    long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+    ramid = cgetg(lr + llev - 1, t_VEC);
+    for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+    for (i = 1; i < llev; i++) {
+      GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+      gel(ramid, i + lr - 1) = theid;
+    }
   }
   GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
   obj_insert(X, afuch_NORMALIZERNORMS, norms);
@@ -3279,14 +3279,14 @@ afuchword(GEN X, GEN g)
   if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
   GEN P = afuch_get_pres(X);
   if (!P) {
-	GEN pre = afuchpresentation(X);
-	cgiv(pre);
-	P = afuch_get_pres(X);/*The return value of afuchpresentation converts back to A from O, which we do not want.*/
+    GEN pre = afuchpresentation(X);
+    cgiv(pre);
+    P = afuch_get_pres(X);/*The return value of afuchpresentation converts back to A from O, which we do not want.*/
   }
   GEN O = afuch_get_O(X);
   if (!gequal1(O)) {
-	GEN Oinv = afuch_get_Oinv(X);
-	g = QM_QC_mul(Oinv, g);/*Convert to in O.*/
+    GEN Oinv = afuch_get_Oinv(X);
+    g = QM_QC_mul(Oinv, g);/*Convert to in O.*/
   }
   return gerepileupto(av, word(X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X)));
 }
@@ -3323,14 +3323,14 @@ afuch_makeALelts(GEN X)
   GEN O = afuch_get_O(X);
   if (gequal1(O)) ramid = ram_disc;
   else {/*Incorporate the level of O too*/
-	GEN ram_level = algorderlevel(A, O, 1);
-	long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
-	ramid = cgetg(lr + llev - 1, t_VEC);
-	for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
-	for (i = 1; i < llev; i++) {
-	  GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
-	  gel(ramid, i + lr - 1) = theid;
-	}
+    GEN ram_level = algorderlevel(A, O, 1);
+    long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+    ramid = cgetg(lr + llev - 1, t_VEC);
+    for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+    for (i = 1; i < llev; i++) {
+      GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+      gel(ramid, i + lr - 1) = theid;
+    }
   }
   GEN ALnorms = AL_make_norms(B, algsplitoo(A), ramid, prec);
   GEN norms1 = gel(ALnorms, 1), norms2 = gel(ALnorms, 2);/*Unit, then AL norms*/
@@ -3357,17 +3357,17 @@ afuch_makenormelts(GEN X)
     GEN O = afuch_get_O(X);
     if (gequal1(O)) ramid = ram_disc;
     else {/*Incorporate the level of O too*/
-	  GEN ram_level = algorderlevel(A, O, 1);
-	  long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
-	  ramid = cgetg(lr + llev - 1, t_VEC);
-	  for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
-	  for (i = 1; i < llev; i++) {
-	    GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
-	    gel(ramid, i + lr - 1) = theid;
-	  }
+      GEN ram_level = algorderlevel(A, O, 1);
+      long lr = lg(ram_disc), llev = lg(gel(ram_level, 1)), i;
+      ramid = cgetg(lr + llev - 1, t_VEC);
+      for (i = 1; i < lr; i++) gel(ramid, i) = gel(ram_disc, i);/*Copy these over*/
+      for (i = 1; i < llev; i++) {
+        GEN theid = idealpow(F, gcoeff(ram_level, i, 1), gcoeff(ram_level, i, 2));
+        gel(ramid, i + lr - 1) = theid;
+      }
     }
     norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
-	obj_insert(X, afuch_NORMALIZERNORMS, norms);
+    obj_insert(X, afuch_NORMALIZERNORMS, norms);
   }
   GEN norms1 = gel(norms, 1), norms2 = gel(norms, 2), norms3 = gel(norms, 3);/*Unit, then AL norms, then normalizer norms*/
   long lu, i;
@@ -3432,15 +3432,15 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
   GEN F, C;
   long nF;
   if (nftyp(B) == typ_BNR) {/*We already made the BNR*/
-	C = B;
-	B = bnr_get_bnf(C);
-	F = bnf_get_nf(B);
-	nF = nf_get_degree(F);
+    C = B;
+    B = bnr_get_bnf(C);
+    F = bnf_get_nf(B);
+    nF = nf_get_degree(F);
   }
   else {
-	F = bnf_get_nf(B);
-	nF = nf_get_degree(F);
-	GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
+    F = bnf_get_nf(B);
+    nF = nf_get_degree(F);
+    GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
     gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
     C = Buchray(B, modulus, nf_INIT);/*Compute the ray class field without generators.*/
   }
@@ -3449,39 +3449,39 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
   long lo = lg(orders), i;
   GEN ordmod = cgetg(lo, t_VECSMALL);
   for (i = 1; i < lo; i++) {
-	if (mod2(gel(orders, i))) ordmod[i] = 1;/*Everything is a square for this generator.*/
-	else ordmod[i] = 2;
+    if (mod2(gel(orders, i))) ordmod[i] = 1;/*Everything is a square for this generator.*/
+    else ordmod[i] = 2;
   }
   long li = lg(ideals), j;
   GEN alphas = cgetg_copy(ideals, &li);
   GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the alphas and the e_i's mod ordmod[i] since we care about whether we are in C^2 or not.*/
   for (i = 1; i < li; i++) {
-	GEN prin = bnrisprincipal(C, gel(ideals, i), 1);/*Compute [ei, alpha]*/
-	gel(alphas, i) = gel(prin, 2);/*Store alpha*/
-	GEN col = cgetg(lo, t_VECSMALL);
-	for (j = 1; j < lo; j++) col[j] = smodis(gmael(prin, 1, j), ordmod[j]);
-	gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
+    GEN prin = bnrisprincipal(C, gel(ideals, i), 1);/*Compute [ei, alpha]*/
+    gel(alphas, i) = gel(prin, 2);/*Store alpha*/
+    GEN col = cgetg(lo, t_VECSMALL);
+    for (j = 1; j < lo; j++) col[j] = smodis(gmael(prin, 1, j), ordmod[j]);
+    gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
   }/*A product of the ideals is in C^2 if and only if the corresponding linear combination of the columns of mat is 0 in F_2.*/
   GEN ker = Flm_ker(mat, 2);/*A basis for the ideals.*/
   long lk = lg(ker);
   GEN newalphas = vectrunc_init(lk);
   for (i = 1; i < lk; i++) {
-	GEN pattern = gel(ker, i);
-	GEN alph = gen_1;
-	for (j = 1; j < li; j++) {
-	  if (pattern[j] == 1) alph = nfmul(F, alph, gel(alphas, j));
-	}
-	GEN den;
-	alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
-	if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
-	  GEN denfact = Q_factor(den);
-	  for (j = 1; j < lg(gel(denfact, 2)); j++) {
-	    if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
-	  }
-	}
-	alph = lift(basistoalg(F, alph));
-	if (gequal1(alph)) continue;/*It is possible to end up with 1, e.g. F=nfinit(y^3 - 104052*y - 12520924), split=1, ideals=idealprimedec(F, 5). Maybe there is a better way to handle this in general? Not sure if alph=1 is the only relation possible.*/
-	vectrunc_append(newalphas, alph);
+    GEN pattern = gel(ker, i);
+    GEN alph = gen_1;
+    for (j = 1; j < li; j++) {
+      if (pattern[j] == 1) alph = nfmul(F, alph, gel(alphas, j));
+    }
+    GEN den;
+    alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
+    if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
+      GEN denfact = Q_factor(den);
+      for (j = 1; j < lg(gel(denfact, 2)); j++) {
+        if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
+      }
+    }
+    alph = lift(basistoalg(F, alph));
+    if (gequal1(alph)) continue;/*It is possible to end up with 1, e.g. F=nfinit(y^3 - 104052*y - 12520924), split=1, ideals=idealprimedec(F, 5). Maybe there is a better way to handle this in general? Not sure if alph=1 is the only relation possible.*/
+    vectrunc_append(newalphas, alph);
   }
   lk = lg(newalphas);
   /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
@@ -3489,17 +3489,17 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
   GEN swapper = gel(unitnorms, 2);/*This is -1 at the split place, if it exists.*/
   GEN ALnorms = vectrunc_init(lk);/*We either get this many, or one less if swapper=0.*/
   for (i = 1; i < lk; i++) {
-	GEN nm = gel(newalphas, i);
-	if (signe(poleval(nm, rt)) > 0) {
-	  vectrunc_append(ALnorms, nm);
-	  continue;/*All good!*/
-	}
-	if (gequal0(swapper)) {
-	  swapper = nm;
-	  continue;/*Use this element to swap the rest out.*/
-	}
-	nm = nfmul(F, nm, swapper);
-	vectrunc_append(ALnorms, lift(basistoalg(F, nm)));/*Add it in.*/
+    GEN nm = gel(newalphas, i);
+    if (signe(poleval(nm, rt)) > 0) {
+      vectrunc_append(ALnorms, nm);
+      continue;/*All good!*/
+    }
+    if (gequal0(swapper)) {
+      swapper = nm;
+      continue;/*Use this element to swap the rest out.*/
+    }
+    nm = nfmul(F, nm, swapper);
+    vectrunc_append(ALnorms, lift(basistoalg(F, nm)));/*Add it in.*/
   }
   return gerepilecopy(av, mkvec3(gel(unitnorms, 1), ALnorms, swapper));
 }
@@ -3522,52 +3522,52 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
   long lo = lg(orders), i;
   GEN ord2gens = vectrunc_init(lo);
   for (i = 1; i < lo; i++) {
-	if (!mod2(gel(orders, i))) {
-	  GEN g = gel(gens, i);
-	  vectrunc_append(ord2gens, idealpows(F, g, itos(gel(orders, i)) >> 1));/*Save the order 2 generators.*/
-	}
+    if (!mod2(gel(orders, i))) {
+      GEN g = gel(gens, i);
+      vectrunc_append(ord2gens, idealpows(F, g, itos(gel(orders, i)) >> 1));/*Save the order 2 generators.*/
+    }
   }
   lo = lg(ord2gens);/*The actual generators.*/
   GEN Borders = gel(bnf_get_clgp(B), 2);/*Orders of the generators of B.*/
   long lBo = lg(Borders), j;
   GEN imCl = cgetg(lo, t_MAT);/*Find the image in Cl(R)[2], as we only keep a generating set for the survivors.*/
   for (i = 1; i < lo; i++) {
-	GEN Clim = bnfisprincipal0(B, gel(ord2gens, i), 0);
-	for (j = 1; j < lBo; j++) if (!gequal0(gel(Clim, j))) gel(Clim, j) = gen_1;/*We only care about 1 vs 0 for picking up part of the 2-torsion.*/
-	gel(imCl, i) = Clim;
+    GEN Clim = bnfisprincipal0(B, gel(ord2gens, i), 0);
+    for (j = 1; j < lBo; j++) if (!gequal0(gel(Clim, j))) gel(Clim, j) = gen_1;/*We only care about 1 vs 0 for picking up part of the 2-torsion.*/
+    gel(imCl, i) = Clim;
   }
   GEN left = gel(FpM_indexrank(imCl, gen_2), 2);/*Which columns we keep, i.e. do not get destroyed boosting up to CL(R)[2].*/
   long lgleft = lg(left);
   GEN alphs = cgetg(lgleft, t_VEC);
   for (i = 1; i < lgleft; i++) {
-	GEN csqr = idealsqr(F, gel(ord2gens, left[i]));/*Principal*/
-	GEN alph = gel(bnrisprincipal(C, csqr, 1), 2);/*Compute [e, alpha], where e=0.*/
-	GEN den;
-	alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
-	if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
-	  GEN denfact = Q_factor(den);
-	  for (j = 1; j < lg(gel(denfact, 2)); j++) {
-	    if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
-	  }
-	}
-	gel(alphs, i) = lift(basistoalg(F, alph));/*Store the scaled alph*/
+    GEN csqr = idealsqr(F, gel(ord2gens, left[i]));/*Principal*/
+    GEN alph = gel(bnrisprincipal(C, csqr, 1), 2);/*Compute [e, alpha], where e=0.*/
+    GEN den;
+    alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
+    if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
+      GEN denfact = Q_factor(den);
+      for (j = 1; j < lg(gel(denfact, 2)); j++) {
+        if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
+      }
+    }
+    gel(alphs, i) = lift(basistoalg(F, alph));/*Store the scaled alph*/
   }
   /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
   GEN rt = gel(nf_get_roots(F), split);
   GEN swapper = gel(ALnorms, 3);/*This is -1 at the split place, if it exists.*/
   GEN normalizernorms = vectrunc_init(lgleft);/*We either get this many, or one less if swapper=0.*/
   for (i = 1; i < lgleft; i++) {
-	GEN nm = gel(alphs, i);
-	if (signe(poleval(nm, rt)) > 0) {
-	  vectrunc_append(normalizernorms, nm);
-	  continue;/*All good!*/
-	}
-	if (gequal0(swapper)) {
-	  swapper = nm;
-	  continue;/*Use this element to swap the rest out.*/
-	}
-	nm = nfmul(F, nm, swapper);
-	vectrunc_append(normalizernorms, lift(basistoalg(F, nm)));/*Add it in.*/
+    GEN nm = gel(alphs, i);
+    if (signe(poleval(nm, rt)) > 0) {
+      vectrunc_append(normalizernorms, nm);
+      continue;/*All good!*/
+    }
+    if (gequal0(swapper)) {
+      swapper = nm;
+      continue;/*Use this element to swap the rest out.*/
+    }
+    nm = nfmul(F, nm, swapper);
+    vectrunc_append(normalizernorms, lift(basistoalg(F, nm)));/*Add it in.*/
   }
   return gerepilecopy(av, mkvec3(gel(ALnorms, 1), gel(ALnorms, 2), normalizernorms));
 }
@@ -3857,7 +3857,7 @@ afuchfindoneelt_i(GEN X, GEN nm, GEN C)
       continue;
     }
     if (lg(E) > 1) return gerepilecopy(av, gel(E, 1));
-	set_avma(av2);
+    set_avma(av2);
   }
 }
 

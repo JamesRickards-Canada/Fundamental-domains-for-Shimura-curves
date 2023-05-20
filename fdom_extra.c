@@ -15,6 +15,7 @@
 /*STATIC DECLARATIONS*/
 
 /*SECTION 1: VISUALIZATION*/
+/*SECTION 2: EICHLER ORDERS*/
 /*SECTION 3: TUNING*/
 
 
@@ -67,11 +68,11 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
     GEN lastv = first;
     for (i = 1; i <= nsides; i++) {/*Each arc*/
       GEN arc = gel(circles, i);
-	  GEN nextv = klein_to_disc(gel(vertices, i), tol);
-	  GEN centre = mkcomplex(gel(arc, 1), gel(arc, 2));
-	  GEN ang1 = garg(gsub(lastv, centre), prec);
-	  GEN ang2 = garg(gsub(nextv, centre), prec);
-	  if (gcmp(ang1, ang2) < 0) ang1 = gadd(ang1, Pi2n(1, prec));
+      GEN nextv = klein_to_disc(gel(vertices, i), tol);
+      GEN centre = mkcomplex(gel(arc, 1), gel(arc, 2));
+      GEN ang1 = garg(gsub(lastv, centre), prec);
+      GEN ang2 = garg(gsub(nextv, centre), prec);
+      if (gcmp(ang1, ang2) < 0) ang1 = gadd(ang1, Pi2n(1, prec));
       pari_fprintf(f, "\\pgfpatharc{%P.8f}{%P.8f}{%P.8fin}\n", gmul(ang1, ascale), gmul(ang2, ascale), gmul(gel(arc, 3), radius));
       lastv=nextv;/*Updating the previous vertex.*/
     }
@@ -81,7 +82,7 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
     GEN first = gel(vertices, nsides);/*The lower point on the first arc.*/
     pari_fprintf(f, "\\pgfpathmoveto{\\pgfqpoint{%P.8fin}{%P.8fin}}\n", gmul(real_i(first), radius), gmul(imag_i(first), radius));/*First point*/
     for (i = 1; i <= nsides; i++) {/*Each side*/
-	  GEN ver = gel(vertices, i);
+      GEN ver = gel(vertices, i);
       pari_fprintf(f, "\\pgfpathlineto{\\pgfqpoint{%P.8fin}{%P.8fin}}\n", gmul(real_i(ver), radius), gmul(imag_i(ver), radius));
     }
     pari_fprintf(f, "\\pgfpathclose\n\\pgfusepath{stroke, fill}\n\\end{pgfscope}\n");
@@ -134,14 +135,14 @@ afuchfdom_python(GEN X, char *filename)
     if (i == 1) v1 = gel(verts, lp - 1);
     else v1 = gel(verts, i - 1);
     GEN v2 = gel(verts, i);/*The two vertices in the Klein model.*/
-	v1 = klein_to_disc(v1, tol);
-	v2 = klein_to_disc(v2, tol);
-	GEN xc = gel(arc, 1);
-	GEN yc = gel(arc, 2);/*The coords of the centre of the isometric circle.*/
-	GEN centre = mkcomplex(xc, yc);
-	GEN r = gel(arc, 3);
-	GEN ang1 = mulrr(garg(gsub(v1, centre), prec), radtodeg);
-	GEN ang2 = mulrr(garg(gsub(v2, centre), prec), radtodeg);
+    v1 = klein_to_disc(v1, tol);
+    v2 = klein_to_disc(v2, tol);
+    GEN xc = gel(arc, 1);
+    GEN yc = gel(arc, 2);/*The coords of the centre of the isometric circle.*/
+    GEN centre = mkcomplex(xc, yc);
+    GEN r = gel(arc, 3);
+    GEN ang1 = mulrr(garg(gsub(v1, centre), prec), radtodeg);
+    GEN ang2 = mulrr(garg(gsub(v2, centre), prec), radtodeg);
     pari_fprintf(f, "%P.20f %P.20f %P.20f %P.20f %P.20f\n", xc, yc, r, ang1, ang2);
   }
   fclose(f);
@@ -165,29 +166,29 @@ afuchgeodesic_python(GEN X, GEN g, char *filename)
   GEN radtodeg = divsr(180, mppi(prec));
   long i, lgeo = lg(g);
   for (i = 1; i < lgeo; i++) {
-	GEN dat = gel(g, i);/*The geodesic segment.*/
-	GEN v1 = klein_to_disc(gel(dat, 4), tol);
-	GEN v2 = klein_to_disc(gel(dat, 5), tol);
-	GEN eqn = gel(dat, 6);
-	if (gequal1(gel(eqn, 3))) {/*Arc*/
-	  GEN xc = gel(eqn, 1);
-	  GEN yc = gel(eqn, 2);/*The coords of the centre of the circle.*/
-	  GEN centre = mkcomplex(xc, yc);
-	  GEN r = sqrtr(subrs(addrr(sqrr(xc), sqrr(yc)), 1));/*sqrt(xc^2+yc^2-1)=r.*/
-	  GEN ang1 = mulrr(garg(gsub(v1, centre), prec), radtodeg);
-	  GEN ang2 = mulrr(garg(gsub(v2, centre), prec), radtodeg);
-	  GEN diff = gmodgs(subrr(ang2, ang1), 360);
-	  long dir;
-	  if (gcmpgs(diff, 180) > 0) { dir = -1; GEN temp = ang2; ang2 = ang1; ang1 = temp; }
-	  else dir = 1;
-	  ang1 = gmodgs(ang1, 360);
-	  ang2 = gmodgs(ang2, 360);
-	  if (cmprr(ang2, ang1) < 0) ang2 = addrs(ang2, 360);
+    GEN dat = gel(g, i);/*The geodesic segment.*/
+    GEN v1 = klein_to_disc(gel(dat, 4), tol);
+    GEN v2 = klein_to_disc(gel(dat, 5), tol);
+    GEN eqn = gel(dat, 6);
+    if (gequal1(gel(eqn, 3))) {/*Arc*/
+      GEN xc = gel(eqn, 1);
+      GEN yc = gel(eqn, 2);/*The coords of the centre of the circle.*/
+      GEN centre = mkcomplex(xc, yc);
+      GEN r = sqrtr(subrs(addrr(sqrr(xc), sqrr(yc)), 1));/*sqrt(xc^2+yc^2-1)=r.*/
+      GEN ang1 = mulrr(garg(gsub(v1, centre), prec), radtodeg);
+      GEN ang2 = mulrr(garg(gsub(v2, centre), prec), radtodeg);
+      GEN diff = gmodgs(subrr(ang2, ang1), 360);
+      long dir;
+      if (gcmpgs(diff, 180) > 0) { dir = -1; GEN temp = ang2; ang2 = ang1; ang1 = temp; }
+      else dir = 1;
+      ang1 = gmodgs(ang1, 360);
+      ang2 = gmodgs(ang2, 360);
+      if (cmprr(ang2, ang1) < 0) ang2 = addrs(ang2, 360);
       pari_fprintf(f, "0 %P.20f %P.20f %P.20f %P.20f %P.20f %d\n", xc, yc, r, ang1, ang2, dir);
-	}
-	else {/*Segment through the origin.*/
-	  pari_fprintf(f, "1 %P.20f %P.20f %P.20f %P.20f\n", real_i(v1), imag_i(v1), real_i(v2), imag_i(v2));
-	}
+    }
+    else {/*Segment through the origin.*/
+      pari_fprintf(f, "1 %P.20f %P.20f %P.20f %P.20f\n", real_i(v1), imag_i(v1), real_i(v2), imag_i(v2));
+    }
   }
   fclose(f);
   set_avma(av);
@@ -298,39 +299,39 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
   timer_start(&T);
   av1 = avma;
   for (i = 1; i <= tests; i++) {
-	long t = 0;
-	av2 = avma;
-	for (j  = 1; j < ldat; j++) {
-	  GEN F = nfinit(gmael(dat, 1, j), prec);
-	  GEN A = alginit(F, gmael(dat, 2, j), 0, 1);
+    long t = 0;
+    av2 = avma;
+    for (j  = 1; j < ldat; j++) {
+      GEN F = nfinit(gmael(dat, 1, j), prec);
+      GEN A = alginit(F, gmael(dat, 2, j), 0, 1);
       GEN Adisc = algdiscnorm(A);/*Norm to Q of disc(A)*/
-	  GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
+      GEN discpart = gmul(nf_get_disc(F), gsqrt(Adisc, prec));/*disc(F)*sqrt(Adisc)*/
       GEN discpartroot = gpow(discpart, gdivgs(gen_1, n), prec);/*discpart^(1/n)=disc(F)^(1/n)*algdisc^(1/2n)*/
-	  GEN C = gmul(Cn, discpartroot);
+      GEN C = gmul(Cn, discpartroot);
       if (gcmpgs(C, n + 2) <= 0) C = stoi(n + 2);
-	  av3 = avma;
-	  for (k = 1; k <= testsperalg; k++) {
-	    timer_delay(&T);
-	    GEN X = afuchinit(A, NULL, NULL, 0, prec);
-	    gmael3(X, 7, 6, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
-	    afuchfdom(X);
-	    t = t + timer_delay(&T);
-		obj_free(X);/*Kill it off.*/
-		set_avma(av3);
-	  }
-	  set_avma(av2);
-	}
-	times[i] = t;
-	pari_printf("The value C_n=%P.8f took %d time.\n", Cn, t);
-	pari_fprintf(f, "%P.8f %d\n", Cn, t);
-	Cn = gerepileupto(av1, gadd(Cn, Cnadd));
+      av3 = avma;
+      for (k = 1; k <= testsperalg; k++) {
+        timer_delay(&T);
+        GEN X = afuchinit(A, NULL, NULL, 0, prec);
+        gmael3(X, 7, 6, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
+        afuchfdom(X);
+        t = t + timer_delay(&T);
+        obj_free(X);/*Kill it off.*/
+        set_avma(av3);
+      }
+      set_avma(av2);
+    }
+    times[i] = t;
+    pari_printf("The value C_n=%P.8f took %d time.\n", Cn, t);
+    pari_fprintf(f, "%P.8f %d\n", Cn, t);
+    Cn = gerepileupto(av1, gadd(Cn, Cnadd));
   }
   fclose(f);
   Cn = Cmin;
   GEN Cs = cgetg(tests + 1, t_VEC);
   for (i = 1; i <= tests; i++) {
-	gel(Cs, i) = Cn;
-	Cn = gadd(Cn, Cnadd);
+    gel(Cs, i) = Cn;
+    Cn = gadd(Cn, Cnadd);
   }
   return gerepilecopy(av, mkvec2(Cs, times));
 }
