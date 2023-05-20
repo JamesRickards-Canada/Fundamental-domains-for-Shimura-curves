@@ -2861,6 +2861,13 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
+/*Returns the algebra in X, which may have been computed to higher accuracy.*/
+GEN
+afuchalg(GEN X)
+{
+  return gcopy(afuch_get_alg(X));
+}
+
 /*Returns the area of X.*/
 GEN
 afucharea(GEN X)
@@ -3221,6 +3228,13 @@ afuchnormalizernorms(GEN X)
   GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
   obj_insert(X, afuch_NORMALIZERNORMS, norms);
   return gerepileupto(av, norms);
+}
+
+/*Stored order*/
+GEN
+afuchorder(GEN X)
+{
+  return gcopy(afuch_get_O(X));
 }
 
 /*Presentation*/

@@ -21,6 +21,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuch_changep,"afuch_changep(X, p): changes the value of p, i.e. what is sent to 0 under the map from the upper half plane to the unit disc/Klein model. We recompute the fundamental domain and presentation if they were initialized.");
 
 	\\3: ALGEBRA FUNDAMENTAL DOMAIN METHODS
+	install(afuchalg,"G",,fdom_library);
+	addhelp(afuchalg,"afuchalg(X): return the stored algebra in X.");
 	install(afucharea,"G",,fdom_library);
 	addhelp(afucharea,"afucharea(X): returns the area of the computed fundamental domain of X.");
 	install(afuchelts,"G",,fdom_library);
@@ -33,6 +35,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchlist,"afuchlist(F, Amin, {Amax}, {split=1}: given a totally real number field F (with variable not x), we find all possible quaternion algebras over F that are split at the unique real place given by split, for which the area of the fundamental domain is between Amin and Amax. If Amax is not passed, we go from 0 to Amin. The return is [[[a, b], area, rprimes]], where A=alginit(F, [a, b]) has area area, and rprimes is the multiset of primes lying above the finite ramified primes of A.");
 	install(afuchnormalizernorms,"G",,fdom_library);
 	addhelp(afuchnormalizernorms,"afuchnormalizernorms(X): let N_{B^x}(O)^+ be the norm totally positive normalizer of the order O. The quotient of this group by F^xO^1 is a 2-group. This method returns the norms of a generating set for this group. The format is [unit, AL, rest], where unit is the set of norms that are units, AL is the set of norms appearing in the Atkin-Lehner group, and rest is the remaining norms in the normalizer, coming from the 2-torsion of the class group. We expece the norms found to be linearly independant with respect to the normalizer quotient, but this is not necessarily guaranteed.");
+	install(afuchorder,"G",,fdom_library);
+	addhelp(afuchorder,"afuchorder(X): returns the stored order in X.");
 	install(afuchpresentation,"G",,fdom_library);
 	addhelp(afuchpresentation,"afuchpresentation(X): returns the presentation P of X. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A. P[3] tracks the sides of the fundamental domain in terms of the generators here, used to write an element as a word in these generators.");
 	install(afuchsignature,"G",,fdom_library);
