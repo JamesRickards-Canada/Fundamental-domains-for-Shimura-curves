@@ -15,7 +15,7 @@
 /*STATIC DECLARATIONS*/
 
 /*SECTION 1: VISUALIZATION*/
-/*SECTION 2: TUNING*/
+/*SECTION 3: TUNING*/
 
 
 /*MAIN BODY*/
@@ -206,7 +206,78 @@ fdomviewer(char *input)
 }
 
 
-/*SECTION 2: TUNING*/
+/*SECTION 2: EICHLER ORDERS*/
+
+/*Given an algebra A/F (neither of which use the variables i, j, or k) and an ideal I in F that is coprime to the discriminant of A (not checked), this finds an Eichler order of that level in A using Magma. You must have Magma installed and accessible for this to work. Creates the file "fdom_make_Eichler.m", calls Magma on this, and stores the output in "fdom_make_Eichler_output.dat".*/
+GEN
+algeichlerorder(GEN A, GEN I)
+{
+  pari_sp av = avma;
+  FILE *f = fopen("fdom_make_Eichler.m", "w");/*Where the Magma code will go.*/
+  GEN F = alg_get_center(A);/*The centre, i.e where A=(a, b/F)*/
+  long nF = nf_get_degree(F);
+  long Fvar = nf_get_varn(F);/*Variable number of F*/
+  GEN gFvar = pol_x(Fvar);/*The actual polynomial*/
+  pari_fprintf(f, "SetColumns(0);\n");/*To stop annoying line breaks*/
+  if (nF == 1) pari_fprintf(f, "F:=RationalsAsNumberField();\n");/*Over Q, must do this.*/
+  else {
+    pari_fprintf(f, "R<%Ps>:=PolynomialRing(Rationals());\n", gFvar);/*Variable*/
+    pari_fprintf(f, "F<%Ps>:=NumberField(%Ps);\n", gFvar, nf_get_pol(F));/*Field*/
+  }
+  pari_fprintf(f, "ZF:=MaximalOrder(F);\n");/*Ring of integers of field*/
+  GEN ab = algab(A);
+  pari_fprintf(f, "A<t2, t3, t4>:=QuaternionAlgebra<F|%Ps, %Ps>;\n", gel(ab, 1), gel(ab, 2));/*Algebra. t2 -> i, t3 ->j, t4 ->k*/
+  /*Now we compute our current maximal order in terms of 1, i, j, k.*/
+  long n = nF << 2, i, j;/*The length of the basis.*/
+  GEN basis = cgetg(n + 1, t_VEC);/*Stores the basis in terms of 1, i, j, k*/
+  for (i = 1; i <= n; i++) gel(basis, i) = algbasisto1ijk(A, col_ei(n, i));
+  GEN polbasis = zerovec(n);/*basis, but we make the polynomials with t2, t3, t4*/
+  for (i = 1; i <= n; i++) {
+    gel(polbasis, i) = gadd(gel(polbasis, i), gmael(basis, i, 1));/*1*/
+    gel(polbasis, i) = gadd(gel(polbasis, i), gmul(gmael(basis, i, 2), pol_x(2)));/*i*/
+    gel(polbasis, i) = gadd(gel(polbasis, i), gmul(gmael(basis, i, 3), pol_x(3)));/*j*/
+    gel(polbasis, i) = gadd(gel(polbasis, i), gmul(gmael(basis, i, 4), pol_x(4)));/*k*/
+  }
+  pari_fprintf(f, "Maxord:=Order(%Ps);\n", polbasis);/*Maximal order of algebra*/
+  GEN Imat = idealhnf(F, I);/*Puts it into a square matrix*/
+  GEN Fbasis = nf_get_zk(F);/*The basis of F*/
+  GEN Ibasis = zerovec(nF);
+  for (i = 1; i <= nF; i++) {
+    for (j = 1; j <= nF; j++) {
+      gel(Ibasis, i) = gadd(gel(Ibasis, i), gmul(gcoeff(Imat, j, i), gel(Fbasis, j)));
+    }
+  }
+  pari_fprintf(f, "Idl:=ideal<ZF|");
+  for (i = 1; i <= nF - 1; i++) pari_fprintf(f, "%Ps, ", gel(Ibasis, i));
+  pari_fprintf(f, "%Ps>;\n", gel(Ibasis, nF));/*Tranlated ideal of F*/
+  pari_fprintf(f, "OEich:=Order(Maxord, Idl);\n");/*Eichler order*/
+  pari_fprintf(f, "B:=ZBasis(OEich);\n");/*Z-basis of the order*/
+  pari_fprintf(f, "SetOutputFile(\"fdom_make_Eichler_output.dat\": Overwrite := true);\n");
+  pari_fprintf(f, "B;\nUnsetOutputFile();\nexit;");/*Output B and exit.*/
+  fclose(f);/*File is made, now let's run Magma.*/
+  GEN runfile = gpextern("magma -b fdom_make_Eichler.m");
+  if (!runfile) pari_err(e_MISC, "Problem running the file. Is magma installed?");
+  GEN O = gel(gp_readvec_file("fdom_make_Eichler_output.dat"), 1);/*Retrieve the output.*/
+  GEN O1ijk = cgetg_copy(O, &n);/*The order with entries back as vectors wrt [1, i, j, k]*/
+  long ivar = fetch_user_var("t2"), jvar = fetch_user_var("t3"), kvar = fetch_user_var("t4");
+  GEN Ai = pol_x(ivar), Aj = pol_x(jvar), Ak = pol_x(kvar);/*i, j, k*/
+  for (i = 1; i < n; i++) {
+    GEN elt = gel(O, i);/*The element*/
+    GEN icoef = polcoef(elt, 1, ivar);/*i coeff*/
+    elt = gsub(elt, gmul(icoef, Ai));
+    GEN jcoef = polcoef(elt, 1, jvar);/*j coeff*/
+    elt = gsub(elt, gmul(jcoef, Aj));
+    GEN kcoef = polcoef(elt, 1, kvar);/*k coeff*/
+    elt = gsub(elt, gmul(kcoef, Ak));
+    gel(O1ijk, i) = mkvec4(simplify(elt), icoef, jcoef, kcoef);
+  }
+  GEN M = cgetg(n, t_MAT);
+  for (i = 1; i < n; i++) gel(M, i) = alg1ijktobasis(A, gel(O1ijk, i));
+  return gerepileupto(av, hnf(M));
+}
+
+
+/*SECTION 3: TUNING*/
 
 /*We have pre-stored algebras of degree n in "data_in/fdom_Cn.dat". We compute the time to compute the fundamental domains of the algebras, where each test is repeated testsperalg times, with the range of C_n's. We only have tests for 1<=n<=9, as algebras with n>=10 are too big to compute very quickly.*/
 GEN
@@ -263,5 +334,9 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
   }
   return gerepilecopy(av, mkvec2(Cs, times));
 }
+
+
+
+
 
 

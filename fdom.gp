@@ -85,9 +85,11 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	install(fdomviewer,"vr",,fdom_library);
 	addhelp(fdomviewer,"fdomviewer(files): assuming the user is using WSL with Python installed in Windows, calls 'fdomviewer.py files' in Python to launch the viewer. Files should be a string of space separated files, the first being the fundamental domain you want to visualize, and the rest being the geodesics.'");
 
-\\SECTION 2: TUNING
+\\SECTION 2: EICHLER ORDERS
+	install(algeichlerorder,"GG",,fdom_library);
+	addhelp(algeichlerorder,"algeichlerorder(A, I): returns an Eichler order of level I in A the stored maximal order of A. This uses Magma, so requires Magma to be installed. Creates and modifies the files 'fdom_make_Eichler.m' and 'fdom_make_Eichler_output.dat', and the algebra A cannot use the variables i, j, or k anywhere.");
 
-	\\2: BEST C
+\\SECTION 3: TUNING
 	install(tune_Cn,"LGGD4,L,D20,L,p",,fdom_library);
 	addhelp(tune_Cn,"tune_Cn(n, Cmin, Cmax, {testsperalg=4}, {tests=20}): For the degree n (between 1 and 9), we compute the fundamental domains for a range of algebras with C_n between Cmin and Cmax. We return the values of C_n and the total time taken for each one. This is used to determine the best value of C_n.");
 
