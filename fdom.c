@@ -196,7 +196,6 @@ static GEN algconj(GEN A, GEN x);
 static GEN alggeta(GEN A);
 static GEN voidalgmul(void *A, GEN x, GEN y);
 static GEN algramifiedplacesf(GEN A);
-static GEN algreduceddisc(GEN A);
 static long algsplitoo(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
@@ -4029,7 +4028,7 @@ algramifiedplacesf(GEN A)
 }
 
 /*Returns the reduced discriminant of A as an ideal in the centre.*/
-static GEN
+GEN
 algreduceddisc(GEN A)
 {
   pari_sp av = avma;

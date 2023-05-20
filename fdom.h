@@ -131,6 +131,7 @@ GEN alg1ijktoalg(GEN A, GEN x);
 GEN alg1ijktobasis(GEN A, GEN x);
 GEN algdiscnorm(GEN A);
 GEN algmulvec(GEN A, GEN G, GEN L);
+GEN algreduceddisc(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
 int algisorder(GEN A, GEN O);

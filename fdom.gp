@@ -71,6 +71,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(algordertoorderalg,"algordertoorderalg(A, O): given an order O of A expressed as a matrix, whose columns form the basis of the order, we convert it to algebraic form, i.e. return a vector whose entries are the basis in algebraic form.");
 	install(algorderlevel,"GGD0,L,",,fdom_library);
 	addhelp(algorderlevel,"algorderlevel(A, O, {flag=0}: returns the level of the order O in A as an ideal in the centre of A. If flag=1, this is in factored form.");
+	install(algreduceddisc,"G",,fdom_library);
+	addhelp(algreduceddisc,"algreduceddisc(A): returns the reduced discriminant of A as an ideal in its centre.");
 	
 	\\4: FINCKE POHST FOR FLAG=2 WITH PRUNING
 	install(qfminim_prune,"GGD1,L,p",,fdom_library);
