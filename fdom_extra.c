@@ -280,19 +280,19 @@ algeichlerorder(GEN A, GEN I)
 
 /*SECTION 3: TUNING*/
 
-/*We have pre-stored algebras of degree n in "data_in/fdom_Cn.dat". We compute the time to compute the fundamental domains of the algebras, where each test is repeated testsperalg times, with the range of C_n's. We only have tests for 1<=n<=9, as algebras with n>=10 are too big to compute very quickly.*/
+/*We have pre-stored algebras of degree n in "testing/fdom_Cn.dat". We compute the time to compute the fundamental domains of the algebras, where each test is repeated testsperalg times, with the range of C_n's. We only have tests for 1<=n<=9, as algebras with n>=10 are too big to compute very quickly.*/
 GEN
 tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
 {
   pari_sp av = avma, av1, av2, av3;
   if (n <= 0 || n >= 10) pari_err(e_MISC, "n must be between 1 and 9.");
-  GEN dat = gel(gp_readvec_file("data_in/fdom_Cn.dat"), n);
+  GEN dat = gel(gp_readvec_file("testing/fdom_Cn.dat"), n);
   long ldat = lg(gel(dat, 1)), i, j, k;
   if (tests <= 1) tests = 2;
   GEN Cn = Cmin;
   GEN Cnadd = gdivgs(gsub(Cmax, Cmin), tests - 1);
   GEN times = cgetg(tests + 1, t_VECSMALL);
-  FILE *f = fopen("data_in/Cn_timings.dat", "a");
+  FILE *f = fopen("testing/Cn_timings.dat", "a");
   pari_fprintf(f, "Testing n=%d, %d trials per algebra, %d values of C between %P.8f and %P.8f\n", n, testsperalg, tests, Cmin, Cmax);
   pari_printf("Testing n=%d, %d trials per algebra, %d values of C between %P.8f and %P.8f\n", n, testsperalg, tests, Cmin, Cmax);
   pari_timer T;
