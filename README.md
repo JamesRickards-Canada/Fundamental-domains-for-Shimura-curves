@@ -1,14 +1,5 @@
 # Fundamental domains for Shimura curves
 
-This package is a PARI/GP implementation of fundamental domains for Shimura curves. You can compute fundamental domains and view them with a Python application (using Matplotlib).
+This branch is a legacy version of the code that was used to write the paper "Improved computation of fundamental domains for arithmetic Fuchsian groups" ([Link](https://doi.org/10.1090/mcom/3777) [Arxiv](https://arxiv.org/abs/2110.11503)). It should work with versions 2.13 and on, though it is no longer tested.
 
-This package is written for the development version of PARI/GP, 2.14. If you are using a stable release, you will have to call "make" in order to recompile the library (.so) file for your own system. In the Makefile, you will have to update the location of the PARI/GP installation to where it is on your own system. Alternatively, there is a .so file for the 2.13 version stored in the folder "2.13_sofile". This may not be updated as often as the code is, but will generally be fine.
-Once you have the .so file compiled, you can call "gp fdom" to open gp and load the package.
-
-For a longer introduction on quaternion algebras in PARI/GP & this package, see the file "QuaternionAlgebras_PARIGP.pdf".
-
-Type ?fdom to access the help inside of gp.
-
-Run the file "example.gp" to see an example of these methods in action.
-
-The files paper_computations.gp, papertimetest.gp, and the folder data_in can be used to reproduce figures from my paper, "Improved computation of fundamental domains for arithmetic Fuchsian groups". They are not necessary for the operation of the package.
+The default branch (klein) is greatly improved, so you should use that instead. The only real reason to use this branch is if you want to reproduce data/figures from my paper using the code that originally created them. For this, see the files paper_computations.gp, papertimetest.gp, as well as the folder data_in.
