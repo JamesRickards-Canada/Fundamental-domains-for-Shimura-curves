@@ -1,21 +1,17 @@
 /*TO DO
-1. How to input groups between O^1 and the full positive normalizer group? (i.e. type in afuchinit).
-8. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
-11. Do we want the debug level here to be the same as for algebras? Currently it is.
-12. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
-13. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
-14. Input the trace_F/Q(nrd(g)/nm) part to the methods, and have a method for finding n non-trivial elements (instead of our current gp-accessible method).
-15. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
-17. Add testing for changing p.
-18. When initialize by a, b allows for denominators, fix afuchlist to not use this.
-19. Geodesics that intersect a vertex.
-*/
+1. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
+2. Do we want the debug level here to be the same as for algebras? Currently it is.
+3. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
+4. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
+5. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
+6. Add testing for changing p.
+7. When initialize by a, b allows for denominators, fix afuchlist to not use this.
+8. Geodesics that intersect a vertex.
 
-/*
 POSSIBLE FUTURE ADDITIONS:
-1) Parallelization of element enumeration along with partial domain computations.
-2) Methods of Imbert (see Voight's original paper) to find a minimal presentation in canonical form.
-3) Computation of cohomology groups.
+1. Parallelization of element enumeration along with partial domain computations.
+2. Methods of Imbert (see Voight's original paper) to find a minimal presentation in canonical form.
+3. Computation of cohomology groups.
 */
 
 
@@ -3884,7 +3880,7 @@ afuchfindoneelt_i(GEN X, GEN nm, GEN C)
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
     realnm = gsubst(nm, Fvar, rt);
-    /*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner??? YES I DO!!
+    /*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner??? YES I DO!! Well... maybe... not sure anymore.
     C = mpdiv(C, realnm);
     if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
     */

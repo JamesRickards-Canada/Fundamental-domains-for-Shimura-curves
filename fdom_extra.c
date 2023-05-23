@@ -23,12 +23,12 @@
 
 /*SECTION 1: VISUALIZATION*/
 
-/*Prints the fundamental domain to a latex file. model=0 means upper half plane, 1 is unit disc, and 2 is Klein.*/
+/*Prints the fundamental domain to a latex file. model=0 means Klein, 1 is unit disc, and 2 is upper half plane.*/
 void
 afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, int open)
 {
   pari_sp av = avma;
-  if (!model) pari_err(e_MISC, "Upper half plane not yet supported");
+  if (model == 2) pari_err(e_MISC, "Upper half plane not yet supported");
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
   long prec = lg(tol);
   GEN U = afuch_get_fdom(X);
@@ -78,7 +78,7 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
     }
     pari_fprintf(f, "\\pgfpathclose\n\\pgfusepath{stroke, fill}\n\\end{pgfscope}\n");
   }
-  else if (model == 2) {/*Klein model*/
+  else if (model == 1) {/*Klein model*/
     GEN first = gel(vertices, nsides);/*The lower point on the first arc.*/
     pari_fprintf(f, "\\pgfpathmoveto{\\pgfqpoint{%P.8fin}{%P.8fin}}\n", gmul(real_i(first), radius), gmul(imag_i(first), radius));/*First point*/
     for (i = 1; i <= nsides; i++) {/*Each side*/
