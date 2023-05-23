@@ -116,6 +116,7 @@ GEN afuchpresentation(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchspair(GEN X);
 GEN afuchword(GEN X, GEN g);
+GEN afuchvertices(GEN X, int model);
 
 /*3: NON NORM 1 METHODS*/
 GEN bnf_make_unitnorms(GEN B, long split, long prec);

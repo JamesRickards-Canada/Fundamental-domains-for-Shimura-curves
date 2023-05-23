@@ -45,6 +45,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchspair,"afuchspair(X): returns S, the side pairing of X. The format is a Vecsmall, where side i is paired with side S[i]. Note that under some conventions, S[i]=i corresponds to there being an extra vertex at the midpoint of the edge (which is fixed), and the pairing is between the two new distinct sides formed.");
 	install(afuchword,"GG",,fdom_library);
 	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. The format is a Vecsmall v, corresponding to the product of P[1][|v[i]|]^{sign(v[i])}, where P is the presentation. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
+	install(afuchvertices,"GD0,L,",,fdom_library);
+	addhelp(afuchvertices,"afuchvertices(X, {model=0}): returns the vertices of the fundamental domain, where side i corresponds to going from vertex i-1 to i counterclockwise around the unit disc. If model=0 they are in the Klein model, and if model=1 they are in the unit disc model.");
 
 	\\3: FINDING ELEMENTS
 	install(afuchfindoneelt,"GD1,G,DG",,fdom_library);

@@ -3304,6 +3304,21 @@ afuchword(GEN X, GEN g)
   return gerepileupto(av, word(X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X)));
 }
 
+/*Returns the vertices of the fundamental domain in the Klein model (model=0), or unit disc model (model=1).*/
+GEN
+afuchvertices(GEN X, int model)
+{
+  GEN U = afuch_get_fdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  GEN verts = normbound_get_vcors(U);
+  if (!model) return gcopy(verts);
+  GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  long lv, i;
+  GEN vdisc = cgetg_copy(verts, &lv);
+  for (i = 1; i < lv; i++) gel(vdisc, i) = klein_to_disc(gel(verts, i), tol);
+  return vdisc;
+}
+
 
 /*3: NON NORM 1 METHODS*/
 
