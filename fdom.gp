@@ -39,6 +39,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchorder,"afuchorder(X): returns the stored order in X.");
 	install(afuchpresentation,"G",,fdom_library);
 	addhelp(afuchpresentation,"afuchpresentation(X): returns the presentation P of X. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A. P[3] tracks the sides of the fundamental domain in terms of the generators here, used to write an element as a word in these generators.");
+	install(afuchsides,"G",,fdom_library);
+	addhelp(afuchsides,"afuchsides(X): returns the sides of the fundamental domain. The format of a side is [a, b, r], where the equation for the side is ax+by=1 in the Klein model, (x-a)^2+(y-b)^2=r^2=a^2+b^2+1 in the unit disc model.");
 	install(afuchsignature,"G",,fdom_library);
 	addhelp(afuchsignature,"afuchsignature(X): returns the signature of X, i.e. [genus, [lengths of elliptic cycles], # of parabolic cycles].");
 	install(afuchspair,"G",,fdom_library);

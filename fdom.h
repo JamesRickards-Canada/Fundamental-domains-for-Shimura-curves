@@ -113,6 +113,7 @@ GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
 GEN afuchnormalizernorms(GEN X);
 GEN afuchorder(GEN X);
 GEN afuchpresentation(GEN X);
+GEN afuchsides(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchspair(GEN X);
 GEN afuchword(GEN X, GEN g);

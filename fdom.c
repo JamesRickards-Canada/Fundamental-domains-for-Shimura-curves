@@ -3259,6 +3259,22 @@ afuchpresentation(GEN X)
   return gerepileupto(av, Opres);
 }
 
+/*Returns the sides of the fundamental domain.*/
+GEN
+afuchsides(GEN X)
+{
+  GEN U = afuch_get_fdom(X);
+  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  GEN oldsides = normbound_get_sides(U);
+  long lo, i, j;
+  GEN sides = cgetg_copy(oldsides, &lo);
+  for (i = 1; i < lo; i++) {
+	gel(sides, i) = cgetg(4, t_VEC);
+	for (j = 1; j <= 3; j++) gmael(sides, i, j) = gcopy(gmael(oldsides, i, j));
+  }
+  return sides;
+}
+
 /*Signature*/
 GEN
 afuchsignature(GEN X)
@@ -3277,10 +3293,9 @@ afuchsignature(GEN X)
 GEN
 afuchspair(GEN X)
 {
-  pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
   if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
-  return gerepilecopy(av, normbound_get_spair(U));
+  return gcopy(normbound_get_spair(U));
 }
 
 /*Writing an element as a word in the presentation. We do not reduce wrt the generators.*/
