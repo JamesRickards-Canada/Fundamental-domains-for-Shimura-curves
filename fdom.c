@@ -2510,7 +2510,7 @@ afuch_changep(GEN X, GEN p)
   set_avma(av);
 }
 
-/*Updates X to have precision prec+inc. Does not initialize the fundamental domain, signature, or precision: this will typically be triggered when we find that we don't have enough precision for qfminim when computing the fundamental domain.*/
+/*Updates X to have precision prec+inc, updating all components that require it.*/
 static void
 afuch_moreprec(GEN X, long inc)
 {
@@ -2558,6 +2558,17 @@ afuch_moreprec(GEN X, long inc)
   obj_insert(X, afuch_QFMATS, qfm);
   obj_insert(X, afuch_GDAT, gdat);
   obj_insert(X, afuch_FDOMDAT, afuchfdomdat_init(new_A, O, new_prec));
+  GEN U = afuch_get_fdom(X);
+  if (U) {/*We must update the old fundamental domain stored.*/
+    GEN S = normbound_get_elts(U);/*Just recall normbound*/
+	U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    obj_insert(X, afuch_FDOM, U);
+  }
+  GEN P = afuch_get_pres(X);
+  if (P) {/*In theory, the call to normbasis could have changed the ordering of things.*/
+    P = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    obj_insert(X, afuch_PRES, P);
+  }
   set_avma(av);
 }
 
@@ -3024,30 +3035,47 @@ afuchfdom(GEN X)
       startingset = newstart;
     }
   }
-  if (precinc) {
+  if (precinc && DEBUGLEVEL > 0) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
-    if (DEBUGLEVEL > 0) pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
   }
   if (!type) {/*Looking for O^1 only.*/
     obj_insert(X, afuch_FDOM, U);
     set_avma(av);
     return;
   }
+  if (DEBUGLEVEL > 0) pari_printf("Looking for elements of the appropriate norms.\n");
+  precinc = 0;
   GEN O1elts = normbound_get_elts(U), newelts, S;
-  switch (type) {
-    case 1:
-      S = shallowconcat(O1elts, afuch_makeunitelts(X));
-      break;
-    case 2:
-      newelts = afuch_makeALelts(X);
-      S = shallowconcat(O1elts, shallowconcat1(newelts));
-      break;
-    case 3:/*case 3*/
-      newelts = afuch_makenormelts(X);
-      S = shallowconcat(O1elts, shallowconcat1(newelts));
-      break;
-    default:
-      S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
+  for (;;) {
+	int addprec = 0;
+    switch (type) {
+      case 1:
+	    newelts = afuch_makeunitelts(X);
+		if (!newelts) addprec = 1;
+        else S = shallowconcat(O1elts, newelts);
+        break;
+      case 2:
+        newelts = afuch_makeALelts(X);
+		if (!newelts) addprec = 1;
+        else S = shallowconcat(O1elts, shallowconcat1(newelts));
+        break;
+      case 3:/*case 3*/
+        newelts = afuch_makenormelts(X);
+		if (!newelts) addprec = 1;
+        else S = shallowconcat(O1elts, shallowconcat1(newelts));
+        break;
+      default:
+        S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
+    }
+	if (!addprec) break;/*No precision increase required.*/
+	if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
+	precinc = 1;
+	afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+  }
+  if (precinc && DEBUGLEVEL > 0) {
+    GEN tol = gdat_get_tol(afuch_get_gdat(X));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
   }
   U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
   GEN elts = normbound_get_elts(U), kact = normbound_get_kact(U);
@@ -3345,7 +3373,11 @@ afuch_makeunitelts(GEN X)
   GEN unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
   long lu, i;
   GEN elts = cgetg_copy(unitnorms, &lu);
-  for (i = 1; i < lu; i++) gel(elts, i) = afuchfindoneelt_i(X, gel(unitnorms, i), NULL);
+  for (i = 1; i < lu; i++) {
+	GEN attempt = afuchfindoneelt_i(X, gel(unitnorms, i), NULL);
+	if (attempt) gel(elts, i) = attempt;
+	else return gc_NULL(av);/*Precision too low.*/
+  }
   return gerepileupto(av, elts);
 }
 
@@ -3375,9 +3407,17 @@ afuch_makeALelts(GEN X)
   GEN norms1 = gel(ALnorms, 1), norms2 = gel(ALnorms, 2);/*Unit, then AL norms*/
   long lu, i;
   GEN elts1 = cgetg_copy(norms1, &lu);
-  for (i = 1; i < lu; i++) gel(elts1, i) = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+  for (i = 1; i < lu; i++) {
+	GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+	if (attempt) gel(elts1, i) = attempt;
+	else return gc_NULL(av);/*Precision too low.*/
+  }
   GEN elts2 = cgetg_copy(norms2, &lu);
-  for (i = 1; i < lu; i++) gel(elts2, i) = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+  for (i = 1; i < lu; i++) {
+	GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+	if (attempt) gel(elts2, i) = attempt;
+	else return gc_NULL(av);/*Precision too low.*/
+  }
   return gerepilecopy(av, mkvec2(elts1, elts2));
 }
 
@@ -3411,11 +3451,23 @@ afuch_makenormelts(GEN X)
   GEN norms1 = gel(norms, 1), norms2 = gel(norms, 2), norms3 = gel(norms, 3);/*Unit, then AL norms, then normalizer norms*/
   long lu, i;
   GEN elts1 = cgetg_copy(norms1, &lu);
-  for (i = 1; i < lu; i++) gel(elts1, i) = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+  for (i = 1; i < lu; i++) {
+	GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+	if (attempt) gel(elts1, i) = attempt;
+	else return gc_NULL(av);/*Precision too low.*/
+  }
   GEN elts2 = cgetg_copy(norms2, &lu);
-  for (i = 1; i < lu; i++) gel(elts2, i) = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+  for (i = 1; i < lu; i++) {
+	GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+	if (attempt) gel(elts2, i) = attempt;
+	else return gc_NULL(av);/*Precision too low.*/
+  }
   GEN elts3 = cgetg_copy(norms3, &lu);
-  for (i = 1; i < lu; i++) gel(elts3, i) = afuchfindoneelt_i(X, gel(norms3, i), NULL);
+  for (i = 1; i < lu; i++) {
+	GEN attempt = afuchfindoneelt_i(X, gel(norms3, i), NULL);
+	if (attempt) gel(elts3, i) = attempt;
+	else return gc_NULL(av);/*Precision too low.*/
+  }
   return gerepilecopy(av, mkvec3(elts1, elts2, elts3));
 }
 
@@ -3916,10 +3968,9 @@ afuchfindoneelt_i(GEN X, GEN nm, GEN C)
     GEN E = afuchfindelts(X, nm, z, C, 1, tracepart, realnm);
     if (!E) {/*Precision too low, we allow up to 20 exceptions before failing.*/
       skip++;
-      if (skip > 20) pari_err_PREC("Precision too low for Fincke Pohst");
-      continue;
+      if (skip > 20) return gc_NULL(av);
     }
-    if (lg(E) > 1) return gerepilecopy(av, gel(E, 1));
+    else if (lg(E) > 1) return gerepilecopy(av, gel(E, 1));
     set_avma(av2);
   }
 }
@@ -3929,9 +3980,20 @@ GEN
 afuchfindoneelt(GEN X, GEN nm, GEN C)
 {
   pari_sp av = avma;
-  GEN O = afuch_get_O(X);
-  GEN elt = afuchfindoneelt_i(X, nm, C);
-  if (gequal1(O)) return elt;
+  long precinc = 0;
+  GEN O = afuch_get_O(X), elt;
+  for (;;) {
+    elt = afuchfindoneelt_i(X, nm, C);
+    if (elt) break;/*Success!*/
+    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
+    precinc = 1;
+    afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+  }
+  if (precinc && DEBUGLEVEL > 0) {
+    GEN tol = gdat_get_tol(afuch_get_gdat(X));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+  }
+  if (gequal1(O)) return gerepileupto(av, elt);
   return gerepileupto(av, QM_QC_mul(O, elt));
 }
 
