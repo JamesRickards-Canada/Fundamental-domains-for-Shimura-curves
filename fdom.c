@@ -3148,7 +3148,7 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
           if (S[i] - S[i - 1] != 1) break;
           i--;
         }
-        if (i == 1) break;/*S[1]...S[nprime] is consecutive and too big, so we will always lose from now on.*/
+        if (i <= 1) break;/*S[1]...S[nprime] is consecutive and too big, so we will always lose from now on. Include i=0 in case there were never any primes (oo loop else).*/
         S[i - 1]++;
         for (j = i; j <= nprime; j++) S[j] = S[j - 1] + 1;
         set_avma(av2);
