@@ -3809,7 +3809,9 @@ afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN real
   long prec = lg(tol);
   GEN lowtol = deflowtol(prec);
   GEN M = afuch_make_qf(X, nm, z, tracepart, realnm);
-  GEN v = fincke_pohst_prune(M, C, 1, prec);
+  GEN v;
+  if (gequal1(nm)) v = fincke_pohst_prune(M, C, 1, prec);
+  else v = fincke_pohst_prune(M, C, 0, prec);/*ONLY prune if norm is 1.*/
   if(!v) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
   int nomax, ind = 1, lv = lg(v), i;
   if (maxelts) nomax = 0;
