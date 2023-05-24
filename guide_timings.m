@@ -27,8 +27,8 @@ UnsetOutputFile();
 
 //Case 5
 SetOutputFile("2_5_3724.txt");
-F<y> := NumberField(x^2-5);
-A<i, j, k> := QuaternionAlgebra<F | -116*y + 95, -16919*y + 36456>;
+F<y> := NumberField(x^2-x-1);
+A<i, j, k> := QuaternionAlgebra<F | -16*y + 3, -6734*y + 5873>;
 O := MaximalOrder(A);
 Discriminant(F);
 Norm(Discriminant(A));
@@ -147,8 +147,8 @@ UnsetOutputFile();
 
 //Case 6
 SetOutputFile("2_44_283.txt");
-F<y> := NumberField(x^2-44);
-A<i, j, k> := QuaternionAlgebra<F | -1, -14*y + 64>;
+F<y> := NumberField(x^2-11);
+A<i, j, k> := QuaternionAlgebra<F | -1, -7*y - 16>;
 O := MaximalOrder(A);
 Discriminant(F);
 Norm(Discriminant(A));
@@ -193,18 +193,6 @@ time FD := FundamentalDomain(Gamma);
 FD;
 UnsetOutputFile();
 
-//Case 10
-SetOutputFile("4_4225_491.txt");
-F<y> := NumberField(x^4-9*x^2+4);
-A<i, j, k> := QuaternionAlgebra<F | -1, -2*y^3 + 10*y^2 + 4*y - 67>;
-O := MaximalOrder(A);
-Discriminant(F);
-Norm(Discriminant(A));
-Gamma := FuchsianGroup(O);
-time FD := FundamentalDomain(Gamma);
-FD;
-UnsetOutputFile();
-
 //Case 17
 SetOutputFile("8_309593125_19.txt");
 F<y> := NumberField(x^8 - 4*x^7 - x^6 + 17*x^5 - 5*x^4 - 23*x^3 + 6*x^2 + 9*x - 1);
@@ -229,3 +217,14 @@ time FD := FundamentalDomain(Gamma);
 FD;
 UnsetOutputFile();
 
+//Case 10
+SetOutputFile("4_1957_2511.txt");
+F<y> := NumberField(x^4 - 4*x^2 - x + 1);
+A<i, j, k> := QuaternionAlgebra<F | -1, -48*y^3 + 36*y^2 + 120*y - 111>;
+O := MaximalOrder(A);
+Discriminant(F);
+Norm(Discriminant(A));
+Gamma := FuchsianGroup(O);
+time FD := FundamentalDomain(Gamma);
+FD;
+UnsetOutputFile();

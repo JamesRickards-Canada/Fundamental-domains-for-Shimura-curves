@@ -161,3 +161,14 @@ GEN algeichlerorder(GEN A, GEN I);
 
 /*SECTION 3: TUNING*/
 GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);
+
+
+
+GEN
+normalizerC(GEN X, GEN nm);
+GEN
+afuch_make_qf2(GEN X, GEN nm, GEN z, GEN tracepart, GEN realnm);
+
+
+
+

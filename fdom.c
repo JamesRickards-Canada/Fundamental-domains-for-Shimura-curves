@@ -3912,6 +3912,11 @@ afuchfindoneelt(GEN X, GEN nm, GEN C)
 }
 
 
+
+
+
+
+
 /*3: ALGEBRA HELPER METHODS*/
 
 /*Returns [a, b] where A=(a, b/F).*/

@@ -55,12 +55,12 @@ avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 2023.1856689118268456
 A=alginit(F, [2070, -45999]);\\Ramified at 19, 269
 avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 5051.680986972387528
 
-F=nfinit(y^2-5);
-A=alginit(F, [-116*y + 95, -16919*y + 36456]);\\Ram at primes over 2, 7, 19
+F=nfinit(y^2-y-1);
+A=alginit(F, [-16*y + 3, -6734*y + 5873]);\\Ram at primes over 2, 7, 19
 avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 542.8672105403162716
 
-F=nfinit(y^2-44);
-A=alginit(F, [-1, -14*y + 64]);\\Ram at prime over 283
+F=nfinit(y^2-11);
+A=alginit(F, [-1, -7*y - 16]);\\Ram at prime over 283
 avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 2067.167966062083951
 
 F=nfinit(y^3-3*y-1);
@@ -75,9 +75,9 @@ F=nfinit(y^4+2*y^3-4*y^2-6*y+1);
 A=alginit(F, [-92*y^3 - 172*y^2 + 352*y + 221, 2*y^3 + 4*y^2 - 7*y - 18]);\\Ramified above 17
 avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 469.1445029360757902
 
-F=nfinit(y^4-9*y^2+4);
-A=alginit(F, [-1, -2*y^3 + 10*y^2 + 4*y - 67]);\\Ram above 491
-avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 1642.0057602762652658
+F=nfinit(y^4 - 4*y^2 - y + 1);
+A=alginit(F, [-1, -48*y^3 + 36*y^2 + 120*y - 111]);\\Ram above 3, 3, 31
+avgtime(fil, A, 0, tno, testspercase);tno++;\\Area 1633.6281798666922729
 
 \p57
 F=nfinit(y^5-5*y^3-y^2+3*y+1);
