@@ -3114,7 +3114,7 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
   GEN order = indexsort(poss_norm);/*Order smallest to largest.*/
   long par = (n - 1)%2, maxprimes = 0, leno = lg(order) - 1;/*The parity of the number of prime divisors we need.*/
   GEN pro = gen_1;
-  while (cmpii(pro, phimax) < 0 && maxprimes < leno){/*maxprimes keeps track of the maximal number of prime divisors we can take*/
+  while (cmpii(pro, phimax) <= 0 && maxprimes < leno){/*maxprimes keeps track of the maximal number of prime divisors we can take*/
     maxprimes++;
     pro = mulii(pro, gel(poss_norm, order[maxprimes]));
   }
