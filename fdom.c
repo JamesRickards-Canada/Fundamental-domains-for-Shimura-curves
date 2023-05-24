@@ -2815,7 +2815,7 @@ afuchO1area(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
   return gerepileupto(av, gtofp(ar, prec));
 }
 
-/*Generate the optimal C value for efficiently finding elements.*/
+/*Generate the optimal C_n value for efficiently finding elements OF NORM 1. See the comment inside afuchfindonelt_i for how to change C when looking for non-norm 1 elements.*/
 static GEN
 afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec)
 {
@@ -3871,20 +3871,42 @@ afuchfindoneelt_i(GEN X, GEN nm, GEN C)
   pari_sp av = avma, av2;
   long prec = afuch_get_prec(X);
   GEN R = afuch_get_R(X);
-  if (!C) C = afuch_get_bestC(X);
   GEN tracepart = NULL, realnm = NULL;
-  if (!gequal1(nm)) {/*Set the trace part and real norm here, AND update C*/
+  if (!gequal1(nm)) {/*Set the trace part and real norm here, AND update C if not set.*/
     tracepart = afuch_make_traceqf(X, nm, NULL);/*Find Tr_{F/Q}(nrd(g)/nm).*/
     GEN A = afuch_get_alg(X), F = alg_get_center(A);
     long split = algsplitoo(A);
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
     realnm = gsubst(nm, Fvar, rt);
-    /*I used to have these next two lines in, but it seems to actually be bad in some cases. Maybe add back for Atkin-Lehner??? YES I DO!! Well... maybe... not sure anymore.
-    C = mpdiv(C, realnm);
-    if (gcmpgs(C, nf_get_degree(F) + 1) <= 0) C = gaddgs(C, 2);
-    */
+	GEN nmnorm = nfnorm(F, nm);/*Norm to Q*/
+	if (!C) {
+	  C = afuch_get_bestC(X);
+	  if (!equali1(nmnorm)) {/*We must scale it.*/
+		/*
+		Let L=nmnorm^(1/n). It turns out that the quadratic form we make, Q^nm(g)=Q_1(g)/sigma(nm)+Tr_{F/Q}(nrd(g)/nm), where sigma is the unique split oo place has the property that Q^nm<=C has the same number of solutions as Q^1<=CL. Assuming the time to compute this enumeration is A+B*(CL)^2n, we can do the same analysis as in my paper to get that
+	      (2n-1)C^{2n}-2n^2C^{2n-1} = 1/L^{2n}(A/B)=1/nmnorm^2*A/B.
+		Since we know this holds true with L=1 and we have the optimal value of C for this case, we can find A/B in this way, and solve for the new optimal C. Note that if L is smallish, this just changes C_opt to C_opt/L. If L gets larger, then we cannot ignore the second term and this no longer holds.
+		*/
+		long var = fetch_var(), n = nf_get_degree(F), twon = n << 1;
+		long firstc = twon - 1, secondc = twon * n, i;
+		GEN AB = gmul(gsubgs(gmulsg(firstc, C), secondc), gpowgs(C, firstc));/*(2n-1)C^(2n)-2n^2C^(2n-1)*/
+		AB = gdiv(AB, sqri(nmnorm));/*Update the output, re-solve for C.*/
+		GEN P = cgetg(twon + 3, t_POL);
+		P[1] = evalvarn(var);
+		gel(P, 2) = gneg(AB);/*Constant coefficient.*/
+        for (i = 3; i <= twon; i++) gel(P, i) = gen_0;/*0's in the middle. P[i] corresp to x^(i-2)*/
+        gel(P, twon + 1) = stoi(-secondc);
+        gel(P, twon + 2) = stoi(firstc);
+        P = normalizepol(P);/*Normalize it in place.*/
+		GEN rts = realroots(P, mkvec2(stoi(n), mkoo()), prec);/*Real roots in [n, oo)*/
+        delete_var();
+        if (lg(rts) != 2) pari_err(e_MISC, "Could not find exactly one real root in [n, oo)!");
+        C = gel(rts, 1);/*Finally, found it!*/
+	  }
+	}
   }
+  else if (!C) C = afuch_get_bestC(X);
   long skip = 0;
   for (;;) {
     av2 = avma;
@@ -3910,11 +3932,6 @@ afuchfindoneelt(GEN X, GEN nm, GEN C)
   if (gequal1(O)) return elt;
   return gerepileupto(av, QM_QC_mul(O, elt));
 }
-
-
-
-
-
 
 
 /*3: ALGEBRA HELPER METHODS*/
