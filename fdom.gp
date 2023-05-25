@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for Arithmetic Fuchsian groups.\n For each subtopic ``P (p)'', call ?p to access a basic description and list of methods. Subtopics:");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act\nafuchinit, afuch_newtype, afuch_changep\nafuchalg, afucharea, afuchelts, afuchfdom, afuchgeodesic, afuchlist, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
 parigp_version=version();
 fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2]);
 
@@ -45,10 +45,10 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afuchsignature,"afuchsignature(X): returns the signature of X, i.e. [genus, [lengths of elliptic cycles], # of parabolic cycles].");
 	install(afuchspair,"G",,fdom_library);
 	addhelp(afuchspair,"afuchspair(X): returns S, the side pairing of X. The format is a Vecsmall, where side i is paired with side S[i]. Note that under some conventions, S[i]=i corresponds to there being an extra vertex at the midpoint of the edge (which is fixed), and the pairing is between the two new distinct sides formed.");
-	install(afuchword,"GG",,fdom_library);
-	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. The format is a Vecsmall v, corresponding to the product of P[1][|v[i]|]^{sign(v[i])}, where P is the presentation. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
 	install(afuchvertices,"GD0,L,",,fdom_library);
 	addhelp(afuchvertices,"afuchvertices(X, {model=0}): returns the vertices of the fundamental domain, where side i corresponds to going from vertex i-1 to i counterclockwise around the unit disc. If model=0 they are in the Klein model, and if model=1 they are in the unit disc model.");
+	install(afuchword,"GG",,fdom_library);
+	addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. The format is a Vecsmall v, corresponding to the product of P[1][|v[i]|]^{sign(v[i])}, where P is the presentation. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely/never.");
 
 	\\3: FINDING ELEMENTS
 	install(afuchfindoneelt,"GD1,G,DG",,fdom_library);
@@ -104,4 +104,3 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(tune_Cn,"tune_Cn(n, Cmin, Cmax, {testsperalg=4}, {tests=20}): For the degree n (between 1 and 9), we compute the fundamental domains for a range of algebras with C_n between Cmin and Cmax. We return the values of C_n and the total time taken for each one. This is used to determine the best value of C_n.");
 
 default(parisize, "4096M");\\Must come at the end
-

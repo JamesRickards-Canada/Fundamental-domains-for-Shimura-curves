@@ -1,3 +1,4 @@
 *.h linguist-language=C
 *.gp linguist-language=GP
 *.c linguist-language=C
+*.m linguist-language=Magma
