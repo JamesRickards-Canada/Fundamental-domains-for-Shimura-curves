@@ -159,6 +159,7 @@ static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 static GEN afuchfdom_i(GEN X, GEN *startingset);
+static void afuchfdom_subgroup(GEN X, GEN M);
 static int nextsub(GEN S, long n);
 
 /*3: NON NORM 1 METHODS*/
@@ -425,7 +426,7 @@ disc_to_klein(GEN z)
 {
   pari_sp av = avma;
   GEN znorm = normcr(z);
-  GEN scale = divsr(2, addsr(1, znorm));//2/(1+|z|^2)
+  GEN scale = divsr(2, addsr(1, znorm));/*2/(1+|z|^2)*/
   return gerepileupto(av, mulcrr(z, scale));/*2z/(1+|z|^2)*/
 }
 
@@ -447,7 +448,7 @@ klein_to_disc(GEN z, GEN tol)
   GEN znm1 = subsr(1, normcr(z));/*1-|z|^2*/
   if (toleq0(znm1, tol)) return gerepilecopy(av, z);/*z->z, so just copy and return it to avoid precision loss with sqrt(0).*/
   GEN rt = sqrtr(znm1);/*sqrt(1-|z|^2)*/
-  GEN scale = invr(addsr(1, rt));//1/(1+sqrt(1-|z|^2))
+  GEN scale = invr(addsr(1, rt));/*1/(1+sqrt(1-|z|^2))*/
   return gerepileupto(av, mulcrr(z, scale));/*z/(1+sqrt(1-|z|^2))*/
 }
 
@@ -457,7 +458,7 @@ klein_to_plane(GEN z, GEN p, GEN tol)
 {
   pari_sp av = avma;
   GEN zdisc = klein_to_disc(z, tol);
-  return gerepileupto(av, disc_to_plane(zdisc, p));//Klein -> disc -> plane
+  return gerepileupto(av, disc_to_plane(zdisc, p));/*Klein -> disc -> plane*/
 }
 
 /*Given a point z in the upper half plane model, this transfers it to the unit disc model. The formula is (z-p)/(z-conj(p))*/
@@ -2384,12 +2385,12 @@ word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
-/*ALGEBRA REQUIREMENTS: UPDATE THIS!
+/*ALGEBRA REQUIREMENTS:
 Let
     F be a totally real number field
     A a quaternion algebra over F split at a unique real place
-    O be an order in A
-We can compute the fundamental domain of groups that live between O^1 and N{B^{\times}}(O)^+, i.e. berween the units of norm 1, and the elements of the normalizer with positive norm at the unique split real place.
+    O be an Eichler order in A
+We can compute the fundamental domain of groups that live between O^1 and N{B^{\times}}(O)^+, i.e. between the units of norm 1, and the elements of the normalizer with positive norm at the unique split real place.
 Inputs to most methods are named "X", which represents the algebra A, the order O, data to describe the exact group we are computing, and various other pieces of data that will be useful. You should first initialize this with afuchinit.
 */
 
@@ -2432,7 +2433,7 @@ presentation
 savedelts
     [O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
 normalizernorms
-    Only initialized if you call afuchnormalizernorms or initialize with type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
+    Only initialized if you call afuchnormalizernorms or set type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
 */
 
 /*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
@@ -2561,7 +2562,7 @@ afuch_moreprec(GEN X, long inc)
   GEN U = afuch_get_fdom(X);
   if (U) {/*We must update the old fundamental domain stored.*/
     GEN S = normbound_get_elts(U);/*Just recall normbound*/
-	U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
     obj_insert(X, afuch_FDOM, U);
   }
   GEN P = afuch_get_pres(X);
@@ -2706,7 +2707,7 @@ afuch_newtype(GEN X, GEN type)
   if (NN) obj_insert(newX, afuch_NORMALIZERNORMS, NN);
   GEN U = afuch_get_fdom(X);
   if (U) {
-    afuchfdom(newX);
+    afuchfdom(newX);/*We already copied over the saved elts and normalizer norms, in case of type t_MAT.*/
     GEN S = afuch_get_sig(X);
     if (S) afuchsignature(newX);
     GEN P = afuch_get_pres(X);
@@ -2999,9 +3000,13 @@ afuchfdom(GEN X)
   GEN U = afuch_get_fdom(X);
   if (U) return;/*We already have U!*/
   GEN Gtype = afuch_get_type(X);
+  if (typ(Gtype) == t_MAT) {/*Subgroup between O^1 and N_{A^x}^+(O). Assume we have initialized the saved elements already.*/
+    afuchfdom_subgroup(X, Gtype);/*We put this computation in a separate function.*/
+    return;
+  }
   if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
   long type = itos(Gtype);
-  GEN allelts = obj_check(X, afuch_SAVEDELTS);
+  GEN allelts = afuch_get_savedelts(X);
   if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
     GEN S = gel(allelts, 1);/*Norm 1, incluced in everything*/
     switch (type) {
@@ -3048,30 +3053,30 @@ afuchfdom(GEN X)
   precinc = 0;
   GEN O1elts = normbound_get_elts(U), newelts, S;
   for (;;) {
-	int addprec = 0;
+    int addprec = 0;
     switch (type) {
       case 1:
-	    newelts = afuch_makeunitelts(X);
-		if (!newelts) addprec = 1;
+        newelts = afuch_makeunitelts(X);
+        if (!newelts) addprec = 1;
         else S = shallowconcat(O1elts, newelts);
         break;
       case 2:
         newelts = afuch_makeALelts(X);
-		if (!newelts) addprec = 1;
+        if (!newelts) addprec = 1;
         else S = shallowconcat(O1elts, shallowconcat1(newelts));
         break;
       case 3:/*case 3*/
         newelts = afuch_makenormelts(X);
-		if (!newelts) addprec = 1;
+        if (!newelts) addprec = 1;
         else S = shallowconcat(O1elts, shallowconcat1(newelts));
         break;
       default:
         S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
     }
-	if (!addprec) break;/*No precision increase required.*/
-	if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
-	precinc = 1;
-	afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+    if (!addprec) break;/*No precision increase required.*/
+    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
+    precinc = 1;
+    afuch_moreprec(X, 1);/*Increase the precision by 1.*/
   }
   if (precinc && DEBUGLEVEL > 0) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
@@ -3088,6 +3093,32 @@ afuchfdom(GEN X)
   obj_insert(X, afuch_FDOM, U);
   if (type == 3) obj_insert(X, afuch_SAVEDELTS, vec_prepend(newelts, O1elts));
   set_avma(av);
+}
+
+/*Does afuchfdom for matrix input.*/
+static void
+afuchfdom_subgroup(GEN X, GEN M)
+{
+  pari_sp av = avma;
+  GEN allelts = afuch_get_savedelts(X);
+  if (!allelts) pari_err(e_MISC, "You must compute the domain with type=3 first, then change the type.");
+  M = FpM_image(M, gen_2);/*Reduce to generating set.*/
+  long lM = lg(M);
+  GEN S = shallowconcat(shallowconcat(gel(allelts, 2), gel(allelts, 3)), gel(allelts, 4));/*Concat for convenience.*/
+  GEN gens = cgetg(lM, t_VEC);
+  long lS = lg(S), i, j;/*Should be the lg of a column of M.*/
+  for (i = 1; i < lM; i++) {/*Multiply our elements to get the generator.*/
+    GEN elt = afuchid(X), col = gel(M, i);
+    for (j = 1; j < lS; j++) {
+      if (equali1(gel(col, j))) elt = afuchmul(X, elt, gel(S, j));
+    }
+    gel(gens, i) = elt;
+  }
+  gens = shallowconcat(gel(allelts, 1), gens);
+  GEN U = normbasis(X, NULL, gens, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+  obj_insert(X, afuch_FDOM, U);
+  set_avma(av);
+  return;
 }
 
 /*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.*/
@@ -3293,8 +3324,8 @@ afuchsides(GEN X)
   long lo, i, j;
   GEN sides = cgetg_copy(oldsides, &lo);
   for (i = 1; i < lo; i++) {
-	gel(sides, i) = cgetg(4, t_VEC);
-	for (j = 1; j <= 3; j++) gmael(sides, i, j) = gcopy(gmael(oldsides, i, j));
+    gel(sides, i) = cgetg(4, t_VEC);
+    for (j = 1; j <= 3; j++) gmael(sides, i, j) = gcopy(gmael(oldsides, i, j));
   }
   return sides;
 }
@@ -3374,9 +3405,9 @@ afuch_makeunitelts(GEN X)
   long lu, i;
   GEN elts = cgetg_copy(unitnorms, &lu);
   for (i = 1; i < lu; i++) {
-	GEN attempt = afuchfindoneelt_i(X, gel(unitnorms, i), NULL);
-	if (attempt) gel(elts, i) = attempt;
-	else return gc_NULL(av);/*Precision too low.*/
+    GEN attempt = afuchfindoneelt_i(X, gel(unitnorms, i), NULL);
+    if (attempt) gel(elts, i) = attempt;
+    else return gc_NULL(av);/*Precision too low.*/
   }
   return gerepileupto(av, elts);
 }
@@ -3408,15 +3439,15 @@ afuch_makeALelts(GEN X)
   long lu, i;
   GEN elts1 = cgetg_copy(norms1, &lu);
   for (i = 1; i < lu; i++) {
-	GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
-	if (attempt) gel(elts1, i) = attempt;
-	else return gc_NULL(av);/*Precision too low.*/
+    GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+    if (attempt) gel(elts1, i) = attempt;
+    else return gc_NULL(av);/*Precision too low.*/
   }
   GEN elts2 = cgetg_copy(norms2, &lu);
   for (i = 1; i < lu; i++) {
-	GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
-	if (attempt) gel(elts2, i) = attempt;
-	else return gc_NULL(av);/*Precision too low.*/
+    GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+    if (attempt) gel(elts2, i) = attempt;
+    else return gc_NULL(av);/*Precision too low.*/
   }
   return gerepilecopy(av, mkvec2(elts1, elts2));
 }
@@ -3452,21 +3483,21 @@ afuch_makenormelts(GEN X)
   long lu, i;
   GEN elts1 = cgetg_copy(norms1, &lu);
   for (i = 1; i < lu; i++) {
-	GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
-	if (attempt) gel(elts1, i) = attempt;
-	else return gc_NULL(av);/*Precision too low.*/
+    GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
+    if (attempt) gel(elts1, i) = attempt;
+    else return gc_NULL(av);/*Precision too low.*/
   }
   GEN elts2 = cgetg_copy(norms2, &lu);
   for (i = 1; i < lu; i++) {
-	GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
-	if (attempt) gel(elts2, i) = attempt;
-	else return gc_NULL(av);/*Precision too low.*/
+    GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
+    if (attempt) gel(elts2, i) = attempt;
+    else return gc_NULL(av);/*Precision too low.*/
   }
   GEN elts3 = cgetg_copy(norms3, &lu);
   for (i = 1; i < lu; i++) {
-	GEN attempt = afuchfindoneelt_i(X, gel(norms3, i), NULL);
-	if (attempt) gel(elts3, i) = attempt;
-	else return gc_NULL(av);/*Precision too low.*/
+    GEN attempt = afuchfindoneelt_i(X, gel(norms3, i), NULL);
+    if (attempt) gel(elts3, i) = attempt;
+    else return gc_NULL(av);/*Precision too low.*/
   }
   return gerepilecopy(av, mkvec3(elts1, elts2, elts3));
 }
@@ -3933,32 +3964,32 @@ afuchfindoneelt_i(GEN X, GEN nm, GEN C)
     long Fvar = nf_get_varn(F);
     GEN rt = gel(nf_get_roots(F), split);
     realnm = gsubst(nm, Fvar, rt);
-	GEN nmnorm = nfnorm(F, nm);/*Norm to Q*/
-	if (!C) {
-	  C = afuch_get_bestC(X);
-	  if (!equali1(nmnorm)) {/*We must scale it.*/
-		/*
-		Let L=nmnorm^(1/n). It turns out that the quadratic form we make, Q^nm(g)=Q_1(g)/sigma(nm)+Tr_{F/Q}(nrd(g)/nm), where sigma is the unique split oo place has the property that Q^nm<=C has the same number of solutions as Q^1<=CL. Assuming the time to compute this enumeration is A+B*(CL)^2n, we can do the same analysis as in my paper to get that
-	      (2n-1)C^{2n}-2n^2C^{2n-1} = 1/L^{2n}(A/B)=1/nmnorm^2*A/B.
-		Since we know this holds true with L=1 and we have the optimal value of C for this case, we can find A/B in this way, and solve for the new optimal C. Note that if L is smallish, this just changes C_opt to C_opt/L. If L gets larger, then we cannot ignore the second term and this no longer holds.
-		*/
-		long var = fetch_var(), n = nf_get_degree(F), twon = n << 1;
-		long firstc = twon - 1, secondc = twon * n, i;
-		GEN AB = gmul(gsubgs(gmulsg(firstc, C), secondc), gpowgs(C, firstc));/*(2n-1)C^(2n)-2n^2C^(2n-1)*/
-		AB = gdiv(AB, sqri(nmnorm));/*Update the output, re-solve for C.*/
-		GEN P = cgetg(twon + 3, t_POL);
-		P[1] = evalvarn(var);
-		gel(P, 2) = gneg(AB);/*Constant coefficient.*/
+    GEN nmnorm = nfnorm(F, nm);/*Norm to Q*/
+    if (!C) {
+      C = afuch_get_bestC(X);
+      if (!equali1(nmnorm)) {/*We must scale it.*/
+        /*
+        Let L=nmnorm^(1/n). It turns out that the quadratic form we make, Q^nm(g)=Q_1(g)/sigma(nm)+Tr_{F/Q}(nrd(g)/nm), where sigma is the unique split oo place has the property that Q^nm<=C has the same number of solutions as Q^1<=CL. Assuming the time to compute this enumeration is A+B*(CL)^2n, we can do the same analysis as in my paper to get that
+          (2n-1)C^{2n}-2n^2C^{2n-1} = 1/L^{2n}(A/B)=1/nmnorm^2*A/B.
+        Since we know this holds true with L=1 and we have the optimal value of C for this case, we can find A/B in this way, and solve for the new optimal C. Note that if L is smallish, this just changes C_opt to C_opt/L. If L gets larger, then we cannot ignore the second term and this no longer holds.
+        */
+        long var = fetch_var(), n = nf_get_degree(F), twon = n << 1;
+        long firstc = twon - 1, secondc = twon * n, i;
+        GEN AB = gmul(gsubgs(gmulsg(firstc, C), secondc), gpowgs(C, firstc));/*(2n-1)C^(2n)-2n^2C^(2n-1)*/
+        AB = gdiv(AB, sqri(nmnorm));/*Update the output, re-solve for C.*/
+        GEN P = cgetg(twon + 3, t_POL);
+        P[1] = evalvarn(var);
+        gel(P, 2) = gneg(AB);/*Constant coefficient.*/
         for (i = 3; i <= twon; i++) gel(P, i) = gen_0;/*0's in the middle. P[i] corresp to x^(i-2)*/
         gel(P, twon + 1) = stoi(-secondc);
         gel(P, twon + 2) = stoi(firstc);
         P = normalizepol(P);/*Normalize it in place.*/
-		GEN rts = realroots(P, mkvec2(stoi(n), mkoo()), prec);/*Real roots in [n, oo)*/
+        GEN rts = realroots(P, mkvec2(stoi(n), mkoo()), prec);/*Real roots in [n, oo)*/
         delete_var();
         if (lg(rts) != 2) pari_err(e_MISC, "Could not find exactly one real root in [n, oo)!");
         C = gel(rts, 1);/*Finally, found it!*/
-	  }
-	}
+      }
+    }
   }
   else if (!C) C = afuch_get_bestC(X);
   long skip = 0;
@@ -4530,12 +4561,14 @@ elementabsmultable(GEN mt, GEN x)
   GEN d, z = elementabsmultable_Z(mt, Q_remove_denom(x, &d));
   return (z && d)? ZM_Z_div(z, d): z;
 }
+
 static GEN
 elementabsmultable_Fp(GEN mt, GEN x, GEN p)
 {
   GEN z = elementabsmultable_Z(mt, x);
   return z? FpM_red(z, p): z;
 }
+
 static GEN
 algbasismultable(GEN al, GEN x)
 {
