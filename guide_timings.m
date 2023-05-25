@@ -13,7 +13,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 
@@ -30,7 +30,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 5
@@ -46,7 +46,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 2
@@ -62,7 +62,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 7
@@ -78,7 +78,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 3
@@ -94,7 +94,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 8
@@ -110,7 +110,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 9
@@ -126,7 +126,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 13
@@ -142,7 +142,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 15
@@ -158,7 +158,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 11
@@ -174,7 +174,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 4
@@ -190,7 +190,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 6
@@ -206,7 +206,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 16
@@ -222,7 +222,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 14
@@ -238,7 +238,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 12
@@ -254,7 +254,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 17
@@ -270,7 +270,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 18
@@ -286,7 +286,7 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
 
 //Case 10
@@ -302,5 +302,5 @@ try
 	FD;
 catch e
 	print "Error:", e`Object;
-end try
+end try;
 UnsetOutputFile();
