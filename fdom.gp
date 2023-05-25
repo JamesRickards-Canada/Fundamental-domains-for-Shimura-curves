@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act\nafuchinit, afuch_newtype, afuch_changep\nafuchalg, afucharea, afuchelts, afuchfdom, afuchgeodesic, afuchlist, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act\nafuchinit, afuch_newtype, afuch_changep\nafuchalg, afucharea, afuchelts, afuchelttype, afuchfdom, afuchgeodesic, afuchlist, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
 parigp_version=version();
 fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2]);
 
@@ -27,6 +27,8 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 	addhelp(afucharea,"afucharea(X): returns the area of the computed fundamental domain of X.");
 	install(afuchelts,"G",,fdom_library);
 	addhelp(afuchelts,"afuchelts(X): returns the vector of elements giving the sides of the fundamental domain of X, which generate the group.");
+	install(afuchelttype,"iGG",,fdom_library);
+	addhelp(afuchelttype,"afuchelttype(X, g): returns 1 if g is hyperbolic, 0 if g is parabolic, and -1 if g is elliptic.");
 	install(afuchfdom,"vG",,fdom_library);
 	addhelp(afuchfdom,"afuchfdom(X): computes and stores the fundamental domain of X.");
 	install(afuchgeodesic,"GG",,fdom_library);

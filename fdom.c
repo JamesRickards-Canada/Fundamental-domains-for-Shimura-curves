@@ -2901,6 +2901,25 @@ afuchelts(GEN X)
   return gerepileupto(av, newelts);
 }
 
+/*Returns 1 if g is hyperbolic, 0 if parabolic, -1 if elliptic.*/
+int
+afuchelttype(GEN X, GEN g)
+{
+  pari_sp av = avma;
+  GEN nm = afuchnorm_fast(X, g);
+  GEN tr = afuchtrace(X, g);
+  GEN A = afuch_get_alg(X);
+  GEN F = alg_get_center(A);
+  GEN fournm = nfmul(F, nm, stoi(4));/*4*norm*/
+  GEN trsq = nfsqr(F, tr);
+  GEN diff = nfsub(F, trsq, fournm);
+  if (gequal0(diff)) return gc_int(av, 0);/*Parabolic*/
+  long split = algsplitoo(A);
+  GEN rt = gel(nf_get_roots(F), split);/*We need to find the sign of diff evaluated at rt.*/
+  diff = lift(basistoalg(F, diff));
+  return gc_int(av, signe(poleval(diff, rt)));
+}
+
 /*Computes the fundamental domain for O^1, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
 static GEN
 afuchfdom_i(GEN X, GEN *startingset)
@@ -3729,7 +3748,7 @@ afuchinnormalizer(GEN X, GEN g)
   return gc_int(av, gequal(hnf(O1), hnf(O2)));
 }
 
-/*Returns 1 if g is parabolic, i.e. trd(g)^2=+/-2nrd(g), and 0 else.*/
+/*Returns 1 if g is parabolic, i.e. trd(g)^2=4nrd(g), and 0 else.*/
 static int
 afuchisparabolic(GEN X, GEN g)
 {
@@ -3737,9 +3756,9 @@ afuchisparabolic(GEN X, GEN g)
   GEN nm = afuchnorm_fast(X, g);
   GEN tr = afuchtrace(X, g);
   GEN F = alg_get_center(afuch_get_alg(X));
-  GEN twonm = nfmul(F, nm, stoi(4));/*2*norm*/
+  GEN fournm = nfmul(F, nm, stoi(4));/*4*norm*/
   GEN trsq = nfsqr(F, tr);
-  if (gequal(twonm, trsq) || gequal(twonm, gneg(trsq))) return gc_int(av, 1);
+  if (gequal(fournm, trsq)) return gc_int(av, 1);
   return gc_int(av, 0);
 }
 

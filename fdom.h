@@ -107,6 +107,7 @@ void afuch_changep(GEN X, GEN p);
 GEN afuchalg(GEN X);
 GEN afucharea(GEN X);
 GEN afuchelts(GEN X);
+int afuchelttype(GEN X, GEN g);
 void afuchfdom(GEN X);
 GEN afuchgeodesic(GEN X, GEN g);
 GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
