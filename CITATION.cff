@@ -23,4 +23,4 @@ references:
     title: "PARI/GP version \texttt{2.16.1}"
     year: 2023
     address: "Univ. Bordeaux"
-    note: "available from \url{http://pari.math.u-bordeaux.fr/}"
+    url: "https://pari.math.u-bordeaux.fr/"
