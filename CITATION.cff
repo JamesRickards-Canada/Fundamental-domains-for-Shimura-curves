@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "To cite this repository, please use the following BibTeX."
+authors:
+- family-names: Rickards
+  given-names: James
+  orcid: "https://orcid.org/0000-0003-3387-9368"
+title: "Fundamental domains for Shimura curves"
+date-released: 2023
+url: "https://github.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves"
+references:
+  - authors:
+      - family-names: Rickards
+        given-names: James
+    title: "Improved computation of fundamental domains for arithmetic Fuchsian groups"
+    doi: 10.1090/mcom/3777
+    journal: "Math. Comp."
+    volume: 91
+    year: 2022
+    number: 338
+    pages: "2929--2954"
+  - authors:
+      - name: "The PARI~Group"
+    title: "PARI/GP version \texttt{2.16.1}"
+    year: 2023
+    address: "Univ. Bordeaux"
+    note: "available from \url{http://pari.math.u-bordeaux.fr/}"
