@@ -7,7 +7,10 @@ for Fuchsian groups](https://math.dartmouth.edu/~jvoight/articles/funddom-jtnb-f
 
 The code in the "paper" branch matches what was used to write the paper, and data within can be recreated using this branch. This branch is no longer updated. The default branch, klein, is a significantly improved version of this code, and should be the branch of choice for 99.9% of users.
 
-![image](https://github.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves/assets/29377834/c404fd83-2e04-4cbd-991c-8c2ad8bb821a)
+Fundamental domains for all Shimura curves of genus 2 (266 up to isomorphism):
+
+![gen2](https://github.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves/assets/29377834/510045e2-d544-4a0f-ab7e-2df6ee6a4150)
+
 
 
 
