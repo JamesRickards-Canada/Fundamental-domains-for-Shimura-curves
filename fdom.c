@@ -3594,13 +3594,11 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
     else ordmod[i] = 2;
   }
   long li = lg(ideals), j;
-  GEN alphas = cgetg_copy(ideals, &li);
-  GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the alphas and the e_i's mod ordmod[i] since we care about whether we are in C^2 or not.*/
+  GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the e_i's mod ordmod[i] since we care about whether we are in C^2 or not. We don't store the alphas since we want to get a generator for the final product, and we want this to actually be an ideal generator and NOT just in the same class. We could find generators for each g_i^ord(g_i), but I don't think it will be any faster/slower.*/
   for (i = 1; i < li; i++) {
-    GEN prin = bnrisprincipal(C, gel(ideals, i), 1);/*Compute [ei, alpha]*/
-    gel(alphas, i) = gel(prin, 2);/*Store alpha*/
+    GEN prin = bnrisprincipal(C, gel(ideals, i), 0);/*Compute ei, skip alpha.*/
     GEN col = cgetg(lo, t_VECSMALL);
-    for (j = 1; j < lo; j++) col[j] = smodis(gmael(prin, 1, j), ordmod[j]);
+    for (j = 1; j < lo; j++) col[j] = smodis(gel(prin, j), ordmod[j]);
     gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
   }/*A product of the ideals is in C^2 if and only if the corresponding linear combination of the columns of mat is 0 in F_2.*/
   GEN ker = Flm_ker(mat, 2);/*A basis for the ideals.*/
@@ -3608,20 +3606,13 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
   GEN newalphas = vectrunc_init(lk);
   for (i = 1; i < lk; i++) {
     GEN pattern = gel(ker, i);
-    GEN alph = gen_1;
+    GEN idl = gen_1;
     for (j = 1; j < li; j++) {
-      if (pattern[j] == 1) alph = nfmul(F, alph, gel(alphas, j));
+      if (pattern[j] == 1) idl = idealmul(F, idl, gel(ideals, j));
     }
-    GEN den;
-    alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
-    if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
-      GEN denfact = Q_factor(den);
-      for (j = 1; j < lg(gel(denfact, 2)); j++) {
-        if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
-      }
-    }
-    alph = lift(basistoalg(F, alph));
-    if (gequal1(alph)) continue;/*It is possible to end up with 1, e.g. F=nfinit(y^3 - 104052*y - 12520924), split=1, ideals=idealprimedec(F, 5). Maybe there is a better way to handle this in general? Not sure if alph=1 is the only relation possible.*/
+    GEN idlgen = bnrisprincipal(C, idl, 1);
+    if (!gequal0(gel(idlgen, 1))) pari_err(e_MISC, "Supposed principal ideal was not principal. Please report.");
+    GEN alph = lift(basistoalg(F, gel(idlgen, 2)));
     vectrunc_append(newalphas, alph);
   }
   lk = lg(newalphas);
