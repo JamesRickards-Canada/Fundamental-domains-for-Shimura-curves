@@ -3284,7 +3284,7 @@ afuchnormalizernorms(GEN X)
   GEN A = afuch_get_alg(X);
   GEN F = alg_get_center(A);
   long prec = afuch_get_prec(X);
-  GEN B = Buchall(F, 0, prec);
+  GEN B = Buchall(F, 1, prec);
   GEN ram_disc = algramifiedplacesf(A), ramid;
   GEN O = afuch_get_O(X);
   if (gequal1(O)) ramid = ram_disc;
@@ -3419,7 +3419,7 @@ afuch_makeunitelts(GEN X)
   GEN A = afuch_get_alg(X);
   GEN F = alg_get_center(A);
   long prec = afuch_get_prec(X);
-  GEN B = Buchall(F, 0, prec);
+  GEN B = Buchall(F, 1, prec);
   GEN unitnorms = gel(bnf_make_unitnorms(B, algsplitoo(A), prec), 1);
   long lu, i;
   GEN elts = cgetg_copy(unitnorms, &lu);
@@ -3439,7 +3439,7 @@ afuch_makeALelts(GEN X)
   GEN A = afuch_get_alg(X);
   GEN F = alg_get_center(A);
   long prec = afuch_get_prec(X);
-  GEN B = Buchall(F, 0, prec);
+  GEN B = Buchall(F, 1, prec);
   GEN ram_disc = algramifiedplacesf(A), ramid;
   GEN O = afuch_get_O(X);
   if (gequal1(O)) ramid = ram_disc;
@@ -3481,7 +3481,7 @@ afuch_makenormelts(GEN X)
     GEN A = afuch_get_alg(X);
     GEN F = alg_get_center(A);
     long prec = afuch_get_prec(X);
-    GEN B = Buchall(F, 0, prec);
+    GEN B = Buchall(F, 1, prec);
     GEN ram_disc = algramifiedplacesf(A), ramid;
     GEN O = afuch_get_O(X);
     if (gequal1(O)) ramid = ram_disc;
@@ -3564,7 +3564,7 @@ bnf_make_unitnorms(GEN B, long split, long prec)
 }
 
 /*
-We make the possible norms for Atkin-Lehner elements, where B=bnfinit(F). Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the vector of maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order). We can also pass in B as the bnr initialized with respect to [1, [1,...,1,0,1,...,1]], where the 0 occurs at the unique split place.
+We make the possible norms for Atkin-Lehner elements, where B=bnfinit(F). Returns [vunit, vAL, uneg], as in bnf_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the vector of maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order). We can also pass in B as the bnr initialized with respect to [1, [1,...,1,0,1,...,1]], where the 0 occurs at the unique split place, WITH generators initialized.
 */
 static GEN
 AL_make_norms(GEN B, long split, GEN ideals, long prec)
@@ -3583,10 +3583,11 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
     nF = nf_get_degree(F);
     GEN modulus = mkvec2(gen_1, const_vec(nF, gen_1));
     gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
-    C = Buchray(B, modulus, nf_INIT);/*Compute the ray class field without generators.*/
+    C = Buchray(B, modulus, nf_INIT | nf_GEN);/*Compute the ray class field with generators.*/
   }
   GEN unitnorms = bnf_make_unitnorms(B, split, prec);/*We need this too, and this is why we saved a uneg if it existed.*/
-  GEN orders = gel(bnr_get_clgp(C), 2);/*Odd orders we don't care about, only even, so let's modify this.*/
+  GEN orders = bnr_get_cyc(C);/*Odd orders we don't care about, only even, so let's modify this.*/
+  GEN gens = bnr_get_gen_nocheck(C);
   long lo = lg(orders), i;
   GEN ordmod = cgetg(lo, t_VECSMALL);
   for (i = 1; i < lo; i++) {
@@ -3594,9 +3595,11 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
     else ordmod[i] = 2;
   }
   long li = lg(ideals), j;
-  GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the e_i's mod ordmod[i] since we care about whether we are in C^2 or not. We don't store the alphas since we want to get a generator for the final product, and we want this to actually be an ideal generator and NOT just in the same class. We could find generators for each g_i^ord(g_i), but I don't think it will be any faster/slower.*/
+  GEN mat = cgetg(li, t_MAT);/*Each of our ideals is alpha*prod(g_i^e_i) in the ray class group C. We store the e_i's mod ordmod[i] since we care about whether we are in C^2 or not. We don't store the alphas since we want to get a generator for the final product, and we want this to actually be an ideal generator and NOT just in the same class.*/
+  GEN actualim = cgetg(li, t_MAT);/*Stores the [e1, e2, ..., ej] not mod, so that mat=actualim mod ordmord.*/
   for (i = 1; i < li; i++) {
     GEN prin = bnrisprincipal(C, gel(ideals, i), 0);/*Compute ei, skip alpha.*/
+    gel(actualim, i) = prin;/*Store this.*/
     GEN col = cgetg(lo, t_VECSMALL);
     for (j = 1; j < lo; j++) col[j] = smodis(gel(prin, j), ordmod[j]);
     gel(mat, i) = col;/*We took the exponents modulo ordmod[j].*/
@@ -3607,8 +3610,17 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
   for (i = 1; i < lk; i++) {
     GEN pattern = gel(ker, i);
     GEN idl = gen_1;
+    GEN clgpim = zerocol(lo - 1);/*Stores the image in the class group C.*/
     for (j = 1; j < li; j++) {
-      if (pattern[j] == 1) idl = idealmul(F, idl, gel(ideals, j));
+      if (!pattern[j]) continue;/*Nothing here.*/
+      idl = idealmul(F, idl, gel(ideals, j));/*Update the ideal product.*/
+      clgpim = ZC_add(clgpim, gel(actualim, j));/*Update the image in the class group.*/
+    }
+    /*Now idl is a square in the class group, with bnrisprincipal(C, idl, 0)=clgpim modulo the orders. Let's modify clgpim to be the powers of the generators needed to multiply by (necessarily even) to reach a principal element. Note that we will get norms for which there exist PRIMITIVE elements of O that have this norm, which is crucial.*/
+    for (j = 1; j < lo; j++) {
+      GEN negord = modii(negi(gel(clgpim, j)), gel(orders, j));/*The power to multiply by to reach principality.*/
+      if (mod2(negord)) negord = addii(negord, gel(orders, j));/*If the order is odd, then negord might be odd. Add the order once to fix.*/
+      idl = idealmul(F, idl, idealpow(F, gel(gens, j), negord));/*Update the ideal.*/
     }
     GEN idlgen = bnrisprincipal(C, idl, 1);
     if (!gequal0(gel(idlgen, 1))) pari_err(e_MISC, "Supposed principal ideal was not principal. Please report.");
@@ -3649,7 +3661,7 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
   gmael(modulus, 2, split) = gen_0;/*Making the modulus. Norms of elements from our algebra must be positive at all non-split places, hence this choice.*/
   GEN C = Buchray(B, modulus, nf_INIT | nf_GEN);/*Compute the ray class field with generators.*/
   GEN ALnorms = AL_make_norms(C, split, ideals, prec);/*We need this too, and this is why we saved a uneg if it existed.*/
-  GEN orders = gel(bnr_get_clgp(C), 2);/*We want generators for the 2-order part of the class group (and do not care about 1).*/
+  GEN orders = bnr_get_cyc(C);/*We want generators for the 2-order part of the class group (and do not care about 1).*/
   GEN gens = bnr_get_gen_nocheck(C);
   long lo = lg(orders), i;
   GEN ord2gens = vectrunc_init(lo);
