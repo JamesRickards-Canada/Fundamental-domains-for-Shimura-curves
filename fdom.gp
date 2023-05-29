@@ -54,7 +54,7 @@ fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2
 
 	\\3: FINDING ELEMENTS
 	install(afuchfindoneelt,"GD1,G,DG",,fdom_library);
-	addhelp(afuchfindoneelt,"afuchfindoneelt(X, {nm=1}, {C=default}: returns one non-trivial element of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z.");
+	addhelp(afuchfindoneelt,"afuchfindoneelt(X, {nm=1}, {C=default}: returns one non-trivial element of X of norm nm in the normalizer of the order O by solving Q_{z, 0}^nm(g)<=C for random points z. The element is primitive in O, so if no such element exists, this will be an infinite loop.");
 
 	\\3: ALGEBRA HELPER METHODS
 	install(algab,"G",,fdom_library);

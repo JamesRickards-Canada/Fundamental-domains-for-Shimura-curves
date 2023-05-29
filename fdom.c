@@ -3721,11 +3721,12 @@ afuchid(GEN X)
   return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X))) - 1, 1);
 }
 
-/*Returns 1 if the element g (in O) is in the normalizer of O, 0 if not.*/
+/*Returns 1 if the element g (in O) is in the normalizer of O AND primitive, 0 if not.*/
 static int
 afuchinnormalizer(GEN X, GEN g)
 {
   pari_sp av = avma;
+  if (Z_content(g)) return 0;/*Not primitive.*/
   long lO = lg(afuch_get_O(X)), i;
   GEN O1 = cgetg(lO, t_MAT), O2 = cgetg(lO, t_MAT);
   GEN v = col_ei(lO - 1, 1);
