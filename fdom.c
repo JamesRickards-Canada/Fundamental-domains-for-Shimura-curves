@@ -3672,7 +3672,7 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
     }
   }
   lo = lg(ord2gens);/*The actual generators.*/
-  GEN Borders = gel(bnf_get_clgp(B), 2);/*Orders of the generators of B.*/
+  GEN Borders = bnf_get_cyc(B);/*Orders of the generators of B.*/
   long lBo = lg(Borders), j;
   GEN imCl = cgetg(lo, t_MAT);/*Find the image in Cl(R)[2], as we only keep a generating set for the survivors.*/
   for (i = 1; i < lo; i++) {
@@ -3686,14 +3686,6 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
   for (i = 1; i < lgleft; i++) {
     GEN csqr = idealsqr(F, gel(ord2gens, left[i]));/*Principal*/
     GEN alph = gel(bnrisprincipal(C, csqr, 1), 2);/*Compute [e, alpha], where e=0.*/
-    GEN den;
-    alph = Q_primitive_part(alph, &den);/*Scaling to be primitive and integral, which won't affect the signs in the embeddings.*/
-    if (den) {/*We are actually only allowed to multiply by squares, so must fix this if we did not.*/
-      GEN denfact = Q_factor(den);
-      for (j = 1; j < lg(gel(denfact, 2)); j++) {
-        if (mod2(gcoeff(denfact, j, 2))) alph = gmul(alph, gcoeff(denfact, j, 1));
-      }
-    }
     gel(alphs, i) = lift(basistoalg(F, alph));/*Store the scaled alph*/
   }
   /*We are almost there! We just have to modify the new found elements to be positive at the split place as well.*/
