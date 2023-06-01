@@ -192,7 +192,6 @@ static GEN afuchfindoneelt_i(GEN X, GEN nm, GEN C);
 static GEN algconj(GEN A, GEN x);
 static GEN alggeta(GEN A);
 static GEN voidalgmul(void *A, GEN x, GEN y);
-static long algsplitoo(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
 static GEN algd(GEN A, GEN a);
@@ -4197,7 +4196,7 @@ algreduceddisc(GEN A)
 }
 
 /*If the algebra A has a unique split infinite place, this returns the index of that place. Otherwise, returns 0.*/
-static long
+long
 algsplitoo(GEN A)
 {
   GEN infram = alg_get_hasse_i(A);/*shallow*/

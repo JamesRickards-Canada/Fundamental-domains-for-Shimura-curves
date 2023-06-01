@@ -136,6 +136,7 @@ GEN algdiscnorm(GEN A);
 GEN algmulvec(GEN A, GEN G, GEN L);
 GEN algramifiedplacesf(GEN A);
 GEN algreduceddisc(GEN A);
+long algsplitoo(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
 int algisorder(GEN A, GEN O);
