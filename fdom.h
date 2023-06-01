@@ -134,6 +134,7 @@ GEN alg1ijktoalg(GEN A, GEN x);
 GEN alg1ijktobasis(GEN A, GEN x);
 GEN algdiscnorm(GEN A);
 GEN algmulvec(GEN A, GEN G, GEN L);
+GEN algramifiedplacesf(GEN A);
 GEN algreduceddisc(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/

@@ -192,7 +192,6 @@ static GEN afuchfindoneelt_i(GEN X, GEN nm, GEN C);
 static GEN algconj(GEN A, GEN x);
 static GEN alggeta(GEN A);
 static GEN voidalgmul(void *A, GEN x, GEN y);
-static GEN algramifiedplacesf(GEN A);
 static long algsplitoo(GEN A);
 
 /*3: ALGEBRA ORDER METHODS*/
@@ -4171,7 +4170,7 @@ voidalgmul(void *A, GEN x, GEN y)
 }
 
 /*Returns the vector of finite ramified places of the algebra A.*/
-static GEN
+GEN
 algramifiedplacesf(GEN A)
 {
   pari_sp av = avma;
