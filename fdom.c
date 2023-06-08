@@ -1017,7 +1017,11 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
       case 0:
         normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
       case 2:
-        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+        if (phase2) {
+          vecsmalltrunc_append(deleted, indtransfer[toins]);
+          continue;/*This can only happen when our current circle and the first circle share an initial vertex, which is also the terminal vertex of the final circle. We are totally enveloped by the first side.*/
+        }
+        if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
           phase2 = 1;
           normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
           continue;
@@ -1319,7 +1323,7 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
   gel(vcors, 1) = gel(firstcirc, 5);/*The terminal vertex of the side is the first vertex.*/
   gel(vargs, 1) = gel(firstcirc, 7);
   long found = 1, lenc = lc - 1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
-  int phase2 = 0;/*Which phase we are in, and if there are infinite sides or not*/
+  int phase2 = 0;/*Which phase we are in*/
   long newU = 0;/*The first index of a new side, used at the end to see if we are the same as before or not.*/
   if (Ctype[rbigind] < 0) newU = 1;/*We use this to detect if the normalized boundary changed or not.*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
@@ -1400,7 +1404,11 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
       case 0:
         normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
       case 2:
-        if (phase2 || angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 has started*/
+        if (phase2) {
+          vecsmalltrunc_append(deleted, t1);
+          continue;/*This can only happen when our current circle and the first circle share an initial vertex, which is also the terminal vertex of the final circle. We are totally enveloped by the first side.*/
+        }
+        if (angle_onarc(gel(curcirc, 6), gel(curcirc, 7), gel(firstcirc, 6), tol)) {/*Phase2 starts*/
           phase2 = 1;
           normbound_icircs_phase2(elts, vcors, vargs, curcirc, firstcirc, tol, toins, &found);/*Phase 2 insertion.*/
           if (!newU && t1 < 0) newU = found;/*This is the first new circle.*/
@@ -1937,7 +1945,7 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)
     break;
   }
   long lgell = lgcyc - firstell + 1;
-  GEN rvec=cgetg(4, t_VEC);/*[g, V, s]*/
+  GEN rvec = cgetg(4, t_VEC);/*[g, V, s]*/
   gel(rvec, 1) = stoi(genus);
   gel(rvec, 2) = cgetg(lgell, t_VECSMALL);
   for (i = 1; i < lgell; i++) {
