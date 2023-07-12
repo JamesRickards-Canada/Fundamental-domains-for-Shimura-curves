@@ -167,7 +167,6 @@ static GEN afuch_makeunitelts(GEN X);
 static GEN afuch_makeALelts(GEN X);
 static GEN afuch_makenormelts(GEN X);
 static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
-static GEN normalizer_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 static GEN afuchconj(GEN X, GEN g);
@@ -3655,9 +3654,9 @@ AL_make_norms(GEN B, long split, GEN ideals, long prec)
 }
 
 /*
-We make the possible norms for all normalizer elements. Returns [vunit, vAL, vclorder2, uneg], as in AL_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order).
+We make the possible norms for all normalizer elements. Returns [vunit, vAL, vclorder2, uneg], as in AL_make_unitnorms (if this did not have a uneg, then we might get one from here). ideals should be the maximal prime power ideals dividing the reduced norm of the order (assuming Eichler order). B should be the bnfinit'ed base field F.
 */
-static GEN
+GEN
 normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
 {
   pari_sp av = avma;

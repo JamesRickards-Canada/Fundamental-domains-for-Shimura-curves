@@ -122,6 +122,7 @@ GEN afuchvertices(GEN X, int model);
 
 /*3: NON NORM 1 METHODS*/
 GEN bnf_make_unitnorms(GEN B, long split, long prec);
+GEN normalizer_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: FINDING ELEMENTS*/
 GEN afuchfindoneelt(GEN X, GEN nm, GEN C);
