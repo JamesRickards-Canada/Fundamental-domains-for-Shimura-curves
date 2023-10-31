@@ -11,7 +11,3 @@ Fundamental domains for all Shimura curves of genus 2 (266 up to isomorphism):
 
 ![gen2](https://github.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves/assets/29377834/510045e2-d544-4a0f-ab7e-2df6ee6a4150)
 
-
-
-
-[![HitCount](https://hits.dwyl.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves.svg?style=flat-square)](http://hits.dwyl.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves)
