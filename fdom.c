@@ -17,20 +17,9 @@ POSSIBLE FUTURE ADDITIONS:
 
 /*INCLUSIONS*/
 
-#ifndef PARILIB
-#define PARILIB
-#include <pari/pari.h>
-#endif
-
-#ifndef PARIPRIVLIB
-#define PARIPRIVLIB
-#include <pari/paripriv.h>
-#endif
-
-#ifndef FDOMDECL
-#define FDOMDECL
+#include <pari.h>
+#include <paripriv.h>
 #include "fdom.h"
-#endif
 
 /*Possibly make it's own debugging level?*/
 #define DEBUGLEVEL DEBUGLEVEL_alg

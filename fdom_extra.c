@@ -2,15 +2,8 @@
 
 /*INCLUSIONS*/
 
-#ifndef PARILIB
-#define PARILIB
-#include <pari/pari.h>
-#endif
-
-#ifndef FDOMDECL
-#define FDOMDECL
+#include <pari.h>
 #include "fdom.h"
-#endif
 
 /*STATIC DECLARATIONS*/
 
