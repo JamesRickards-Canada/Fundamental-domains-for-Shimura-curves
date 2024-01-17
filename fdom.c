@@ -206,9 +206,10 @@ static GEN norm_aux(GEN xk, GEN yk, GEN zk, GEN vk);
 /*4: MAIN FINCKE POHST METHODS*/
 static GEN smallvectors_prune(GEN q, GEN C, GEN prune);
 
-/*SECTION 5: METHODS DELETED OR NAME CHANGED FROM LIBPARI*/
+/*SECTION 5: METHODS DELETED / NAME CHANGED FROM LIBPARI / DID NOT EXIST IN 2.15*/
 static GEN qf_RgM_apply_old(GEN q, GEN M);
 static void init_qf_apply(GEN q, GEN M, long *l);
+static GEN RgM_Cholesky_copy(GEN M, long prec);
 static GEN my_alg_changeorder(GEN al, GEN ord);
 static GEN elementabsmultable(GEN mt, GEN x);
 static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
@@ -4421,7 +4422,7 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
   GEN U;
   if (isinexact(M)) {/*We do this in case the input was inexact and became negative definite, where lllfp may run into an infinite loop.*/
-    GEN C = RgM_Cholesky(M, prec);
+    GEN C = RgM_Cholesky_copy(M, prec);
     if (!C) return gc_NULL(av);
     U = lllfp(C, 0.75, LLL_IM);
   }
@@ -4549,7 +4550,7 @@ smallvectors_prune(GEN q, GEN C, GEN prune)
 }
 
 
-/*SECTION 5: METHODS DELETED OR NAME CHANGED FROM LIBPARI*/
+/*SECTION 5: METHODS DELETED / NAME CHANGED FROM LIBPARI / DID NOT EXIST IN 2.15*/
 
 /*This function name was changed from qf_apply_RgM to qf_RgM_apply, so we copy paste it here so that it works in both 2.15 and 2.17.*/
 static GEN
@@ -4570,8 +4571,25 @@ init_qf_apply(GEN q, GEN M, long *l)
   pari_err_DIM("qf_RgM_apply");
 }
 
+/*This function did not exist in 2.15? Or at least, it's name was different. This is a direct copy of RgM_Cholesky from alglin2.c*/
+static GEN
+RgM_Cholesky_copy(GEN M, long prec)
+{
+  pari_sp av = avma;
+  long i, j, lM = lg(M);
+  GEN R, L = qfgaussred_positive(M);
+  if (!L) return gc_NULL(av);
+  R = cgetg(lM, t_MAT); for (j = 1; j < lM; j++) gel(R,j) = cgetg(lM, t_COL);
+  for (i = 1; i < lM; i++)
+  {
+    GEN r = gsqrt(gcoeff(L, i, i), prec);
+    for (j = 1; j < lM; j++)
+      gcoeff(R, i, j) = (i == j) ? r: gmul(r, gcoeff(L, i, j));
+  }
+  return gerepileupto(av, R);
+}
 
-/*Here because it was deleted from libpari*/
+/*This function is here because it was deleted from libpari*/
 static GEN
 my_alg_changeorder(GEN al, GEN ord)
 {
