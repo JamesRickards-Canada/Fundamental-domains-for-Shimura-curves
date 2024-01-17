@@ -5,17 +5,17 @@ testalgfdom(L)={
   for(i=1,#L,
     for(j=1,#L[i][1],
       F=nfinit(L[i][1][j]);
-	  A=alginit(F, L[i][2][j]);
-	  X=afuchinit(A, , , 1);
-	  elts=afuchelts(X);
-	  S=afuchsignature(X);
-	  print(S);\\Invariant.
-	  P=afuchpresentation(X);
-	  g=algmulvec(A, elts, vector(5+random(15), k, (2*random(2)-1)*(random(#elts)+1)));\\Random norm 1 element.
-	  word=afuchword(X, g);
-	  newg=algmulvec(A, P[1], word);
-	  if(newg==g || newg==-g,print("Passed word test"),print("Failed word test"));
-	  \\if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));\\No error should be raised if this works.
+      A=alginit(F, L[i][2][j]);
+      X=afuchinit(A, , , 1);
+      elts=afuchelts(X);
+      S=afuchsignature(X);
+      print(S);\\Invariant.
+      P=afuchpresentation(X);
+      g=algmulvec(A, elts, vector(5+random(15), k, (2*random(2)-1)*(random(#elts)+1)));\\Random norm 1 element.
+      word=afuchword(X, g);
+      newg=algmulvec(A, P[1], word);
+      if(newg==g || newg==-g,print("Passed word test"),print("Failed word test"));
+      \\if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));\\No error should be raised if this works.
     );
   );
 }

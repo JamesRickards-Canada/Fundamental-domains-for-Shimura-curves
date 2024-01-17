@@ -2933,7 +2933,7 @@ afuchfdom_i(GEN X, GEN *startingset)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
-  long prec = lg(gdat_get_tol(gdat));
+  long prec = realprec(gdat_get_tol(gdat));
   GEN twopi = Pi2n(1, prec);
   GEN area = afuch_get_O1area(X);
   GEN areabound = addrr(area, shiftr(area, -1));/*area*1.5*/
@@ -2983,7 +2983,7 @@ afuchfdom_i(GEN X, GEN *startingset)
       }
     }
     else {
-      for (i = 1; i < N; i++){
+      for (i = 1; i < N; i++) {
         GEN z = hdiscrandom(R, prec);
         GEN found = afuchfindelts(X, gen_1, z, C, 1, NULL, NULL);
         if (!found) {/*Precision too low.*/
@@ -4410,6 +4410,7 @@ qfminim_prune(GEN M, GEN C, int prunetype, long prec)
   if (!res) pari_err_PREC("qfminim");
   return res;
 }
+
 
 /*Solve q(x)=x~*M*x <= C, M is positive definite with real entries. We use pruning if prunetype=1. This is mostly a copy of fincke_pohst from bibli1.c.*/
 GEN
