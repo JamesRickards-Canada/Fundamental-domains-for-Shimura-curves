@@ -4419,8 +4419,13 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   long prec = PREC;
   long lM = lg(M);
   if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
-  if (!isintzero(gel(qfsign(M), 2))) return gc_NULL(av);/*Precision loss caused a non-positive definite matrix. lllfp may enter infinite loop.*/
-  GEN U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
+  GEN U;
+  if (isinexact(M)) {/*We do this in case the input was inexact and became negative definite, where lllfp may run into an infinite loop.*/
+    GEN C = RgM_Cholesky(M, prec);
+    if (!C) return gc_NULL(av);
+    U = lllfp(C, 0.75, LLL_IM);
+  }
+  else U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
   if (lg(U) != lM) return gc_NULL(av);
   GEN R = qf_RgM_apply_old(M, U);/*U~*M*U*/
   long i = gprecision(R), j;
