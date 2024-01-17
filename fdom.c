@@ -4411,7 +4411,6 @@ qfminim_prune(GEN M, GEN C, int prunetype, long prec)
   return res;
 }
 
-
 /*Solve q(x)=x~*M*x <= C, M is positive definite with real entries. We use pruning if prunetype=1. This is mostly a copy of fincke_pohst from bibli1.c.*/
 GEN
 fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
@@ -4420,6 +4419,7 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   long prec = PREC;
   long lM = lg(M);
   if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
+  if (!isintzero(gel(qfsign(M), 2))) return gc_NULL(av);/*Precision loss caused a non-positive definite matrix. lllfp may enter infinite loop.*/
   GEN U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
   if (lg(U) != lM) return gc_NULL(av);
   GEN R = qf_RgM_apply_old(M, U);/*U~*M*U*/
