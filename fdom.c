@@ -206,7 +206,9 @@ static GEN norm_aux(GEN xk, GEN yk, GEN zk, GEN vk);
 /*4: MAIN FINCKE POHST METHODS*/
 static GEN smallvectors_prune(GEN q, GEN C, GEN prune);
 
-/*SECTION 5: CHANGING ORDER METHODS, WHICH WERE DELETED FROM LIBPARI*/
+/*SECTION 5: METHODS DELETED OR NAME CHANGED FROM LIBPARI*/
+static GEN qf_RgM_apply_old(GEN q, GEN M);
+static void init_qf_apply(GEN q, GEN M, long *l);
 static GEN my_alg_changeorder(GEN al, GEN ord);
 static GEN elementabsmultable(GEN mt, GEN x);
 static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
@@ -240,7 +242,7 @@ tol
 p
     The point in the upper half plane that is mapped to 0 in the unit ball model. This should be chosen to have trivial stabilizer in Gamma, otherwise issues may arise. We convert it to have components that are t_REAL.
 precision
-    Can be retrieved by lg(tol), so we don't store it.
+    Can be retrieved by realprec(tol), so we don't store it.
 */
 
 
@@ -292,7 +294,7 @@ line_int(GEN l1, GEN l2, GEN tol)
   if (!det) return gc_NULL(av);/*Lines are parallel*/
   if (!signe(c1)) {/*ax+by = 0*/
     if (!signe(c2)) {/*Both must pass through 0*/
-      GEN zeror = real_0(lg(tol));/*prec=lg(tol)*/
+      GEN zeror = real_0(realprec(tol));/*prec=realprec(tol)*/
       return gerepilecopy(av, mkcomplex(zeror, zeror));
     }
     return gerepilecopy(av, mkcomplex(divrr(negr(gel(l1, 2)), det), divrr(gel(l1, 1), det)));/*-b/det, a/det*/
@@ -712,7 +714,7 @@ subrcr(GEN r, GEN z)
 static GEN
 deftol(long prec)
 {
-  return real2n((BITS_IN_LONG >> 1)*(2 - prec), prec);
+  return real2n(-(prec2nbits(prec) >> 1), prec);
 }
 
 /*Lower tolerance. Useful if we may have more precision loss and are OK with the larger range (e.g. we have a slow routine to check exact equality, and use this to sift down to a smaller set).*/
@@ -847,7 +849,7 @@ icirc_klein(GEN M, GEN tol)
 {
   if (toleq0(gel(M, 2), tol)) return gen_0;/*Isometric circle is everything, don't want to call it here.*/
   pari_sp av = avma;
-  long prec = lg(tol);
+  long prec = realprec(tol);
   GEN A = gel(M, 1), B = gel(M, 2);
   GEN centre_pre = divcrcr(A, B);/*The centre is -conj(centre_pre)*/
   GEN Bnorm = normcr(B);
@@ -890,7 +892,7 @@ icirc_elt(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
 static GEN
 argmod(GEN x, GEN y, GEN tol)
 {
-  long prec = lg(tol);
+  long prec = realprec(tol);
   int xsign = tolsigne(x, tol);/*Sign of x up to tolerance.*/
   if (xsign == 0) {/*Fixing theta when x == 0, so the line is vertical.*/
     GEN theta = Pi2n(-1, prec);/*Pi/2*/
@@ -964,7 +966,7 @@ static GEN
 normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
 {
   GEN tol = gdat_get_tol(gdat);
-  long prec=lg(tol);
+  long prec = realprec(tol);
   GEN order = gen_indexsort(C, &tol, &cmp_icircangle);/*Order the sides by initial angle.*/
   long lc = lg(C), maxsides = 2*lc, istart = normbound_icircs_bigr(C, order);/*Largest r value index (wrt order).*/
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
@@ -1310,8 +1312,8 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
-  long prec=lg(tol);
-  long lc = lg(C), maxsides = 2*lc, lenU = lg(Uvcors) - 1;
+  long prec = realprec(tol);
+  long lc = lg(C), maxsides = lc << 1, lenU = lg(Uvcors) - 1;
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
   GEN vcors = cgetg(maxsides, t_VEC);/*Stores coordinates of the vertices.*/
   GEN vargs = cgetg(maxsides, t_VEC);/*Stores arguments of the vertices.*/
@@ -1535,8 +1537,8 @@ args_find_cross(GEN args)
   long l1 = 1, l2 = lg(args) - 1;
   int c = cmprr(gel(args, l1), gel(args, l2));
   if (c < 0) return l2;/*Sorted already, so it only loops back at the end.*/
-  while (l2-l1 > 1) {
-    long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
+  while ( l2 - l1 > 1) {
+    long l = (l1 + l2) >> 1;/*floor((l1+l2)/2)*/
     int c = cmprr(gel(args, l1), gel(args, l));
     if (c < 0) l1 = l;
     else l2 = l;
@@ -1650,10 +1652,10 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
-  long prec = lg(tol);
+  long prec = realprec(tol);
   GEN origin = gtocr(gen_0, prec);
   long lG = lg(G), i, j = lG;
-  GEN Gstart = cgetg(2*lG - 1, t_VEC), Gadd;/*Make the vector with G and its inverses.*/
+  GEN Gstart = cgetg((lG << 1) - 1, t_VEC), Gadd;/*Make the vector with G and its inverses.*/
   for (i = 1; i < lG; i++) {
     gel(Gstart, i) = gel(G, i);
     gel(Gstart, j) = Xinv(X, gel(G, i));
@@ -1784,7 +1786,7 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind + 1, t_VECSMALL);
   for (;;) {
-    if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
+    if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       GEN gact = Xtoklein(X, g);
       z = klein_act_i(gact, zorig);
     }
@@ -1827,7 +1829,7 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
   z = klein_act_i(gklein, z);/*Starting point.*/
   long ind = 1;
   for (;;) {
-    if (ind%20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
+    if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       GEN gact = Xtoklein(X, g);
       z = klein_act_i(gact, zorig);
     }
@@ -1857,7 +1859,7 @@ minimalcycles(GEN pair)
   pari_sp av = avma;
   long np1 = lg(pair), n = np1 - 1, vleft = np1, i;/*Number of sides/vertices (not counting vertices that occur on the middle of a side).*/
   GEN vind = const_vecsmall(n, 1);/*Tracking if the vertices have run out or not*/
-  GEN cycles = vectrunc_init(2*np1), cyc;/*Max number of cycles, since each side could have a middle vertex. In reality the number is probably much smaller, but this is safe.*/
+  GEN cycles = vectrunc_init(np1 << 1), cyc;/*Max number of cycles, since each side could have a middle vertex. In reality the number is probably much smaller, but this is safe.*/
   long startind = 1, ind;
   for (i = 1; i < np1; i++){/*We sort the fixed sides first, as later on we would miss the ones that get removed before checking.*/
     if (pair[i] == i) vectrunc_append(cycles, mkvecsmall(-i));/*Middle of the side is fixed.*/
@@ -1990,7 +1992,7 @@ fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
     return gerepilecopy(av, mkvec5(stoi(s1), stoi(s2), v1, v2, geodeq));
   }
   GEN verts = normbound_get_vcors(U);
-  int forwards, prec = lg(tol);/*Tracks whether the arc goes from v1 to v2 or v2 to v1 counterclockwise around the circle.*/
+  int forwards, prec = realprec(tol);/*Tracks whether the arc goes from v1 to v2 or v2 to v1 counterclockwise around the circle.*/
   GEN arg1 = argmod_complex(gel(geod, 1), tol), arg2 = argmod_complex(gel(geod, 2), tol);/*Arguments of the vertices of geod*/
   if (cmprr(arg1, arg2) < 0) {/*arg2 > arg1*/
     GEN diff = subrr(arg2, arg1);
@@ -2271,7 +2273,7 @@ presentation_update(GEN words, long ind, GEN repl)
 {
   GEN invrepl = word_inv(repl);
   long lwords = lg(words), i;
-  for (i = 1; i < lwords; i++) gel(words, i)=word_substitute(gel(words, i), ind, repl, invrepl);/*Substitute!*/
+  for (i = 1; i < lwords; i++) gel(words, i) = word_substitute(gel(words, i), ind, repl, invrepl);/*Substitute!*/
 }
 
 /*Given a word, "collapses" it down, i.e. deletes consecutive indices of the form i, -i, and repeats until the word is reduced.*/
@@ -2336,7 +2338,7 @@ word_substitute(GEN word, long ind, GEN repl, GEN invrepl)
     else if (word[i] == mind) { replaceplaces[i] = -1; nreplace++; }
     else replaceplaces[i] = 0;
   }
-  if (nreplace==0) return gerepileupto(av, word_collapse(word));/*Nothing to replace! Just collapse the word down.*/
+  if (nreplace == 0) return gerepileupto(av, word_collapse(word));/*Nothing to replace! Just collapse the word down.*/
   long newwordlg = lgword + nreplace*(lrepl - 2);/*The new lg*/
   GEN newword = cgetg(newwordlg, t_VECSMALL);/*The new word*/
   long newind = 1, j;
@@ -2368,7 +2370,7 @@ word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
-  long prec = lg(tol);
+  long prec = realprec(tol);
   GEN origin = gtocr(gen_0, prec);
   GEN ginv = Xinv(X, g);/*g^-1*/
   GEN gred = red_elt_decomp(X, U, ginv, origin, Xtoklein, Xmul, gdat);/*Reduction of g^-1, which gives a word for g.*/
@@ -2516,14 +2518,14 @@ afuch_changep(GEN X, GEN p)
   set_avma(av);
 }
 
-/*Updates X to have precision prec+inc, updating all components that require it.*/
+/*Updates X to have precision prec+inc*DEFAULTPREC, updating all components that require it.*/
 static void
 afuch_moreprec(GEN X, long inc)
 {
   pari_sp av = avma, av2;
   if (inc < 0) inc = 1;
   GEN old_gdat = afuch_get_gdat(X);
-  long old_prec = lg(gdat_get_tol(old_gdat));
+  long old_prec = realprec(gdat_get_tol(old_gdat));
   av2 = avma;
   GEN old_A = afuch_get_alg(X);
   GEN old_nf = alg_get_center(old_A);
@@ -2533,7 +2535,7 @@ afuch_moreprec(GEN X, long inc)
   GEN hi = alg_get_hasse_i(old_A);
   GEN hf = alg_get_hasse_f(old_A);
   GEN b = alg_get_b(old_A);/*The basic data*/
-  long new_prec = old_prec + inc;/*The new precision*/
+  long new_prec = nbits2prec(prec2nbits(old_prec) + inc * DEFAULTPREC);/*The new precision. Works on 2.15 and 2.17.*/
   GEN new_nf = nfinit(nf_get_pol(old_nf), new_prec);/*Recompile the number field*/
   GEN new_rnf = rnfinit(new_nf, rnf_get_pol(old_rnf));/*Recompile the rnf*/
   GEN bden = Q_denom(lift(b));
@@ -2612,7 +2614,7 @@ afuch_make_m2rmats(GEN A, GEN O, long prec)
   GEN mats = cgetg(lO, t_VEC);/*To store the 2x2 matrices.*/
   for (i = 1; i < lO; i++) {
     GEN x = algbasisto1ijk(A, gel(O, i));/*ith basis element in the form e+fi+gj+hk*/
-    for (j=1; j<=4; j++) gel(x, j) = gsubst(gel(x, j), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
+    for (j = 1; j <= 4; j++) gel(x, j) = gsubst(gel(x, j), Kvar, Kroot);/*Evaluate it at Kroot. Will be real if K!=Q, else will be rational.*/
     if (apos) {/*e+fi+gj+hk -> [e+fsqrt(a), b(g+hsqrt(a));g-hsqrt(a), e-fsqrt(a)*/
       GEN frta = gmul(gel(x, 2), rt);/*f*sqrt(a)*/
       GEN hrta = gmul(gel(x, 4), rt);/*h*sqrt(a)*/
@@ -2790,7 +2792,7 @@ Onorm_toreal(GEN A, GEN Onorm)
   GEN rt = gel(nf_get_roots(F), split);
   GEN Onormreal = zeromatcopy(n, n);
   for (i = 1; i <= n; i++) {
-    for (j = i; j <=n; j++) gcoeff(Onormreal, i, j) = gsubst(lift(basistoalg(F, gcoeff(Onorm, i, j))), Fvar, rt);
+    for (j = i; j <= n; j++) gcoeff(Onormreal, i, j) = gsubst(lift(basistoalg(F, gcoeff(Onorm, i, j))), Fvar, rt);
   }
   return gerepilecopy(av, Onormreal);
 }
@@ -2803,7 +2805,7 @@ static GEN
 afuchO1area(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
 {
   pari_sp av = avma;
-  long bits = bit_accuracy(computeprec);
+  long bits = prec2nbits(computeprec);/*Here for backwards compatibility with 2.15.*/
   GEN F = alg_get_center(A), pol = nf_get_pol(F);
   GEN zetaval = lfun(pol, gen_2, bits);/*zeta_F(2)*/
   GEN rams = algramifiedplacesf(A);
@@ -2859,7 +2861,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
   pari_sp av = avma;
   GEN F = alg_get_center(A);
   GEN Olevel_fact = algorderlevel(A, O, 1);
-  GEN area = afuchO1area(A, O, Olevel_fact, 3, prec);
+  GEN area = afuchO1area(A, O, Olevel_fact, DEFAULTPREC, prec);
   GEN Olevel_nofact = idealfactorback(F, Olevel_fact, NULL, 0);
   GEN C = afuchbestC(A, O, Olevel_nofact, prec);
   GEN gamma = gtofp(dbltor(2.1), prec);
@@ -3066,7 +3068,7 @@ afuchfdom(GEN X)
   }
   if (precinc && DEBUGLEVEL > 0) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
-    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
   }
   if (!type) {/*Looking for O^1 only.*/
     obj_insert(X, afuch_FDOM, U);
@@ -3104,7 +3106,7 @@ afuchfdom(GEN X)
   }
   if (precinc && DEBUGLEVEL > 0) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
-    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
   }
   U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
   GEN elts = normbound_get_elts(U), kact = normbound_get_kact(U);
@@ -3171,7 +3173,7 @@ GEN
 afuchlist(GEN F, GEN Amin, GEN Amax, long split)
 {
   pari_sp av = avma, av2;
-  long bits = bit_accuracy(3);
+  long bits = prec2nbits(DEFAULTPREC);
   GEN pol = nf_get_pol(F);
   GEN zetaval = lfun(pol, gen_2, bits);/*zeta_F(2)*/
   long n = nf_get_degree(F), twon = n << 1;
@@ -3183,7 +3185,7 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
   GEN phimax = gfloor(gdiv(Amax, ar));/*The min and max possible values of the product of N(p)-1*/
   GEN plist = primes0(mkvec2(gen_2, addis(phimax, 1)));/*The possible primes lying above divisors of D in the given area range.*/
   long lp = lg(plist), i, j;
-  GEN poss_ideal = vectrunc_init(n*lp), poss_norm = vectrunc_init(n*lp);
+  GEN poss_ideal = vectrunc_init(n * lp), poss_norm = vectrunc_init(n * lp);
   for (i = 1; i < lp; i++) {
     GEN pdec = idealprimedec(F, gel(plist, i));
     for (j = 1; j < lg(pdec); j++) {
@@ -3195,13 +3197,13 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
     }
   }
   GEN order = indexsort(poss_norm);/*Order smallest to largest.*/
-  long par = (n - 1)%2, maxprimes = 0, leno = lg(order) - 1;/*The parity of the number of prime divisors we need.*/
+  long par = (n - 1) % 2, maxprimes = 0, leno = lg(order) - 1;/*The parity of the number of prime divisors we need.*/
   GEN pro = gen_1;
   while (cmpii(pro, phimax) <= 0 && maxprimes < leno){/*maxprimes keeps track of the maximal number of prime divisors we can take*/
     maxprimes++;
     pro = mulii(pro, gel(poss_norm, order[maxprimes]));
   }
-  if (maxprimes%2 != par) maxprimes--;/*Make it line up with parity.*/
+  if (maxprimes % 2 != par) maxprimes--;/*Make it line up with parity.*/
   GEN infram = const_vecsmall(n, 1);
   infram[split] = 0;/*The infinite ramification vector.*/
   GEN condition = cgetg(4, t_VEC);/*For specifying the algebra by Hasse invariants*/
@@ -3216,7 +3218,7 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
     gmael(condition, 2, 1) = cgetg(nprime + 1, t_VEC);/*To store those primes.*/
     GEN S = cgetg(nprime + 1, t_VECSMALL);/*Look over nprime element subsets. I could do this more efficiently (in terms of failing a test => we fail the next set), but this is not the bottleneck and should be OK for now.*/
     for (i = 1; i <= nprime; i++) S[i] = i;
-    for(;;) {
+    for (;;) {
       av2 = avma;
       pro = gen_1;
       for (i = 1; i <= nprime; i++) pro = mulii(pro, gel(poss_norm, order[S[i]]));/*Find the total product.*/
@@ -3909,7 +3911,7 @@ afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN real
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
-  long prec = lg(tol);
+  long prec = realprec(tol);
   GEN lowtol = deflowtol(prec);
   GEN M = afuch_make_qf(X, nm, z, tracepart, realnm);
   GEN v;
@@ -4042,7 +4044,7 @@ afuchfindoneelt(GEN X, GEN nm, GEN C)
   }
   if (precinc && DEBUGLEVEL > 0) {
     GEN tol = gdat_get_tol(afuch_get_gdat(X));
-    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", lg(tol), precision00(tol, NULL));
+    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
   }
   if (gequal1(O)) return gerepileupto(av, elt);
   return gerepileupto(av, QM_QC_mul(O, elt));
@@ -4207,7 +4209,7 @@ long
 algsplitoo(GEN A)
 {
   GEN infram = alg_get_hasse_i(A);/*shallow*/
-  long split=0, linf = lg(infram), i;
+  long split = 0, linf = lg(infram), i;
   for (i = 1; i < linf; i++){/*Finding the split place*/
     if (infram[i] == 0){/*Split place*/
       if(split > 0) return 0;
@@ -4229,7 +4231,7 @@ algd(GEN A, GEN a)
   GEN M = cgetg(5, t_MAT);
   for (i = 1; i < 5; i++) gel(M, i) = cgetg(5, t_COL);
   for (i = 1; i < 5; i++) {/*Setting the coefficients of M*/
-    gcoeff(M, i, i)=algtrace(A, algsqr(A, gel(a, i)), 0);
+    gcoeff(M, i, i) = algtrace(A, algsqr(A, gel(a, i)), 0);
     for (j = i + 1; j < 5; j++) gcoeff(M, i, j) = gcoeff(M, j, i) = algtrace(A, algmul(A, gel(a, i), gel(a, j)), 0);
   }
   return gerepileupto(av, nfM_det(alg_get_center(A), M));
@@ -4419,7 +4421,7 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
   GEN U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
   if (lg(U) != lM) return gc_NULL(av);
-  GEN R = qf_apply_RgM(M, U);/*U~*M*U*/
+  GEN R = qf_RgM_apply_old(M, U);/*U~*M*U*/
   long i = gprecision(R), j;
   if (i) prec = i;
   else {
@@ -4541,7 +4543,27 @@ smallvectors_prune(GEN q, GEN C, GEN prune)
 }
 
 
-/*SECTION 5: CHANGING ORDER METHODS, WHICH WERE DELETED FROM LIBPARI*/
+/*SECTION 5: METHODS DELETED OR NAME CHANGED FROM LIBPARI*/
+
+/*This function name was changed from qf_apply_RgM to qf_RgM_apply, so we copy paste it here so that it works in both 2.15 and 2.17.*/
+static GEN
+qf_RgM_apply_old(GEN q, GEN M)
+{
+  pari_sp av = avma;
+  long l; init_qf_apply(q, M, &l); if (l == 1) return cgetg(1, t_MAT);
+  return gerepileupto(av, RgM_transmultosym(M, RgM_mul(q, M)));
+}
+
+static void
+init_qf_apply(GEN q, GEN M, long *l)
+{
+  long k = lg(M);
+  *l = lg(q);
+  if (*l == 1) { if (k == 1) return; }
+  else         { if (k != 1 && lgcols(M) == *l) return; }
+  pari_err_DIM("qf_RgM_apply");
+}
+
 
 /*Here because it was deleted from libpari*/
 static GEN

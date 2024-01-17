@@ -74,7 +74,7 @@ afuch_get_savedelts(GEN X) { return obj_check(X, afuch_SAVEDELTS); }
 INLINE GEN
 afuch_get_normalizernorms(GEN X) { return obj_check(X, afuch_NORMALIZERNORMS); }
 INLINE long
-afuch_get_prec(GEN X) { return lg(gdat_get_tol(afuch_get_gdat(X))); }
+afuch_get_prec(GEN X) { return realprec(gdat_get_tol(afuch_get_gdat(X))); }
 
 /*SECTION 1: GEOMETRIC METHODS*/
 

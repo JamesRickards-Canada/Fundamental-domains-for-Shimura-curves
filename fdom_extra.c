@@ -30,7 +30,7 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
   pari_sp av = avma;
   if (model == 2) pari_err(e_MISC, "Upper half plane not yet supported");
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
-  long prec = lg(tol);
+  long prec = realprec(tol);
   GEN U = afuch_get_fdom(X);
   GEN width = dbltor(6.0);/*Width of the picture in inches.*/
   GEN radius = shiftr(width, -1);/*Circle radius*/
@@ -128,7 +128,7 @@ afuchfdom_python(GEN X, char *filename)
   GEN arcs = normbound_get_sides(U);
   GEN verts = normbound_get_vcors(U);
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
-  long prec = lg(tol);
+  long prec = realprec(tol);
   GEN radtodeg = divsr(180, mppi(prec));
   for (i = 1; i < lp; i++) {
     GEN arc = gel(arcs, i), v1;
@@ -161,7 +161,7 @@ afuchgeodesic_python(GEN X, GEN g, char *filename)
   char *fullfile = stack_sprintf("fdoms/%s.dat", filename);
   FILE *f = fopen(fullfile, "w");/*Now we have created the output file f.*/
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
-  long prec = lg(tol);
+  long prec = realprec(tol);
   if (typ(g) == t_COL) g = afuchgeodesic(X, g);
   GEN radtodeg = divsr(180, mppi(prec));
   long i, lgeo = lg(g);
@@ -335,9 +335,4 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
   }
   return gerepilecopy(av, mkvec2(Cs, times));
 }
-
-
-
-
-
 
