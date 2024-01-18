@@ -25,6 +25,7 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
   long prec = realprec(tol);
   GEN U = afuch_get_fdom(X);
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN width = dbltor(6.0);/*Width of the picture in inches.*/
   GEN radius = shiftr(width, -1);/*Circle radius*/
   if (!pari_is_dir("plots/build")) {/*Checking the directory*/
@@ -112,7 +113,7 @@ afuchfdom_python(GEN X, char *filename)
   char *fullfile = stack_sprintf("fdoms/%s.dat", filename);
   FILE *f = fopen(fullfile, "w");/*Now we have created the output file f.*/
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN pair = normbound_get_spair(U);
   pari_fprintf(f, "%d", pair[1]);
   long i, lp = lg(pair);
@@ -305,11 +306,10 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
       av3 = avma;
       for (k = 1; k <= testsperalg; k++) {
         timer_delay(&T);
-        GEN X = afuchinit(A, NULL, NULL, 0, prec);
-        gmael3(X, 7, 6, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
-        afuchfdom(X);
+        GEN X = afuchinit(A, NULL, gen_0, 0, prec);
+        gmael2(X, afuch_FDOMDAT, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
+        X = afuchmakefdom(X);
         t = t + timer_delay(&T);
-        obj_free(X);/*Kill it off.*/
         set_avma(av3);
       }
       set_avma(av2);
