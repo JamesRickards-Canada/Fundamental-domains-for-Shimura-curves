@@ -2459,7 +2459,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
     if (gequal0(gel(AX, afuch_ONORMDAT))) gel(AX, afuch_ONORMDAT) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup. We must copy here as we modify Onorm later.*/
   }
   else gel(AX, afuch_ONORMDAT) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm. We must copy here as we modify Onorm later.*/
-  gel(AX, 6) = type;
+  gel(AX, afuch_TYPE) = type;
   if (nF > 1) gel(AX, afuch_ONORMREAL) = Onorm_toreal(A, Onorm);/*No need to store approximate if n=1.*/
   GEN kleinmats = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
   gel(AX, afuch_KLEINMATS) = kleinmats;
