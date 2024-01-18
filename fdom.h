@@ -2,9 +2,6 @@
 
 /*CONSTANTS*/
 
-/*Geometric data*/
-enum { gdat_TOL = 1, gdat_P };
-
 /*Normalized boundary*/
 enum { normbound_ELTS = 1, normbound_SIDES, normbound_VCORS, normbound_VARGS, normbound_CROSS, normbound_KACT, normbound_AREA, normbound_SPAIR, normbound_INFINITE };
 
@@ -19,9 +16,9 @@ enum { fdomdat_O1AREA = 1, fdomdat_BESTC, fdomdat_R, fdomdat_EPSILON, fdomdat_PA
 
 /*1: GEOMETRIC DATA*/
 INLINE GEN
-gdat_get_tol(GEN gd) { return gel(gd, gdat_TOL); }
+gdat_get_tol(GEN gd) { return gel(gd, 1); }
 INLINE GEN
-gdat_get_p(GEN gd) { return gel(gd, gdat_P); }
+gdat_get_p(GEN gd) { return gel(gd, 2); }
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN

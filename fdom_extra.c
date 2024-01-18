@@ -307,7 +307,7 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
       for (k = 1; k <= testsperalg; k++) {
         timer_delay(&T);
         GEN X = afuchinit(A, NULL, gen_0, 0, prec);
-        gmael2(X, afuch_FDOMDAT, 2) = C;/*This isn't really safe but should be OK for now. If we change where C is stored, this must change.*/
+        gmael(X, afuch_FDOMDAT, fdomdat_BESTC) = C;
         X = afuchmakefdom(X);
         t = t + timer_delay(&T);
         set_avma(av3);

@@ -1095,16 +1095,16 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
     gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
     gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
   }
-  gel(rv, 1) = rv_elts;/*The elements*/
-  gel(rv, 2) = rv_sides;/*The sides*/
-  gel(rv, 3) = vec_shorten(vcors, found);/*Vertex coords*/
-  gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
-  gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
-  gel(rv, 6) = rv_kact;/*Kleinian action*/
-  if (lg(infinite) > 1) gel(rv, 7) = mkoo();/*Infinite side means infinite area.*/
-  else gel(rv, 7) = normbound_area(rv_sides, prec);
-  gel(rv, 8) = deleted;/*For now, stores the deleted indices.*/
-  gel(rv, 9) = infinite;/*Infinite sides*/
+  gel(rv, normbound_ELTS) = rv_elts;/*The elements*/
+  gel(rv, normbound_SIDES) = rv_sides;/*The sides*/
+  gel(rv, normbound_VCORS) = vec_shorten(vcors, found);/*Vertex coords*/
+  gel(rv, normbound_VARGS) = vec_shorten(vargs, found);/*Vertex arguments*/
+  gel(rv, normbound_CROSS) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
+  gel(rv, normbound_KACT) = rv_kact;/*Kleinian action*/
+  if (lg(infinite) > 1) gel(rv, normbound_AREA) = mkoo();/*Infinite side means infinite area.*/
+  else gel(rv, normbound_AREA) = normbound_area(rv_sides, prec);
+  gel(rv, normbound_SPAIR) = deleted;/*For now, stores the deleted indices.*/
+  gel(rv, normbound_INFINITE) = infinite;/*Infinite sides*/
   return rv;
 }
 
@@ -1495,16 +1495,16 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
     gel(rv_sides, i) = elts[i] ? gmael(C, elts[i], 3) : gen_0;
     gel(rv_kact, i) = elts[i] ? gmael(C, elts[i], 2) : gen_0;
   }
-  gel(rv, 1) = rv_elts;/*The elements*/
-  gel(rv, 2) = rv_sides;/*The sides*/
-  gel(rv, 3) = vec_shorten(vcors, found);/*Vertex coords*/
-  gel(rv, 4) = vec_shorten(vargs, found);/*Vertex arguments*/
-  gel(rv, 5) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
-  gel(rv, 6) = rv_kact;/*Kleinian action*/
-  if (lg(infinite) > 1) gel(rv, 7) = mkoo();/*Infinite side means infinite area.*/
-  else gel(rv, 7) = normbound_area(rv_sides, prec);
-  gel(rv, 8) = deleted;/*For now, stores the deleted indices.*/
-  gel(rv, 9) = infinite;/*Infinite sides*/
+  gel(rv, normbound_ELTS) = rv_elts;/*The elements*/
+  gel(rv, normbound_SIDES) = rv_sides;/*The sides*/
+  gel(rv, normbound_VCORS) = vec_shorten(vcors, found);/*Vertex coords*/
+  gel(rv, normbound_VARGS) = vec_shorten(vargs, found);/*Vertex arguments*/
+  gel(rv, normbound_CROSS) = stoi(args_find_cross(gel(rv, 4)));/*Crossing point*/
+  gel(rv, normbound_KACT) = rv_kact;/*Kleinian action*/
+  if (lg(infinite) > 1) gel(rv, normbound_AREA) = mkoo();/*Infinite side means infinite area.*/
+  else gel(rv, normbound_AREA) = normbound_area(rv_sides, prec);
+  gel(rv, normbound_SPAIR) = deleted;/*For now, stores the deleted indices.*/
+  gel(rv, normbound_INFINITE) = infinite;/*Infinite sides*/
   return rv;
 }
 
@@ -1585,7 +1585,7 @@ edgepairing(GEN U, GEN tol)
   GEN kact = normbound_get_kact(U);/*Action of the sides*/
   GEN sides = normbound_get_sides(U);/*Sides*/
   long lU = lg(kact), lenU = lU - 1, i;/*Number of sides*/
-  GEN unpair = vectrunc_init(2*lU - 1), pair = zero_zv(lenU);/*Unpair stores the unpaired edges, pair stores the paired edges*/
+  GEN unpair = vectrunc_init((lU << 1) - 1), pair = zero_zv(lenU);/*Unpair stores the unpaired edges, pair stores the paired edges*/
   for (i = 1; i < lU; i++) {/*Try to pair the ith side.*/
     GEN act = gel(kact, i);
     if (gequal0(act)) { pair[i] = i; continue; }/*oo side, go next (we say it is paired with itself)*/
@@ -1605,7 +1605,7 @@ edgepairing(GEN U, GEN tol)
     }
     long i2;
     if (i == 1) i2 = lenU;
-    else i2 = i-1;/*i2 is the previous vertex, also on the ith side.*/
+    else i2 = i - 1;/*i2 is the previous vertex, also on the ith side.*/
     GEN v2 = klein_act_i(act, gel(vcors, i2));/*Image of the second (i-1 st) vertex.*/
     GEN v2arg = argmod_complex(v2, tol);/*Argument*/
     long v2pair = args_search(vargs, cross, v2arg, tol), v2loc, foundv2;
@@ -1736,7 +1736,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
           if (Xistriv(X, Xmul(X, gel(elts, gind), gel(elts, gvind)))) {/*gv is on I(g^-1) which is part of U.*/
             /*Let the element of the side intersecting gind at v gdind be w. Then I(wg^-1) contains gv, and will give gv as an intersection vertex, so we add in wg^-1.*/
             long wind;
-            if (gind == dat[2]) wind = gind%lenU + 1;
+            if (gind == dat[2]) wind = (gind % lenU) + 1;
             else wind = dat[2];
             vectrunc_append(Gadd, Xmul(X, gel(elts, wind), gel(elts, gvind)));/*gel(elts, gvind) = g^-1, or at least they have the same isometric circle*/
           }
@@ -1897,8 +1897,8 @@ minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xi
     }
     if (Xistriv(X, g)) { types[i] = 1; continue; }/*Accidental cycle, continue on.*/
     if (Xisparabolic(X, g)) { types[i] = 0; continue; }/*Parabolic cycle.*/
-    long ord=1;
-    GEN gpower=g;
+    long ord = 1;
+    GEN gpower = g;
     do {/*Finding the order of g*/
       ord++;
       gpower = Xmul(X, g, gpower);
@@ -2007,7 +2007,7 @@ fdom_intersect(GEN U, GEN geod, GEN tol, long s1)
     if (!whichside) pari_err(e_MISC,"TO DO: GEODESIC INTERSECTING VERTEX.");
     if (whichside == 1) { i3 = i; i4 = i; break; }/*Crossed over*/
     GEN dist1 = fdom_intersect_dist(geodeq, gel(verts, i));
-    long ip = (i%n) + 1;
+    long ip = (i % n) + 1;
     GEN dist2 = fdom_intersect_dist(geodeq, gel(verts, ip));
     int ips = tolsigne(dist2, tol);
     if (ips == 1) { i3 = ip; i4 = ip; break; }/*i+1 crosses over.*/
@@ -2124,10 +2124,10 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
     for (j = 2; j <= cyctype[i]; j++) cy = vecsmall_concat(cy, cy1);/*Concat to make the power right.*/
     gel(cyc, i) = cy;/*The actual relations are now stored in cyc.*/
   }
-  GEN H=cgetg(lgelts, t_VECSMALL);/*We start by taking only one of g or g^(-1) for all g. In general, H tracks which elements are left in the generating set. Of the pair that appears, we just keep the first one we find.*/
+  GEN H = cgetg(lgelts, t_VECSMALL);/*We start by taking only one of g or g^(-1) for all g. In general, H tracks which elements are left in the generating set. Of the pair that appears, we just keep the first one we find.*/
   for (i = 1; i < lgelts; i++){/*Initially, H[i]=1 if g=g^(-1), and for exactly one of [g, g^(-1)] for all other g.*/
     long pairedind = pairing[i];/*What side i is paired to.*/
-    if (pairedind >= i) { H[i]=1; ngens++; continue; }/*No need to update words, we are keeping this generator for now.*/
+    if (pairedind >= i) { H[i] = 1; ngens++; continue; }/*No need to update words, we are keeping this generator for now.*/
     H[i] = 0;/*H[i]=0 and update the word to g^-1, g is the paired index.*/
     gel(words, i)[1] = -pairedind;
     presentation_update(cyc, i, gel(words, i));/*Update the cycles.*/
@@ -2137,7 +2137,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
   while (accind < lgcyc && cyctype[accind] == 0) accind++;/*Find the first accidental cycle.*/
   long ellind = accind;
   while (ellind < lgcyc && cyctype[ellind] == 1) ellind++;/*Find the first elliptic cycle.*/
-  long naccident = ellind-accind;/*How many accidental cycles*/
+  long naccident = ellind - accind;/*How many accidental cycles*/
   GEN r = gen_0;/*The accidental relation, if it exists.*/
   if (naccident) r = gel(cyc, accind);/*The first accidental relation.*/
   if (naccident > 1) {/*More than one relation. We go through the relations, updating r by solving for elements it has in common in another relation.*/
@@ -2513,7 +2513,7 @@ afuchchangep(GEN X, GEN p)
 static GEN
 afuch_moreprec_shallow(GEN X, long inc)
 {
-  if (inc < 0) inc = 1;
+  if (inc <= 0) inc = 1;
   GEN new_X = leafcopy(X);/*Initial shallow copy.*/
   GEN old_gdat = afuch_get_gdat(X);
   long old_prec = realprec(gdat_get_tol(old_gdat));
@@ -2847,7 +2847,7 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
   GEN epsilon = mkfracss(1, 6), passes;
   if (nf_get_degree(alg_get_center(A)) == 1) passes = gen_2;
   else passes = stoi(8);
-  return gerepilecopy(av, mkvec5(area, C, R, epsilon, passes));
+  return gerepilecopy(av, mkvec5(area, C, R, epsilon, passes));/*If this gets updated, the fdomdat_DATA tags need updating too.*/
 }
 
 
@@ -4108,7 +4108,7 @@ algdiscnorm(GEN A)
 static GEN
 alggeta(GEN A)
 {
-  pari_sp av=avma;
+  pari_sp av = avma;
   GEN L = alg_get_splittingfield(A);/*L=K(sqrt(a)).*/
   long Lvar = rnf_get_varn(L);/*Variable number for L*/
   return gerepileupto(av, gneg(polcoef_i(rnf_get_pol(L), Lvar, 0)));/*Defining polynomial is x^2-a, so retrieve a.*/
