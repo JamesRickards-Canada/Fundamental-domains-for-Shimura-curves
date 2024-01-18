@@ -1,36 +1,47 @@
 /*fdom.c methods*/
 
 /*CONSTANTS*/
+
+/*Geometric data*/
+enum { gdat_TOL = 1, gdat_P };
+
+/*Normalized boundary*/
+enum { normbound_ELTS = 1, normbound_SIDES, normbound_VCORS, normbound_VARGS, normbound_CROSS, normbound_KACT, normbound_AREA, normbound_SPAIR, normbound_INFINITE };
+
 /*Sets the ordering of the fundamental domain vector.*/
-enum {afuch_A = 1, afuch_O, afuch_OINV, afuch_OCONJ, afuch_OMULTABLE, afuch_ONORMDAT, afuch_TYPE, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_PRES, afuch_SAVEDELTS, afuch_NORMALIZERNORMS};
+enum { afuch_A = 1, afuch_O, afuch_OINV, afuch_OCONJ, afuch_OMULTABLE, afuch_ONORMDAT, afuch_TYPE, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_PRES, afuch_SAVEDELTS, afuch_NORMALIZERNORMS };
+
+/*Constants for fundamental domain computation*/
+enum { fdomdat_O1AREA = 1, fdomdat_BESTC, fdomdat_R, fdomdat_EPSILON, fdomdat_PASSES };
+
 
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
 /*1: GEOMETRIC DATA*/
 INLINE GEN
-gdat_get_tol(GEN gd) { return gel(gd, 1); }
+gdat_get_tol(GEN gd) { return gel(gd, gdat_TOL); }
 INLINE GEN
-gdat_get_p(GEN gd) { return gel(gd, 2); }
+gdat_get_p(GEN gd) { return gel(gd, gdat_P); }
 
 /*2: NORMALIZED BOUNDARY*/
 INLINE GEN
-normbound_get_elts(GEN U) { return gel(U, 1); }
+normbound_get_elts(GEN U) { return gel(U, normbound_ELTS); }
 INLINE GEN
-normbound_get_sides(GEN U) { return gel(U, 2); }
+normbound_get_sides(GEN U) { return gel(U, normbound_SIDES); }
 INLINE GEN
-normbound_get_vcors(GEN U) { return gel(U, 3); }
+normbound_get_vcors(GEN U) { return gel(U, normbound_VCORS); }
 INLINE GEN
-normbound_get_vargs(GEN U) { return gel(U, 4); }
+normbound_get_vargs(GEN U) { return gel(U, normbound_VARGS); }
 INLINE long
-normbound_get_cross(GEN U) { return itos(gel(U, 5)); }
+normbound_get_cross(GEN U) { return itos(gel(U, normbound_CROSS)); }
 INLINE GEN
-normbound_get_kact(GEN U) { return gel(U, 6); }
+normbound_get_kact(GEN U) { return gel(U, normbound_KACT); }
 INLINE GEN
-normbound_get_area(GEN U) { return gel(U, 7); }
+normbound_get_area(GEN U) { return gel(U, normbound_AREA); }
 INLINE GEN
-normbound_get_spair(GEN U) { return gel(U, 8); }
+normbound_get_spair(GEN U) { return gel(U, normbound_SPAIR); }
 INLINE GEN
-normbound_get_infinite(GEN U) { return gel(U, 9); }
+normbound_get_infinite(GEN U) { return gel(U, normbound_INFINITE); }
 
 /*3: ARITHMETIC FUCHSIAN GROUPS*/
 INLINE GEN
@@ -56,15 +67,15 @@ afuch_get_qfmats(GEN X) { return gel(X, afuch_QFMATS); }
 INLINE GEN
 afuch_get_gdat(GEN X) { return gel(X, afuch_GDAT); }
 INLINE GEN
-afuch_get_O1area(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 1); }
+afuch_get_O1area(GEN X) { return gmael(X, afuch_FDOMDAT, fdomdat_O1AREA); }
 INLINE GEN
-afuch_get_bestC(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 2); }
+afuch_get_bestC(GEN X) { return gmael(X, afuch_FDOMDAT, fdomdat_BESTC); }
 INLINE GEN
-afuch_get_R(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 3); }
+afuch_get_R(GEN X) { return gmael(X, afuch_FDOMDAT, fdomdat_R); }
 INLINE GEN
-afuch_get_epsilon(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 4); }
+afuch_get_epsilon(GEN X) { return gmael(X, afuch_FDOMDAT, fdomdat_EPSILON); }
 INLINE GEN
-afuch_get_passes(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 5); }
+afuch_get_passes(GEN X) { return gmael(X, afuch_FDOMDAT, fdomdat_PASSES); }
 INLINE GEN
 afuch_get_fdom(GEN X) { return gel(X, afuch_FDOM); }
 INLINE GEN
