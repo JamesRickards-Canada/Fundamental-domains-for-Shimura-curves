@@ -2444,7 +2444,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   if (!type) type = gen_0;
   GEN p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
-  GEN Oinv, AX = cgetg(17, t_VEC);
+  GEN Oinv, AX = zerovec(16);
   gel(AX, afuch_A) = A;
   gel(AX, afuch_O) = O;
   gel(AX, afuch_OINV) = Oinv = QM_inv(O);/*Inverse*/
@@ -2696,7 +2696,7 @@ afuchnewtype(GEN X, GEN type)
   GEN new_X = leafcopy(X);/*Initial copy.*/
   gel(new_X, afuch_TYPE) = type;/*Change the type.*/
   GEN U = afuch_get_fdom(new_X);
-  if (!U) return gerepilecopy(av, new_X);/*Super easy, no fundamental domain!*/
+  if (gequal0(U)) return gerepilecopy(av, new_X);/*Super easy, no fundamental domain!*/
   new_X = afuchmakefdom(new_X);/*We already copied over the saved elts and normalizer norms, in case of type t_MAT.*/
   return gerepileupto(av, new_X);/*afuchmakefdom is stack clean.*/
 }
@@ -3009,7 +3009,7 @@ afuchmakefdom(GEN X)
   GEN new_X = leafcopy(X);/*For the new group.*/
   long type = itos(Gtype);
   GEN allelts = afuch_get_savedelts(new_X), U;
-  if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
+  if (!gequal0(allelts)) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
     GEN S = gel(allelts, 1);/*Norm 1, incluced in everything*/
     switch (type) {
       case 3:
@@ -3102,7 +3102,7 @@ afuchfdom_subgroup(GEN X, GEN M)
 {
   GEN new_X = leafcopy(X);
   GEN allelts = afuch_get_savedelts(new_X);
-  if (!allelts) pari_err(e_MISC, "You must compute the domain with type=3 first, then change the type.");
+  if (gequal0(allelts)) pari_err(e_MISC, "You must compute the domain with type=3 first, then change the type.");
   M = FpM_image(M, gen_2);/*Reduce to generating set.*/
   long lM = lg(M);
   GEN S = shallowconcat(shallowconcat(gel(allelts, 2), gel(allelts, 3)), gel(allelts, 4));/*Concat for convenience.*/
@@ -3363,7 +3363,7 @@ afuchword(GEN X, GEN g)
   GEN U = afuch_get_fdom(X);
   if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN P = afuch_get_pres(X);
-  if (!P) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
+  if (gequal0(P)) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
   GEN O = afuch_get_O(X);
   if (!gequal1(O)) {
     GEN Oinv = afuch_get_Oinv(X);
@@ -3455,7 +3455,7 @@ static GEN
 afuch_makenormelts(GEN X)
 {
   GEN norms = afuch_get_normalizernorms(X);
-  if (!norms) {/*Must make the norms.*/
+  if (gequal0(norms)) {/*Must make the norms.*/
     GEN A = afuch_get_alg(X);
     GEN F = alg_get_center(A);
     long prec = afuch_get_prec(X);
