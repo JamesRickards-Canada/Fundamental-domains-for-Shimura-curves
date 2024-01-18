@@ -1,5 +1,5 @@
-\\Runs the fundamental domain methods across a method suite to compare to Magma. We don't use orders, and compute for O^1 here.
-
+/*Runs the fundamental domain methods across a method suite to compare to Magma. We don't use orders, and compute for O^1 here.
+Be aware that if gp is built with pthread, then these timings are not quite accurate! This gives the CPU time, which will not correlate with the timings on a single threaded gp installation.*/
 avg_stdev(v)={
   my(avg, n, va);
   n=#v;
@@ -13,9 +13,9 @@ avgtime(fil, A, Or, case, N)={
   my(times, X, dat, dom, st, extra);
   times=vector(N);
   for(i=1,N,
-	gettime();
-	X=afuchinit(A, , 0, 1);
-	times[i]=gettime()/1000;
+    gettime();
+    X=afuchinit(A, , 0, 1);
+    times[i]=gettime()/1000;
   );
   dat=avg_stdev(times);
   afuchfdom(X);
