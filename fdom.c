@@ -1,7 +1,7 @@
 /*TO DO
 1. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
 2. Do we want the debug level here to be the same as for algebras? Currently it is.
-3. In afuch_moreprec, when alg_hilbert is updated to allow for denominators, this method can be simplified.
+3. In afuch_moreprec_shallow, when alg_hilbert is updated to allow for denominators, this method can be simplified.
 4. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
 5. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
 6. Add testing for changing p.
@@ -21,7 +21,7 @@ POSSIBLE FUTURE ADDITIONS:
 #include <paripriv.h>
 #include "fdom.h"
 
-/*Possibly make it's own debugging level?*/
+/*AUREL: Possibly make it's own debugging level? Not sure what is preferred.*/
 #define DEBUGLEVEL DEBUGLEVEL_alg
 
 /*STATIC DECLARATIONS*/
@@ -131,7 +131,7 @@ static GEN word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
-static void afuch_moreprec(GEN X, long inc);
+static GEN afuch_moreprec_shallow(GEN X, long inc);
 static GEN afuch_make_kleinmats(GEN A, GEN O, GEN p, long prec);
 static GEN afuch_make_m2rmats(GEN A, GEN O, long prec);
 static GEN afuch_make_qfmats(GEN kleinmats);
@@ -147,8 +147,8 @@ static GEN afuchbestC(GEN A, GEN O, GEN Olevel_nofact, long prec);
 static GEN afuchfdomdat_init(GEN A, GEN O, long prec);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
-static GEN afuchfdom_i(GEN X, GEN *startingset);
-static void afuchfdom_subgroup(GEN X, GEN M);
+static GEN afuchfdom_worker(GEN X, GEN *startingset);
+static GEN afuchfdom_subgroup(GEN X, GEN M);
 static int nextsub(GEN S, long n);
 
 /*3: NON NORM 1 METHODS*/
@@ -899,7 +899,7 @@ argmod(GEN x, GEN y, GEN tol)
 
 /*argmod, except we take c=x+iy. Gerepileupto safe, leaves garbage.*/
 static GEN
-argmod_complex(GEN c, GEN tol) {return argmod(gel(c, 1), gel(c, 2), tol);}
+argmod_complex(GEN c, GEN tol) { return argmod(gel(c, 1), gel(c, 2), tol); }
 
 
 /*2: NORMALIZED BOUNDARY*/
@@ -958,7 +958,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
   GEN tol = gdat_get_tol(gdat);
   long prec = realprec(tol);
   GEN order = gen_indexsort(C, &tol, &cmp_icircangle);/*Order the sides by initial angle.*/
-  long lc = lg(C), maxsides = 2*lc, istart = normbound_icircs_bigr(C, order);/*Largest r value index (wrt order).*/
+  long lc = lg(C), maxsides = lc << 1, istart = normbound_icircs_bigr(C, order);/*Largest r value index (wrt order).*/
   GEN elts = cgetg(maxsides, t_VECSMALL);/*Stores indices in C of the sides. 0 represents an infinite side.*/
   GEN vcors = cgetg(maxsides, t_VEC);/*Stores coordinates of the vertices.*/
   GEN vargs = cgetg(maxsides, t_VEC);/*Stores arguments of the vertices.*/
@@ -968,7 +968,7 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
   GEN firstcirc = gmael(C, elts[1], 3);/*The equation for the fist line, used in phase 2 and for detecting phase 2 starting.*/
   gel(vcors, 1) = gel(firstcirc, 5);/*The terminal vertex of the side is the first vertex.*/
   gel(vargs, 1) = gel(firstcirc, 7);
-  long found = 1, lenc = lc-1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
+  long found = 1, lenc = lc - 1, absind;/*found=how many sides we have found up to now. This can increase and decrease.*/
   int phase2 = 0;/*Which phase we are in*/
   /*PHASE 1: inserting sides, where the end vertex does not intersect the first side. All we need to update / keep track of are:
     elts, vcors, vargs, infinite, deleted, found, absind, phase2
@@ -1218,15 +1218,15 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
   long lCnew = lg(Cnew);
   if (lCnew == 1) return gc_NULL(av);
   long lenU = lU - 1;/*Now we figure out the order of U, before merging them.*/
-  long Ustart = normbound_get_cross(U)%lenU + 1;/*The side which crosses the origin. We do a linear probe to find the smallest initial angle.*/
-  long Unext = Ustart%lenU + 1;
+  long Ustart = (normbound_get_cross(U) % lenU) + 1;/*The side which crosses the origin. We do a linear probe to find the smallest initial angle.*/
+  long Unext = (Ustart % lenU) + 1;
   GEN Usides = normbound_get_sides(U), tol = gdat_get_tol(gdat);
   for (;;) {
     if (gequal0(gel(Usides, Ustart))) { Ustart = Unext; break; }/*The next side is not infinite, and must be the first one.*/
-    if (gequal0(gel(Usides, Unext))) { Ustart = Unext%lenU + 1; break; }/*Must move past the infinite side.*/
+    if (gequal0(gel(Usides, Unext))) { Ustart = (Unext % lenU) + 1; break; }/*Must move past the infinite side.*/
     if (tolcmp(gmael(Usides, Ustart, 6), gmael(Usides, Unext, 6), tol) >= 0) { Ustart = Unext; break; }/*We have crossed over.*/
     Ustart = Unext;
-    Unext = Unext%lenU + 1;
+    Unext = (Unext % lenU) + 1;
   }
   GEN Uelts = normbound_get_elts(U), Ukact = normbound_get_kact(U);
   GEN order = gen_indexsort(Cnew, &tol, &cmp_icircangle);/*Order the new sides by initial angle.*/
@@ -1242,7 +1242,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
     vecsmalltrunc_append(Ctype, Ustart);/*Old side*/
     if (!rbigind && Ustart == 1) rbigind = 1;
     Cnewind = 1;
-    Uind = Ustart%lenU + 1;
+    Uind = (Ustart % lenU) + 1;
     if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
   }
   else {/*Start with C*/
@@ -1253,7 +1253,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
     Uind = Ustart;
   }
   for (;;) {/*Now we merge the two into one list, keeping track of old vs new sides.*/
-    if (lg(C)>Cnewind && Uind == Ustart) {/*We have finished with the U's (first inequality tracks if we have added any U's).*/
+    if (lg(C) > Cnewind && Uind == Ustart) {/*We have finished with the U's (first inequality tracks if we have added any U's).*/
       while (Cnewind < lCnew) {/*Just C's left.*/
         vectrunc_append(C, gel(Cnew, order[Cnewind]));
         vecsmalltrunc_append(Ctype, -indtransfer[order[Cnewind]]);
@@ -1267,7 +1267,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
         vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
         vecsmalltrunc_append(Ctype, Uind);
         if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
-        Uind = Uind%lenU + 1;
+        Uind = (Uind % lenU) + 1;
         if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
       } while (Uind != Ustart);
       break;
@@ -1277,7 +1277,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
       vectrunc_append(C, mkvec3(gel(Uelts, Uind), gel(Ukact, Uind), gel(Usides, Uind)));
       vecsmalltrunc_append(Ctype, Uind);
       if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
-      Uind = Uind%lenU + 1;
+      Uind = (Uind % lenU) + 1;
       if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
       continue;
     }
@@ -1564,7 +1564,7 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
   while (l2 - l1 > 1) {
     long l = (l1 + l2)>>1;/*floor((l1+l2)/2)*/
     int c = tolcmp(gel(args, l), arg, tol);
-    if (c > 0) {l2 = l;continue;}
+    if (c > 0) { l2 = l; continue; }
     if (c == 0) return -l;
     l1 = l;
   }
@@ -2274,9 +2274,9 @@ word_collapse(GEN word)
   long lgword = lg(word), n = lgword - 1, last1 = 0, newlg = lgword, i;/*last1 tracks the last value of 1 in H that we have tracked. newlg tracks the new length.*/
   GEN H = const_vecsmall(n, 1);/*H tracks if we keep each index in the collapsed word.*/
   for (i = 1; i < n; i++) {/*We go through the word.*/
-    if (word[i] != -word[i+1]) {last1 = i;continue;}/*Nothing to do here, move on. H[i]=1 is necessarily true.*/
+    if (word[i] != -word[i+1]) { last1 = i; continue; }/*Nothing to do here, move on. H[i]=1 is necessarily true.*/
     H[i] = 0;
-    H[i+1] = 0;/*Deleting i and i+1*/
+    H[i + 1] = 0;/*Deleting i and i+1*/
     newlg -= 2;/*2 less entries*/
     if (last1 == 0) {i++;continue;}/*All previous entries are already deleted, along with i+1, so just move on to i+2.*/
     long next1 = i + 2;/*Next entry with 1*/
@@ -2329,7 +2329,7 @@ word_substitute(GEN word, long ind, GEN repl, GEN invrepl)
     else replaceplaces[i] = 0;
   }
   if (nreplace == 0) return gerepileupto(av, word_collapse(word));/*Nothing to replace! Just collapse the word down.*/
-  long newwordlg = lgword + nreplace*(lrepl - 2);/*The new lg*/
+  long newwordlg = lgword + nreplace * (lrepl - 2);/*The new lg*/
   GEN newword = cgetg(newwordlg, t_VECSMALL);/*The new word*/
   long newind = 1, j;
   for (i = 1; i < lgword; i++){/*Make the new word*/
@@ -2395,10 +2395,12 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS*/
 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
-An arithmetic Fuchsian group initialization is represented by X, and is stored as a lazy vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. We have:
+An arithmetic Fuchsian group initialization is represented by X, and is stored as a vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. When using this in gp, one should therefore use the retrieval methods, and NOT access these components directly. We have:
 X
-    [O, Oinv, Oconj, Omultable, Onormdat, type [A, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, savedelts, normalizernorms]]
+    [A, O, Oinv, Oconj, Omultable, Onormdat, type, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, savedelts, normalizernorms]
 
+A
+    The algebra 
 O, Oinv
     The order and its inverse, given as a matrix whose columns generate the order (with respect to the stored order in A).
 Oconj
@@ -2409,8 +2411,6 @@ Onormdat
     Decomposition used to compute norms of elements more quickly.
 type
     Which symmetric space we want to compute. 0 is O^1, 1 is totally positive reduced norm, 2 is AL(O), 3 is N_{B^{\times}}^+(O).
-A
-    The algebra 
 Onormreal
     Used to compute real approximations to norms of elements, which is much more efficient when deg(F)>1.
 kleinmats
@@ -2430,10 +2430,10 @@ presentation
 savedelts
     [O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
 normalizernorms
-    Only initialized if you call afuchnormalizernorms or set type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
+    Only initialized if you set type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
 */
 
-/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the signature and presentation as well.*/
+/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the presentation as well.*/
 GEN
 afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
 {
@@ -2444,79 +2444,80 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   if (!type) type = gen_0;
   GEN p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
-  GEN Oinv, AX = obj_init(6, 11);
-  gel(AX, 1) = O;
-  gel(AX, 2) = Oinv = QM_inv(O);/*Inverse*/
+  GEN Oinv, AX = cgetg(17, t_VEC);
+  gel(AX, afuch_A) = A;
+  gel(AX, afuch_O) = O;
+  gel(AX, afuch_OINV) = Oinv = QM_inv(O);/*Inverse*/
   long lgO = lg(O), i, j;
   GEN AOconj = cgetg(lgO, t_MAT);/*Conjugates of basis of O, written in A.*/
   for (i = 1; i < lgO; i++) gel(AOconj, i) = algconj(A, gel(O, i));
-  gel(AX, 3) = QM_mul(Oinv, AOconj);/*Matrix of conjugates; write it in terms of O.*/
-  gel(AX, 4) = Omultable(A, O, Oinv);
+  gel(AX, afuch_OCONJ) = QM_mul(Oinv, AOconj);/*Matrix of conjugates; write it in terms of O.*/
+  gel(AX, afuch_OMULTABLE) = Omultable(A, O, Oinv);
   GEN Onorm = Onorm_makemat(A, O, AOconj);
   if (nF >= 5) {/*More efficient to use the Cholesky norm.*/
-    gel(AX, 5) = Onorm_makechol(F, Onorm);
-    if (gequal0(gel(AX, 5))) gel(AX, 5) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup.*/
+    gel(AX, afuch_ONORMDAT) = Onorm_makechol(F, Onorm);
+    if (gequal0(gel(AX, afuch_ONORMDAT))) gel(AX, afuch_ONORMDAT) = gcopy(Onorm);/*I don't think this can ever trigger, but just in case we can't get the Cholesky version, we use Onorm as backup. We must copy here as we modify Onorm later.*/
   }
-  else gel(AX, 5) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm.*/
-  gel(AX, 6) = gcopy(type);
-  obj_insert(AX, afuch_A, A);
-  if (nF > 1) obj_insert(AX, afuch_ONORMREAL, Onorm_toreal(A, Onorm));/*No need to store approximate if n=1.*/
-  GEN kleinmats = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);
-  obj_insert(AX, afuch_KLEINMATS, kleinmats);/*Make sure p is safe.*/
+  else gel(AX, afuch_ONORMDAT) = gcopy(Onorm);/*Testing showed that Cholesky was faster if deg(F)>=5, and Onorm if deg(F)<=4. Both were much faster than algnorm. We must copy here as we modify Onorm later.*/
+  gel(AX, 6) = type;
+  if (nF > 1) gel(AX, afuch_ONORMREAL) = Onorm_toreal(A, Onorm);/*No need to store approximate if n=1.*/
+  GEN kleinmats = afuch_make_kleinmats(A, O, gdat_get_p(gdat), prec);/*Make sure p is safe.*/
+  gel(AX, afuch_KLEINMATS) = kleinmats;
   GEN qfm = afuch_make_qfmats(kleinmats);
   for (i = 1; i < lgO; i++) {/*Making the traces in Onorm.*/
     for (j = i; j < lgO; j++) gcoeff(Onorm, i, j) = nftrace(F, gcoeff(Onorm, i, j));
   }
   gel(qfm, 5) = Onorm;
-  obj_insert(AX, afuch_QFMATS, qfm);
-  obj_insert(AX, afuch_GDAT, gdat);
-  obj_insert(AX, afuch_FDOMDAT, afuchfdomdat_init(A, O, prec));
-  if (flag) {
-    afuchfdom(AX);
-    if (flag == 2) { afuchsignature(AX); afuchpresentation(AX); }
-  }
+  gel(AX, afuch_QFMATS) = qfm;
+  gel(AX, afuch_GDAT) = gdat;
+  gel(AX, afuch_FDOMDAT) = afuchfdomdat_init(A, O, prec);
+  if (!flag) return gerepilecopy(av, AX);/*Done! Just initialize the main structure.*/
+  AX = afuchmakefdom(AX);/*Make the fundamental domain.*/
+  if (flag == 1) return gerepilecopy(av, AX);/*Just this*/
+  AX = afuchmakepresentation(AX);/*Add presentation in.*/
   return gerepilecopy(av, AX);
 }
 
-/*Updates X to the new value of p.*/
-void
-afuch_changep(GEN X, GEN p)
+/*Returns a new X with the new value of p.*/
+GEN
+afuchchangep(GEN X, GEN p)
 {
   pari_sp av = avma;
+  GEN new_X = leafcopy(X);/*Initial shallow copy.*/
   GEN A = afuch_get_alg(X);
   GEN O = afuch_get_O(X);
   long prec = afuch_get_prec(X);
   p = uhp_safe(p, prec);
   GEN kleinmats = afuch_make_kleinmats(A, O, p, prec);
-  obj_insert(X, afuch_KLEINMATS, kleinmats);
+  gel(new_X, afuch_KLEINMATS) = kleinmats;
   GEN qfm = afuch_make_qfmats(kleinmats);
   gel(qfm, 5) = gcopy(gel(afuch_get_qfmats(X), 5));/*This part was exact, so we can copy it over.*/
-  obj_insert(X, afuch_QFMATS, qfm);
+  gel(new_X, afuch_QFMATS) = qfm;
   GEN gdat = gcopy(afuch_get_gdat(X));
   gel(gdat, 2) = p;
-  obj_insert(X, afuch_GDAT, gdat);
+  gel(new_X, afuch_GDAT) = gdat;
   GEN U = afuch_get_fdom(X);
-  if (U) {/*Recompute the fundamental domain.*/
-    U = normbasis(X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
-    obj_insert(X, afuch_FDOM, U);
+  if (!gequal0(U)) {/*Recompute the fundamental domain.*/
+    U = normbasis(new_X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    gel(new_X, afuch_FDOM) = U;
     GEN pres = afuch_get_pres(X);
-    if (pres) {/*Recompute the presentation.*/
-      pres = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
-      obj_insert(X, afuch_PRES, pres);
+    if (!gequal0(pres)) {/*Recompute the presentation.*/
+      pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+      gel(new_X, afuch_PRES) = pres;
     }
   }
-  set_avma(av);
+  return gerepilecopy(av, new_X);
 }
 
-/*Updates X to have precision prec+inc*DEFAULTPREC, updating all components that require it.*/
-static void
-afuch_moreprec(GEN X, long inc)
+/*Updates X to have precision prec+inc*DEFAULTPREC, returning a new vector whose components are either clean copies of the higher precision object, or point to the corresponding component of X. NOT gerepileupto safe.*/
+static GEN
+afuch_moreprec_shallow(GEN X, long inc)
 {
-  pari_sp av = avma, av2;
   if (inc < 0) inc = 1;
+  GEN new_X = leafcopy(X);/*Initial shallow copy.*/
   GEN old_gdat = afuch_get_gdat(X);
   long old_prec = realprec(gdat_get_tol(old_gdat));
-  av2 = avma;
+  pari_sp av = avma;
   GEN old_A = afuch_get_alg(X);
   GEN old_nf = alg_get_center(old_A);
   long nF = nf_get_degree(old_nf);
@@ -2540,34 +2541,42 @@ afuch_moreprec(GEN X, long inc)
   GEN basis_dontwant = alg_get_invbasis(new_A);
   GEN basis_change = QM_mul(basis_dontwant, basis_want);
   new_A = my_alg_changeorder(new_A, basis_change);/*Correct the basis to the old one*/
-  new_A = gerepileupto(av2, new_A);
+  new_A = gerepileupto(av, new_A);
   /*We have the new algebra*/
-  obj_insert(X, afuch_A, new_A);
+  gel(new_X, afuch_A) = new_A;
   GEN O = afuch_get_O(X);
   GEN AOconj = QM_mul(O, afuch_get_Oconj(X));
   GEN Onorm = Onorm_makemat(new_A, O, AOconj);
-  if (nF > 1) obj_insert(X, afuch_ONORMREAL, Onorm_toreal(new_A, Onorm));/*No need to store approximate if n=1.*/
+  if (nF > 1) gel(new_X, afuch_ONORMREAL) = Onorm_toreal(new_A, Onorm);/*No need to store approximate if n=1.*/
   GEN p = gtocr(gdat_get_p(old_gdat), new_prec);
   GEN gdat = gdat_initialize(p, new_prec);
   GEN kleinmats = afuch_make_kleinmats(new_A, O, p, new_prec);
-  obj_insert(X, afuch_KLEINMATS, kleinmats);
+  gel(new_X, afuch_KLEINMATS) = kleinmats;
   GEN qfm = afuch_make_qfmats(kleinmats);
   gel(qfm, 5) = gcopy(gel(afuch_get_qfmats(X), 5));/*This part was exact, so we can copy it over.*/
-  obj_insert(X, afuch_QFMATS, qfm);
-  obj_insert(X, afuch_GDAT, gdat);
-  obj_insert(X, afuch_FDOMDAT, afuchfdomdat_init(new_A, O, new_prec));
+  gel(new_X, afuch_QFMATS) = qfm;
+  gel(new_X, afuch_GDAT) = gdat;
+  gel(new_X, afuch_FDOMDAT) = afuchfdomdat_init(new_A, O, new_prec);
   GEN U = afuch_get_fdom(X);
-  if (U) {/*We must update the old fundamental domain stored.*/
+  if (!gequal0(U)) {/*We must update the old fundamental domain stored.*/
     GEN S = normbound_get_elts(U);/*Just recall normbound*/
-    U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
-    obj_insert(X, afuch_FDOM, U);
+    U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    gel(new_X, afuch_FDOM) = U;
+    GEN P = afuch_get_pres(X);
+    if (!gequal0(P)) {/*In theory, the call to normbasis could have changed the ordering of things.*/
+      P = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+      gel(new_X, afuch_PRES) = P;
+    }
   }
-  GEN P = afuch_get_pres(X);
-  if (P) {/*In theory, the call to normbasis could have changed the ordering of things.*/
-    P = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
-    obj_insert(X, afuch_PRES, P);
-  }
-  set_avma(av);
+  return new_X;
+}
+
+/*Increases the precision of X by inc * DEFAULTPREC, returning the new object.*/
+GEN
+afuchprecinc(GEN X, long inc)
+{
+  pari_sp av = avma;
+  return gerepilecopy(av, afuch_moreprec_shallow(X, inc));
 }
 
 /*Returns a vector v of pairs [A, B] such that O[,i] is sent to v[i] acting on the Klein model..*/
@@ -2679,38 +2688,17 @@ afuch_make_traceqf(GEN X, GEN nm, GEN Onorm)
   return gerepileupto(av, M);
 }
 
-/*Returns a new Fuchsian group with the same algebra and order, but a new type. This entry will point to some of the data on the heap for the original one, further enforcing the requirement that you do not access and change the components directly.*/
+/*Returns a new Fuchsian group with the same algebra and order, but a new type. Does not initialize presentation, even if it was in X.*/
 GEN
-afuch_newtype(GEN X, GEN type)
+afuchnewtype(GEN X, GEN type)
 {
   pari_sp av = avma;
-  GEN newX = obj_init(6, 11);
-  gel(newX, 1) = afuch_get_O(X);
-  gel(newX, 2) = afuch_get_Oinv(X);
-  gel(newX, 3) = afuch_get_Oconj(X);
-  gel(newX, 4) = afuch_get_Omultable(X);
-  gel(newX, 5) = afuch_get_Onormdat(X);
-  gel(newX, 6) = type;
-  obj_insert(newX, afuch_A, afuch_get_alg(X));
-  GEN Onormreal = afuch_get_Onormreal(X);
-  if (Onormreal) obj_insert(newX, afuch_ONORMREAL, Onormreal);
-  obj_insert(newX, afuch_KLEINMATS, afuch_get_kleinmats(X));
-  obj_insert(newX, afuch_QFMATS, afuch_get_qfmats(X));
-  obj_insert(newX, afuch_GDAT, afuch_get_gdat(X));
-  obj_insert(newX, afuch_FDOMDAT, obj_check(X, afuch_FDOMDAT));
-  GEN saved = afuch_get_savedelts(X);
-  if (saved) obj_insert(newX, afuch_SAVEDELTS, saved);
-  GEN NN = afuch_get_normalizernorms(X);
-  if (NN) obj_insert(newX, afuch_NORMALIZERNORMS, NN);
-  GEN U = afuch_get_fdom(X);
-  if (U) {
-    afuchfdom(newX);/*We already copied over the saved elts and normalizer norms, in case of type t_MAT.*/
-    GEN S = afuch_get_sig(X);
-    if (S) afuchsignature(newX);
-    GEN P = afuch_get_pres(X);
-    if (P) afuchpresentation(newX);
-  }
-  return gerepilecopy(av, newX);
+  GEN new_X = leafcopy(X);/*Initial copy.*/
+  gel(new_X, afuch_TYPE) = type;/*Change the type.*/
+  GEN U = afuch_get_fdom(new_X);
+  if (!U) return gerepilecopy(av, new_X);/*Super easy, no fundamental domain!*/
+  new_X = afuchmakefdom(new_X);/*We already copied over the saved elts and normalizer norms, in case of type t_MAT.*/
+  return gerepileupto(av, new_X);/*afuchmakefdom is stack clean.*/
 }
 
 /*Initializes a table to compute multiplication of elements written in terms of O's basis more efficiently.*/
@@ -2790,7 +2778,7 @@ Onorm_toreal(GEN A, GEN Onorm)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN CONSTANTS*/
 
-/*Returns the area of the fundamental domain of Q, computed to computeprec (Olevel is the output of algorderlevel(A, O, 1)). Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the theorem. We also submit the old precision since the loss of precision causes errors later.*/
+/*Returns the area of the fundamental domain of Q, computed to computeprec (Olevel is the output of algorderlevel(A, O, 1)). Assumes the order is Eichler; see Voight Theorem 39.1.8 to update for the general case. We also submit the old precision since the loss of precision causes errors later.*/
 static GEN
 afuchO1area(GEN A, GEN O, GEN Olevel_fact, long computeprec, long prec)
 {
@@ -2865,30 +2853,30 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
-/*Returns the algebra in X, which may have been computed to higher accuracy.*/
+/*Retrieves the algebra in X, which may have been computed to higher accuracy.*/
 GEN
 afuchalg(GEN X)
 {
   return gcopy(afuch_get_alg(X));
 }
 
-/*Returns the area of X.*/
+/*Retrieves the area of X.*/
 GEN
 afucharea(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   return gerepilecopy(av, normbound_get_area(U));
 }
 
-/*Returns the elements giving the side for the fundamental domain of X.*/
+/*Retrieves the elements giving the side for the fundamental domain of X.*/
 GEN
 afuchelts(GEN X)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN elts = normbound_get_elts(U);
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, elts);
@@ -2919,7 +2907,7 @@ afuchelttype(GEN X, GEN g)
 
 /*Computes the fundamental domain for O^1, DEBUGLEVEL allows extra input to be displayed. Returns NULL if precision too low. Can pass in a starting set. This is useful in case we do some computations then have too low precision, we don't lose the computations.*/
 static GEN
-afuchfdom_i(GEN X, GEN *startingset)
+afuchfdom_worker(GEN X, GEN *startingset)
 {
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
@@ -2934,7 +2922,7 @@ afuchfdom_i(GEN X, GEN *startingset)
   GEN passes = afuch_get_passes(X);/*Based on heuristics, we choose the number of points at each stage to expect to finish after this number of passes. Well, that would be true if the probability that we find a point that is there is 1, which it isn't since we are pruning.*/
   long N = 1 + itos(gceil(gdiv(gsqr(area), gmul(gmul(shiftr(twopi, 2), gsubgs(C, n)), passes))));/*Area^2/(8*Pi*(C-n)*#Passes)*/
   if (N < 3) N = 3;/*Make sure N>=2; I think it basically always should be, but this guarantees it.*/
-  if (DEBUGLEVEL > 0) pari_printf("Initial constants:\n   C=%P.8f\n   N=%d\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N - 1, R, area);
+  if (DEBUGLEVEL) pari_printf("Initial constants:\n   C=%P.8f\n   N=%d\n   R=%P.8f\nTarget Area: %P.8f\n\n", C, N - 1, R, area);
   pari_sp av_mid = avma;
   GEN firstelts = *startingset;
   if (!firstelts) {/*No starting set passed.*/
@@ -2947,12 +2935,12 @@ afuchfdom_i(GEN X, GEN *startingset)
   long pass = 0;
   for (;;) {
     pass++;
-    if (DEBUGLEVEL > 0) pari_printf("Pass %d with %d random points in the ball of radius %P.8f\n", pass, N - 1, R);
+    if (DEBUGLEVEL) pari_printf("Pass %d with %d random points in the ball of radius %P.8f\n", pass, N - 1, R);
     GEN elts = vectrunc_init(N);
     GEN oosides = nU ? normbound_get_infinite(U) : NULL;
     long noo = nU ? lg(oosides) - 1 : 0, i;
     if (noo) {/*Looking near infinite sides*/
-      if (DEBUGLEVEL > 0) pari_printf("%d infinite sides\n", noo);
+      if (DEBUGLEVEL) pari_printf("%d infinite sides\n", noo);
       long iside = 0;
       GEN Uvargs = normbound_get_vargs(U);
       for (i = 1; i < N; i++){
@@ -2984,45 +2972,43 @@ afuchfdom_i(GEN X, GEN *startingset)
         if (lg(found) > 1) vectrunc_append(elts, gel(found, 1));/*Found an element!*/
       }
     }
-    if (DEBUGLEVEL > 0) pari_printf("%d elements found\n", lg(elts) - 1);
+    if (DEBUGLEVEL) pari_printf("%d elements found\n", lg(elts) - 1);
     if (lg(elts) > 1) U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
     if (!U) {
       nU = 0;
-      if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has 0 sides\n\n");
+      if (DEBUGLEVEL) pari_printf("Current normalized basis has 0 sides\n\n");
       R = gadd(R, epsilon);/*Update R, maybe it was too small.*/
       gerepileall(av_mid, 1, &R);
       U = NULL;
       continue;
     }
     long newnU = lg(normbound_get_elts(U)) - 1;
-    if (DEBUGLEVEL > 0) pari_printf("Current normalized basis has %d sides\n\n", newnU);
+    if (DEBUGLEVEL) pari_printf("Current normalized basis has %d sides\n\n", newnU);
     GEN Uarea = normbound_get_area(U);
     if (gcmp(Uarea, areabound) < 0) break;/*Done*/
     if (pass > 1 && nU == newnU) R = gadd(R, epsilon);/*Updating R if we didn't change the number of sides.*/
     nU = newnU;
     if (gc_needed(av, 2)) {
-      if (DEBUGLEVEL > 0) pari_printf("Garbage collection.\n");
+      if (DEBUGLEVEL) pari_printf("Garbage collection.\n");
       gerepileall(av_mid, 2, &U, &R);
     }
   }
   return gerepileupto(av, U);
 }
 
-/*Computes and stores the fundamental domain, recomputing X to more accuracy if the precision is too low.*/
-void
-afuchfdom(GEN X)
+/*Computes the fundamental domain for X, returning the vector with it inserted. If type = 3, we also insert the saved elements. Increases precision if required.*/
+GEN
+afuchmakefdom(GEN X)
 {
   pari_sp av = avma;
-  GEN U = afuch_get_fdom(X);
-  if (U) return;/*We already have U!*/
   GEN Gtype = afuch_get_type(X);
   if (typ(Gtype) == t_MAT) {/*Subgroup between O^1 and N_{A^x}^+(O). Assume we have initialized the saved elements already.*/
-    afuchfdom_subgroup(X, Gtype);/*We put this computation in a separate function.*/
-    return;
+    return gerepilecopy(av, afuchfdom_subgroup(X, Gtype));/*We put this computation in a separate function.*/
   }
   if (typ(Gtype) != t_INT) pari_err_TYPE("Type should be 0, 1, 2, or 3", Gtype);
+  GEN new_X = leafcopy(X);/*For the new group.*/
   long type = itos(Gtype);
-  GEN allelts = afuch_get_savedelts(X);
+  GEN allelts = afuch_get_savedelts(new_X), U;
   if (allelts) {/*We already have a set of generators for everything, so just call normbasis on the appropriate thing.*/
     GEN S = gel(allelts, 1);/*Norm 1, incluced in everything*/
     switch (type) {
@@ -3033,19 +3019,19 @@ afuchfdom(GEN X)
       case 1:
         S = shallowconcat(S, gel(allelts, 2));
     }
-    U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
-    obj_insert(X, afuch_FDOM, U);
-    set_avma(av);
-    return;
+    U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
+    gel(new_X, afuch_FDOM) = U;
+    if (!gequal0(afuch_get_pres(new_X))) gel(new_X, afuch_PRES) = gen_0;/*If we computed a presentation, don't want to save it!*/
+    return gerepilecopy(av, new_X);
   }
   int precinc = 0;
   GEN startingset = NULL;
   for (;;) {
-    U = afuchfdom_i(X, &startingset);
+    U = afuchfdom_worker(new_X, &startingset);
     if (U) break;/*Success!*/
-    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
+    if (DEBUGLEVEL) pari_warn(warner, "Increasing precision");
     precinc = 1;
-    afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+    new_X = afuch_moreprec_shallow(new_X, 1);/*Increase the precision by 1.*/
     if (startingset) {/*We did find some elements, so we save them (after removing the 0's).*/
       long ls = lg(startingset), i;
       GEN newstart = vectrunc_init(ls);
@@ -3056,33 +3042,32 @@ afuchfdom(GEN X)
       startingset = newstart;
     }
   }
-  if (precinc && DEBUGLEVEL > 0) {
-    GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  if (precinc && DEBUGLEVEL) {
+    GEN tol = gdat_get_tol(afuch_get_gdat(new_X));
     pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
   }
   if (!type) {/*Looking for O^1 only.*/
-    obj_insert(X, afuch_FDOM, U);
-    set_avma(av);
-    return;
+    gel(new_X, afuch_FDOM) = U;
+    return gerepilecopy(av, new_X);
   }
-  if (DEBUGLEVEL > 0) pari_printf("Looking for elements of the appropriate norms.\n");
+  if (DEBUGLEVEL) pari_printf("Looking for elements of the appropriate norms.\n");
   precinc = 0;
   GEN O1elts = normbound_get_elts(U), newelts, S;
   for (;;) {
     int addprec = 0;
     switch (type) {
       case 1:
-        newelts = afuch_makeunitelts(X);
+        newelts = afuch_makeunitelts(new_X);
         if (!newelts) addprec = 1;
         else S = shallowconcat(O1elts, newelts);
         break;
       case 2:
-        newelts = afuch_makeALelts(X);
+        newelts = afuch_makeALelts(new_X);
         if (!newelts) addprec = 1;
         else S = shallowconcat(O1elts, shallowconcat1(newelts));
         break;
       case 3:/*case 3*/
-        newelts = afuch_makenormelts(X);
+        newelts = afuch_makenormelts(new_X);/*This also saves the normalizer norms in new_X*/
         if (!newelts) addprec = 1;
         else S = shallowconcat(O1elts, shallowconcat1(newelts));
         break;
@@ -3090,33 +3075,33 @@ afuchfdom(GEN X)
         S = cgetg(1, t_VEC);/*In case we input a bad type value.*/
     }
     if (!addprec) break;/*No precision increase required.*/
-    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
+    if (DEBUGLEVEL) pari_warn(warner, "Increasing precision");
     precinc = 1;
-    afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+    new_X = afuch_moreprec_shallow(new_X, 1);/*Increase the precision by 1.*/
   }
-  if (precinc && DEBUGLEVEL > 0) {
-    GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  if (precinc && DEBUGLEVEL) {
+    GEN tol = gdat_get_tol(afuch_get_gdat(new_X));
     pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
   }
-  U = normbasis(X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+  U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
   GEN elts = normbound_get_elts(U), kact = normbound_get_kact(U);
   long le = lg(elts), i;
   for (i = 1; i < le; i++) {/*Due to multiplication, we may have huge elements that can be cut down. We do this now.*/
     GEN den;
     gel(elts, i) = Q_primitive_part(gel(elts, i), &den);
-    if (den) gel(kact, i) = afuchtoklein(X, gel(elts, i));/*Recompute this way in case of precision mishaps.*/
+    if (den) gel(kact, i) = afuchtoklein(new_X, gel(elts, i));/*Recompute this way in case of precision mishaps.*/
   }
-  obj_insert(X, afuch_FDOM, U);
-  if (type == 3) obj_insert(X, afuch_SAVEDELTS, vec_prepend(newelts, O1elts));
-  set_avma(av);
+  gel(new_X, afuch_FDOM) = U;
+  if (type == 3) gel(new_X, afuch_SAVEDELTS) = vec_prepend(newelts, O1elts);
+  return gerepilecopy(av, new_X);
 }
 
-/*Does afuchfdom for matrix input.*/
-static void
+/*Does afuchfdom for matrix input, shallow method, no garbage collection.*/
+static GEN
 afuchfdom_subgroup(GEN X, GEN M)
 {
-  pari_sp av = avma;
-  GEN allelts = afuch_get_savedelts(X);
+  GEN new_X = leafcopy(X);
+  GEN allelts = afuch_get_savedelts(new_X);
   if (!allelts) pari_err(e_MISC, "You must compute the domain with type=3 first, then change the type.");
   M = FpM_image(M, gen_2);/*Reduce to generating set.*/
   long lM = lg(M);
@@ -3124,17 +3109,17 @@ afuchfdom_subgroup(GEN X, GEN M)
   GEN gens = cgetg(lM, t_VEC);
   long lS = lg(S), i, j;/*Should be the lg of a column of M.*/
   for (i = 1; i < lM; i++) {/*Multiply our elements to get the generator.*/
-    GEN elt = afuchid(X), col = gel(M, i);
+    GEN elt = afuchid(new_X), col = gel(M, i);
     for (j = 1; j < lS; j++) {
-      if (equali1(gel(col, j))) elt = afuchmul(X, elt, gel(S, j));
+      if (equali1(gel(col, j))) elt = afuchmul(new_X, elt, gel(S, j));
     }
     gel(gens, i) = elt;
   }
   gens = shallowconcat(gel(allelts, 1), gens);
-  GEN U = normbasis(X, NULL, gens, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
-  obj_insert(X, afuch_FDOM, U);
-  set_avma(av);
-  return;
+  GEN U = normbasis(new_X, NULL, gens, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
+  gel(new_X, afuch_FDOM) = U;
+  if (!gequal0(afuch_get_pres(new_X))) gel(new_X, afuch_PRES) = gen_0;/*If we computed a presentation, don't want to save it!*/
+  return new_X;
 }
 
 /*Finds the image of the root geodesic of g in the fundamental domain. The return is a vector of [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.*/
@@ -3144,7 +3129,7 @@ afuchgeodesic(GEN X, GEN g)
   pari_sp av = avma;
   GEN gdat = afuch_get_gdat(X);
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN O = afuch_get_O(X);
   int isO = !gequal1(O);
   if (isO) {/*Convert g to in O*/
@@ -3277,7 +3262,7 @@ afuchnormalizernorms(GEN X)
 {
   pari_sp av = avma;
   GEN NN = afuch_get_normalizernorms(X);
-  if (NN) return gcopy(NN);
+  if (!gequal0(NN)) return gcopy(NN);/*Already computed.*/
   GEN A = afuch_get_alg(X);
   GEN F = alg_get_center(A);
   long prec = afuch_get_prec(X);
@@ -3296,7 +3281,6 @@ afuchnormalizernorms(GEN X)
     }
   }
   GEN norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
-  obj_insert(X, afuch_NORMALIZERNORMS, norms);
   return gerepileupto(av, norms);
 }
 
@@ -3307,27 +3291,34 @@ afuchorder(GEN X)
   return gcopy(afuch_get_O(X));
 }
 
-/*Presentation*/
+/*Retrieves the presentation for X, if initialized*/
 GEN
 afuchpresentation(GEN X)
 {
   pari_sp av = avma;
   GEN pres = afuch_get_pres(X);
-  if (!pres) {
-    GEN U = afuch_get_fdom(X);
-    if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
-    pres = presentation(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
-    obj_insert(X, afuch_PRES, pres);
-  }
+  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN O = afuch_get_O(X);
-  if (gequal1(O)) return gerepileupto(av, pres);/*O=1, no conversion necessary.*/
-  GEN Opres = cgetg(4, t_VEC);
+  if (gequal1(O)) return gerepilecopy(av, vec_shorten(pres, 2));/*O=1, no conversion necessary. We also only return the first 2 components.*/
+  GEN Opres = cgetg(3, t_VEC);/*I doubt the user would care about pres[3], this is used internally in afuchword only.*/
   long lgen, i;
   gel(Opres, 1) = cgetg_copy(gel(pres, 1), &lgen);
   for (i = 1; i < lgen; i++) gmael(Opres, 1, i) = QM_QC_mul(O, gmael(pres, 1, i));
-  gel(Opres, 2) = gcopy(gel(pres, 2));
-  gel(Opres, 3) = gcopy(gel(pres, 3));
-  return gerepileupto(av, Opres);
+  gel(Opres, 2) = gel(pres, 2);
+  return gerepilecopy(av, Opres);
+}
+
+/*Stores the presentation, returning the updated X.*/
+GEN
+afuchmakepresentation(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  GEN new_X = leafcopy(X);
+  GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  gel(new_X, afuch_PRES) = pres;
+  return gerepilecopy(av, new_X);
 }
 
 /*Returns the sides of the fundamental domain.*/
@@ -3335,8 +3326,8 @@ GEN
 afuchsides(GEN X)
 {
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
-  GEN oldsides = normbound_get_sides(U);
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  GEN oldsides = normbound_get_sides(U);/*We chop off the components we don't need.*/
   long lo, i, j;
   GEN sides = cgetg_copy(oldsides, &lo);
   for (i = 1; i < lo; i++) {
@@ -3350,14 +3341,9 @@ afuchsides(GEN X)
 GEN
 afuchsignature(GEN X)
 {
-  pari_sp av = avma;
-  GEN sig = afuch_get_sig(X);/*Already computed.*/
-  if (sig) return sig;
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
-  sig = signature(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
-  obj_insert(X, afuch_SIG, sig);
-  return gerepileupto(av, sig);
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  return signature(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
 }
 
 /*Returns the side pairing for X.*/
@@ -3365,7 +3351,7 @@ GEN
 afuchspair(GEN X)
 {
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   return gcopy(normbound_get_spair(U));
 }
 
@@ -3375,13 +3361,9 @@ afuchword(GEN X, GEN g)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN P = afuch_get_pres(X);
-  if (!P) {
-    GEN pre = afuchpresentation(X);
-    cgiv(pre);
-    P = afuch_get_pres(X);/*The return value of afuchpresentation converts back to A from O, which we do not want.*/
-  }
+  if (!P) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
   GEN O = afuch_get_O(X);
   if (!gequal1(O)) {
     GEN Oinv = afuch_get_Oinv(X);
@@ -3395,7 +3377,7 @@ GEN
 afuchvertices(GEN X, int model)
 {
   GEN U = afuch_get_fdom(X);
-  if (!U) { afuchfdom(X); U = afuch_get_fdom(X); }
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN verts = normbound_get_vcors(U);
   if (!model) return gcopy(verts);
   GEN tol = gdat_get_tol(afuch_get_gdat(X));
@@ -3472,7 +3454,6 @@ afuch_makeALelts(GEN X)
 static GEN
 afuch_makenormelts(GEN X)
 {
-  pari_sp av = avma;
   GEN norms = afuch_get_normalizernorms(X);
   if (!norms) {/*Must make the norms.*/
     GEN A = afuch_get_alg(X);
@@ -3493,7 +3474,7 @@ afuch_makenormelts(GEN X)
       }
     }
     norms = normalizer_make_norms(B, algsplitoo(A), ramid, prec);
-    obj_insert(X, afuch_NORMALIZERNORMS, norms);
+    gel(X, afuch_NORMALIZERNORMS) = norms;/*Update the norms.*/
   }
   GEN norms1 = gel(norms, 1), norms2 = gel(norms, 2), norms3 = gel(norms, 3);/*Unit, then AL norms, then normalizer norms*/
   long lu, i;
@@ -3501,21 +3482,21 @@ afuch_makenormelts(GEN X)
   for (i = 1; i < lu; i++) {
     GEN attempt = afuchfindoneelt_i(X, gel(norms1, i), NULL);
     if (attempt) gel(elts1, i) = attempt;
-    else return gc_NULL(av);/*Precision too low.*/
+    else return NULL;/*Precision too low.*/
   }
   GEN elts2 = cgetg_copy(norms2, &lu);
   for (i = 1; i < lu; i++) {
     GEN attempt = afuchfindoneelt_i(X, gel(norms2, i), NULL);
     if (attempt) gel(elts2, i) = attempt;
-    else return gc_NULL(av);/*Precision too low.*/
+    else return NULL;/*Precision too low.*/
   }
   GEN elts3 = cgetg_copy(norms3, &lu);
   for (i = 1; i < lu; i++) {
     GEN attempt = afuchfindoneelt_i(X, gel(norms3, i), NULL);
     if (attempt) gel(elts3, i) = attempt;
-    else return gc_NULL(av);/*Precision too low.*/
+    else return NULL;/*Precision too low.*/
   }
-  return gerepilecopy(av, mkvec3(elts1, elts2, elts3));
+  return mkvec3(elts1, elts2, elts3);/*Do NOT copy, as we have stored the normalizer norms in X here.*/
 }
 
 /*
@@ -3907,7 +3888,7 @@ afuchfindelts(GEN X, GEN nm, GEN z, GEN C, long maxelts, GEN tracepart, GEN real
   GEN v;
   if (gequal1(nm)) v = fincke_pohst_prune(M, C, 1, prec);
   else v = fincke_pohst_prune(M, C, 0, prec);/*ONLY prune if norm is 1.*/
-  if(!v) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
+  if (!v) return gc_NULL(av);/*Occurs when the precision is too low. Return NULL and maybe recompute above.*/
   int nomax, ind = 1, lv = lg(v), i;
   if (maxelts) nomax = 0;
   else { nomax = 1; maxelts = 10; }
@@ -4028,13 +4009,12 @@ afuchfindoneelt(GEN X, GEN nm, GEN C)
   for (;;) {
     elt = afuchfindoneelt_i(X, nm, C);
     if (elt) break;/*Success!*/
-    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision");
-    precinc = 1;
-    afuch_moreprec(X, 1);/*Increase the precision by 1.*/
+    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision.");
+    precinc++;
+    X = gerepileupto(av, afuchprecinc(X, 1));/*Increase the precision by 1, cannot do this shallowly! We gerepile in case we need to do this a bunch.*/
   }
-  if (precinc && DEBUGLEVEL > 0) {
-    GEN tol = gdat_get_tol(afuch_get_gdat(X));
-    pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
+  if (precinc && DEBUGLEVEL) {
+    pari_warn(warner, "Precision increased by %ld, consider calling X = afuchprecinc(X, %ld) to avoid this in future calls.", precinc, precinc);
   }
   if (gequal1(O)) return gerepileupto(av, elt);
   return gerepileupto(av, QM_QC_mul(O, elt));
@@ -4540,6 +4520,7 @@ smallvectors_prune(GEN q, GEN C, GEN prune)
 
 
 /*SECTION 5: METHODS DELETED / NAME CHANGED FROM LIBPARI / DID NOT EXIST IN 2.15*/
+/*AUREL: All of these methods can be updated when integrating: either the function already exists (but not in 2.15), the function name was changed, or it will get an updated method (my_alg_changeorder)*/
 
 /*This function name was changed from qf_apply_RgM to qf_RgM_apply, so we copy paste it here so that it works in both 2.15 and 2.17.*/
 static GEN

@@ -1,6 +1,8 @@
 /*fdom.c methods*/
 
-enum {afuch_A = 1, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIG, afuch_PRES, afuch_SAVEDELTS, afuch_NORMALIZERNORMS};
+/*CONSTANTS*/
+/*Sets the ordering of the fundamental domain vector.*/
+enum {afuch_A = 1, afuch_O, afuch_OINV, afuch_OCONJ, afuch_OMULTABLE, afuch_ONORMDAT, afuch_TYPE, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_PRES, afuch_SAVEDELTS, afuch_NORMALIZERNORMS};
 
 /*INLINE SHALLOW RETRIEVAL METHODS*/
 
@@ -32,47 +34,45 @@ normbound_get_infinite(GEN U) { return gel(U, 9); }
 
 /*3: ARITHMETIC FUCHSIAN GROUPS*/
 INLINE GEN
-afuch_get_O(GEN X) { return gel(X, 1); }
+afuch_get_alg(GEN X) { return gel(X, afuch_A); }
 INLINE GEN
-afuch_get_Oinv(GEN X) { return gel(X, 2); }
+afuch_get_O(GEN X) { return gel(X, afuch_O); }
 INLINE GEN
-afuch_get_Oconj(GEN X) { return gel(X, 3); }
+afuch_get_Oinv(GEN X) { return gel(X, afuch_OINV); }
 INLINE GEN
-afuch_get_Omultable(GEN X) { return gel(X, 4); }
+afuch_get_Oconj(GEN X) { return gel(X, afuch_OCONJ); }
 INLINE GEN
-afuch_get_Onormdat(GEN X) { return gel(X, 5); }
+afuch_get_Omultable(GEN X) { return gel(X, afuch_OMULTABLE); }
 INLINE GEN
-afuch_get_type(GEN X) { return gel(X, 6); }
+afuch_get_Onormdat(GEN X) { return gel(X, afuch_ONORMDAT); }
 INLINE GEN
-afuch_get_alg(GEN X) { return obj_check(X, afuch_A); }
+afuch_get_type(GEN X) { return gel(X, afuch_TYPE); }
 INLINE GEN
-afuch_get_Onormreal(GEN X) { return obj_check(X, afuch_ONORMREAL); }
+afuch_get_Onormreal(GEN X) { return gel(X, afuch_ONORMREAL); }
 INLINE GEN
-afuch_get_kleinmats(GEN X) { return obj_check(X, afuch_KLEINMATS); }
+afuch_get_kleinmats(GEN X) { return gel(X, afuch_KLEINMATS); }
 INLINE GEN
-afuch_get_qfmats(GEN X) { return obj_check(X, afuch_QFMATS); }
+afuch_get_qfmats(GEN X) { return gel(X, afuch_QFMATS); }
 INLINE GEN
-afuch_get_gdat(GEN X) { return obj_check(X, afuch_GDAT); }
+afuch_get_gdat(GEN X) { return gel(X, afuch_GDAT); }
 INLINE GEN
-afuch_get_O1area(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 1) : NULL; }
+afuch_get_O1area(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 1); }
 INLINE GEN
-afuch_get_bestC(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 2) : NULL; }
+afuch_get_bestC(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 2); }
 INLINE GEN
-afuch_get_R(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 3) : NULL; }
+afuch_get_R(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 3); }
 INLINE GEN
-afuch_get_epsilon(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 4) : NULL; }
+afuch_get_epsilon(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 4); }
 INLINE GEN
-afuch_get_passes(GEN X) { GEN fdomdat = obj_check(X, afuch_FDOMDAT); return fdomdat? gel(fdomdat, 5) : NULL; }
+afuch_get_passes(GEN X) { GEN fdomdat = gel(X, afuch_FDOMDAT); return gel(fdomdat, 5); }
 INLINE GEN
-afuch_get_fdom(GEN X) { return obj_check(X, afuch_FDOM); }
+afuch_get_fdom(GEN X) { return gel(X, afuch_FDOM); }
 INLINE GEN
-afuch_get_sig(GEN X) { return obj_check(X, afuch_SIG); }
+afuch_get_pres(GEN X) { return gel(X, afuch_PRES); }
 INLINE GEN
-afuch_get_pres(GEN X) { return obj_check(X, afuch_PRES); }
+afuch_get_savedelts(GEN X) { return gel(X, afuch_SAVEDELTS); }
 INLINE GEN
-afuch_get_savedelts(GEN X) { return obj_check(X, afuch_SAVEDELTS); }
-INLINE GEN
-afuch_get_normalizernorms(GEN X) { return obj_check(X, afuch_NORMALIZERNORMS); }
+afuch_get_normalizernorms(GEN X) { return gel(X, afuch_NORMALIZERNORMS); }
 INLINE long
 afuch_get_prec(GEN X) { return realprec(gdat_get_tol(afuch_get_gdat(X))); }
 
@@ -100,20 +100,22 @@ GEN hdiscrandom(GEN R, long prec);
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
 GEN afuchinit(GEN A, GEN O, GEN type, int flag, long prec);
-GEN afuch_newtype(GEN X, GEN type);
-void afuch_changep(GEN X, GEN p);
+GEN afuchprecinc(GEN X, long inc);
+GEN afuchnewtype(GEN X, GEN type);
+GEN afuchchangep(GEN X, GEN p);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchalg(GEN X);
 GEN afucharea(GEN X);
 GEN afuchelts(GEN X);
 int afuchelttype(GEN X, GEN g);
-void afuchfdom(GEN X);
+GEN afuchmakefdom(GEN X);
 GEN afuchgeodesic(GEN X, GEN g);
 GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
 GEN afuchnormalizernorms(GEN X);
 GEN afuchorder(GEN X);
 GEN afuchpresentation(GEN X);
+GEN afuchmakepresentation(GEN X);
 GEN afuchsides(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchspair(GEN X);
