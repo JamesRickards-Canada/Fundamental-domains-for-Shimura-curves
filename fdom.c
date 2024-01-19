@@ -4233,14 +4233,14 @@ algorderalgtoorder(GEN A, GEN Oalg)
   return M;
 }
 
-/*Given an order O as a matrix of columns who generate the order, returns a vector of the columns in algebraic form. This is useful to save an order as being basis-independant (e.g. if you recompute the algebra A, you may change the chosen maximal order).*/
+/*Given an order O as a matrix of columns who generate the order, returns a vector of the columns in algebraic form. This is useful to save an order as being basis-independant (e.g. if you recompute the algebra A, the computed maximal order may change).*/
 GEN
 algordertoorderalg(GEN A, GEN O)
 {
   pari_sp av = avma;
   long lO = lg(O), i;
   GEN v = cgetg(lO, t_VEC);
-  for (i = 1; i < lO; i++) gel(v, i) = lift(algbasistoalg(A, gel(O, i)));
+  for (i = 1; i < lO; i++) gel(v, i) = liftall(algbasistoalg(A, gel(O, i)));
   return gerepilecopy(av, v);
 }
 
