@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchnewp, afuchnewtype, afuchprecinc.\nafuchalg, afucharea, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchmakepresentation, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchmakepresentation, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
 parigp_version = version();
 fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
@@ -19,8 +19,8 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(afuchnewp,"afuchnewp(X, p): returns the Fuchsian group with the changed the value of p, i.e. what is sent to 0 under the map from the upper half plane to the unit disc/Klein model. We also recompute the fundamental domain and presentation if they were initialized.");
   install(afuchnewtype,"GG");
   addhelp(afuchnewtype,"afuchnewtype(X, type): returns a the Fuchsian group X but we change the type. If the fundamental domain was already computed with type=3, this is very efficient, as we do not have to search for new generators. In order to input a subgroup Gamma between O^1 and N_{A^x}^+(O), consider S=concat(afuchnormalizernorms(X)). We know that N_{A^x}^+(O)/O^1=(Z/2Z)^#S, with norms of generators corresponding to the entries of S. A subgroup of this can be specified by a matrix with #S rows, where each column consists of 0's/1's, indicating the generating set of the subgroup. Thus the 0 matrix gets you O^1, and any matrix with rank #S gets the full positive normalizer. We do not initialize the presentation, even if it was computed for X.");
-  install(afuchprecinc,"GD1,L,");
-  addhelp(afuchprecinc,"afuchprecinc(X, inc=1): returns the Fuchsian group X with precision increased by inc steps, i.e. inc*DEFAULTPREC more precision.");
+  install(afuchmoreprec,"GD1,L,");
+  addhelp(afuchmoreprec,"afuchmoreprec(X, inc=1): returns the Fuchsian group X with precision increased by inc steps, i.e. inc*DEFAULTPREC more precision.");
 
   /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
   install(afuchalg,"G");

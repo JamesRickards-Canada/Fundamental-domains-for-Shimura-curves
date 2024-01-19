@@ -2573,7 +2573,7 @@ afuch_moreprec_shallow(GEN X, long inc)
 
 /*Increases the precision of X by inc * DEFAULTPREC, returning the new object.*/
 GEN
-afuchprecinc(GEN X, long inc)
+afuchmoreprec(GEN X, long inc)
 {
   pari_sp av = avma;
   return gerepilecopy(av, afuch_moreprec_shallow(X, inc));
@@ -4011,10 +4011,10 @@ afuchfindoneelt(GEN X, GEN nm, GEN C)
     if (elt) break;/*Success!*/
     if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision.");
     precinc++;
-    X = gerepileupto(av, afuchprecinc(X, 1));/*Increase the precision by 1, cannot do this shallowly! We gerepile in case we need to do this a bunch.*/
+    X = gerepileupto(av, afuchmoreprec(X, 1));/*Increase the precision by 1, cannot do this shallowly! We gerepile in case we need to do this a bunch.*/
   }
   if (precinc && DEBUGLEVEL) {
-    pari_warn(warner, "Precision increased by %ld, consider calling X = afuchprecinc(X, %ld) to avoid this in future calls.", precinc, precinc);
+    pari_warn(warner, "Precision increased by %ld, consider calling X = afuchmoreprec(X, %ld) to avoid this in future calls.", precinc, precinc);
   }
   if (gequal1(O)) return gerepileupto(av, elt);
   return gerepileupto(av, QM_QC_mul(O, elt));

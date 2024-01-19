@@ -108,7 +108,7 @@ GEN hdiscrandom(GEN R, long prec);
 
 /*3: INITIALIZE SYMMETRIC SPACE*/
 GEN afuchinit(GEN A, GEN O, GEN type, int flag, long prec);
-GEN afuchprecinc(GEN X, long inc);
+GEN afuchmoreprec(GEN X, long inc);
 GEN afuchnewp(GEN X, GEN p);
 GEN afuchnewtype(GEN X, GEN type);
 
