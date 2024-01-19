@@ -112,3 +112,5 @@ Xm2 = afuchnewtype(X3, [1,0,0;0,1,0;0,0,1;0,0,1]);
 print(afuchsignature(Xm2));
 Xm3 = afuchnewtype(X3, [1;1;1;1]);
 print(afuchsignature(Xm3));
+Xm4 = afuchnewtype(X3, [1,0;0,2;3,4;-1,-1]);
+print(afuchsignature(Xm4));

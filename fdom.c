@@ -3103,7 +3103,7 @@ afuchfdom_subgroup(GEN X, GEN M)
   GEN new_X = leafcopy(X);
   GEN allelts = afuch_get_savedelts(new_X);
   if (gequal0(allelts)) pari_err(e_MISC, "You must compute the domain with type=3 first, then change the type.");
-  M = FpM_image(M, gen_2);/*Reduce to generating set.*/
+  M = FpM_image(FpM_red(M, gen_2), gen_2);/*Reduce to generating set, must reduce M mod 2 first!*/
   long lM = lg(M);
   GEN S = shallowconcat(shallowconcat(gel(allelts, 2), gel(allelts, 3)), gel(allelts, 4));/*Concat for convenience.*/
   GEN gens = cgetg(lM, t_VEC);
