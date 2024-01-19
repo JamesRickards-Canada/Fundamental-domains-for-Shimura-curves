@@ -2480,7 +2480,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
 
 /*Returns a new X with the new value of p.*/
 GEN
-afuchchangep(GEN X, GEN p)
+afuchnewp(GEN X, GEN p)
 {
   pari_sp av = avma;
   GEN new_X = leafcopy(X);/*Initial shallow copy.*/
