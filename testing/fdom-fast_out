@@ -35,4 +35,4 @@ Mat(4)
 [9, 0; 0, 9]
 [4, Vecsmall([4, 4]), 0]
 9
-Total time spent: 7397
+Total time spent: 200
