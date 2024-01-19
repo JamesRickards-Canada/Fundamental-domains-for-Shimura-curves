@@ -1,7 +1,7 @@
 print("\n\nType '?fdom' for help.\n\n");
 addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchchangep, afuchnewtype, afuchprecinc.\nafuchalg, afucharea, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchmakepresentation, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
-parigp_version=version();
-fdom_library=strprintf("./libfdom-%d-%d.so", parigp_version[1], parigp_version[2]);
+parigp_version = version();
+fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
 /*fdom.c*/
 

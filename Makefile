@@ -17,7 +17,7 @@ PARI_LIB = $(shell grep "libdir=" "$(PARI_CFG)" -s | cut -d"'" -f2)
 PARI_INCLUDE = $(shell grep "includedir=" "$(PARI_CFG)" -s | cut -d"'" -f2)/pari
 
 #Naming the library file to include the version of pari/gp.
-VER = $(shell grep "pari_release=" "$(PARI_CFG)" -s | cut -d"'" -f2 | tr . - | cut -d"-" -f1,2)
+VER = $(shell grep "pari_release=" "$(PARI_CFG)" -s | cut -d"'" -f2 | tr . - | cut -d"-" -f1,2,3)
 DYN = lib$(TARGET)-$(VER).so
 
 #Compiling options
