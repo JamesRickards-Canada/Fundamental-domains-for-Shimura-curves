@@ -60,7 +60,7 @@ wrln
 wrln "+++$B Total bench time is $time ms"
 
 #No bugs?
-if test -z "$pat"; then exit 0; fi
+if test -z "$pat"; then wrln "All tests passed!"; exit 0; fi
 
 #Inform the user of bugs found
 wrln
