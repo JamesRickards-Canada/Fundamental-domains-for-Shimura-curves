@@ -158,12 +158,10 @@ static GEN afuch_makenormelts(GEN X);
 static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
-static GEN afuchconj(GEN X, GEN g);
 static GEN afuchid(GEN X);
 static int afuchinnormalizer(GEN X, GEN g);
 static int afuchisparabolic(GEN X, GEN g);
 static int afuchistriv(GEN X, GEN g);
-static GEN afuchmul(GEN X, GEN g1, GEN g2);
 static GEN afuchnorm_fast(GEN X, GEN g);
 static GEN afuchnorm_chol(GEN F, GEN chol, GEN g);
 static GEN afuchnorm_mat(GEN F, GEN Onorm, GEN g);
@@ -3691,7 +3689,7 @@ normalizer_make_norms(GEN B, long split, GEN ideals, long prec)
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 
 /*Conjugation formatted for the input of an afuch, for use in the geometry section. Since we work in O, entries are all in Z. We use this in place of alginv as well, to avoid a potential costly scaling.*/
-static GEN
+GEN
 afuchconj(GEN X, GEN g)
 {
   return ZM_ZC_mul(afuch_get_Oconj(X), g);
@@ -3747,7 +3745,7 @@ afuchistriv(GEN X, GEN g)
 }
 
 /*algmul for elements of O written in terms of the basis of O.*/
-static GEN
+GEN
 afuchmul(GEN X, GEN g1, GEN g2)
 {
   pari_sp av = avma;

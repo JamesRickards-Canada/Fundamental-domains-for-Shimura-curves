@@ -134,6 +134,10 @@ GEN afuchvertices(GEN X, int model);
 GEN bnf_make_unitnorms(GEN B, long split, long prec);
 GEN normalizer_make_norms(GEN B, long split, GEN ideals, long prec);
 
+/*3: ALGEBRA BASIC AUXILLARY METHODS*/
+GEN afuchconj(GEN X, GEN g);
+GEN afuchmul(GEN X, GEN g1, GEN g2);
+
 /*3: FINDING ELEMENTS*/
 GEN afuchfindoneelt(GEN X, GEN nm, GEN C);
 
@@ -173,5 +177,6 @@ void fdomviewer(char *input);
 /*SECTION 2: EICHLER ORDERS*/
 GEN algeichlerorder(GEN A, GEN I);
 
-/*SECTION 3: TUNING*/
+/*SECTION 3: TESTING AND TUNING*/
+long afuchcheck(GEN X);
 GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);

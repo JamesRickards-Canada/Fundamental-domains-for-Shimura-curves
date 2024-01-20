@@ -9,8 +9,9 @@
 
 /*SECTION 1: VISUALIZATION*/
 /*SECTION 2: EICHLER ORDERS*/
-/*SECTION 3: TUNING*/
-
+/*SECTION 3: TESTING AND TUNING*/
+static int alg_in_centre(GEN A, GEN g);
+static GEN afuchmulvec(GEN X, GEN G, GEN L);
 
 /*MAIN BODY*/
 
@@ -272,7 +273,112 @@ algeichlerorder(GEN A, GEN I)
 }
 
 
-/*SECTION 3: TUNING*/
+/*SECTION 3: TESTING AND TUNING*/
+
+/*Runs a series of checks on X with the fundamental domain and presentation initialized. Returns 0 if all passed, and something non-zero else. These return codes are:
+  1: signature area formula does not match computed area;
+  2: presentation has wrong number of generators;
+  3: presentation has wrong number of relations;
+  4: one of the relations fails;
+  5: one of the side pairing element relations fails;
+  6: afuchfdomword fails on a random element (15 tested).
+*/
+long
+afuchcheck(GEN X)
+{
+  pari_sp av = avma;
+  GEN pres = afuch_get_pres(X);
+  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
+  long prec = afuch_get_prec(X);
+  GEN sig = afuchsignature(X);
+  long genus = itos(gel(sig, 1)), npar = itos(gel(sig, 3));
+  GEN asig = stoi(((genus - 1) << 1) + npar);/*2g-2 + e_oo*/
+  long i, nell = lg(gel(sig, 2)) - 1;
+  for (i = 1; i <= nell; i++) asig = gadd(asig, mkfracss(gel(sig, 2)[i] - 1, gel(sig, 2)[i]));/*Add 1-1/e_i*/
+  asig = gmul(asig, Pi2n(1, prec));
+  GEN aX = normbound_get_area(afuch_get_fdom(X));
+  GEN diff = gabs(gsub(asig, aX), prec);
+  if (gcmp(diff, real2n(-16, prec)) > 0) return gc_long(av, 1);/*Area not within 2^-16 of signature formula.*/
+  
+  long ngens = (genus << 1) + nell + npar;/*Generators corresponding to signature*/
+  if (nell || npar) ngens--;/*Can eliminate one if there is at least one elliptic or parabolic cycle.*/
+  GEN gens = gel(pres, 1), rels = gel(pres, 2);/*Minimal set of generators and the relations.*/
+  if (ngens + 1 != lg(gens)) return gc_long(av, 2);/*Wrong number of generators.*/
+  
+  long nrel;
+  if (nell) nrel = nell;/*If there are elliptic cycles, then their count is the number of relations.*/
+  else {
+    if (npar) nrel = 0;/*No elliptic cycles, but parabolic cycles. No relations.*/
+    else nrel = 1;/*No elliptic cycles or parabolic cycles. One relation.*/
+  }
+  if (nrel + 1 != lg(rels)) return gc_long(av, 3);/*Wrong number of relations.*/
+  
+  GEN A = afuch_get_alg(X), O = afuch_get_O(X);
+  for (i = 1; i <= nrel; i++) {/*Check the relations actually work.*/
+    GEN g = afuchmulvec(X, gens, gel(rels, i));
+    if (!gequal1(O)) g = QM_QC_mul(O, g);/*Move to base field if required.*/
+    if (!alg_in_centre(A, g)) return gc_long(av, 4);/*Relation fails.*/
+  }
+  
+  GEN fdomelts = afuchelts(X);/*Get the side pairing elements in terms of A, not the order.*/
+  long nfdomelts = lg(fdomelts) - 1;
+  GEN fdomwords = gel(pres, 3);/*fdomelts as words in gens*/
+  for (i = 1; i <= nfdomelts; i++) {/*Check that the claimed expressions for these elements are valid.*/
+    GEN g = afuchmulvec(X, gens, gel(fdomwords, i));
+    if (!gequal1(O)) g = QM_QC_mul(O, g);/*Move to base field if required.*/
+    g = algmul(A, g, alginv(A, gel(fdomelts, i)));
+    if (!alg_in_centre(A, g)) return gc_long(av, 5);/*Expression for side pairing element fails.*/
+  }
+  
+  long wordtries;
+  for (wordtries = 1; wordtries <= 15; wordtries++) {/*Try a random element.*/
+    long lword = 6 + random_Fl(15);
+    GEN tomul = cgetg(lword, t_VECSMALL);
+    for (i = 1; i < lword; i++) {
+      tomul[i] = random_Fl(nfdomelts) + 1;
+      if (random_Fl(2)) tomul[i] = -tomul[i];/*Invert some elements.*/
+    }
+    GEN g = algmulvec(A, fdomelts, tomul);
+    GEN word = afuchword(X, g);
+    GEN gword = afuchmulvec(X, gens, word);
+    if (!gequal1(O)) gword = QM_QC_mul(O, gword);/*Move to base field if required.*/
+    GEN diff = algmul(A, g, alginv(A, gword));
+    if (!alg_in_centre(A, diff)) return gc_long(av, 6);/*Expressing a random element as a word failed.*/
+  }
+  
+  return gc_long(av, 0);
+}
+
+/*Returns 1 iff g is in the centre of A, i.e. the base number field.*/
+static int
+alg_in_centre(GEN A, GEN g)
+{
+  pari_sp av = avma;
+  GEN x;
+  if (typ(g) == t_COL) x = algbasisto1ijk(A, g);
+  else x = algalgto1ijk(A, g);
+  long i;
+  for (i = 2; i <= 4; i++) if (!gequal0(gel(x, i))) return gc_int(av, 0);/*i,j,k component not 0 menas not in centre.*/
+  return gc_int(av, 1);
+}
+
+/*Returns G[L[1]]*G[L[2]]*...*G[L[n]], where L is a vecsmall. We use the faster multiplication afforded by X, and assume the G elements are written in terms of the basis O in X. Rather than inverses, we use the conjugates.*/
+static GEN
+afuchmulvec(GEN X, GEN G, GEN L)
+{
+  pari_sp av = avma;
+  GEN g;
+  if (L[1] > 0) g = gel(G, L[1]);
+  else g = afuchconj(X, gel(G, -L[1]));
+  long lL = lg(L), i;
+  for (i = 2; i < lL; i++) {
+    GEN g1;
+    if (L[i] > 0) g1 = gel(G, L[i]);
+    else g1 = afuchconj(X, gel(G, -L[i]));
+    g = afuchmul(X, g, g1);
+  }
+  return gerepileupto(av, g);
+}
 
 /*We have pre-stored algebras of degree n in "testing/fdom_Cn.dat". We compute the time to compute the fundamental domains of the algebras, where each test is repeated testsperalg times, with the range of C_n's. We only have tests for 1<=n<=9, as algebras with n>=10 are too big to compute very quickly.*/
 GEN
