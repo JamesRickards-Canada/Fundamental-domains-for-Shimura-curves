@@ -14,7 +14,7 @@ testalgfdom(L) = {
       print(S);/*Invariant.*/
       X = afuchmakepresentation(X);
       P = afuchpresentation(X);
-      g = algmulvec(A, elts, vector(5 + random(15), k, (2*random(2) - 1)*(random(#elts) + 1)));/*Random norm 1 element.*/
+      g = algmulvec(A, elts, vector(5 + random(15), k, (2*random(2) - 1)*(random(#elts) + 1)));/*Random element.*/
       word = afuchword(X, g);
       newg = algmulvec(A, P[1], word);
       if(newg == g || newg == -g, print("Passed word test"), print("Failed word test"));
