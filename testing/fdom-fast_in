@@ -1,7 +1,7 @@
 \r fdom;
 
 testalgfdom(L) = {
-  my(F, A, X, elts, S, P, g, word, newg);
+  my(F, A, X, S);
   for (i = 1, #L,
     for (j = 1, #L[i][1],
       F = nfinit(L[i][1][j]);
@@ -9,17 +9,23 @@ testalgfdom(L) = {
       X = afuchinit(A, , , 1);
       if (j == 1, X = afuchnewp(X, random(1.) + random(1.) * I));
       if ((i + j) % 3 == 0, X = afuchmoreprec(X, random(4) + 1));
-      elts = afuchelts(X);
       S = afuchsignature(X);
       print(S);/*Invariant.*/
       X = afuchmakepresentation(X);
-      P = afuchpresentation(X);
-      g = algmulvec(A, elts, vector(5 + random(15), k, (2*random(2) - 1)*(random(#elts) + 1)));/*Random element.*/
-      word = afuchword(X, g);
-      newg = algmulvec(A, P[1], word);
-      if(newg == g || newg == -g, print("Passed word test"), print("Failed word test"));
+      onealgcheck(X);
     );
   );
+}
+
+onealgcheck(X) = {
+  my(ch);
+  ch = afuchcheck(X);
+  if (ch == 1, print("Signature area formula does not match computed area"));
+  if (ch == 2, print("Presentation has wrong number of generators"));
+  if (ch == 3, print("Presentation has wrong number of relations"));
+  if (ch == 4, print("One of the relations fails"));
+  if (ch == 5, print("One of the side pairing element relations fails"));
+  if (ch == 6, print("afuchfdomword fails on a random element (15 tested)"));
 }
 
 As=vector(3);/*Various algebras*/
@@ -41,8 +47,7 @@ X = afuchmoreprec(X, 3);
 X = afuchnewp(X, Pi + 0.5119*I);
 print(afuchsignature(X));
 X = afuchmakepresentation(X);
-P = afuchpresentation(X);
-print(length(P[1]));
+onealgcheck(X);
 
 O1bas = [[1, 0]~, [97*x, 0]~, [57*x + 1/2, 1/2]~, [265/4*x, 1/4*x]~];/*Level 97*/
 O1 = algorderalgtoorder(A, O1bas);
@@ -51,8 +56,7 @@ print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
 X = afuchmakepresentation(X);
-P = afuchpresentation(X);
-print(length(P[1]));
+onealgcheck(X);
 
 A = alginit(F, [3, -1]);/*Ramified at 2, 3*/
 
@@ -63,8 +67,7 @@ print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
 X = afuchmakepresentation(X);
-P = afuchpresentation(X);
-print(length(P[1]));
+onealgcheck(X);
 
 A = alginit(F, [105, -8]);/*Ramified at 5, 7*/
 
@@ -77,8 +80,7 @@ X = afuchnewp(X, -1 + sqrt(3)*I);
 print(afuchsignature(X));
 X = afuchmakepresentation(X);
 X = afuchmoreprec(X, 1);
-P = afuchpresentation(X);
-print(length(P[1]));
+onealgcheck(X);
 
 F = nfinit(y^2 - 2);
 A = alginit(F,  [-7*y + 1, -15*y + 17]);/*Ramified at the prime above 2*/
@@ -90,8 +92,7 @@ print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
 print(afuchsignature(X));
 X = afuchmakepresentation(X);
-P = afuchpresentation(X);
-print(length(P[1]));
+onealgcheck(X);
 
 F = nfinit(y^2-3);
 A = alginit(F, [-7*y + 2, -551*y - 720]);/*Ramified at places above 2, 3, 23.*/
@@ -101,21 +102,29 @@ if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X3 = afuchinit(A, O1, 3, 1);
 print(afuchsignature(X3));
+X3 = afuchmakepresentation(X3);
+onealgcheck(X3);
 X1 = afuchnewtype(X3, 1);
 print(afuchsignature(X1));
+X1 = afuchmakepresentation(X1);
+onealgcheck(X1);
 X0 = afuchnewtype(X1, 0);
 print(afuchsignature(X0));
+X0 = afuchmakepresentation(X0);
+onealgcheck(X0);
 Xm1 = afuchnewtype(X3, [1,0;0,0;1,0;1,1]);
 print(afuchsignature(Xm1));
 Xm1 = afuchmakepresentation(Xm1);
-P = afuchpresentation(Xm1);
-print(length(P[1]));
+onealgcheck(Xm1);
 Xm2 = afuchnewtype(X3, [1,0,0;0,1,0;0,0,1;0,0,1]);
 print(afuchsignature(Xm2));
+Xm2 = afuchmakepresentation(Xm2);
+onealgcheck(Xm2);
 Xm3 = afuchnewtype(X3, [1;1;1;1]);
 print(afuchsignature(Xm3));
 Xm3 = afuchmakepresentation(Xm3);
-P = afuchpresentation(Xm3);
-print(length(P[1]));
+onealgcheck(Xm3);
 Xm4 = afuchnewtype(X3, [1,0;0,2;3,4;-1,-1]);
 print(afuchsignature(Xm4));
+Xm4 = afuchmakepresentation(Xm4);
+onealgcheck(Xm4);

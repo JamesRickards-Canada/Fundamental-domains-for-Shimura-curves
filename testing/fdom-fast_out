@@ -5,45 +5,30 @@ Type '?fdom' for help.
 
   ***   Warning: new stack size = 4096000000 (3906.250 Mbytes).
 [0, Vecsmall([2, 3]), 1]
-Passed word test
 [0, Vecsmall([2, 2, 3, 3]), 0]
-Passed word test
 [4, Vecsmall([]), 0]
-Passed word test
 [9, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2]), 0]
-Passed word test
 [8, Vecsmall([]), 0]
-Passed word test
 [2, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 3]), 0]
-Passed word test
 [1, Vecsmall([9, 9]), 0]
-Passed word test
 [3, Vecsmall([2, 2, 2, 2]), 0]
-Passed word test
 Mat(5)
 [0, Vecsmall([2, 2]), 2]
-3
 Mat(97)
 [7, Vecsmall([2, 2, 3, 3]), 2]
-19
 Mat(37)
 [5, Vecsmall([2, 2, 2, 2, 3, 3, 3, 3]), 0]
-17
 Mat(4)
 [13, Vecsmall([]), 0]
-26
 [9, 0; 0, 9]
 [4, Vecsmall([4, 4]), 0]
-9
 [11, 6; 0, 1]
 [1, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]), 0]
 [23, Vecsmall([]), 0]
 [45, Vecsmall([]), 0]
 [11, Vecsmall([2, 2, 2, 2]), 0]
-25
 [3, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]), 0]
 [17, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2
 , 2, 2, 2]), 0]
-57
 [11, Vecsmall([2, 2, 2, 2]), 0]
 Total time spent: 200
