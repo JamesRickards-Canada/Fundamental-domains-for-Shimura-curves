@@ -1,7 +1,7 @@
 \r fdom;
 
 testalgfdom(L) = {
-  my(F, A, X, elts, S, P, g, word, newword);
+  my(F, A, X, elts, S, P, g, word, newg);
   for (i = 1, #L,
     for (j = 1, #L[i][1],
       F = nfinit(L[i][1][j]);
@@ -18,7 +18,6 @@ testalgfdom(L) = {
       word = afuchword(X, g);
       newg = algmulvec(A, P[1], word);
       if(newg == g || newg == -g, print("Passed word test"), print("Failed word test"));
-      /*if(algelttype(A, g)==1,geod=algfdomrootgeodesic(g, U));/*No error should be raised if this works.*/
     );
   );
 }

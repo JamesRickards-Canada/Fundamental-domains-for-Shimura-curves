@@ -5,40 +5,26 @@ Type '?fdom' for help.
 
   ***   Warning: new stack size = 4096000000 (3906.250 Mbytes).
 [0, Vecsmall([2, 3]), 1]
-Passed word test
 [0, Vecsmall([2, 2, 3, 3]), 0]
-Passed word test
 [4, Vecsmall([]), 0]
-Passed word test
 [9, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2]), 0]
-Passed word test
 [16, Vecsmall([]), 0]
-Passed word test
 [8, Vecsmall([]), 0]
-Passed word test
 [2, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 3]), 0]
-Passed word test
 [12, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3]),
  0]
-Passed word test
 [1, Vecsmall([9, 9]), 0]
-Passed word test
 [3, Vecsmall([2, 2, 2, 2]), 0]
-Passed word test
 [4, Vecsmall([2, 2]), 0]
-Passed word test
 [3, Vecsmall([3, 3, 3, 3, 3, 3]), 0]
-Passed word test
 [5, Vecsmall([3, 3, 3, 3, 3, 3, 3, 3, 5, 5]), 0]
-Passed word test
 [10, Vecsmall([]), 0]
-Passed word test
 [5, Vecsmall([3, 3, 3, 3]), 0]
-Passed word test
 [9, Vecsmall([3, 3, 3, 3]), 0]
-Passed word test
 [2, Vecsmall([3, 3, 5, 5]), 0]
-Passed word test
+[0, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]), 0]
+[4, Vecsmall([2, 2, 2, 2, 2, 4, 4]), 0]
+[0, Vecsmall([2, 2, 2, 2, 2, 2, 2, 2, 2, 2]), 0]
 Mat(5)
 [0, Vecsmall([2, 2]), 2]
 3

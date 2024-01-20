@@ -3297,7 +3297,7 @@ afuchpresentation(GEN X)
 {
   pari_sp av = avma;
   GEN pres = afuch_get_pres(X);
-  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, vec_shorten(pres, 2));/*O=1, no conversion necessary. We also only return the first 2 components.*/
   GEN Opres = cgetg(3, t_VEC);/*I doubt the user would care about pres[3], this is used internally in afuchword only.*/
@@ -3367,8 +3367,9 @@ afuchword(GEN X, GEN g)
   GEN O = afuch_get_O(X);
   if (!gequal1(O)) {
     GEN Oinv = afuch_get_Oinv(X);
-    g = QM_QC_mul(Oinv, g);/*Convert to in O.*/
+    g = QM_QC_mul(Oinv, g);/*Convert to in O's basis.*/
   }
+  g = Q_primpart(g);/*Scaling to make sure we land inside O.*/
   return gerepileupto(av, word(X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X)));
 }
 
