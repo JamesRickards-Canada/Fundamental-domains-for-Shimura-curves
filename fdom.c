@@ -2141,7 +2141,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
   if (naccident > 1) {/*More than one relation. We go through the relations, updating r by solving for elements it has in common in another relation.*/
     ngens = ngens - naccident + 1;/*Updating the number of generators.*/
     long lastrel = ellind - 1;/*The last relation we consider. We swap this with the relation we find every step and decrease it, so we only need to consider relations from accind+1 to lastrel at each step.*/
-    long indrep=1, torep;/*indrep stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement. No collapsing occurs, since each index and its inverse appear at most once in the relations (and cannot disappear, unless we cancel them).*/
+    long indrep = 1, torep;/*indrep stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement. No collapsing occurs, since each index and its inverse appear at most once in the relations (and cannot disappear, unless we cancel them).*/
     GEN repind = gen_0, cycle;/*repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.*/
     /*Now we look for a common term.*/
     for (i = 1; i < naccident; i++) {/*Each step we solve the relation.*/
@@ -2159,7 +2159,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
             if (torep > 0) H[torep] = 0;/*Make sure it has been deleted from H.*/
             else H[mtorep] = 0;
             repind = mkvecsmall3(j, l, m);
-            l = lastrel+1;/*Break loop*/
+            l = lastrel + 1;/*Break loop*/
             j = lr;/*Break loop*/
             break;/*Break loop*/
           }
@@ -3252,6 +3252,16 @@ nextsub(GEN S, long n)
     cur--;
   }
   return 0;
+}
+
+/*Returns [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m. It is returned with the types sorted, i.e. parabolic cycles first, then accidental, then elliptic.*/
+GEN
+afuchminimalcycles(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  return gerepileupto(av, minimalcycles_bytype(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv));
 }
 
 /*Possible norms of normalizer elements.*/

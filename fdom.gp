@@ -39,6 +39,8 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(afuchmakefdom,"afuchmakefdom(X): returns X with the fundamental domain computed.");
   install(afuchmakepresentation,"G");
   addhelp(afuchmakepresentation,"afuchmakepresentation(X): returns X with the presentation P computed. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A.");
+  install(afuchminimalcycles,"G");
+  addhelp(afuchminimalcycles,"afuchminimalcycles(X): computes the minimal cycles in X, returning [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m. It is returned with the types sorted, i.e. parabolic cycles first, then accidental, then elliptic.");
   install(afuchnormalizernorms,"G");
   addhelp(afuchnormalizernorms,"afuchnormalizernorms(X): let N_{B^x}(O)^+ be the norm totally positive normalizer of the order O. The quotient of this group by F^xO^1 is a 2-group. This method returns the norms of a generating set for this group. The format is [unit, AL, rest], where unit is the set of norms that are units, AL is the set of norms appearing in the Atkin-Lehner group, and rest is the remaining norms in the normalizer, coming from the 2-torsion of the class group. We expect the norms found to be linearly independant with respect to the normalizer quotient, but this is not necessarily guaranteed.");
   install(afuchorder,"G");
