@@ -122,10 +122,7 @@ static GEN geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN)
 
 /*2: PRESENTATION*/
 static GEN presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
-static void presentation_update(GEN words, long ind, GEN repl);
 static GEN word_collapse(GEN word);
-static GEN word_inv(GEN word);
-static GEN word_substitute(GEN word, long ind, GEN repl, GEN invrepl);
 static GEN word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
 
 /*SECTION 3: QUATERNION ALGEBRA METHODS*/
@@ -2109,10 +2106,9 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
 {
   pari_sp av = avma;
   /*Initially, we start with using the original indices (of U[1]), and transfer over at the very end.*/
-  long lgelts, i, j;
   GEN elts = normbound_get_elts(U);
-  GEN words = cgetg_copy(elts, &lgelts);/*Stores elts[i] as a word in terms of the minimal generators. Initially, we only make it in terms of indices of U[1], and only store the 1 step g_1=g_2^-1 from the side pairing or g_1=g_2^-1g_3^-1 from accidental cycles. Later on, we do a depth first search updating of all of these words.*/
-  for (i = 1; i < lgelts; i++) gel(words, i) = mkvecsmall(i);/*Initially, each entry is just itself.*/
+  long lgelts = lg(elts), i, j;
+  GEN words = zerovec(lgelts - 1);/*Stores elts[i] as a word in terms of the minimal generators. Initially, we only make it in terms of indices of U[1], and only store the 1 step g_1=g_2^-1 from the side pairing or g_1=g_2^-1g_3^-1 from accidental cycles. Later on, we do a depth first search updating of all of these words.*/
   GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xisparabolic, Xistriv);/*Minimal cycles by type.*/
   GEN cyc = gel(mcyc, 1), cyctype = gel(mcyc, 2), pairing = normbound_get_spair(U);/*Cycles, types, pairing*/
   long lgcyc = lg(cyc), firstacc = 1;
@@ -2181,12 +2177,22 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
     long j1 = (j % 3) + 1;
     long j2 = (j1 % 3) + 1;/*The next two in [1, 2, 3] taken cyclically.*/
     /*Recall that the minimal cycles are BACKWARDS of the relation, i.e. [a, b, c] means g_c*g_b_g*a=1.*/
+    rel = gel(cyc, relind);
     gel(words, rel[j]) = mkvecsmall2(-rel[j1], -rel[j2]);
     if (!iselliptic[rel[j1]]) { tocheckmax++; tocheck[tocheckmax] = rel[j1]; }/*Add it to queue.*/
     if (!iselliptic[rel[j2]]) { tocheckmax++; tocheck[tocheckmax] = rel[j2]; }/*Add it to queue.*/
   }
   /*Now we should go through and solve for each of the words, doing all of the replacements. We also check which indices actually survived.*/
   GEN finished = const_vecsmall(lgelts - 1, 0);/*Updates to 1 if it survived, and 2 if it didn't survive but we have replaced words[i] with a word in terms of surviving indices.*/
+  /*We need to finish initializing the words: for every non-initialized one, we pick one between itself and it's pair. Up until now, we always initialized them in pairs.*/
+  for (i = 1; i < lgelts; i++) {
+    if (!gequal0(gel(words, i))) continue;/*Already done.*/
+    long ipair = pairing[i];
+    if (ipair == i) { gel(words, i) = mkvecsmall(i); continue; }
+    gel(words, ipair) = mkvecsmall(-i);
+    finished[ipair] = 2;
+    gel(words, i) = mkvecsmall(i);/*The first time we come upon an uninitialized pair, ipair>=i.*/
+  }
   long maxdepth = 100;
   GEN depthseq = cgetg(maxdepth + 1, t_VECSMALL);/*Indices of what word we are trying to update.*/
   GEN depthseqwhere = cgetg(maxdepth + 1, t_VECSMALL);/*Inside the corresponding depthseq word, which index of an element we are trying.*/
@@ -2241,11 +2247,11 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
     }
   }
   /*At this point we have sorted out all the words and found the minimal generating set. We just need to update the relations if there are no parabolic elements, and replace the indices with the indices of the surviving generators.*/
-  long nrels = lgelts - firstell + 1;/*Number of elliptic cycles plus the extra relation.*/
+  long nrels = lgcyc - firstell + 1;/*Number of elliptic cycles plus the extra relation.*/
   if (!onlyacc) nrels--;/*This big relation disappears or is incorporated into an elliptic relation.*/
   GEN relations = cgetg(nrels + 1, t_VEC);
   long relind = 1;
-  for (i = firstell; i < lgelts; i++) {/*Go through and insert these relations.*/
+  for (i = firstell; i < lgcyc; i++) {/*Go through and insert these relations.*/
     long eelt = gel(cyc, i)[1];/*The element.*/
     long pow = cyctype[i];/*Its order.*/
     if (finished[eelt] == 1) {/*Still there*/
@@ -2272,7 +2278,7 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
     for (j = 1; j <= 3; j++) lr += (lg(gel(words, rel[j])) - 1);
     GEN r = cgetg(lr, t_VECSMALL);
     long rind = 1, k;
-    for (j = 1; j <= 3; j++) {
+    for (j = 3; j >= 1; j--) {/*Remember, we do it BACKWARDS*/
       GEN wd = gel(words, rel[j]);
       for (k = 1; k < lg(wd); k++) r[rind++] = wd[k];
     }
@@ -2307,15 +2313,6 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
   return gerepilecopy(av, mkvec3(gens, relations, words));
 }
 
-/*Perform word_substitute(word, ind, repl) on each word in words, and updates it. This is OK since word is a GEN vector, so we are updating the memory addresses.*/
-static void
-presentation_update(GEN words, long ind, GEN repl)
-{
-  GEN invrepl = word_inv(repl);
-  long lwords = lg(words), i;
-  for (i = 1; i < lwords; i++) gel(words, i) = word_substitute(gel(words, i), ind, repl, invrepl);/*Substitute!*/
-}
-
 /*Given a word, "collapses" it down, i.e. deletes consecutive indices of the form i, -i, and repeats until the word is reduced.*/
 static GEN
 word_collapse(GEN word)
@@ -2348,60 +2345,6 @@ word_collapse(GEN word)
     nind++;
   }
   return gerepileupto(av, newword);
-}
-
-/*Inverse of the word.*/
-static GEN
-word_inv(GEN word)
-{
-  long lword, i;
-  GEN invword = cgetg_copy(word, &lword);/*The inverse of word*/
-  long invind = lword;
-  for (i = 1; i < lword; i++) {/*Negate and reverse word*/
-    invind--;
-    invword[invind] = -word[i];
-  }
-  return invword;
-}
-
-/*We replace all instances of the index ind in word with repl, and then collapse down to a reduced word (with regards to the free group on the indices). We return the new word. Thus, substitute_word([1,2,3,-4,5], 3, [-2, -2, 5, 4])=[1, -2, 5, 5]. invrepl can be passed as NULL.*/
-static GEN
-word_substitute(GEN word, long ind, GEN repl, GEN invrepl)
-{
-  pari_sp av = avma;
-  long lrepl = lg(repl), i;/*length of the replacement word*/
-  if (!invrepl) invrepl = word_inv(repl);
-  long nreplace = 0, mind = -ind, lgword;/*nreplace counts how many replacement we need to perform, and mind is -ind.*/
-  GEN replaceplaces = cgetg_copy(word, &lgword);/*index 1 means replace this with repl,-1 with invrepl, and 0 means keep.*/
-  for (i = 1; i < lgword; i++) {
-    if (word[i] == ind) { replaceplaces[i] = 1; nreplace++; }
-    else if (word[i] == mind) { replaceplaces[i] = -1; nreplace++; }
-    else replaceplaces[i] = 0;
-  }
-  if (nreplace == 0) return gerepileupto(av, word_collapse(word));/*Nothing to replace! Just collapse the word down.*/
-  long newwordlg = lgword + nreplace * (lrepl - 2);/*The new lg*/
-  GEN newword = cgetg(newwordlg, t_VECSMALL);/*The new word*/
-  long newind = 1, j;
-  for (i = 1; i < lgword; i++){/*Make the new word*/
-    switch (replaceplaces[i]) {
-      case 0:/*Move this index to the new word.*/
-        newword[newind] = word[i];
-        newind++;
-        break;
-      case 1:
-        for (j = 1; j < lrepl; j++) {
-          newword[newind] = repl[j];
-          newind++;
-        }
-        break;
-      default:/*Case -1, add in invrepl.*/
-        for (j = 1; j < lrepl; j++) {
-          newword[newind] = invrepl[j];
-          newind++;
-        }
-    }
-  }
-  return gerepileupto(av, word_collapse(newword));/*Collapse the finalword.*/
 }
 
 /*Writes g as a word in terms of the presentation.*/
