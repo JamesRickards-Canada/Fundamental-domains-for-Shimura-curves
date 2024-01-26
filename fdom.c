@@ -2111,146 +2111,198 @@ presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabol
   /*Initially, we start with using the original indices (of U[1]), and transfer over at the very end.*/
   long lgelts, i, j;
   GEN elts = normbound_get_elts(U);
-  GEN words = cgetg_copy(elts, &lgelts);/*Stores elts[i] as a word in terms of the minimal generators.*/
+  GEN words = cgetg_copy(elts, &lgelts);/*Stores elts[i] as a word in terms of the minimal generators. Initially, we only make it in terms of indices of U[1], and only store the 1 step g_1=g_2^-1 from the side pairing or g_1=g_2^-1g_3^-1 from accidental cycles. Later on, we do a depth first search updating of all of these words.*/
   for (i = 1; i < lgelts; i++) gel(words, i) = mkvecsmall(i);/*Initially, each entry is just itself.*/
   GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xisparabolic, Xistriv);/*Minimal cycles by type.*/
   GEN cyc = gel(mcyc, 1), cyctype = gel(mcyc, 2), pairing = normbound_get_spair(U);/*Cycles, types, pairing*/
-  long lgcyc = lg(cyc), ngens = 0;
-  for (i = 1; i < lgcyc; i++) {/*The relations are in reverse.*/
-    if (cyctype[i] == 0) gel(cyc, i) = mkvecsmall(0);/*Parabolic elements give no relations (for Shimura curves, they should only exist with M_2(Q))*/
-    GEN cy1 = vecsmall_reverse(gel(cyc, i)), cy = cy1;/*The element, whose cyctype[i]th power is 1.*/
-    for (j = 2; j <= cyctype[i]; j++) cy = vecsmall_concat(cy, cy1);/*Concat to make the power right.*/
-    gel(cyc, i) = cy;/*The actual relations are now stored in cyc.*/
+  long lgcyc = lg(cyc), firstacc = 1;
+  GEN iselliptic = const_vecsmall(lgelts - 1, 0);/*1 if and only if the ith element is elliptic, and 2 iff the ith element is parabolic*/
+  while (firstacc < lgcyc && !cyctype[firstacc]) {/*Find the first non-parabolic cycle (should be accidental).*/
+    if (lg(gel(cyc, firstacc)) != 2) pari_err(e_MISC, "Parabolic cycle of length != 1. Please change the base point p and recompute (all parabolic cycles are of length 1 outside of a set of measure 0).");
+    long ind = gel(cyc, firstacc)[1];
+    iselliptic[ind] = 2;
+    iselliptic[pairing[ind]] = 2;/*Save the parabolic elements.*/
+    firstacc++;
   }
-  GEN H = cgetg(lgelts, t_VECSMALL);/*We start by taking only one of g or g^(-1) for all g. In general, H tracks which elements are left in the generating set. Of the pair that appears, we just keep the first one we find.*/
-  for (i = 1; i < lgelts; i++){/*Initially, H[i]=1 if g=g^(-1), and for exactly one of [g, g^(-1)] for all other g.*/
-    long pairedind = pairing[i];/*What side i is paired to.*/
-    if (pairedind >= i) { H[i] = 1; ngens++; continue; }/*No need to update words, we are keeping this generator for now.*/
-    H[i] = 0;/*H[i]=0 and update the word to g^-1, g is the paired index.*/
-    gel(words, i)[1] = -pairedind;
-    presentation_update(cyc, i, gel(words, i));/*Update the cycles.*/
+  GEN arelinds = const_vecsmall(lgelts - 1, 0);/*Tracks which accidental relation each index is in (at most 1, as each element is in EXACTLY 1 cycle). For cyc[i][j], we store 4*i+j (1<=j<=3).*/
+  long firstell = firstacc;
+  while (firstell < lgcyc && cyctype[firstell] == 1) {/*Find the first elliptic cycle.*/
+    if (lg(gel(cyc, firstell)) != 4) pari_err(e_MISC, "Accidental cycle of length != 3. Please change the base point p and recompute (all accidental cycles are of length 3 outside of a set of measure 0).");/* F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A);p=I/2 for an example of this*/
+    for (j = 1; j <= 3; j++) arelinds[gel(cyc, firstell)[j]] = (firstell << 2) + j;
+    firstell++;
   }
-  /*At this point, we have replaced all inverses.*/
-  long accind = 1;/*accind tracks the first accidental cycle.*/
-  while (accind < lgcyc && cyctype[accind] == 0) accind++;/*Find the first accidental cycle.*/
-  long ellind = accind;
-  while (ellind < lgcyc && cyctype[ellind] == 1) ellind++;/*Find the first elliptic cycle.*/
-  long naccident = ellind - accind;/*How many accidental cycles*/
-  GEN r = gen_0;/*The accidental relation, if it exists.*/
-  if (naccident) r = gel(cyc, accind);/*The first accidental relation.*/
-  if (naccident > 1) {/*More than one relation. We go through the relations, updating r by solving for elements it has in common in another relation.*/
-    ngens = ngens - naccident + 1;/*Updating the number of generators.*/
-    long lastrel = ellind - 1;/*The last relation we consider. We swap this with the relation we find every step and decrease it, so we only need to consider relations from accind+1 to lastrel at each step.*/
-    long indrep = 1, torep;/*indrep stores the index replaced in r. On the next pass, we may as well start from there, as we have already checked the previous indices for replacement. No collapsing occurs, since each index and its inverse appear at most once in the relations (and cannot disappear, unless we cancel them).*/
-    GEN repind = gen_0, cycle;/*repind stores [j, l, m], where term j in relation r is replaced by using term m of relation l.*/
-    /*Now we look for a common term.*/
-    for (i = 1; i < naccident; i++) {/*Each step we solve the relation.*/
-      if (gc_needed(av, 2)) {
-        gerepileall(av, 5, &cyc, &cyctype, &H, &words, &r);
-      }
-      long lr = lg(r);
-      for (j = indrep; j < lr; j++) {/*Trying to replace index j. We stop once we find one replacable.*/
-        torep = r[j];/*What we try to replace.*/
-        long mtorep = -torep, l, m;/*The inverse.*/
-        for (l = accind + 1; l <= lastrel; l++) {/*Looking at cycle l*/
-          for(m = 1; m < lg(gel(cyc, l)); m++) {/*element m of cycle l*/
-            long thisind = gel(cyc, l)[m];
-            if(thisind != torep && thisind != mtorep) continue;
-            if (torep > 0) H[torep] = 0;/*Make sure it has been deleted from H.*/
-            else H[mtorep] = 0;
-            repind = mkvecsmall3(j, l, m);
-            l = lastrel + 1;/*Break loop*/
-            j = lr;/*Break loop*/
-            break;/*Break loop*/
+  for (i = firstell; i < lgcyc; i++) {/*Setting iselliptic*/
+    if (lg(gel(cyc, i)) != 2) pari_err(e_MISC, "Elliptic cycle of length != 1. Please change the base point p and recompute (all elliptic cycles are of length 1 outside of a set of measure 0).");/* F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A);p=I/2 for an example of this*/
+    long ind = gel(cyc, i)[1];/*The element.*/
+    iselliptic[ind] = 1;
+    iselliptic[pairing[ind]] = 1;/*Often paired to itself, but not always.*/
+  }
+  /*PLAN: find an accidental relation with a parabolic (or elliptic if no parabolic) element. If no such elements, any will suffice. This "starts" our big relation. We add the other non-elliptic/parabolic indices to a queue of indices to check. If we have yet to use the accidental relation corresponding to it's paired index, then we can use it, update words, and add the new elements to the queue. Keep repeating until we have used up all the accidental relations. If there are NO accidental or parabolic relations, then this gives us one relation to analyze.*/
+  GEN accleft = const_vecsmall(firstell - 1, 1);/*Update to 0 once we have used this accidental cycle in the big relation.*/
+  long epindtofind = 1;/*The index of the elliptic or parabolic cycle that does occur in an accidental cycle that we look for. If there are no such, it remains 1, which is just fine.*/
+  int onlyacc = 1;/*Are there only accidental cycles?*/
+  if (firstacc > 1) {/*Parabolic cycles.*/
+    long parind = gel(cyc, 1)[1];/*Parabolic element, let's use this one.*/
+    epindtofind = pairing[parind];/*This one actually appears in an accidental cycle.*/
+    gel(words, parind) = mkvecsmall(-epindtofind);/*Replace the word.*/
+    onlyacc = 0;
+  }
+  else if (firstell < lgcyc) {/*Elliptic cycles.*/
+    long ellipind = gel(cyc, firstell)[1];/*Elliptic element, let's use this one.*/
+    epindtofind = pairing[ellipind];/*This one actually appears in an accidental cycle.*/
+    gel(words, ellipind) = mkvecsmall(-epindtofind);/*Replace the word.*/
+    onlyacc = 0;
+  }
+  long epindtofinddat = arelinds[epindtofind];
+  long initialacctodel = epindtofinddat >> 2;/*We wan to choose an accidental cycle with a parabolic element if possible, and if not with an elliptic element. If neither exist, we can start anywhere we want.*/
+  long firstswap = epindtofinddat % 4;/*The index in initialacctodel that we solve for.*/
+  long tocheckmin = 1, tocheckmax = 0;
+  GEN tocheck = cgetg(lgelts, t_VECSMALL);/*Stores the queue of indices to check. Do NOT store any elliptic indices here.*/
+  /*Let's initialize this first accidental cycle*/
+  accleft[initialacctodel] = 0;/*Delete this from the available list.*/
+  GEN rel = gel(cyc, initialacctodel);
+  for (j = 1; j <= 3; j++) {
+    if (j != firstswap || onlyacc) {/*Add them to the queue*/
+      if (iselliptic[rel[j]]) continue;/*Elliptic or parabolic.*/
+      tocheckmax++; tocheck[tocheckmax] = rel[j]; continue;
+    }
+    /*Now we are at the elliptic/parabolic element we want to replace.*/
+    gel(words, epindtofind) = mkvecsmall2(-rel[(j % 3) + 1], -rel[((j + 1) % 3) + 1]);
+  }
+  while (tocheckmin <= tocheckmax) {/*Roll on through the elements, seeing if we can replace them. This is guaranteed to use up all of the accidental cycles, resulting in one big cycle. We always pre-check if they are elliptic before adding them.*/
+    long ind = tocheck[tocheckmin];/*What we want to attempt to replace.*/
+    long pairedind = pairing[ind];/*Look for this index in a remaining accidental relation.*/
+    long relinddat = arelinds[pairedind];/*Data about which accidental relation this is in.*/
+    long relind = relinddat >> 2;/*The index of the accidental relation*/
+    if (!accleft[relind]) { tocheckmin++; continue; }/*Already used, cannot replace.*/
+    accleft[relind] = 0;/*We are using it, so set to 0.*/
+    j = relinddat % 4;/*Index inside of this relation, which we CAN replace!!*/
+    gel(words, ind) = mkvecsmall(-pairedind);/*Replace ind.*/
+    long j1 = (j % 3) + 1;
+    long j2 = (j1 % 3) + 1;/*The next two in [1, 2, 3] taken cyclically.*/
+    /*Recall that the minimal cycles are BACKWARDS of the relation, i.e. [a, b, c] means g_c*g_b_g*a=1.*/
+    gel(words, rel[j]) = mkvecsmall2(-rel[j1], -rel[j2]);
+    if (!iselliptic[rel[j1]]) { tocheckmax++; tocheck[tocheckmax] = rel[j1]; }/*Add it to queue.*/
+    if (!iselliptic[rel[j2]]) { tocheckmax++; tocheck[tocheckmax] = rel[j2]; }/*Add it to queue.*/
+  }
+  /*Now we should go through and solve for each of the words, doing all of the replacements. We also check which indices actually survived.*/
+  GEN finished = const_vecsmall(lgelts - 1, 0);/*Updates to 1 if it survived, and 2 if it didn't survive but we have replaced words[i] with a word in terms of surviving indices.*/
+  long maxdepth = 100;
+  GEN depthseq = cgetg(maxdepth + 1, t_VECSMALL);/*Indices of what word we are trying to update.*/
+  GEN depthseqwhere = cgetg(maxdepth + 1, t_VECSMALL);/*Inside the corresponding depthseq word, which index of an element we are trying.*/
+  for (i = 1; i < lgelts; i++) {/*Run through the elements, doing the replacing.*/
+    if (finished[i]) continue;/*Already finished this element off.*/
+    depthseq[1] = i;
+    depthseqwhere[1] = 1;
+    long ind = 1;
+    while (ind) {
+      long torep = depthseq[ind];/*What word we are trying to replace.*/
+      GEN wd = gel(words, torep);/*What we've stored as a word for it.*/
+      if (depthseqwhere[ind] == lg(wd)) {/*We've reached the end of this path, let's finally make our word.*/
+        long totlg = 1;
+        for (j = 1; j < depthseqwhere[ind]; j++) {
+          long absind = (wd[j] > 0) ? wd[j] : -wd[j];/*Which to replace.*/
+          totlg += (lg(gel(words, absind)) - 1);/*Finding total length of the word.*/
+        }
+        GEN newwd = cgetg(totlg, t_VECSMALL);/*Here is the word. Now let's fill it!*/
+        long newwdind = 1, k;
+        for (j = 1; j < depthseqwhere[ind]; j++) {
+          if (wd[j] > 0) {/*Straight up insert this word.*/
+            GEN theword = gel(words, wd[j]);
+            for (k = 1; k < lg(theword); k++) newwd[newwdind++] = theword[k];
+            continue;
           }
+          GEN theword = gel(words, -wd[j]);/*Insert it backwards with negatives.*/
+          for (k = lg(theword) - 1; k >= 1; k--) newwd[newwdind++] = -theword[k];
         }
+        gel(words, torep) = newwd;
+        finished[torep] = 2;
+        ind--;
+        if(ind) depthseqwhere[ind]++;/*Move on to the next part of the previous word*/
+        continue;
       }
-      /*Now, repind gives us all the information we need to do the replacement.*/
-      cycle = gel(cyc, repind[2]);/*The cycle being deleted.*/
-      long lcyc = lg(cycle);
-      GEN repl = cgetg(lcyc-1, t_VECSMALL);/*cycle[repind[3]]. we have a1*...*an=1 -> a_m=a_{m-1}^(-1)*...*a_1^(-1)*a_n^(-1)*a_{n-1}^(-1)*...*a_{m+1}^(-1).*/
-      long irepl = 1;
-      for (j = repind[3] - 1; j > 0; j--) { repl[irepl] = -cycle[j]; irepl++; }
-      for (j = lcyc - 1; j > repind[3]; j--) { repl[irepl] = -cycle[j]; irepl++; }/*Replace index cycle[repind[3]] with the word repl.*/
-      presentation_update(words, cycle[repind[3]], repl);/*Replace the words.*/
-      r = word_substitute(r, cycle[repind[3]], repl, NULL);/*Replace it in r. No need to replace it in the other relations, since it cannot appear.*/
-      indrep = repind[1];/*The index we replaced.*/
-      gel(cyc, repind[2]) = gel(cyc, lastrel);/*Replace the relation we replaced with the last one.*/
-      lastrel--;/*One less relation.*/
+      if (lg(wd) == 2 && wd[1] == torep) {/*Itself, survives*/
+        finished[torep] = 1;
+        ind--;
+        if (ind) depthseqwhere[ind]++;/*Move on to the next part of the previous word*/
+        continue;
+      }
+      long whattorep = wd[depthseqwhere[ind]];/*Which index in the word we are trying to replace.*/
+      long abswhattorep = (whattorep > 0) ? whattorep : -whattorep;
+      if (finished[abswhattorep]) { depthseqwhere[ind]++; continue; }/*This word has been computed already.*/
+      ind++;/*This word has not yet been computed. Move deeper!*/
+      if (ind > maxdepth) {
+        maxdepth <<= 1;/*Double lengths*/
+        depthseq = vecsmall_lengthen(depthseq, maxdepth);
+        depthseqwhere = vecsmall_lengthen(depthseqwhere, maxdepth);
+      }
+      depthseq[ind] = abswhattorep;
+      depthseqwhere[ind] = 1;
     }
   }
-  /*Now we are almost done. If there is an elliptic cycle, we can do one final replacement.*/
-  if (ellind < lgcyc) {
-    ngens--;/*One less generator.*/
-    long lr = lg(r), irel = 0, rind = 0;/*r[rind] shares an index with cyc[irel].*/
-    for (i = ellind; i < lgcyc; i++) {/*Testing elliptic relation i. In the generic case, all elliptic relations have length 1 (and all accidental have length 3). However, this does NOT need to be the case if our point p happens to be from a certain set (c.f. Voight Prop 5.4). For an explicit example, F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A);p=I/2*/
-      long maxj = (lg(gel(cyc, i)) - 1)/cyctype[i];/*Since the elliptic relation is repeated cyctype[i] times, we only need to check the first grouping of indices.*/
-      for (j = 1; j <= maxj; j++) {
-        long ind = gel(cyc, i)[j], mind = -ind, rinc;
-        for (rinc = 1; rinc < lr; rinc++) {/*There MUST be an accidental cycle, so r is non-zero.*/
-          if (r[rinc] != ind && r[rinc] != mind) continue;/*Not equal*/
-          irel = i;
-          rind = rinc;
-          j = maxj + 1;/*break*/
-          i = lgcyc;/*break*/
-          break;/*break*/
-        }
-      }
+  /*At this point we have sorted out all the words and found the minimal generating set. We just need to update the relations if there are no parabolic elements, and replace the indices with the indices of the surviving generators.*/
+  long nrels = lgelts - firstell + 1;/*Number of elliptic cycles plus the extra relation.*/
+  if (!onlyacc) nrels--;/*This big relation disappears or is incorporated into an elliptic relation.*/
+  GEN relations = cgetg(nrels + 1, t_VEC);
+  long relind = 1;
+  for (i = firstell; i < lgelts; i++) {/*Go through and insert these relations.*/
+    long eelt = gel(cyc, i)[1];/*The element.*/
+    long pow = cyctype[i];/*Its order.*/
+    if (finished[eelt] == 1) {/*Still there*/
+      gel(relations, relind++) = const_vecsmall(pow, eelt);
+      continue;
     }
-    /*Now we solve for the index with r.*/
-    if (r[rind] > 0) H[r[rind]] = 0;/*Deleting from H.*/
-    else H[-r[rind]] = 0;
-    GEN repl = cgetg(lr - 1, t_VECSMALL);
-    long irepl = 1;
-    for (j = rind - 1; j > 0; j--) { repl[irepl] = -r[j]; irepl++; }
-    for (j = lr - 1; j > rind; j--) { repl[irepl] = -r[j]; irepl++; }/*The replacment for r.*/
-    presentation_update(words, r[rind], repl);/*Replace the words.*/
-    gel(cyc, irel) = word_substitute(gel(cyc, irel), r[rind], repl, NULL);/*Update the elliptic relation.*/
+    rel = gel(words, eelt);
+    long lrel = lg(rel);
+    if (lrel == 2) {/*Must be the pairing, and it's paired element lives..*/
+      eelt = rel[1];
+      gel(relations, relind++) = const_vecsmall(pow, eelt);
+      continue;
+    }
+    GEN r = cgetg((lrel - 1) * pow + 1, t_VECSMALL);
+    long rind = 1, k;
+    for (j = 1; j <= pow; j++) {/*Putting the relation in pow times.*/
+      for (k = 1; k < lrel; k++) r[rind++] = rel[k];
+    }
+    gel(relations, relind++) = r;
   }
-  /*Ok, time to finish. H tracks which indices remain, words track the words, and we have some relations. We have to change the indices to in terms of the remaining generators.*/
-  GEN gens = cgetg(ngens + 1, t_VEC);/*The generators.*/
-  long igens = 1, Hind = 1;
+  if (onlyacc) {/*We didn't solve for an element above, but need to make the final relation.*/
+    rel = gel(cyc, initialacctodel);/*This relation holds*/
+    long lr = 1;
+    for (j = 1; j <= 3; j++) lr += (lg(gel(words, rel[j])) - 1);
+    GEN r = cgetg(lr, t_VECSMALL);
+    long rind = 1, k;
+    for (j = 1; j <= 3; j++) {
+      GEN wd = gel(words, rel[j]);
+      for (k = 1; k < lg(wd); k++) r[rind++] = wd[k];
+    }
+    gel(relations, relind) = r;
+  }
+  /*Final step: Make the vector of elements, and update the indices to be with respect to this list.*/
+  GEN H = cgetg(lgelts, t_VECSMALL);/*H[i] is the index of the corresponding element in the surviving set of generators, if it survives.*/
+  GEN gens = vectrunc_init(lgelts);
+  long ngens = 0;
   for (i = 1; i < lgelts; i++) {
-    if (H[i] == 1) {
-      H[i] = Hind;
-      Hind++;
-      gel(gens, igens) = gel(elts, i);
-      igens++;
-    }
-  }/*Index i is replaced with index H[i].*/
-  /*Let's do words first.*/
-  for (i = 1; i < lgelts; i++) {
-    for (j = 1; j < lg(gel(words, i)); j++) {
-      long k = gel(words, i)[j];
-      if (k > 0) gel(words, i)[j] = H[k];
-      else gel(words, i)[j] = -H[-k];
+    if (finished[i] != 1) continue;
+    ngens++;
+    H[i] = ngens;
+    vectrunc_append(gens, gel(elts, i));
+  }
+  for (i = 1; i < lgelts; i++) {/*Update the indices in the words.*/
+    GEN wd = gel(words, i);
+    long lwd = lg(wd);
+    for (j = 1; j < lwd; j++) {
+      if (wd[j] > 0) wd[j] = H[wd[j]];
+      else wd[j] = -H[-wd[j]];
     }
   }
-  /*Now, relations*/
-  GEN relations;
-  if (ellind < lgcyc) {/*There were elliptic relations, and this is all that remains (since the final accidental relation was combined into an elliptic one).*/
-    long nell = lgcyc - ellind + 1;/*Number of relations;*/
-    relations = cgetg(nell, t_VEC);
-    long relind = 1;
-    for (i = ellind; i < lgcyc; i++) {
-      long lr;
-      gel(relations, relind) = cgetg_copy(gel(cyc, i), &lr);
-      for (j = 1; j < lr; j++) {
-        long k = gel(cyc, i)[j];
-        if (k > 0) gel(relations, relind)[j] = H[k];
-        else gel(relations, relind)[j] = -H[-k];
-      }
-      relind++;
+  for (i = 1; i <= nrels; i++) {/*Update the indices in the relations.*/
+    GEN wd = gel(relations, i);
+    long lwd = lg(wd);
+    for (j = 1; j < lwd; j++) {
+      if (wd[j] > 0) wd[j] = H[wd[j]];
+      else wd[j] = -H[-wd[j]];
     }
-  }
-  else {/*No elliptic relations, so just r leftover.*/
-    long lr = lg(r);
-    for (i = 1; i < lr; i++) {
-      long k = r[i];
-      if(k > 0) r[i] = H[k];
-      else r[i] = -H[-k];
-    }
-    relations = mkvec(r);
   }
   return gerepilecopy(av, mkvec3(gens, relations, words));
 }
