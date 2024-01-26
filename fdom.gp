@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchmakepresentation, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
 parigp_version = version();
 fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
@@ -14,11 +14,11 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
     
   /*3: INITIALIZE ARITHMETIC FUCHSIAN GROUPS*/
   install(afuchinit,"GDGDGD1,L,p");
-  addhelp(afuchinit,"afuchinit(al, {O}, {type}, {flag=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p=Pi/8+0.5*I is sent to 0. The default order O is the stored maximal order in A, and the default type is 0. type=0 means O^1, type=1 means totally positive unit norm, type=2 is AL(O)^+, and type=3 is the whole positive normalizer. If flag = 1, also computes the fundamental domain. flag = 2 also computes the presentation. To compute a fundamental domain for a general congruence arithmetic Fuchsian group, initialize with type=3 and then use afuch_newtype.");
+  addhelp(afuchinit,"afuchinit(al, {O}, {type}, {flag=1}): initializes the arithmetic Fuchsian group in the algebra al with respect to the order O and of the given type. We work in the Klein model where p=Pi/8+0.5*I is sent to 0. The default order O is the stored maximal order in A, and the default type is 0. type=0 means O^1, type=1 means totally positive unit norm, type=2 is AL(O)^+, and type=3 is the whole positive normalizer. If flag = 1, also computes the fundamental domain and presentation. To compute a fundamental domain for a general congruence arithmetic Fuchsian group, initialize with type=3 and then use afuch_newtype.");
   install(afuchnewp,"GG");
   addhelp(afuchnewp,"afuchnewp(X, p): returns the Fuchsian group with the changed the value of p, i.e. what is sent to 0 under the map from the upper half plane to the unit disc/Klein model. We also recompute the fundamental domain and presentation if they were initialized.");
   install(afuchnewtype,"GG");
-  addhelp(afuchnewtype,"afuchnewtype(X, type): returns a the Fuchsian group X but we change the type. If the fundamental domain was already computed with type=3, this is very efficient, as we do not have to search for new generators. In order to input a subgroup Gamma between O^1 and N_{A^x}^+(O), consider S=concat(afuchnormalizernorms(X)). We know that N_{A^x}^+(O)/O^1=(Z/2Z)^#S, with norms of generators corresponding to the entries of S. A subgroup of this can be specified by a matrix with #S rows, where each column consists of 0's/1's, indicating the generating set of the subgroup. Thus the 0 matrix gets you O^1, and any matrix with rank #S gets the full positive normalizer. We do not initialize the presentation, even if it was computed for X.");
+  addhelp(afuchnewtype,"afuchnewtype(X, type): returns a the Fuchsian group X but we change the type. If the fundamental domain was already computed with type=3, this is very efficient, as we do not have to search for new generators. In order to input a subgroup Gamma between O^1 and N_{A^x}^+(O), consider S=concat(afuchnormalizernorms(X)). We know that N_{A^x}^+(O)/O^1=(Z/2Z)^#S, with norms of generators corresponding to the entries of S. A subgroup of this can be specified by a matrix with #S rows, where each column consists of 0's/1's, indicating the generating set of the subgroup. Thus the 0 matrix gets you O^1, and any matrix with rank #S gets the full positive normalizer.");
   install(afuchmoreprec,"GD1,L,");
   addhelp(afuchmoreprec,"afuchmoreprec(X, inc=1): returns the Fuchsian group X with precision increased by inc steps, i.e. inc*DEFAULTPREC more precision.");
 
@@ -36,9 +36,7 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   install(afuchlist,"GGDGD1,L,");
   addhelp(afuchlist,"afuchlist(F, Amin, {Amax}, {split=1}: given a totally real number field F (with variable not x), we find all possible quaternion algebras over F that are split at the unique real place given by split, for which the area of the fundamental domain is between Amin and Amax. If Amax is not passed, we go from 0 to Amin. The return is [[[a, b], area, rprimes]], where A=alginit(F, [a, b]) has area area, and rprimes is the multiset of primes lying above the finite ramified primes of A.");
   install(afuchmakefdom,"G");
-  addhelp(afuchmakefdom,"afuchmakefdom(X): returns X with the fundamental domain computed.");
-  install(afuchmakepresentation,"G");
-  addhelp(afuchmakepresentation,"afuchmakepresentation(X): returns X with the presentation P computed. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A.");
+  addhelp(afuchmakefdom,"afuchmakefdom(X): returns X with the fundamental domain and presentation computed.");
   install(afuchminimalcycles,"G");
   addhelp(afuchminimalcycles,"afuchminimalcycles(X): computes the minimal cycles in X, returning [cycles, types], where cycles[i] has type types[i]. Type 0=parabolic, 1=accidental, m>=2=elliptic of order m. It is returned with the types sorted, i.e. parabolic cycles first, then accidental, then elliptic.");
   install(afuchnormalizernorms,"G");
@@ -46,7 +44,7 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   install(afuchorder,"G");
   addhelp(afuchorder,"afuchorder(X): retrieves the stored order in X.");
   install(afuchpresentation,"G");
-  addhelp(afuchpresentation,"afuchpresentation(X): retrieves the stored presentation in X.");
+  addhelp(afuchpresentation,"afuchpresentation(X): retrieves the stored presentation P in X. P[1] is the vector of generators, and P[2] is the vector of relations, where [1, -4, 3, 3] corresponds to P[1][1]*P[1][4]^-1*P[1][3]*P[3][3] being in the centre of A.");
   install(afuchsides,"G");
   addhelp(afuchsides,"afuchsides(X): retrieves the sides of the fundamental domain. The format of a side is [a, b, r], where the equation for the side is ax+by=1 in the Klein model, (x-a)^2+(y-b)^2=r^2=a^2+b^2-1 in the unit disc model.");
   install(afuchsignature,"G");

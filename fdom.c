@@ -2426,7 +2426,7 @@ normalizernorms
     Only initialized if you set type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
 */
 
-/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain, and flag=2 means we do the presentation as well.*/
+/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain and presentation.*/
 GEN
 afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
 {
@@ -2465,9 +2465,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   gel(AX, afuch_GDAT) = gdat;
   gel(AX, afuch_FDOMDAT) = afuchfdomdat_init(A, O, prec);
   if (!flag) return gerepilecopy(av, AX);/*Done! Just initialize the main structure.*/
-  AX = afuchmakefdom(AX);/*Make the fundamental domain.*/
-  if (flag == 1) return gerepilecopy(av, AX);/*Just this*/
-  AX = afuchmakepresentation(AX);/*Add presentation in.*/
+  AX = afuchmakefdom(AX);/*Make the fundamental domain and presentation.*/
   return gerepilecopy(av, AX);
 }
 
@@ -2493,11 +2491,8 @@ afuchnewp(GEN X, GEN p)
   if (!gequal0(U)) {/*Recompute the fundamental domain.*/
     U = normbasis(new_X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
     gel(new_X, afuch_FDOM) = U;
-    GEN pres = afuch_get_pres(X);
-    if (!gequal0(pres)) {/*Recompute the presentation.*/
-      pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
-      gel(new_X, afuch_PRES) = pres;
-    }
+    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);/*Recompute the presentation.*/
+    gel(new_X, afuch_PRES) = pres;
   }
   return gerepilecopy(av, new_X);
 }
@@ -2555,11 +2550,8 @@ afuch_moreprec_shallow(GEN X, long inc)
     GEN S = normbound_get_elts(U);/*Just recall normbound*/
     U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
     gel(new_X, afuch_FDOM) = U;
-    GEN P = afuch_get_pres(X);
-    if (!gequal0(P)) {/*In theory, the call to normbasis could have changed the ordering of things.*/
-      P = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
-      gel(new_X, afuch_PRES) = P;
-    }
+    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);/*In theory, the call to normbasis could have changed the ordering of things.*/
+    gel(new_X, afuch_PRES) = pres;
   }
   return new_X;
 }
@@ -2681,7 +2673,7 @@ afuch_make_traceqf(GEN X, GEN nm, GEN Onorm)
   return gerepileupto(av, M);
 }
 
-/*Returns a new Fuchsian group with the same algebra and order, but a new type. Does not initialize presentation, even if it was in X.*/
+/*Returns a new Fuchsian group with the same algebra and order, but a new type.*/
 GEN
 afuchnewtype(GEN X, GEN type)
 {
@@ -2989,7 +2981,7 @@ afuchfdom_worker(GEN X, GEN *startingset)
   return gerepileupto(av, U);
 }
 
-/*Computes the fundamental domain for X, returning the vector with it inserted. If type = 3, we also insert the saved elements. Increases precision if required.*/
+/*Computes the fundamental domain for X, returning the vector with it inserted. If type = 3, we also insert the saved elements. Increases precision if required. Also initializes the presentation.*/
 GEN
 afuchmakefdom(GEN X)
 {
@@ -3014,7 +3006,8 @@ afuchmakefdom(GEN X)
     }
     U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
     gel(new_X, afuch_FDOM) = U;
-    if (!gequal0(afuch_get_pres(new_X))) gel(new_X, afuch_PRES) = gen_0;/*If we computed a presentation, don't want to save it!*/
+    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    gel(new_X, afuch_PRES) = pres;
     return gerepilecopy(av, new_X);
   }
   int precinc = 0;
@@ -3041,6 +3034,8 @@ afuchmakefdom(GEN X)
   }
   if (!type) {/*Looking for O^1 only.*/
     gel(new_X, afuch_FDOM) = U;
+    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    gel(new_X, afuch_PRES) = pres;
     return gerepilecopy(av, new_X);
   }
   if (DEBUGLEVEL) pari_printf("Looking for elements of the appropriate norms.\n");
@@ -3086,6 +3081,8 @@ afuchmakefdom(GEN X)
   }
   gel(new_X, afuch_FDOM) = U;
   if (type == 3) gel(new_X, afuch_SAVEDELTS) = vec_prepend(newelts, O1elts);
+  GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  gel(new_X, afuch_PRES) = pres;
   return gerepilecopy(av, new_X);
 }
 
@@ -3111,7 +3108,8 @@ afuchfdom_subgroup(GEN X, GEN M)
   gens = shallowconcat(gel(allelts, 1), gens);
   GEN U = normbasis(new_X, NULL, gens, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
   gel(new_X, afuch_FDOM) = U;
-  if (!gequal0(afuch_get_pres(new_X))) gel(new_X, afuch_PRES) = gen_0;/*If we computed a presentation, don't want to save it!*/
+  GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  gel(new_X, afuch_PRES) = pres;
   return new_X;
 }
 
@@ -3300,7 +3298,7 @@ afuchpresentation(GEN X)
 {
   pari_sp av = avma;
   GEN pres = afuch_get_pres(X);
-  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
+  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the fundamental domain and presentation first with X = afuchmakefdom(X).");
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, vec_shorten(pres, 2));/*O=1, no conversion necessary. We also only return the first 2 components.*/
   GEN Opres = cgetg(3, t_VEC);/*I doubt the user would care about pres[3], this is used internally in afuchword only.*/
@@ -3309,19 +3307,6 @@ afuchpresentation(GEN X)
   for (i = 1; i < lgen; i++) gmael(Opres, 1, i) = QM_QC_mul(O, gmael(pres, 1, i));
   gel(Opres, 2) = gel(pres, 2);
   return gerepilecopy(av, Opres);
-}
-
-/*Stores the presentation, returning the updated X.*/
-GEN
-afuchmakepresentation(GEN X)
-{
-  pari_sp av = avma;
-  GEN U = afuch_get_fdom(X);
-  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
-  GEN new_X = leafcopy(X);
-  GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
-  gel(new_X, afuch_PRES) = pres;
-  return gerepilecopy(av, new_X);
 }
 
 /*Returns the sides of the fundamental domain.*/
@@ -3364,9 +3349,8 @@ afuchword(GEN X, GEN g)
 {
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
-  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain and presentation first with X = afuchmakefdom(X).");
   GEN P = afuch_get_pres(X);
-  if (gequal0(P)) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
   GEN O = afuch_get_O(X);
   if (!gequal1(O)) {
     GEN Oinv = afuch_get_Oinv(X);

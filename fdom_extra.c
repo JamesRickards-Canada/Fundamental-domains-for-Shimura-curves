@@ -288,7 +288,7 @@ afuchcheck(GEN X)
 {
   pari_sp av = avma;
   GEN pres = afuch_get_pres(X);
-  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the presentation first with X = afuchmakepresentation(X).");
+  if (gequal0(pres)) pari_err(e_MISC, "Please initialize the fundamental domain and presentation first with X = afuchmakefdom(X).");
   long prec = afuch_get_prec(X);
   GEN sig = afuchsignature(X);
   long genus = itos(gel(sig, 1)), npar = itos(gel(sig, 3));

@@ -11,7 +11,6 @@ testalgfdom(L) = {
       if ((i + j) % 3 == 0, X = afuchmoreprec(X, random(4) + 1));
       S = afuchsignature(X);
       print(S);/*Invariant.*/
-      X = afuchmakepresentation(X);
       onealgcheck(X);
     );
   );
@@ -46,7 +45,6 @@ X = afuchinit(A, O1, , 2);
 X = afuchmoreprec(X, 3);
 X = afuchnewp(X, Pi + 0.5119*I);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 O1bas = [[1, 0]~, [97*x, 0]~, [57*x + 1/2, 1/2]~, [265/4*x, 1/4*x]~];/*Level 97*/
@@ -55,7 +53,6 @@ if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 A = alginit(F, [3, -1]);/*Ramified at 2, 3*/
@@ -66,7 +63,6 @@ if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 A = alginit(F, [105, -8]);/*Ramified at 5, 7*/
@@ -78,7 +74,6 @@ print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
 X = afuchnewp(X, -1 + sqrt(3)*I);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 X = afuchmoreprec(X, 1);
 onealgcheck(X);
 
@@ -91,7 +86,6 @@ if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 F = nfinit(y^2-3);
@@ -102,29 +96,22 @@ if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X3 = afuchinit(A, O1, 3, 1);
 print(afuchsignature(X3));
-X3 = afuchmakepresentation(X3);
 onealgcheck(X3);
 X1 = afuchnewtype(X3, 1);
 print(afuchsignature(X1));
-X1 = afuchmakepresentation(X1);
 onealgcheck(X1);
 X0 = afuchnewtype(X1, 0);
 print(afuchsignature(X0));
-X0 = afuchmakepresentation(X0);
 onealgcheck(X0);
 Xm1 = afuchnewtype(X3, [1,0;0,0;1,0;1,1]);
 print(afuchsignature(Xm1));
-Xm1 = afuchmakepresentation(Xm1);
 onealgcheck(Xm1);
 Xm2 = afuchnewtype(X3, [1,0,0;0,1,0;0,0,1;0,0,1]);
 print(afuchsignature(Xm2));
-Xm2 = afuchmakepresentation(Xm2);
 onealgcheck(Xm2);
 Xm3 = afuchnewtype(X3, [1;1;1;1]);
 print(afuchsignature(Xm3));
-Xm3 = afuchmakepresentation(Xm3);
 onealgcheck(Xm3);
 Xm4 = afuchnewtype(X3, [1,0;0,2;3,4;-1,-1]);
 print(afuchsignature(Xm4));
-Xm4 = afuchmakepresentation(Xm4);
 onealgcheck(Xm4);

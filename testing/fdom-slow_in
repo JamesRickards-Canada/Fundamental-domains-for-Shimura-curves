@@ -12,7 +12,6 @@ testalgfdom(L) = {
       if ((i + j) % 3 == 0, X = afuchmoreprec(X, random(4) + 1));
       S = afuchsignature(X);
       print(S);/*Invariant.*/
-      X = afuchmakepresentation(X);
       onealgcheck(X);
     );
   );
@@ -51,7 +50,6 @@ X = afuchinit(A, O1, , 2);
 X = afuchmoreprec(X, 2);
 X = afuchnewp(X, sqrt(5) + 1.3*I);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 O1bas = [[1, 0]~, [97*x, 0]~, [57*x + 1/2, 1/2]~, [265/4*x, 1/4*x]~];/*Level 97*/
@@ -61,7 +59,6 @@ print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 X = afuchnewp(X, Pi - 3 + sqrt(11)/4 * I);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 O1bas = [[1, 0]~, [120*x, 0]~, [96*x + 1/2, 1/2]~, [97/4*x, 1/4*x]~];/*Level 120*/
@@ -70,7 +67,6 @@ if (!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 A=alginit(F, [21, 715]);/*Ramified at 11, 13*/
@@ -81,7 +77,6 @@ if (!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 X = afuchmoreprec(X, 1);
 onealgcheck(X);
 
@@ -95,7 +90,6 @@ if (!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
-X = afuchmakepresentation(X);
 onealgcheck(X);
 
 F = nfinit(y^3 - 5*y + 1);
@@ -107,5 +101,4 @@ print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
 X = afuchnewp(X, Pi / 2 + 0.7871*I);
-X = afuchmakepresentation(X);
 onealgcheck(X);
