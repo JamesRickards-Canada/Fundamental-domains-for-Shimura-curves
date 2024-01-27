@@ -2089,7 +2089,7 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
   gel(midpt, 1) = shiftr(gel(midpt, 1), -1);
   gel(midpt, 2) = shiftr(gel(midpt, 2), -1);
   GEN red = red_elt(X, U, Xid, midpt, Xtoklein, Xmul, 0, gdat);/*Reduce this to the interior.*/
-  if (gequal0(red)) pari_err(e_PREC, "Catastrophic precision loss, please recompute with more precision.");
+  if (!red) pari_err(e_PREC, "Catastrophic precision loss, please recompute with more precision.");
   g = Xmul(X, Xmul(X, red, g), Xinv(X, red));/*Conjugate g by red, so now the root geodesic of g goes through the interior.*/
   GEN geod = geodesic_klein(X, g, Xtoklein, tol);/*Update the initial geodesic.*/
   GEN sidestart = fdom_intersect(U, geod, tol, 0);/*First intersection*/
@@ -2372,7 +2372,7 @@ word_collapse(GEN word)
   return gerepileupto(av, newword);
 }
 
-/*Writes g as a word in terms of the presentation.*/
+/*Writes g as a word in terms of the presentation. If we cannot reduce it, returns NULL (allowing the user to recompute the givens above if desired.*/
 static GEN
 word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat)
 {
@@ -2382,7 +2382,7 @@ word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN
   GEN origin = gtocr(gen_0, prec);
   GEN ginv = Xinv(X, g);/*g^-1*/
   GEN gred = red_elt_decomp(X, U, ginv, origin, Xtoklein, Xmul, gdat);/*Reduction of g^-1, which gives a word for g.*/
-  if (gequal0(gred) || !Xistriv(X, gel(gred, 1))) pari_err(e_MISC, "We could not reduce the element to the identity. Increase the precision perhaps?");
+  if (!gred || !Xistriv(X, gel(gred, 1))) return gc_NULL(av);
   GEN oldword = gel(gred, 2);/*g as a word in U[1]. We must move it to a word in P[1].*/
   GEN Ptrans = gel(P, 3);/*U[1] in terms of P.*/
   long newlg = 1, lold = lg(oldword), i;
@@ -3411,7 +3411,19 @@ afuchword(GEN X, GEN g)
     g = QM_QC_mul(Oinv, g);/*Convert to in O's basis.*/
   }
   g = Q_primpart(g);/*Scaling to make sure we land inside O.*/
-  return gerepileupto(av, word(X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X)));
+  GEN new_X = X, wd;
+  int precinc = 0;
+  for (;;) {/*Recompute to more accuracy if required.*/
+    wd = word(new_X, U, P, g, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(X));
+    if (wd) break;
+    if (DEBUGLEVEL > 0) pari_warn(warner, "Increasing precision.");
+    precinc++;
+    new_X = afuch_moreprec_shallow(new_X, 1);
+  }
+  if (precinc && DEBUGLEVEL) {
+    pari_warn(warner, "Precision increased by %ld, consider calling X = afuchmoreprec(X, %ld) to avoid this in future calls.", precinc, precinc);
+  }
+  return gerepileupto(av, wd);
 }
 
 /*Returns the vertices of the fundamental domain in the Klein model (model=0), or unit disc model (model=1).*/
