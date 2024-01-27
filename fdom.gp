@@ -54,7 +54,7 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   install(afuchvertices,"GD0,L,");
   addhelp(afuchvertices,"afuchvertices(X, {model=0}): returns the vertices of the fundamental domain, where side i corresponds to going from vertex i-1 to i counterclockwise around the unit disc. If model=0 they are in the Klein model, and if model=1 they are in the unit disc model.");
   install(afuchword,"GG");
-  addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. The format is a Vecsmall v, corresponding to the product of P[1][|v[i]|]^{sign(v[i])}, where P is the presentation. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely.");
+  addhelp(afuchword,"afuchword(X, g): writes g as a word in terms of the presentation of X. The format is a Vecsmall v, corresponding to the product of P[1][|v[i]|]^{sign(v[i])}, where P is the presentation. We do not check the relations of the presentation and eliminate their occurences, though I suspect that this non-trivial behaviour will occur rarely. If your element g is ''too big'', this will internally recompute X to more and more precision. If you do this with multiple elements, it is more efficient to increase X's precision first.");
 
   /*3: FINDING ELEMENTS*/
   install(afuchfindoneelt,"GD1,G,DG");

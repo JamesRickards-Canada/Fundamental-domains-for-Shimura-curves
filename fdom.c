@@ -1777,6 +1777,7 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
+  long prec = realprec(tol);
   GEN zorig = z;
   GEN gact = Xtoklein(X, g);
   z = klein_act_i(gact, z);/*Starting point*/
@@ -1785,11 +1786,15 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
   GEN kact = normbound_get_kact(U);
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind + 1, t_VECSMALL);
+  long precfailures = 0;/*If the precision failes us enough times, we ask the calling method to increase it.*/
   for (;;) {
     if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       gact = Xtoklein(X, g);
-      z = klein_act_i(gact, zorig);
-      if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
+      GEN newz = klein_act_i(gact, zorig);
+      if (!newz) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
+      if (!toleq(z, newz, deflowtol(prec))) precfailures++;/*Points too far apart.*/
+      if (precfailures >= 5) return gc_NULL(av);/*Too many precision failures, recompute with more precision*/
+      z = newz;
     }
     long outside = normbound_outside(U, z, tol);
     if (outside <= 0) {/*We are inside or on the boundary.*/
@@ -1798,6 +1803,8 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
       if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       outside = normbound_outside(U, z, tol);
       if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
+      precfailures++;
+      if (precfailures >= 5) return gc_NULL(av);/*Too many precision failures, recompute with more precision*/
     }
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
@@ -1819,6 +1826,7 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
 {
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
+  long prec = realprec(tol);
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   GEN zorig = z;
@@ -1831,12 +1839,15 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
   else gklein = Xtoklein(X, g);/*Compute it.*/
   z = klein_act_i(gklein, z);/*Starting point.*/
   if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
-  long ind = 1;
+  long ind = 1, precfailures = 0;/*If the precision failes us enough times, we ask the calling method to increase it.*/
   for (;;) {
     if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       GEN gact = Xtoklein(X, g);
-      z = klein_act_i(gact, zorig);
-      if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
+      GEN newz = klein_act_i(gact, zorig);
+      if (!newz) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
+      if (!toleq(z, newz, deflowtol(prec))) precfailures++;/*Points too far apart.*/
+      if (precfailures >= 5) return gc_NULL(av);/*Too many precision failures, recompute with more precision*/
+      z = newz;
     }
     long outside = normbound_outside(U, z, tol);
     if (outside <= 0) {/*We are inside or on the boundary.*/
@@ -1845,6 +1856,8 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
       if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       outside = normbound_outside(U, z, tol);
       if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
+      precfailures++;
+      if (precfailures >= 5) return gc_NULL(av);/*Too many precision failures, recompute with more precision*/
     }
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
     if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
@@ -3397,7 +3410,7 @@ afuchspair(GEN X)
   return gcopy(normbound_get_spair(U));
 }
 
-/*Writing an element as a word in the presentation. We do not reduce wrt the generators.*/
+/*Writing an element as a word in the presentation. We do not reduce wrt the generators. Recompiles to more precision if necessary.*/
 GEN
 afuchword(GEN X, GEN g)
 {
