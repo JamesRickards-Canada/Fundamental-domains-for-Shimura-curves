@@ -1631,7 +1631,7 @@ edgepairing(GEN U, GEN tol)
   return gerepilecopy(av, unpair);
 }
 
-/*Returns the normalized basis of G. Can pass in U as a normalized basis to append to, or NULL to just start with G. If no normalized basis, returns NULL.*/
+/*Returns the normalized basis of G. Can pass in U as a normalized basis to append to, or NULL to just start with G. If no normalized basis, returns NULL. If something else goes wrong (e.g. computed Klein action has catastrophic precision loss and becomes 0), we return 0, with the intention to recompute above with more precision.*/
 static GEN
 normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat)
 {
@@ -1653,8 +1653,9 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
     GEN del = normbound_get_spair(U), g;/*The deleted sides*/
     long ldel = lg(del);
     Gadd = vectrunc_init(ldel);
-    for (i = 1; i<ldel; i++) {
+    for (i = 1; i< ldel; i++) {
       g = red_elt(X, U, Xinv(X, gel(Gstart, del[i])), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x^-1 for each deleted side x.*/
+      if (!g) return gc_const(av, gen_0);
       if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
       vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
     }
@@ -1665,6 +1666,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
     GEN g;
     for (i = 1; i < lG; i++) {
       g = red_elt(X, U, gel(Gstart, i), origin, Xtoklein, Xmul, 0, gdat);/*Reduce x. No need to do the inverse, as our list includes all inverses of elements so we just hit it later.*/
+      if (!g) return gc_const(av, gen_0);
       if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
       vectrunc_append(Gadd, Xinv(X, g));/*Add g^-1 to our list*/
     }
@@ -1678,6 +1680,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
         GEN Gnew = vectrunc_init(lG), g;
         for (i = 1; i < lG; i++) {
           g = red_elt(X, U, Xinv(X, gel(Gadd, i)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce g.*/
+          if (!g) return gc_const(av, gen_0);
           if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
           vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
         }
@@ -1687,10 +1690,11 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
       GEN del = normbound_get_spair(Unew);/*The deleted sides*/
       long ldel = lg(del), ind;
       GEN Gnew = vectrunc_init(ldel), Uelts = normbound_get_elts(U), g;
-      for (i = 1; i<ldel; i++) {
+      for (i = 1; i < ldel; i++) {
         ind = del[i];
         if (ind > 0) g = red_elt(X, Unew, Xinv(X, gel(Uelts, ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from U*/
         else g = red_elt(X, Unew, Xinv(X, gel(Gadd, -ind)), origin, Xtoklein, Xmul, 0, gdat);/*Reduce element from Gadd*/
+        if (!g) return gc_const(av, gen_0);
         if (Xistriv(X, g)) continue;/*Reduces to 1, move on.*/
         vectrunc_append(Gnew, Xinv(X, g));/*Add g^-1 to our list*/
       }
@@ -1741,7 +1745,9 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
           continue;
         }
         /*Now dat[4]=1, i.e. gv is outside of U. We reduce g with respect to v to get Wg, where Wgv is strictly closer to the origin than v is. Therefore I(Wg) encloses v, so will delete the vertex v and change U. This is the case described by John Voight.*/
-        vectrunc_append(Gadd, red_elt(X, U, stoi(gind), v, Xtoklein, Xmul, 0, gdat));/*Add the reduction in.*/
+        GEN redtoadd = red_elt(X, U, stoi(gind), v, Xtoklein, Xmul, 0, gdat);
+        if (!redtoadd) return gc_const(av, gen_0);
+        vectrunc_append(Gadd, redtoadd);/*Add the reduction in.*/
         continue;
       }
       /*We have an infinite vertex.*/
@@ -1765,19 +1771,23 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
   pari_sp av = avma;
   GEN tol = gdat_get_tol(gdat);
   GEN zorig = z;
-  z = klein_act_i(Xtoklein(X, g), z);/*Starting point*/
+  GEN gact = Xtoklein(X, g);
+  if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
+  z = klein_act_i(gact, z);/*Starting point*/
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   long ind = 1, maxind = 32;
   GEN decomp = cgetg(maxind + 1, t_VECSMALL);
   for (;;) {
     if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
-      GEN gact = Xtoklein(X, g);
+      gact = Xtoklein(X, g);
+      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
     }
     long outside = normbound_outside(U, z, tol);
     if (outside <= 0) {/*We are inside or on the boundary.*/
-      GEN gact = Xtoklein(X, g);
+      gact = Xtoklein(X, g);
+      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
       outside = normbound_outside(U, z, tol);
       if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
@@ -1811,16 +1821,19 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
     g = gel(elts, gind);
   }
   else gklein = Xtoklein(X, g);/*Compute it.*/
+  if (gequal0(gklein)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
   z = klein_act_i(gklein, z);/*Starting point.*/
   long ind = 1;
   for (;;) {
     if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       GEN gact = Xtoklein(X, g);
+      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
     }
     long outside = normbound_outside(U, z, tol);
     if (outside <= 0) {/*We are inside or on the boundary.*/
       GEN gact = Xtoklein(X, g);
+      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
       outside = normbound_outside(U, z, tol);
       if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
@@ -2067,6 +2080,7 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
   gel(midpt, 1) = shiftr(gel(midpt, 1), -1);
   gel(midpt, 2) = shiftr(gel(midpt, 2), -1);
   GEN red = red_elt(X, U, Xid, midpt, Xtoklein, Xmul, 0, gdat);/*Reduce this to the interior.*/
+  if (gequal0(red)) pari_err(e_PREC, "Catastrophic precision loss, please recompute with more precision.");
   g = Xmul(X, Xmul(X, red, g), Xinv(X, red));/*Conjugate g by red, so now the root geodesic of g goes through the interior.*/
   GEN geod = geodesic_klein(X, g, Xtoklein, tol);/*Update the initial geodesic.*/
   GEN sidestart = fdom_intersect(U, geod, tol, 0);/*First intersection*/
@@ -2100,7 +2114,9 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
 A word is a vecsmall, which is taken in reference to a list of elements G. A negative entry denotes taking the inverse of the corresponding index, so the word [1, -2, 5] is G[1]*G[2]^-1*G[5]. The fundamental domain gives us a set of generators, and we will manipulate this into a minimal set of generators with relations (stored as words).
 */
 
-/*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].*/
+/*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].
+NOTE: we assume that the minimal cycles obey the following property: each side pairing element appears in exactly ONE cycle, except if spair[i]=i, in which it also appears in an elliptic/parabolic cycle. This is guaranteed by how our minimal cycle method works, but is NOT in general guaranteed.
+*/
 static GEN
 presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN))
 {
@@ -2357,7 +2373,7 @@ word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN
   GEN origin = gtocr(gen_0, prec);
   GEN ginv = Xinv(X, g);/*g^-1*/
   GEN gred = red_elt_decomp(X, U, ginv, origin, Xtoklein, Xmul, gdat);/*Reduction of g^-1, which gives a word for g.*/
-  if (!Xistriv(X, gel(gred, 1))) pari_err(e_MISC, "We could not reduce the element to the identity. Increase the precision perhaps?");
+  if (gequal0(gred) || !Xistriv(X, gel(gred, 1))) pari_err(e_MISC, "We could not reduce the element to the identity. Increase the precision perhaps?");
   GEN oldword = gel(gred, 2);/*g as a word in U[1]. We must move it to a word in P[1].*/
   GEN Ptrans = gel(P, 3);/*U[1] in terms of P.*/
   long newlg = 1, lold = lg(oldword), i;
@@ -2489,7 +2505,19 @@ afuchnewp(GEN X, GEN p)
   gel(new_X, afuch_GDAT) = gdat;
   GEN U = afuch_get_fdom(X);
   if (!gequal0(U)) {/*Recompute the fundamental domain.*/
-    U = normbasis(new_X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    int precinc = 0;
+    gel(new_X, afuch_FDOM) = gen_0;/*Reset to 0 in case we need to compute with more precision, where we do NOT want to recompute the fdom.*/
+    for (;;) {
+      U = normbasis(new_X, NULL, normbound_get_elts(U), &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+      if (!gequal0(U)) break;
+      if (DEBUGLEVEL) pari_warn(warner, "Increasing precision");
+      X = afuch_moreprec_shallow(X, 1);/*Loss of precision, solve by increasing it.*/
+      precinc = 1;
+    }
+    if (precinc && DEBUGLEVEL) {
+      GEN tol = gdat_get_tol(afuch_get_gdat(new_X));
+      pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
+    }
     gel(new_X, afuch_FDOM) = U;
     GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);/*Recompute the presentation.*/
     gel(new_X, afuch_PRES) = pres;
@@ -2548,7 +2576,7 @@ afuch_moreprec_shallow(GEN X, long inc)
   GEN U = afuch_get_fdom(X);
   if (!gequal0(U)) {/*We must update the old fundamental domain stored.*/
     GEN S = normbound_get_elts(U);/*Just recall normbound*/
-    U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);/*We do NOT check if this is non-zero, since if the basis was computed the first time with less precision, increasing the precision should not have an effect. Make sure that if you increase the precision and you are still computing a normalized basis, then you delete this stored entry from X before calling this method.*/
     gel(new_X, afuch_FDOM) = U;
     GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);/*In theory, the call to normbasis could have changed the ordering of things.*/
     gel(new_X, afuch_PRES) = pres;
@@ -2958,8 +2986,9 @@ afuchfdom_worker(GEN X, GEN *startingset)
       }
     }
     if (DEBUGLEVEL) pari_printf("%d elements found\n", lg(elts) - 1);
-    if (lg(elts) > 1) U = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
-    if (!U) {
+    GEN newU = U;
+    if (lg(elts) > 1) newU = normbasis(X, U, elts, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);
+    if (!newU) {
       nU = 0;
       if (DEBUGLEVEL) pari_printf("Current normalized basis has 0 sides\n\n");
       R = gadd(R, epsilon);/*Update R, maybe it was too small.*/
@@ -2967,6 +2996,11 @@ afuchfdom_worker(GEN X, GEN *startingset)
       U = NULL;
       continue;
     }
+    else if (gequal0(newU)) {
+      if (U) *startingset = gerepilecopy(av, normbound_get_elts(U));
+      return NULL;/*Precision problems down below.*/
+    }
+    U = newU;
     long newnU = lg(normbound_get_elts(U)) - 1;
     if (DEBUGLEVEL) pari_printf("Current normalized basis has %d sides\n\n", newnU);
     GEN Uarea = normbound_get_area(U);
@@ -3005,6 +3039,7 @@ afuchmakefdom(GEN X)
         S = shallowconcat(S, gel(allelts, 2));
     }
     U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
+    /*No need to check if U=0 since we already computed with it, shouldn't now create a precision loss.*/
     gel(new_X, afuch_FDOM) = U;
     GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
     gel(new_X, afuch_PRES) = pres;
@@ -3067,11 +3102,17 @@ afuchmakefdom(GEN X)
     precinc = 1;
     new_X = afuch_moreprec_shallow(new_X, 1);/*Increase the precision by 1.*/
   }
+  for (;;) {
+    U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
+    if (!gequal0(U)) break;/*Success!*/
+    if (DEBUGLEVEL) pari_warn(warner, "Increasing precision");
+    precinc = 1;
+    new_X = afuch_moreprec_shallow(new_X, 1);/*Increase the precision by 1.*/
+  }
   if (precinc && DEBUGLEVEL) {
     GEN tol = gdat_get_tol(afuch_get_gdat(new_X));
     pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
   }
-  U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
   GEN elts = normbound_get_elts(U), kact = normbound_get_kact(U);
   long le = lg(elts), i;
   for (i = 1; i < le; i++) {/*Due to multiplication, we may have huge elements that can be cut down. We do this now.*/
@@ -3107,6 +3148,7 @@ afuchfdom_subgroup(GEN X, GEN M)
   }
   gens = shallowconcat(gel(allelts, 1), gens);
   GEN U = normbasis(new_X, NULL, gens, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
+  /*No need to check if U=0 since we already computed with it, shouldn't now create a precision loss.*/
   gel(new_X, afuch_FDOM) = U;
   GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
   gel(new_X, afuch_PRES) = pres;
@@ -3816,6 +3858,8 @@ afuchtoklein(GEN X, GEN g)
   }
   return gerepilecopy(av, mkvec2(A, B));
 }
+
+GEN ttest(GEN X, GEN g){return afuchtoklein(X, g);}
 
 /*Returns the trace of an element of X. We only use it in afuchisparabolic (which itself is only used in computing minimal cycles), so this is not as efficient as it could be (by saving the traces of a basis).*/
 static GEN
