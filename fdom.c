@@ -347,7 +347,7 @@ gdat_initialize(GEN p, long prec)
   return ret;
 }
 
-/*This gives the action in the Klein model, as described above.*/
+/*This gives the action in the Klein model, as described above. Returns NULL if massive precision loss.*/
 GEN
 klein_act_i(GEN M, GEN z)
 {
@@ -357,6 +357,7 @@ klein_act_i(GEN M, GEN z)
   GEN BzcpA = addcrcr(mulcrcr_conj(B, z), A);/*B*conj(z)+A*/
   GEN num = addcrcr(mulcrcr(A, AzpB), mulcrcr(B, BzcpA));/*A(Az+B)+B(B*conj(z)+A)*/
   GEN denom = addcrcr(mulcrcr_conj(AzpB, B), mulcrcr_conj(BzcpA, A));/*(Az+B)conj(B)+(B*conj(z)+A)conj(A)*/
+  if (gequal0(denom)) return gc_NULL(av);
   return gerepilecopy(av, divcrcr(num, denom));
 }
 
@@ -367,7 +368,9 @@ klein_act(GEN M, GEN z, long prec)
   pari_sp av = avma;
   GEN Msafe = klein_safe(M, prec);
   GEN zsafe = gtocr(z, prec);
-  return gerepileupto(av, klein_act_i(Msafe, zsafe));
+  GEN zimg = klein_act_i(Msafe, zsafe);
+  if (!zimg) pari_err(e_PREC,"Catastrophic precision loss, please recompute to a higher precision level.");
+  return gerepileupto(av, zimg);
 }
 
 /*Returns M=[A, B] converted to having complex entries with real components of precision prec.*/
@@ -1569,7 +1572,7 @@ args_search(GEN args, long ind, GEN arg, GEN tol)
 
 /*2: NORMALIZED BASIS*/
 
-/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily.*/
+/*Returns the edge pairing, as VECSMALL v where v[i]=j means i is paired with j (infinite sides are by convention paired with themselves). If not all sides can be paired, instead returns [v1, v2, ...] where vi=[gind, vind, side, location] is a VECSMALL. gind is the index of the unpaired side, vind is the corresponding index of an unpaired vertex (so gind==vind or gind==vind+1 mod # of sides). The point gv projects to side side, and location=-1 means it is inside U, 0 on the boundary, and 1 is outside U. If v is infinite, then location<=0 necessarily. IF precision loss occurs in here, we return NULL to recompute to higher precision.*/
 static GEN
 edgepairing(GEN U, GEN tol)
 {
@@ -1586,6 +1589,7 @@ edgepairing(GEN U, GEN tol)
     if (gequal0(act)) { pair[i] = i; continue; }/*oo side, go next (we say it is paired with itself)*/
     if (pair[i]) continue;/*We have already paired this side, so move on.*/
     GEN v1 = klein_act_i(act, gel(vcors, i));/*Image of the ith vertex.*/
+    if (!v1) return gc_NULL(av);
     GEN v1arg = argmod_complex(v1, tol);/*Argument*/
     long v1pair = args_search(vargs, cross, v1arg, tol), v1loc, foundv1;
     if (v1pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v1 is on the side.*/
@@ -1602,6 +1606,7 @@ edgepairing(GEN U, GEN tol)
     if (i == 1) i2 = lenU;
     else i2 = i - 1;/*i2 is the previous vertex, also on the ith side.*/
     GEN v2 = klein_act_i(act, gel(vcors, i2));/*Image of the second (i-1 st) vertex.*/
+    if (!v2) return gc_NULL(av);
     GEN v2arg = argmod_complex(v2, tol);/*Argument*/
     long v2pair = args_search(vargs, cross, v2arg, tol), v2loc, foundv2;
     if (v2pair < 0) {/*We found the angle. In theory the points might not be equal, so we check this now. It suffices to check if v2 is on the side.*/
@@ -1703,6 +1708,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
     }
     /*At this point, <G> = <U[1]>_(no-inverse). Now we have to check if there is a side pairing.*/
     GEN newunpair = edgepairing(U, unpairtol);
+    if (!newunpair) return gc_const(av, gen_0);/*Precision loss*/
     if (typ(newunpair) == t_VECSMALL) {/*All paired up!*/
       gel(U, 8) = newunpair;
       return gerepilecopy(av, U);
@@ -1711,6 +1717,7 @@ normbasis(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, 
     if (gequal(unpair, newunpair)) {/*In this case, we likely have hit an infinite loop with a true side pairing that was missed due to tolerance. We decrease the tolerance.*/
       unpairtol = shiftr(unpairtol, 1);
       newunpair = edgepairing(U, unpairtol);
+      if (!newunpair) return gc_const(av, gen_0);/*Precision loss*/
       if (typ(newunpair) == t_VECSMALL) {/*All paired up!*/
         gel(U, 8) = newunpair;
         return gerepilecopy(av, U);
@@ -1772,8 +1779,8 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
   GEN tol = gdat_get_tol(gdat);
   GEN zorig = z;
   GEN gact = Xtoklein(X, g);
-  if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
   z = klein_act_i(gact, z);/*Starting point*/
+  if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
   GEN elts = normbound_get_elts(U);
   GEN kact = normbound_get_kact(U);
   long ind = 1, maxind = 32;
@@ -1781,18 +1788,19 @@ red_elt_decomp(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul
   for (;;) {
     if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       gact = Xtoklein(X, g);
-      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
+      if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
     }
     long outside = normbound_outside(U, z, tol);
     if (outside <= 0) {/*We are inside or on the boundary.*/
       gact = Xtoklein(X, g);
-      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
+      if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       outside = normbound_outside(U, z, tol);
       if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
     }
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
+    if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
     if (ind > maxind) {/*Make decomp longer*/
       maxind <<= 1;/*Double it.*/
@@ -1821,24 +1829,25 @@ red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, 
     g = gel(elts, gind);
   }
   else gklein = Xtoklein(X, g);/*Compute it.*/
-  if (gequal0(gklein)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
   z = klein_act_i(gklein, z);/*Starting point.*/
+  if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
   long ind = 1;
   for (;;) {
     if (ind % 20 == 0) {/*Recompute z every 20 moves to account for precision issues.*/
       GEN gact = Xtoklein(X, g);
-      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
+      if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
     }
     long outside = normbound_outside(U, z, tol);
     if (outside <= 0) {/*We are inside or on the boundary.*/
       GEN gact = Xtoklein(X, g);
-      if (gequal0(gact)) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       z = klein_act_i(gact, zorig);
+      if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
       outside = normbound_outside(U, z, tol);
       if (outside <= 0) break;/*We recompile to combat loss of precision, which CAN and WILL happen.*/
     }
     z = klein_act_i(gel(kact, outside), z);/*Act on z.*/
+    if (!z) return gc_NULL(av);/*Massive precision loss, recompute with more precision.*/
     g = Xmul(X, gel(elts, outside), g);/*Multiply on the left of g.*/
     ind++;
   }
