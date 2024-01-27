@@ -2557,6 +2557,9 @@ afuch_moreprec_shallow(GEN X, long inc)
   GEN basis_dontwant = alg_get_invbasis(new_A);
   GEN basis_change = QM_mul(basis_dontwant, basis_want);
   new_A = my_alg_changeorder(new_A, basis_change);/*Correct the basis to the old one*/
+  
+  gel(new_A, 5) = hf;/*AUREL: I think there is a bug with alg_cyclic, so that the finite place is not updated. So I'm putting this line of code here for now to hopefully bandaid fix it.*/
+  
   new_A = gerepileupto(av, new_A);
   /*We have the new algebra*/
   gel(new_X, afuch_A) = new_A;
@@ -3858,8 +3861,6 @@ afuchtoklein(GEN X, GEN g)
   }
   return gerepilecopy(av, mkvec2(A, B));
 }
-
-GEN ttest(GEN X, GEN g){return afuchtoklein(X, g);}
 
 /*Returns the trace of an element of X. We only use it in afuchisparabolic (which itself is only used in computing minimal cycles), so this is not as efficient as it could be (by saving the traces of a basis).*/
 static GEN
