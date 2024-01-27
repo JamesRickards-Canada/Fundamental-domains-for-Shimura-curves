@@ -102,3 +102,9 @@ X = afuchinit(A, O1, , 2);
 print(afuchsignature(X));
 X = afuchnewp(X, Pi / 2 + 0.7871*I);
 onealgcheck(X);
+
+F = nfinit(y^2-103);
+A = alginit(F, [y - 38, -43*y - 4]);
+X = afuchinit(A, , 3);
+print(afuchsignature(X));
+onealgcheck(X);
