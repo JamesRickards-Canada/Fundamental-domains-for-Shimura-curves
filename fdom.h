@@ -124,7 +124,7 @@ GEN afuchelts(GEN X);
 int afuchelttype(GEN X, GEN g);
 GEN afuchmakefdom(GEN X);
 GEN afuchgeodesic(GEN X, GEN g);
-GEN afuchlist(GEN F, GEN Amin, GEN Amax, long split);
+GEN afuchlist(GEN F, GEN bounds, long split);
 GEN afuchminimalcycles(GEN X);
 GEN afuchnormalizernorms(GEN X);
 GEN afuchorder(GEN X);

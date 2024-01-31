@@ -35,8 +35,8 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(afuchelttype,"afuchelttype(X, g): returns 1 if g is hyperbolic, 0 if g is parabolic, and -1 if g is elliptic.");
   install(afuchgeodesic,"GG");
   addhelp(afuchgeodesic,"afuchgeodesic(X, g): computes the image of the closed geodesic associated to the hyperbolic element g in the fundamental domain (g belongs to X as well). The return is a vector with entries being [g, s1, s2, v1, v2, [a, b, c]], where each component runs from vertex v1 on side s1 to vertex v2 on side s2, which has equation ax+by=c=0 or 1. The components are listed in order.");
-  install(afuchlist,"GGDGD1,L,");
-  addhelp(afuchlist,"afuchlist(F, Amin, {Amax}, {split=1}: given a totally real number field F (with variable not x), we find all possible quaternion algebras over F that are split at the unique real place given by split, for which the area of the fundamental domain is between Amin and Amax. If Amax is not passed, we go from 0 to Amin. The return is [[[a, b], area, rprimes]], where A=alginit(F, [a, b]) has area area, and rprimes is the multiset of primes lying above the finite ramified primes of A.");
+  install(afuchlist,"GGD1,L,");
+  addhelp(afuchlist,"afuchlist(F, bounds, {split=1}: given a totally real number field F (with variable not x), we find all possible quaternion algebras over F that are split at the unique real place given by split, for which the area of the fundamental domain is between Amin and Amax, where bounds=[Amin, Amax] or Amin=0 and Amax=bounds. The return is [[[a, b], area, rprimes]], where A=alginit(F, [a, b]) has area area, and rprimes is the multiset of primes lying above the finite ramified primes of A.");
   install(afuchmakefdom,"G");
   addhelp(afuchmakefdom,"afuchmakefdom(X): returns X with the fundamental domain and presentation computed.");
   install(afuchminimalcycles,"G");

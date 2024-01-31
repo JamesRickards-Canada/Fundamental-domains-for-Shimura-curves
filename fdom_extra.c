@@ -347,13 +347,13 @@ afuchcheck(GEN X)
     if (!alg_in_centre(A, diff)) return gc_long(av, 6);/*Expressing a random element as a word failed.*/
   }
   
-  GEN elliptic = afuch_get_elliptic(X);
+  GEN elliptic = afuchelliptic(X);/*Make sure we get the base field version of our elements, not in terms of a stored order.*/
   if (lg(elliptic) != (nell + 1)) return gc_long(av, 7);/*Not the same number of orders as elliptic elements.*/
   for (i = 1; i <= nell; i++) {
     GEN g, gbase;
     g = gbase = gel(elliptic, i);
     long j;
-    for (j = 1; j < gel(sig, 2)[j]; j++) {
+    for (j = 1; j < gel(sig, 2)[i]; j++) {
       if (afuchistriv(X, g)) return gc_long(av, 7);/*Elliptic element has smaller order than claimed.*/
       g = algmul(A, g, gbase);
     }

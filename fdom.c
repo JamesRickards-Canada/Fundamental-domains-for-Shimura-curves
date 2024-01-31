@@ -2939,7 +2939,7 @@ afuchelliptic(GEN X)
 {
   pari_sp av = avma;
   GEN ellip = afuch_get_elliptic(X);
-  if (gequal0(ellip)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  if (gequal0(afuch_get_fdom(X))) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, ellip);/*O=1, no conversion necessary.*/
   long lell, i;
@@ -3261,9 +3261,9 @@ afuchgeodesic(GEN X, GEN g)
   return gerepilecopy(av, geod);
 }
 
-/*Given a totally real number field F (with variable not x), we return [pairs, areas, rprimes], where A=alginit(F, pairs[i]) gives an arithmetic Fuchsian group (with respect to the maximal order) whose area, areas[i], is between Amin and Amax, and the multiset of primes lying above the ramified ideals is rprimes[i]. In fact, we find all such algebras that are split only at the place "split". Can pass Amax as NULL to go from 0 to Amin. Currently, we do not treat Eichler orders here.*/
+/*Given a totally real number field F (with variable not x), we return [pairs, areas, rprimes], where A=alginit(F, pairs[i]) gives an arithmetic Fuchsian group (with respect to the maximal order) whose area, areas[i], is between Amin and Amax, and the multiset of primes lying above the ramified ideals is rprimes[i]. In fact, we find all such algebras that are split only at the place "split". Can pass bounds as [Amin, Amax] or Amax to go from 0 to Amax. Currently, we do not treat Eichler orders here.*/
 GEN
-afuchlist(GEN F, GEN Amin, GEN Amax, long split)
+afuchlist(GEN F, GEN bounds, long split)
 {
   pari_sp av = avma, av2;
   long bits = prec2nbits(DEFAULTPREC);
@@ -3273,7 +3273,13 @@ afuchlist(GEN F, GEN Amin, GEN Amax, long split)
   GEN ar = gmul(gpow(nfdisc(pol), gdivsg(3, gen_2), 3), zetaval);/*zeta_F(2)*d_F^(3/2)*/
   ar = mpshift(ar, 3 - twon);
   ar = gmul(ar, gpowgs(mppi(3), 1 - twon));/*2^(3-2n)*Pi^(1-2n)*zeta_F(2)*d_F^(3/2). The area is ar*product of N(p)-1 across the prime ideals dividing D*/
-  if (!Amax) { Amax = Amin; Amin = gen_0; }
+  GEN Amin, Amax;
+  if (typ(bounds) == t_VEC) {
+    if (lg(bounds) <= 2) pari_err_TYPE("bounds must either be a positive real number or a pair of such", bounds);
+    Amin = gel(bounds, 1);
+    Amax = gel(bounds, 2);
+  }
+  else { Amin = gen_0; Amax = bounds; }
   GEN phimin = gceil(gdiv(Amin, ar));
   GEN phimax = gfloor(gdiv(Amax, ar));/*The min and max possible values of the product of N(p)-1*/
   GEN plist = primes0(mkvec2(gen_2, addis(phimax, 1)));/*The possible primes lying above divisors of D in the given area range.*/

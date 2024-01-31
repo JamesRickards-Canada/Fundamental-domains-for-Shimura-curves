@@ -26,6 +26,7 @@ onealgcheck(X) = {
   if (ch == 4, print("One of the relations fails"));
   if (ch == 5, print("One of the side pairing element relations fails"));
   if (ch == 6, print("afuchfdomword fails on a random element (15 tested)"));
+  if (ch == 7, print("Wrong number of elliptic elements, or their orders are incorrect"));
 }
 
 As = vector(7);/*Various algebras*/
