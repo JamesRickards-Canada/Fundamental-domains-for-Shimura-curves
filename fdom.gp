@@ -113,4 +113,5 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   install(tune_Cn,"LGGD4,L,D20,L,p");
   addhelp(tune_Cn,"tune_Cn(n, Cmin, Cmax, {testsperalg=4}, {tests=20}): For the degree n (between 1 and 9), we compute the fundamental domains for a range of algebras with C_n between Cmin and Cmax. We return the values of C_n and the total time taken for each one. This is used to determine the best value of C_n.");
 
+\r eichler /*Aurel Page's code to compute Eichler orders*/
 default(parisize, "4096M");
