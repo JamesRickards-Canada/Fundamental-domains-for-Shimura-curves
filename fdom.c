@@ -121,7 +121,7 @@ static GEN geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol);
 static GEN geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat);
 
 /*2: PRESENTATION*/
-static GEN presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN presentation(GEN X, GEN U, GEN mcyc_bytype);
 static GEN word_collapse(GEN word);
 static GEN word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
 
@@ -2136,19 +2136,19 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
 A word is a vecsmall, which is taken in reference to a list of elements G. A negative entry denotes taking the inverse of the corresponding index, so the word [1, -2, 5] is G[1]*G[2]^-1*G[5]. The fundamental domain gives us a set of generators, and we will manipulate this into a minimal set of generators with relations (stored as words).
 */
 
-/*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind].
+/*Returns the group presentation of the fundamental domain U. The return is a vector V, where the V[1] is the list of generators (a subset of U[1]). V[2] is the vector of relations. Finally the V[3] is a vector whose ith entry is the representation of the word U[1][i] in terms of V[1]. Each term in V[2] and V[3] is formatted as [i1, i2, ..., ir], which corresponds to g_{|i1|}^(sign(i1))*...*g_{|ir|}^sign(ir). Thus, one of the generators is given the entry [ind], and its inverse is given [-ind]. 
+Pass in mcyc_bytype, the output of minimalcycles_bytype.
 NOTE: we assume that the minimal cycles obey the following property: each side pairing element appears in exactly ONE cycle, except if spair[i]=i, in which it also appears in an elliptic/parabolic cycle. This is guaranteed by how our minimal cycle method works, but is NOT in general guaranteed.
 */
 static GEN
-presentation(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+presentation(GEN X, GEN U, GEN mcyc_bytype)
 {
   pari_sp av = avma;
   /*Initially, we start with using the original indices (of U[1]), and transfer over at the very end.*/
   GEN elts = normbound_get_elts(U);
   long lgelts = lg(elts), i, j;
   GEN words = zerovec(lgelts - 1);/*Stores elts[i] as a word in terms of the minimal generators. Initially, we only make it in terms of indices of U[1], and only store the 1 step g_1=g_2^-1 from the side pairing or g_1=g_2^-1g_3^-1 from accidental cycles. Later on, we do a depth first search updating of all of these words.*/
-  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xisparabolic, Xistriv);/*Minimal cycles by type.*/
-  GEN cyc = gel(mcyc, 1), cyctype = gel(mcyc, 2), pairing = normbound_get_spair(U);/*Cycles, types, pairing*/
+  GEN cyc = gel(mcyc_bytype, 1), cyctype = gel(mcyc_bytype, 2), pairing = normbound_get_spair(U);/*Cycles, types, pairing*/
   long lgcyc = lg(cyc), firstacc = 1;
   GEN iselliptic = const_vecsmall(lgelts - 1, 0);/*1 if and only if the ith element is elliptic, and 2 iff the ith element is parabolic*/
   while (firstacc < lgcyc && !cyctype[firstacc]) {/*Find the first non-parabolic cycle (should be accidental).*/
@@ -2541,7 +2541,8 @@ afuchnewp(GEN X, GEN p)
       pari_warn(warner, "Precision increased to %d, i.e. \\p%Pd", realprec(tol), precision00(tol, NULL));
     }
     gel(new_X, afuch_FDOM) = U;
-    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);/*Recompute the presentation.*/
+    GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN pres = presentation(new_X, U, mcyc_bytype);/*Recompute the presentation.*/
     gel(new_X, afuch_PRES) = pres;
   }
   return gerepilecopy(av, new_X);
@@ -2579,9 +2580,7 @@ afuch_moreprec_shallow(GEN X, long inc)
   GEN basis_dontwant = alg_get_invbasis(new_A);
   GEN basis_change = QM_mul(basis_dontwant, basis_want);
   new_A = my_alg_changeorder(new_A, basis_change);/*Correct the basis to the old one*/
-  
-  gel(new_A, 5) = hf;/*AUREL: I think there is a bug with alg_cyclic, so that the finite place is not updated. So I'm putting this line of code here for now to hopefully bandaid fix it.*/
-  
+  gel(new_A, 5) = hf;/*AUREL: This is a bandaid fix to hopefully work with both 2.15 and 2.16.*/
   new_A = gerepileupto(av, new_A);
   /*We have the new algebra*/
   gel(new_X, afuch_A) = new_A;
@@ -2603,7 +2602,8 @@ afuch_moreprec_shallow(GEN X, long inc)
     GEN S = normbound_get_elts(U);/*Just recall normbound*/
     U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);/*We do NOT check if this is non-zero, since if the basis was computed the first time with less precision, increasing the precision should not have an effect. Make sure that if you increase the precision and you are still computing a normalized basis, then you delete this stored entry from X before calling this method.*/
     gel(new_X, afuch_FDOM) = U;
-    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);/*In theory, the call to normbasis could have changed the ordering of things.*/
+    GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN pres = presentation(new_X, U, mcyc_bytype);/*In theory, the call to normbasis could have changed the ordering of things.*/
     gel(new_X, afuch_PRES) = pres;
   }
   return new_X;
@@ -3066,7 +3066,8 @@ afuchmakefdom(GEN X)
     U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
     /*No need to check if U=0 since we already computed with it, shouldn't now create a precision loss.*/
     gel(new_X, afuch_FDOM) = U;
-    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN pres = presentation(new_X, U, mcyc_bytype);
     gel(new_X, afuch_PRES) = pres;
     return gerepilecopy(av, new_X);
   }
@@ -3094,7 +3095,8 @@ afuchmakefdom(GEN X)
   }
   if (!type) {/*Looking for O^1 only.*/
     gel(new_X, afuch_FDOM) = U;
-    GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN pres = presentation(new_X, U, mcyc_bytype);
     gel(new_X, afuch_PRES) = pres;
     return gerepilecopy(av, new_X);
   }
@@ -3147,7 +3149,8 @@ afuchmakefdom(GEN X)
   }
   gel(new_X, afuch_FDOM) = U;
   if (type == 3) gel(new_X, afuch_SAVEDELTS) = vec_prepend(newelts, O1elts);
-  GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  GEN pres = presentation(new_X, U, mcyc_bytype);
   gel(new_X, afuch_PRES) = pres;
   return gerepilecopy(av, new_X);
 }
@@ -3175,7 +3178,8 @@ afuchfdom_subgroup(GEN X, GEN M)
   GEN U = normbasis(new_X, NULL, gens, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, afuch_get_gdat(new_X));
   /*No need to check if U=0 since we already computed with it, shouldn't now create a precision loss.*/
   gel(new_X, afuch_FDOM) = U;
-  GEN pres = presentation(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  GEN pres = presentation(new_X, U, mcyc_bytype);
   gel(new_X, afuch_PRES) = pres;
   return new_X;
 }
