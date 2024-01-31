@@ -282,6 +282,7 @@ algeichlerorder(GEN A, GEN I)
   4: one of the relations fails;
   5: one of the side pairing element relations fails;
   6: afuchfdomword fails on a random element (15 tested).
+  7: there are too many / few elliptic elements, or some of their orders are wrong.
 */
 long
 afuchcheck(GEN X)
@@ -344,6 +345,19 @@ afuchcheck(GEN X)
     if (!gequal1(O)) gword = QM_QC_mul(O, gword);/*Move to base field if required.*/
     GEN diff = algmul(A, g, alginv(A, gword));
     if (!alg_in_centre(A, diff)) return gc_long(av, 6);/*Expressing a random element as a word failed.*/
+  }
+  
+  GEN elliptic = afuch_get_elliptic(X);
+  if (lg(elliptic) != (nell + 1)) return gc_long(av, 7);/*Not the same number of orders as elliptic elements.*/
+  for (i = 1; i <= nell; i++) {
+    GEN g, gbase;
+    g = gbase = gel(elliptic, i);
+    long j;
+    for (j = 1; j < gel(sig, 2)[j]; j++) {
+      if (afuchistriv(X, g)) return gc_long(av, 7);/*Elliptic element has smaller order than claimed.*/
+      g = algmul(A, g, gbase);
+    }
+    if (!afuchistriv(X, g)) return gc_long(av, 7);/*Elliptic element has larger order than claimed.*/
   }
   
   return gc_long(av, 0);

@@ -141,6 +141,7 @@ GEN normalizer_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
 GEN afuchconj(GEN X, GEN g);
+int afuchistriv(GEN X, GEN g);
 GEN afuchmul(GEN X, GEN g1, GEN g2);
 
 /*3: FINDING ELEMENTS*/

@@ -158,7 +158,6 @@ static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
 static GEN afuchid(GEN X);
 static int afuchinnormalizer(GEN X, GEN g);
 static int afuchisparabolic(GEN X, GEN g);
-static int afuchistriv(GEN X, GEN g);
 static GEN afuchnorm_fast(GEN X, GEN g);
 static GEN afuchnorm_chol(GEN F, GEN chol, GEN g);
 static GEN afuchnorm_mat(GEN F, GEN Onorm, GEN g);
@@ -3866,7 +3865,7 @@ afuchisparabolic(GEN X, GEN g)
 }
 
 /*Returns 1 if g is a scalar, i.e. g==conj(g).*/
-static int
+int
 afuchistriv(GEN X, GEN g)
 {
   pari_sp av = avma;
