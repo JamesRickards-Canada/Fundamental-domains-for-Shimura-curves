@@ -6,7 +6,7 @@
 enum { normbound_ELTS = 1, normbound_SIDES, normbound_VCORS, normbound_VARGS, normbound_CROSS, normbound_KACT, normbound_AREA, normbound_SPAIR, normbound_INFINITE };
 
 /*Sets the ordering of the fundamental domain vector.*/
-enum { afuch_A = 1, afuch_O, afuch_OINV, afuch_OCONJ, afuch_OMULTABLE, afuch_ONORMDAT, afuch_TYPE, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_PRES, afuch_SAVEDELTS, afuch_NORMALIZERNORMS };
+enum { afuch_A = 1, afuch_O, afuch_OINV, afuch_OCONJ, afuch_OMULTABLE, afuch_ONORMDAT, afuch_TYPE, afuch_ONORMREAL, afuch_KLEINMATS, afuch_QFMATS, afuch_GDAT, afuch_FDOMDAT, afuch_FDOM, afuch_SIGNATURE, afuch_PRES, afuch_ELLIPTIC, afuch_SAVEDELTS, afuch_NORMALIZERNORMS };
 
 /*Constants for fundamental domain computation*/
 enum { fdomdat_O1AREA = 1, fdomdat_BESTC, fdomdat_R, fdomdat_EPSILON, fdomdat_PASSES };
@@ -76,7 +76,11 @@ afuch_get_passes(GEN X) { return gmael(X, afuch_FDOMDAT, fdomdat_PASSES); }
 INLINE GEN
 afuch_get_fdom(GEN X) { return gel(X, afuch_FDOM); }
 INLINE GEN
-afuch_get_pres(GEN X) { return gel(X, afuch_PRES); }
+afuch_get_signature(GEN X) { return gel(X, afuch_SIGNATURE); }
+INLINE GEN
+afuch_get_presentation(GEN X) { return gel(X, afuch_PRES); }
+INLINE GEN
+afuch_get_elliptic(GEN X) { return gel(X, afuch_ELLIPTIC); }
 INLINE GEN
 afuch_get_savedelts(GEN X) { return gel(X, afuch_SAVEDELTS); }
 INLINE GEN
@@ -115,6 +119,7 @@ GEN afuchnewtype(GEN X, GEN type);
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 GEN afuchalg(GEN X);
 GEN afucharea(GEN X);
+GEN afuchelliptic(GEN X);
 GEN afuchelts(GEN X);
 int afuchelttype(GEN X, GEN g);
 GEN afuchmakefdom(GEN X);
@@ -124,7 +129,6 @@ GEN afuchminimalcycles(GEN X);
 GEN afuchnormalizernorms(GEN X);
 GEN afuchorder(GEN X);
 GEN afuchpresentation(GEN X);
-GEN afuchmakepresentation(GEN X);
 GEN afuchsides(GEN X);
 GEN afuchsignature(GEN X);
 GEN afuchspair(GEN X);

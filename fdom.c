@@ -4,9 +4,8 @@
 3. In afuch_moreprec_shallow, when alg_hilbert is updated to allow for denominators, this method can be simplified.
 4. my_alg_changeorder may have a better successor with the updated quaternion algebra methods.
 5. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
-6. Add testing for changing p.
-7. When initialize by a, b allows for denominators, fix afuchlist to not use this.
-8. Geodesics that intersect a vertex.
+6. When initialize by a, b allows for denominators, fix afuchlist to not use this.
+7. Geodesics that intersect a vertex. Maybe just forbid this, raising an error?
 
 POSSIBLE FUTURE ADDITIONS:
 1. Parallelization of element enumeration along with partial domain computations.
@@ -112,7 +111,7 @@ static GEN red_elt(GEN X, GEN U, GEN g, GEN z, GEN (*Xtoklein)(GEN, GEN), GEN (*
 /*2: CYCLES AND SIGNATURE*/
 static GEN minimalcycles(GEN pair);
 static GEN minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
-static GEN signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN));
+static GEN signature(GEN X, GEN U, GEN mcyc_bytype);
 
 /*2: GEODESICS*/
 static long fdom_intersect_sidesmidpt(long i1, long i2, long n);
@@ -120,7 +119,8 @@ static GEN fdom_intersect(GEN U, GEN geod, GEN tol, long s1);
 static GEN geodesic_klein(GEN X, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN tol);
 static GEN geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), GEN gdat);
 
-/*2: PRESENTATION*/
+/*2: ELLIPTIC ELEMENTS AND PRESENTATION*/
+static GEN elliptic(GEN X, GEN U, GEN mcyc_bytype);
 static GEN presentation(GEN X, GEN U, GEN mcyc_bytype);
 static GEN word_collapse(GEN word);
 static GEN word(GEN X, GEN U, GEN P, GEN g, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmul)(GEN, GEN, GEN), GEN (*Xinv)(GEN, GEN), int (*Xistriv)(GEN, GEN), GEN gdat);
@@ -1940,15 +1940,14 @@ minimalcycles_bytype(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xi
   return gerepilecopy(av, mkvec2(vecpermute(cycles, ordering), vecsmallpermute(types, ordering)));/*The return, [cycles, types]*/
 }
 
-/*Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s).*/
+/*Computes the signature of the fundamental domain U. The return in [g, V, s], where g is the genus, V=[m1,m2,...,mt] (vecsmall) are the orders of the elliptic cycles (all >=2), and s is the number of parabolic cycles. The signature is normally written as (g;m1,m2,...,mt;s). Pass in mcyc_bytype, the output of minimalcycles_bytype.*/
 static GEN
-signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)(GEN, GEN), int (*Xistriv)(GEN, GEN))
+signature(GEN X, GEN U, GEN mcyc_bytype)
 {
   pari_sp av = avma;
-  GEN mcyc = minimalcycles_bytype(X, U, Xid, Xmul, Xisparabolic, Xistriv);/*The minimal cycles and their types.*/
-  long nfixed = 0, lgcyc = lg(gel(mcyc, 1)), i;/*The number of fixed sides, and number of cycles+1*/
+  long nfixed = 0, lgcyc = lg(gel(mcyc_bytype, 1)), i;/*The number of fixed sides, and number of cycles+1*/
   for (i = 1; i < lgcyc; i++) {
-    if (lg(gmael(mcyc, 1, i)) == 2 && gel(mcyc, 2)[i] == 2) nfixed++;
+    if (lg(gmael(mcyc_bytype, 1, i)) == 2 && gel(mcyc_bytype, 2)[i] == 2) nfixed++;
   }/*Fixed sides MUST correspond to length 1 cycles with order 2.*/
   GEN elts = normbound_get_elts(U);
   long genus = (((lg(elts) - 1 + nfixed) >> 1) - lgcyc + 2) >> 1;
@@ -1957,11 +1956,11 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)
   int foundlastpar = 0;
   for (i = 1; i < lgcyc; i++) {
     if (!foundlastpar) {
-      if (gel(mcyc, 2)[i] == 0) continue;
+      if (gel(mcyc_bytype, 2)[i] == 0) continue;
       s = i - 1;/*Found the last parabolic.*/
       foundlastpar = 1;
     }
-    if (gel(mcyc, 2)[i] == 1) continue;
+    if (gel(mcyc_bytype, 2)[i] == 1) continue;
     firstell = i;/*Found the last accidental.*/
     break;
   }
@@ -1970,7 +1969,7 @@ signature(GEN X, GEN U, GEN Xid, GEN (*Xmul)(GEN, GEN, GEN), int (*Xisparabolic)
   gel(rvec, 1) = stoi(genus);
   gel(rvec, 2) = cgetg(lgell, t_VECSMALL);
   for (i = 1; i < lgell; i++) {
-    gel(rvec, 2)[i] = gel(mcyc, 2)[firstell];
+    gel(rvec, 2)[i] = gel(mcyc_bytype, 2)[firstell];
     firstell++;
   }
   gel(rvec, 3) = stoi(s);
@@ -2130,7 +2129,32 @@ geodesic_fdom(GEN X, GEN U, GEN g, GEN Xid, GEN (*Xtoklein)(GEN, GEN), GEN (*Xmu
 }
 
 
-/*2: PRESENTATION*/
+/*2: ELLIPTIC ELEMENTS AND PRESENTATION*/
+
+
+/*Returns the elliptic elements of X, with the orders corresponding respectively to the signature's elliptic orders.*/
+static GEN
+elliptic(GEN X, GEN U, GEN mcyc_bytype)
+{
+  GEN cyc = gel(mcyc_bytype, 1), types = gel(mcyc_bytype, 2);
+  long lt = lg(types), f = lt - 1;
+  while (f) {
+    if (types[f] <= 1) break;
+    f--;
+  }/*First elliptic element is at f+1*/
+  GEN elts = normbound_get_elts(U);
+  GEN ellip = cgetg(lt - f, t_VEC);
+  f++;
+  long i = 1;
+  while (f < lt) {
+    if (lg (gel(cyc, f)) != 2) pari_err(e_MISC, "Elliptic cycle of length != 1. Please change the base point p and recompute (all elliptic cycles are of length 1 outside of a set of measure 0).");/* F=nfinit(y);A=alginit(F, [33, -1]);X=afuchinit(A);p=I/2 for an example of this*/
+    long ind = gel(cyc, f)[1];
+    if (ind < 0) ind = -ind;/*For middle of the face slides*/
+    gel(ellip, i) = gcopy(gel(elts, ind));
+    i++; f++;
+  }
+  return ellip;
+}
 
 /*
 A word is a vecsmall, which is taken in reference to a list of elements G. A negative entry denotes taking the inverse of the corresponding index, so the word [1, -2, 5] is G[1]*G[2]^-1*G[5]. The fundamental domain gives us a set of generators, and we will manipulate this into a minimal set of generators with relations (stored as words).
@@ -2428,7 +2452,7 @@ Inputs to most methods are named "X", which represents the algebra A, the order 
 /*ARITHMETIC FUCHSIAN GROUPS FORMATTING
 An arithmetic Fuchsian group initialization is represented by X, and is stored as a vector. In general, elements of the algebra A are represented in terms of the basis of O, NOT in terms of the basis of A. If O is the identity, then these notions are identical. When using this in gp, one should therefore use the retrieval methods, and NOT access these components directly. We have:
 X
-    [A, O, Oinv, Oconj, Omultable, Onormdat, type, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, savedelts, normalizernorms]
+    [A, O, Oinv, Oconj, Omultable, Onormdat, type, Onormreal, kleinmats, qfmats, gdat, fdomdat, fdom, sig, pres, elliptic, savedelts, normalizernorms]
 
 A
     The algebra 
@@ -2455,16 +2479,18 @@ fdomdat
 fdom
     Fundamental domain, if computed.
 sig
-    Signature, if computed.
+    Signature, if the fundamental domain was computed.
 presentation
-    Presentation, if computed.
+    Presentation, if the fundamental domain was computed.
+elliptic
+    Vector of elliptic elements, if the fundamental domain was computed. Listed in the same order as sig[2].
 savedelts
     [O1elts, totposelts, ALelts, normelts]. If type=3, we initialize this, which saves the data required to compute any fundamental domain between O^1 and N_{B^{\times}}^+(O). If type <3, we don't bother initializing this. If you want to compute a variety of types for the same algebra, you should initialize type=3 first.
 normalizernorms
     Only initialized if you set type=3. This is the collection [n1, n2, n3], where ni is a collection of norms possible in the positive normalizer of the Eichler order O. n1 is a set of generators for the unit norms, n2 is for the Atkin-Lehner norms, and n3 finishes off the entire normalizer group.
 */
 
-/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental domain and presentation.*/
+/*Clean initialization of data for the fundamental domain. Can pass p=NULL and will set it to the default, O=NULL gives the stored maximal order, and type=NULL gives norm 1 group. flag>0 means we also initialize the fundamental, signature, presentation, and elliptic elements.*/
 GEN
 afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
 {
@@ -2475,7 +2501,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   if (!type) type = gen_0;
   GEN p = defp(prec);
   GEN gdat = gdat_initialize(p, prec);
-  GEN Oinv, AX = zerovec(16);
+  GEN Oinv, AX = zerovec(18);
   gel(AX, afuch_A) = A;
   gel(AX, afuch_O) = O;
   gel(AX, afuch_OINV) = Oinv = QM_inv(O);/*Inverse*/
@@ -2503,7 +2529,7 @@ afuchinit(GEN A, GEN O, GEN type, int flag, long prec)
   gel(AX, afuch_GDAT) = gdat;
   gel(AX, afuch_FDOMDAT) = afuchfdomdat_init(A, O, prec);
   if (!flag) return gerepilecopy(av, AX);/*Done! Just initialize the main structure.*/
-  AX = afuchmakefdom(AX);/*Make the fundamental domain and presentation.*/
+  AX = afuchmakefdom(AX);/*Make the fundamental domain, signature, presentation, elliptic elements.*/
   return gerepilecopy(av, AX);
 }
 
@@ -2526,7 +2552,7 @@ afuchnewp(GEN X, GEN p)
   gel(gdat, 2) = p;
   gel(new_X, afuch_GDAT) = gdat;
   GEN U = afuch_get_fdom(X);
-  if (!gequal0(U)) {/*Recompute the fundamental domain.*/
+  if (!gequal0(U)) {/*Recompute the fundamental domain and related data.*/
     int precinc = 0;
     gel(new_X, afuch_FDOM) = gen_0;/*Reset to 0 in case we need to compute with more precision, where we do NOT want to recompute the fdom.*/
     for (;;) {
@@ -2542,7 +2568,7 @@ afuchnewp(GEN X, GEN p)
     }
     gel(new_X, afuch_FDOM) = U;
     GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
-    GEN pres = presentation(new_X, U, mcyc_bytype);/*Recompute the presentation.*/
+    GEN pres = presentation(new_X, U, mcyc_bytype);/*Recompute the presentation. No need to do the signature or elliptic celements.*/
     gel(new_X, afuch_PRES) = pres;
   }
   return gerepilecopy(av, new_X);
@@ -2603,7 +2629,7 @@ afuch_moreprec_shallow(GEN X, long inc)
     U = normbasis(new_X, NULL, S, &afuchtoklein, &afuchmul, &afuchconj, &afuchistriv, gdat);/*We do NOT check if this is non-zero, since if the basis was computed the first time with less precision, increasing the precision should not have an effect. Make sure that if you increase the precision and you are still computing a normalized basis, then you delete this stored entry from X before calling this method.*/
     gel(new_X, afuch_FDOM) = U;
     GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
-    GEN pres = presentation(new_X, U, mcyc_bytype);/*In theory, the call to normbasis could have changed the ordering of things.*/
+    GEN pres = presentation(new_X, U, mcyc_bytype);/*In theory, the call to normbasis could have changed the ordering of things. No need to do the signature or elliptic celements.*/
     gel(new_X, afuch_PRES) = pres;
   }
   return new_X;
@@ -2908,6 +2934,21 @@ afucharea(GEN X)
   return gerepilecopy(av, normbound_get_area(U));
 }
 
+/*Retrieves the elliptic for X, if initialized*/
+GEN
+afuchelliptic(GEN X)
+{
+  pari_sp av = avma;
+  GEN ellip = afuch_get_elliptic(X);
+  if (gequal0(ellip)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  GEN O = afuch_get_O(X);
+  if (gequal1(O)) return gerepilecopy(av, ellip);/*O=1, no conversion necessary.*/
+  long lell, i;
+  GEN new_ellip = cgetg_copy(ellip, &lell);
+  for (i = 1; i < lell; i++) gel(new_ellip, i) = QM_QC_mul(O, gel(ellip, i));
+  return gerepilecopy(av, new_ellip);
+}
+
 /*Retrieves the elements giving the side for the fundamental domain of X.*/
 GEN
 afuchelts(GEN X)
@@ -3067,8 +3108,12 @@ afuchmakefdom(GEN X)
     /*No need to check if U=0 since we already computed with it, shouldn't now create a precision loss.*/
     gel(new_X, afuch_FDOM) = U;
     GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN sig = signature(new_X, U, mcyc_bytype);
+    gel(new_X, afuch_SIGNATURE) = sig;
     GEN pres = presentation(new_X, U, mcyc_bytype);
     gel(new_X, afuch_PRES) = pres;
+    GEN ellip = elliptic(new_X, U, mcyc_bytype);
+    gel(new_X, afuch_ELLIPTIC) = ellip;
     return gerepilecopy(av, new_X);
   }
   int precinc = 0;
@@ -3096,8 +3141,12 @@ afuchmakefdom(GEN X)
   if (!type) {/*Looking for O^1 only.*/
     gel(new_X, afuch_FDOM) = U;
     GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+    GEN sig = signature(new_X, U, mcyc_bytype);
+    gel(new_X, afuch_SIGNATURE) = sig;
     GEN pres = presentation(new_X, U, mcyc_bytype);
     gel(new_X, afuch_PRES) = pres;
+    GEN ellip = elliptic(new_X, U, mcyc_bytype);
+    gel(new_X, afuch_ELLIPTIC) = ellip;
     return gerepilecopy(av, new_X);
   }
   if (DEBUGLEVEL) pari_printf("Looking for elements of the appropriate norms.\n");
@@ -3150,8 +3199,12 @@ afuchmakefdom(GEN X)
   gel(new_X, afuch_FDOM) = U;
   if (type == 3) gel(new_X, afuch_SAVEDELTS) = vec_prepend(newelts, O1elts);
   GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  GEN sig = signature(new_X, U, mcyc_bytype);
+  gel(new_X, afuch_SIGNATURE) = sig;
   GEN pres = presentation(new_X, U, mcyc_bytype);
   gel(new_X, afuch_PRES) = pres;
+  GEN ellip = elliptic(new_X, U, mcyc_bytype);
+  gel(new_X, afuch_ELLIPTIC) = ellip;
   return gerepilecopy(av, new_X);
 }
 
@@ -3179,8 +3232,12 @@ afuchfdom_subgroup(GEN X, GEN M)
   /*No need to check if U=0 since we already computed with it, shouldn't now create a precision loss.*/
   gel(new_X, afuch_FDOM) = U;
   GEN mcyc_bytype = minimalcycles_bytype(new_X, U, afuchid(new_X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  GEN sig = signature(new_X, U, mcyc_bytype);
+  gel(new_X, afuch_SIGNATURE) = sig;
   GEN pres = presentation(new_X, U, mcyc_bytype);
   gel(new_X, afuch_PRES) = pres;
+  GEN ellip = elliptic(new_X, U, mcyc_bytype);
+  gel(new_X, afuch_ELLIPTIC) = ellip;
   return new_X;
 }
 
@@ -3368,7 +3425,7 @@ GEN
 afuchpresentation(GEN X)
 {
   pari_sp av = avma;
-  GEN pres = afuch_get_pres(X);
+  GEN pres = afuch_get_presentation(X);
   if (gequal0(pres)) pari_err(e_MISC, "Please initialize the fundamental domain and presentation first with X = afuchmakefdom(X).");
   GEN O = afuch_get_O(X);
   if (gequal1(O)) return gerepilecopy(av, vec_shorten(pres, 2));/*O=1, no conversion necessary. We also only return the first 2 components.*/
@@ -3400,9 +3457,10 @@ afuchsides(GEN X)
 GEN
 afuchsignature(GEN X)
 {
-  GEN U = afuch_get_fdom(X);
-  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
-  return signature(X, U, afuchid(X), &afuchmul, &afuchisparabolic, &afuchistriv);
+  pari_sp av = avma;
+  GEN sig = afuch_get_signature(X);
+  if (gequal0(sig)) pari_err(e_MISC, "Please initialize the fundamental domain frst with X = afuchmakefdom(X).");
+  return gerepilecopy(av, sig);
 }
 
 /*Returns the side pairing for X.*/
@@ -3421,7 +3479,7 @@ afuchword(GEN X, GEN g)
   pari_sp av = avma;
   GEN U = afuch_get_fdom(X);
   if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain and presentation first with X = afuchmakefdom(X).");
-  GEN P = afuch_get_pres(X);
+  GEN P = afuch_get_presentation(X);
   GEN O = afuch_get_O(X);
   if (!gequal1(O)) {
     GEN Oinv = afuch_get_Oinv(X);

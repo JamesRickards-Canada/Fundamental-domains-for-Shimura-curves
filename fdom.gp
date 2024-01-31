@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\nafuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalgeichlerorder\ntune_Cn");
 parigp_version = version();
 fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
@@ -27,6 +27,8 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(afuchalg,"afuchalg(X): retrieves the stored algebra in X.");
   install(afucharea,"G");
   addhelp(afucharea,"afucharea(X): retrieves the area of the computed fundamental domain of X.");
+  install(afuchelliptic,"G");
+  addhelp(afuchelliptic,"afuchelliptic(X): retrieves the elliptic elements of X.");
   install(afuchelts,"G");
   addhelp(afuchelts,"afuchelts(X): retrieves the vector of elements giving the sides of the stored fundamental domain of X, which generate the group.");
   install(afuchelttype,"iGG");
