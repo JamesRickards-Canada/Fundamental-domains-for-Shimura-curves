@@ -3,7 +3,6 @@ A = alginit(F, [y - 3, -3]);/*Quaternion algebra (y-3,-3/F), which is split at o
 X = afuchinit(A);/*Initialize and compute the fundamental domain*/
 afuchfdom_latex(X, "example_fdom", 1, 1, 1, 0);/*Create (and compile) the fundamental domain in Latex, stored in ./plots/. Requires pdftex to compile it.*/
 S = afuchsignature(X);/*Signature*/
-X = afuchmakepresentation(X);/*Compute presentation*/
 P = afuchpresentation(X);/*Retrieve presentation*/
 elts = afuchelts(X);
 elt = algmulvec(A, elts, [1, 2, 7, 1, 2, 2, 1, 5, 7]);/*Generating an element of the group (happens to be hyperbolic)*/
