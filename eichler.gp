@@ -74,7 +74,7 @@ eichlerprimepower(A,pr,k) =
 
 
 /*Computes and returns the basis of an Eichler order of the given level in A. Over Q, the level can be an integer.*/
-eichler(A, lev) = {
+algeichlerorder(A, lev) = {
   my(nf, fact, lats, L);
   nf = algcenter(A);
   fact = idealfactor(nf, lev);

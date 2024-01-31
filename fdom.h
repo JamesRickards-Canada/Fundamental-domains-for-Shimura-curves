@@ -180,9 +180,6 @@ void afuchfdom_python(GEN X, char *filename);
 void afuchgeodesic_python(GEN X, GEN g, char *filename);
 void fdomviewer(char *input);
 
-/*SECTION 2: EICHLER ORDERS*/
-GEN algeichlerorder(GEN A, GEN I);
-
-/*SECTION 3: TESTING AND TUNING*/
+/*SECTION 2: TESTING AND TUNING*/
 long afuchcheck(GEN X);
 GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);

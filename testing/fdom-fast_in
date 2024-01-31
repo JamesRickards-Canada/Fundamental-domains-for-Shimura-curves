@@ -38,7 +38,7 @@ testalgfdom(As);
 F = nfinit(y);
 A = alginit(F, [2, 1]);/*Unramified*/
 
-O1 = eichler(A, 5);/*Level 5*/
+O1 = algeichlerorder(A, 5);/*Level 5*/
 if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
@@ -47,7 +47,7 @@ X = afuchnewp(X, Pi + 0.5119*I);
 print(afuchsignature(X));
 onealgcheck(X);
 
-O1 = eichler(A, 97);/*Level 97*/
+O1 = algeichlerorder(A, 97);/*Level 97*/
 if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
@@ -56,7 +56,7 @@ onealgcheck(X);
 
 A = alginit(F, [3, -1]);/*Ramified at 2, 3*/
 
-O1 = eichler(A, 37);/*Level 37*/
+O1 = algeichlerorder(A, 37);/*Level 37*/
 if(!algisorder(A, O1),print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
@@ -65,7 +65,7 @@ onealgcheck(X);
 
 A = alginit(F, [105, -8]);/*Ramified at 5, 7*/
 
-O1 = eichler(A, 4);/*Level 4*/
+O1 = algeichlerorder(A, 4);/*Level 4*/
 if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
@@ -77,7 +77,7 @@ onealgcheck(X);
 F = nfinit(y^2 - 2);
 A = alginit(F,  [-7*y + 1, -15*y + 17]);/*Ramified at the prime above 2*/
 
-O1 = eichler(A, 9);/*Level 9*/
+O1 = algeichlerorder(A, 9);/*Level 9*/
 if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X = afuchinit(A, O1, , 1);
@@ -86,7 +86,7 @@ onealgcheck(X);
 
 F = nfinit(y^2 - 3);
 A = alginit(F, [-7*y + 2, -551*y - 720]);/*Ramified at places above 2, 3, 23.*/
-O1 = eichler(A, idealfactor(F, 11)[1, 1]);/*Level a prime above 11.*/
+O1 = algeichlerorder(A, idealfactor(F, 11)[1, 1]);/*Level a prime above 11.*/
 if(!algisorder(A, O1), print("Not an order"));
 print(algorderlevel(A, O1, 0));
 X3 = afuchinit(A, O1, 3, 1);
