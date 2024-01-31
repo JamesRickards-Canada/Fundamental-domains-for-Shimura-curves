@@ -6,6 +6,7 @@
 5. Don't check if in normalizer for primes dividing the discriminant or for unit norms.
 6. When initialize by a, b allows for denominators, fix afuchlist to not use this.
 7. Geodesics that intersect a vertex. Maybe just forbid this, raising an error?
+8. Find elements of norm!=1 faster
 
 POSSIBLE FUTURE ADDITIONS:
 1. Parallelization of element enumeration along with partial domain computations.
