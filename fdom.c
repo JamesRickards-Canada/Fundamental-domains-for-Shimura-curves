@@ -1002,6 +1002,10 @@ normbound_icircs(GEN C, GEN indtransfer, GEN gdat)
         vecsmalltrunc_append(deleted, indtransfer[elts[found]]);
         absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
         found--;
+        if (!elts[found]) {/*Previous side was oo, so we just re-insert our side and move on.*/
+          absind++;
+          normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);
+        }
         continue;
       case 0:
         normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
@@ -1266,7 +1270,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
         vecsmalltrunc_append(Ctype, Uind);
         if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
         Uind = (Uind % lenU) + 1;
-        if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
+        if (gequal0(gel(Usides, Uind))) Uind = (Uind % lenU) + 1;/*Move past infinite side.*/
       } while (Uind != Ustart);
       break;
     }
@@ -1276,7 +1280,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
       vecsmalltrunc_append(Ctype, Uind);
       if (!rbigind && Uind == 1) rbigind = lg(C) - 1;
       Uind = (Uind % lenU) + 1;
-      if (gequal0(gel(Usides, Uind))) Uind = Uind%lenU + 1;/*Move past infinite side.*/
+      if (gequal0(gel(Usides, Uind))) Uind = (Uind % lenU) + 1;/*Move past infinite side.*/
       continue;
     }
     vectrunc_append(C, gel(Cnew, order[Cnewind]));
@@ -1289,7 +1293,7 @@ normbound_append(GEN X, GEN U, GEN G, GEN (*Xtoklein)(GEN, GEN), GEN gdat)
 
 /*Does normbound_icircs, except we already have a normalized boundary U that we add to. We prep this method with normbound_append. This method is very similar to normbound_icircs.
 Ucors: the previously computed coordinates of vertices
-Uargs: the previuosly computed arguments of vertices
+Uargs: the previously computed arguments of vertices
 C: Same as for normbound
 Ctype[i] = ind>0 if C[i] = U[1][ind], and -ind if C[i] = G[-ind] where G was input in normbound_append.
 If we do NOT change the boundary, we just return NULL. This is for convenience with normbasis.
@@ -1389,6 +1393,11 @@ normbound_append_icircs(GEN Uvcors, GEN Uvargs, GEN C, GEN Ctype, long rbigind, 
         vecsmalltrunc_append(deleted, Ctype[elts[found]]);
         absind--;/*We completely envelop the previous side. We need to delete it and redo this case.*/
         found--;
+        if (!elts[found]) {/*Previous side was oo, so we just re-insert our side and move on.*/
+          absind++;
+          normbound_icircs_insclean(elts, vcors, vargs, curcirc, toins, &found);
+          if (!newU && t1 < 0) newU = found;/*First new circle.*/
+        }
         continue;
       case 0:
         normbound_icircs_insinfinite(elts, vcors, vargs, infinite, curcirc, &found);/*Insert oo side!*/
