@@ -34,7 +34,7 @@ tno = 1;
 /*Starting the file*/
 #/*My timer is default on*/
 fil = fileopen("benchmarks.txt", "a");
-rgen = getwalltime();
+rgen = 1;
 setrand(rgen);
 st=strprintf("Testing the running time of algfdom, in seconds. There are %d cases, and each case is tested %d times. The initial random seed is %d.\nCase |  n |      Area | #Sides | Time (avg) | Time (stdev)", Ntests, testspercase, rgen);
 filewrite(fil, st);

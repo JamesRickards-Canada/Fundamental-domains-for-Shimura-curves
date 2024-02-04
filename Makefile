@@ -22,7 +22,7 @@ DYN = lib$(TARGET)-$(VER).so
 
 #Compiling options
 CC = cc
-CFLAGS = -O3 -Wall -fno-strict-aliasing -fPIC
+CFLAGS = -O3 -Wall -fno-strict-aliasing -fPIC -march=native
 RM = rm -f
 
 #Recipes
