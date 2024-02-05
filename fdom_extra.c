@@ -8,10 +8,10 @@
 /*STATIC DECLARATIONS*/
 
 /*SECTION 1: VISUALIZATION*/
-/*SECTION 2: EICHLER ORDERS*/
-/*SECTION 3: TESTING AND TUNING*/
+/*SECTION 2: TESTING AND TUNING*/
 static int alg_in_centre(GEN A, GEN g);
 static GEN afuchmulvec(GEN X, GEN G, GEN L);
+/*SECTION 3: EXTRA METHODS OVER Q*/
 
 /*MAIN BODY*/
 
@@ -376,5 +376,33 @@ tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec)
     Cn = gadd(Cn, Cnadd);
   }
   return gerepilecopy(av, mkvec2(Cs, times));
+}
+
+
+/*SECTION 3: EXTRA METHODS OVER Q*/
+
+/*Initializes the quaternion algebra over Q with discriminant being the product of the prime factors of D. Can also pass in D as a vector of the prime factors*/
+GEN
+alginit_Qdisc(GEN D, long prec)
+{
+  pari_sp av = avma;
+  GEN y = pol_x(1);/*Variable y*/
+  GEN F = nfinit(y, prec);
+  GEN ps;
+  if (typ(D) == t_INT) {
+    if (signe(D) == -1) D = negi(D);
+    ps = gel(Z_factor(D), 1);/*First column.*/
+    settyp(ps, t_VEC);
+  }
+  else if (typ(D) == t_VEC) ps = D;
+  else { pari_err_TYPE("D must be an integer or a vector of prime numbers", D); ps = gen_0; }/*Set ps to avoid error.*/
+  long lps, i;
+  GEN pdecs = cgetg_copy(ps, &lps);
+  for (i = 1; i < lps; i++) gel(pdecs, i) = gel(idealprimedec(F, gel(ps, i)), 1);
+  GEN finram = const_vec(lps - 1, gen_1);
+  GEN infram;
+  if (lps % 2) infram = gen_0;/*oo needs to be ramified, even number of primes*/
+  else infram = gen_1;
+  return gerepileupto(av, alginit(F, mkvec3(gen_2, mkvec2(pdecs, finram), mkvec(infram)), 0, 3));
 }
 

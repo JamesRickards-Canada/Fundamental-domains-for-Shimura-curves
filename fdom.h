@@ -183,3 +183,6 @@ void fdomviewer(char *input);
 /*SECTION 2: TESTING AND TUNING*/
 long afuchcheck(GEN X);
 GEN tune_Cn(long n, GEN Cmin, GEN Cmax, long testsperalg, long tests, long prec);
+
+/*SECTION 3: EXTRA METHODS OVER Q*/
+GEN alginit_Qdisc(GEN D, long prec);
