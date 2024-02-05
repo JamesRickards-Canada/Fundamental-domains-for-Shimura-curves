@@ -14,7 +14,6 @@ POSSIBLE FUTURE ADDITIONS:
 3. Computation of cohomology groups.
 */
 
-
 /*INCLUSIONS*/
 
 #include <pari.h>
@@ -193,7 +192,6 @@ static GEN smallvectors_prune(GEN q, GEN C, GEN prune);
 /*SECTION 5: METHODS DELETED / NAME CHANGED FROM LIBPARI / DID NOT EXIST IN 2.15*/
 static GEN qf_RgM_apply_old(GEN q, GEN M);
 static void init_qf_apply(GEN q, GEN M, long *l);
-static GEN RgM_Cholesky_copy(GEN M, long prec);
 static GEN my_alg_changeorder(GEN al, GEN ord);
 static GEN elementabsmultable(GEN mt, GEN x);
 static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
@@ -4533,28 +4531,9 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   long prec = PREC;
   long lM = lg(M);
   if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
-  GEN U;
-  if (isinexact(M)) {/*We do this in case the input was inexact and became negative definite, where lllfp may run into an infinite loop.*/
-    /*if (!isintzero(gel(qfsign(M), 2))) {
-      output(gel(mateigen(M, 1, prec), 1));
-      long i, j;
-      pari_printf("[");
-      for (i = 1; i < lM; i++) {
-        for (j = 1; j < lM; j++) {
-          pari_printf("%P.38f", gcoeff(M, i, j));
-          if (j < lM - 1) pari_printf(", ");
-          else if (i < lM - 1) pari_printf("; ");
-        }
-      }
-      pari_printf("]\n");
-    }*/
-    if (!isintzero(gel(qfsign(M), 2))) return gc_NULL(av);/*Here because there is an issue in one case where the C does not raise an error but we get an infinite loop.*/
-    GEN C = RgM_Cholesky_copy(M, prec);
-    if (!C) return gc_NULL(av);
-    U = lllfp(C, 0.75, LLL_IM);
-  }
-  else U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
-  if (lg(U) != lM) return gc_NULL(av);
+  if (!isintzero(gel(qfsign(M), 2))) return gc_NULL(av);/*Here because there is an issue in one case where the C does not raise an error but we get an infinite loop.*/
+  GEN U = lllfp(M, 0.75, LLL_GRAM | LLL_IM);/*LLL reduce our input matrix*/
+  if (!U || lg(U) != lM) return gc_NULL(av);
   GEN R = qf_RgM_apply_old(M, U);/*U~*M*U*/
   long i = gprecision(R), j;
   if (i) prec = i;
@@ -4697,24 +4676,6 @@ init_qf_apply(GEN q, GEN M, long *l)
   if (*l == 1) { if (k == 1) return; }
   else         { if (k != 1 && lgcols(M) == *l) return; }
   pari_err_DIM("qf_RgM_apply");
-}
-
-/*This function did not exist in 2.15? Or at least, it's name was different. This is a direct copy of RgM_Cholesky from alglin2.c*/
-static GEN
-RgM_Cholesky_copy(GEN M, long prec)
-{
-  pari_sp av = avma;
-  long i, j, lM = lg(M);
-  GEN R, L = qfgaussred_positive(M);
-  if (!L) return gc_NULL(av);
-  R = cgetg(lM, t_MAT); for (j = 1; j < lM; j++) gel(R,j) = cgetg(lM, t_COL);
-  for (i = 1; i < lM; i++)
-  {
-    GEN r = gsqrt(gcoeff(L, i, i), prec);
-    for (j = 1; j < lM; j++)
-      gcoeff(R, i, j) = (i == j) ? r: gmul(r, gcoeff(L, i, j));
-  }
-  return gerepileupto(av, R);
 }
 
 /*This function is here because it was deleted from libpari*/
