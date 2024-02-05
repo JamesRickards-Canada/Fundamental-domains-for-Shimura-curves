@@ -4535,6 +4535,20 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
   if (lM == 1) retmkvec3(gen_0, gen_0, cgetg(1, t_MAT));
   GEN U;
   if (isinexact(M)) {/*We do this in case the input was inexact and became negative definite, where lllfp may run into an infinite loop.*/
+    /*if (!isintzero(gel(qfsign(M), 2))) {
+      output(gel(mateigen(M, 1, prec), 1));
+      long i, j;
+      pari_printf("[");
+      for (i = 1; i < lM; i++) {
+        for (j = 1; j < lM; j++) {
+          pari_printf("%P.38f", gcoeff(M, i, j));
+          if (j < lM - 1) pari_printf(", ");
+          else if (i < lM - 1) pari_printf("; ");
+        }
+      }
+      pari_printf("]\n");
+    }*/
+    if (!isintzero(gel(qfsign(M), 2))) return gc_NULL(av);/*Here because there is an issue in one case where the C does not raise an error but we get an infinite loop.*/
     GEN C = RgM_Cholesky_copy(M, prec);
     if (!C) return gc_NULL(av);
     U = lllfp(C, 0.75, LLL_IM);
