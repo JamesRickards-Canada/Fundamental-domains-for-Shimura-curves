@@ -79,6 +79,7 @@ algeichlerorder(A, lev) = {
   nf = algcenter(A);
   fact = idealfactor(nf, lev);
   lats = vector(matsize(fact)[1], i, eichlerprimepower(A, fact[i, 1], fact[i, 2]));/*Prime power lattices.*/
+  if (#lats == 0, return(matid(#algbasis(A))));/*Level 1*/
   L = alglathnf(A, lats[1]);
   for (i = 2, #lats, L = alglatinter(A, L, alglathnf(A, lats[i])));/*Intersect them all.*/
   return(L[1]);

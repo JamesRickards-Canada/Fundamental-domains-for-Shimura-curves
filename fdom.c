@@ -4548,7 +4548,7 @@ fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC)
     gcoeff(R, i, i) = s;
     for (j = i + 1; j < lM; j++) gcoeff(R, i, j) = gmul(s, gcoeff(R, i, j));
   }
-  /* now R~ * R = a in LLL basis */
+  /* now R~ * R = U in LLL basis */
   GEN Rinv = RgM_inv_upper(R);
   if (!Rinv) return gc_NULL(av);
   GEN Rinvtrans = shallowtrans(Rinv);
