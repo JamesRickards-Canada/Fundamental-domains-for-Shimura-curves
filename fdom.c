@@ -50,6 +50,7 @@ static GEN hdiscrandom_arc(GEN R, GEN ang1, GEN ang2, long prec);
 /*1: OPERATIONS ON COMPLEX REALS*/
 static GEN gtocr(GEN z, long prec);
 static GEN addcrcr(GEN z1, GEN z2);
+static GEN cr_conj(GEN z);
 static GEN divcrcr(GEN z1, GEN z2);
 static GEN mulcrcr(GEN z1, GEN z2);
 static GEN mulcrcr_conj(GEN z1, GEN z2);
@@ -335,6 +336,20 @@ defp(long prec)
   return p;
 }
 
+/*This gives the action in the unit disc model, as described above. Safe version, usable by a gp user.*/
+GEN
+disc_act(GEN M, GEN z, long prec)
+{
+  pari_sp av = avma;
+  GEN Msafe = klein_safe(M, prec);
+  GEN zsafe = gtocr(z, prec);
+  GEN A = gel(Msafe, 1), B = gel(Msafe, 2);
+  GEN AzpB = addcrcr(mulcrcr(A, zsafe), B);/*Az+B*/
+  GEN BczpAc = addcrcr(mulcrcr_conj(z, B), cr_conj(A));/*conj(B)*z+conj(A)*/
+  if (gequal0(BczpAc)) pari_err(e_PREC,"Catastrophic precision loss, please recompute to a higher precision level.");
+  return gerepilecopy(av, divcrcr(AzpB, BczpAc));
+}
+
 /*Initializes gdat for a given p and precision. */
 static GEN
 gdat_initialize(GEN p, long prec)
@@ -569,6 +584,16 @@ addcrcr(GEN z1, GEN z2)
   gel(z, 1) = addrr(gel(z1, 1), gel(z2, 1));
   gel(z, 2) = addrr(gel(z1, 2), gel(z2, 2));
   return z;
+}
+
+/*conjugate of a complex number with two real components. Not gerepileupto safe, shallow method.*/
+static GEN
+cr_conj(GEN z)
+{
+  GEN znew = cgetg(3, t_COMPLEX);
+  gel(znew, 1) = gel(z, 1);
+  gel(znew, 2) = negr(gel(z, 2));
+  return znew;
 }
 
 /*Divides two complex numbers with real components, giving a complex output. Gerepileupto safe, leaves garbage.*/

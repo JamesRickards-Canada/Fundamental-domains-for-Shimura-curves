@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\ndisc_to_klein, klein_to_disc.\nafuchactions, afuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalginit_Qdisc\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\ndisc_act, klein_act.\ndisc_to_klein, klein_to_disc.\nafuchactions, afuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalginit_Qdisc\nalgeichlerorder\ntune_Cn");
 parigp_version = version();
 fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
@@ -7,8 +7,10 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
 
 /*SECTION 1: GEOMETRIC METHODS*/
   /*1: MATRIX ACTION ON GEOMETRY*/
-  install(klein_act,"GGp",,fdom_library);
-  addhelp(klein_act,"klein_act(M, z): returns the action of M on z, where we are working in the Klein model. M=[A, B] with |A|^2-|B|^2=1 acts on the unit disc model via the normal Mobius action of [A, B;conj(B), conj(A)].");
+  install(disc_act,"GGp",,fdom_library);
+  addhelp(disc_act,"disc_act(M, z): returns the action of M on z, where we are working in the unit disc model. M=[A, B] with |A|^2-|B|^2=1 acts on the unit disc model via the normal Mobius action of [A, B;conj(B), conj(A)].");
+  install(klein_act,"GGp");
+  addhelp(klein_act,"klein_act(M, z): returns the action of M on z, where we are working in the Klein model. M=[A, B] with |A|^2-|B|^2=1 acts on the unit disc model via Mz=(A^2z+B^2conj(z)+2AB)/(|A|^2+|B|^2+A*z*conj(B)+conj(A)*conj(z)*B.");
   
   /*1: TRANSFER BETWEEN MODELS*/
   install(disc_to_klein_user,"Gp",disc_to_klein);

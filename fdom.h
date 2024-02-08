@@ -91,6 +91,7 @@ afuch_get_prec(GEN X) { return realprec(gdat_get_tol(afuch_get_gdat(X))); }
 /*SECTION 1: GEOMETRIC METHODS*/
 
 /*1: MATRIX ACTION ON GEOMETRY*/
+GEN disc_act(GEN M, GEN z, long prec);
 GEN klein_act_i(GEN M, GEN z);
 GEN klein_act(GEN M, GEN z, long prec);
 GEN pgl_act(GEN M, GEN z);
