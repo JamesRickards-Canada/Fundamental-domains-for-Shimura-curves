@@ -119,6 +119,7 @@ GEN afuchnewp(GEN X, GEN p);
 GEN afuchnewtype(GEN X, GEN type);
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+GEN afuchactions(GEN X);
 GEN afuchalg(GEN X);
 GEN afucharea(GEN X);
 GEN afuchelliptic(GEN X);

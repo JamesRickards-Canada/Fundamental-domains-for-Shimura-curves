@@ -2943,6 +2943,17 @@ afuchfdomdat_init(GEN A, GEN O, long prec)
 
 /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
 
+/*Returns the matrices representing the action of the side pairing elements on the Klein model (can be used in disc_act and klein_act).*/
+GEN
+afuchactions(GEN X)
+{
+  pari_sp av = avma;
+  GEN U = afuch_get_fdom(X);
+  if (gequal0(U)) pari_err(e_MISC, "Please initialize the fundamental domain first with X = afuchmakefdom(X).");
+  GEN kact = normbound_get_kact(U);
+  return gerepilecopy(av, kact);
+}
+
 /*Retrieves the algebra in X, which may have been computed to higher accuracy.*/
 GEN
 afuchalg(GEN X)

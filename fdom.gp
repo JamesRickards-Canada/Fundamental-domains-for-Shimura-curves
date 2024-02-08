@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\ndisc_to_klein, klein_to_disc.\nafuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalginit_Qdisc\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\nklein_act.\ndisc_to_klein, klein_to_disc.\nafuchactions, afuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalginit_Qdisc\nalgeichlerorder\ntune_Cn");
 parigp_version = version();
 fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
@@ -30,6 +30,8 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(afuchmoreprec,"afuchmoreprec(X, inc=1): returns the Fuchsian group X with precision increased by inc steps, i.e. inc*DEFAULTPREC more precision.");
 
   /*3: ALGEBRA FUNDAMENTAL DOMAIN METHODS*/
+  install(afuchactions,"G");
+  addhelp(afuchactions,"afuchactions(X): retrieves the elements giving the action of the side pairing elements on either the Klein or the unit disc model (for use in disc_act and klein_act).");
   install(afuchalg,"G");
   addhelp(afuchalg,"afuchalg(X): retrieves the stored algebra in X.");
   install(afucharea,"G");
