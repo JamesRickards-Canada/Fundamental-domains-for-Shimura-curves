@@ -415,6 +415,15 @@ disc_to_klein(GEN z)
   return gerepileupto(av, mulcrr(z, scale));/*2z/(1+|z|^2)*/
 }
 
+/*Given a point z in the unit disc model, this transfers it to the Klein model. This function is built to be used by the user (safety precautions taken).*/
+GEN
+disc_to_klein_user(GEN z, long prec)
+{
+  pari_sp av = avma;
+  GEN zsafe = gtocr(z, prec);
+  return gerepileupto(av, disc_to_klein(zsafe));
+}
+
 /*Given a point z in the unit disc model, this transfers it to the upper half plane model. The formula is conj(p)*z-p/(z-1)*/
 GEN
 disc_to_plane(GEN z, GEN p)
@@ -435,6 +444,16 @@ klein_to_disc(GEN z, GEN tol)
   GEN rt = sqrtr(znm1);/*sqrt(1-|z|^2)*/
   GEN scale = invr(addsr(1, rt));/*1/(1+sqrt(1-|z|^2))*/
   return gerepileupto(av, mulcrr(z, scale));/*z/(1+sqrt(1-|z|^2))*/
+}
+
+/*Given a point z in the Klein model, this transfers it to the unit disc model. This function takes the tolerance from the precision and is built to be used by the user (safety precautions taken).*/
+GEN
+klein_to_disc_user(GEN z, long prec)
+{
+  pari_sp av = avma;
+  GEN tol = deftol(prec);
+  GEN zsafe = gtocr(z, prec);
+  return gerepileupto(av, klein_to_disc(zsafe, tol));
 }
 
 /*Given a point z in the Klein model, this transfers it to the upper half plane model.*/

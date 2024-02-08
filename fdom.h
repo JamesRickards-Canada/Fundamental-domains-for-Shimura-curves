@@ -97,8 +97,10 @@ GEN pgl_act(GEN M, GEN z);
 
 /*1: TRANSFER BETWEEN MODELS*/
 GEN disc_to_klein(GEN z);
+GEN disc_to_klein_user(GEN z, long prec);
 GEN disc_to_plane(GEN z, GEN p);
 GEN klein_to_disc(GEN z, GEN tol);
+GEN klein_to_disc_user(GEN z, long prec);
 GEN klein_to_plane(GEN z, GEN p, GEN tol);
 GEN plane_to_disc(GEN z, GEN p);
 GEN plane_to_klein(GEN z, GEN p);
