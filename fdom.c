@@ -1,4 +1,7 @@
 /*TO DO
+
+0. Look at https://math.dartmouth.edu/~jvoight/articles/belyi-triangle-032717.pdf, and figure out how to compute the fundamental domain for any sub-order from the one for the maximal order. This should be much much faster than the current method! Maybe also include the tiling of the original fundamental domain.
+
 1. algorderdisc can be very slow in some cases. Maybe randomize the choice of i1 -> i4?
 2. Do we want the debug level here to be the same as for algebras? Currently it is.
 3. In afuch_moreprec_shallow, when alg_hilbert is updated to allow for denominators, this method can be simplified.
