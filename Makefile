@@ -24,13 +24,19 @@ DYN = lib$(TARGET)-$(VER).so
 CC = cc
 CFLAGS = -O3 -Wall -fno-strict-aliasing -fPIC -march=native
 RM = rm -f
+#System check as -shared option for linker fails on MacOS
+ifneq ($(shell uname -s), Darwin)
+    OS_FLAG = -shared
+else
+    OS_FLAG =
+endif
 
 #Recipes
 all: $(DYN)
 
 #Build the shared library object
 $(DYN): $(OBJS)
-	$(CC) -o $@ -shared	$(CFLAGS) -Wl,-shared $(OBJS) -lc -lm -L$(PARI_LIB) -lpari
+	$(CC) -o $@ -shared	$(CFLAGS) -Wl,$(OS_FLAG) $(OBJS) -lc -lm -L$(PARI_LIB) -lpari
 
 #Make the object files
 %.o: %.c
