@@ -125,7 +125,7 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(alginit_Qdisc,"alginit_Qdisc(D): returns the quaternion algebra over Q with discriminant being the product of the prime factors of D. Can also pass in D as a vector of the prime factors");
 
 
-\r eichler /*Aurel Page's code to compute Eichler orders*/
+\\\r eichler /*Aurel Page's code to compute Eichler orders; inserted into PARI/GP in 2.18 (Oct 30th 2024 ish)*/
   
 /*EICHLER ORDERS*/
   addhelp(algeichlerorder,"algeichlerorder(A, I): returns an Eichler order of level I in A the stored maximal order of A. Currently an unoptimized gp script, but still pretty quick.");
