@@ -144,6 +144,7 @@ GEN bnf_make_unitnorms(GEN B, long split, long prec);
 GEN normalizer_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
+GEN afuchid(GEN X);
 GEN afuchconj(GEN X, GEN g);
 int afuchistriv(GEN X, GEN g);
 GEN afuchmul(GEN X, GEN g1, GEN g2);

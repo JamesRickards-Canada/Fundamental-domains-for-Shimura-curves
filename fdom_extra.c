@@ -310,6 +310,7 @@ static GEN
 afuchmulvec(GEN X, GEN G, GEN L)
 {
   pari_sp av = avma;
+  if (lg(L) == 1) return afuchid(X);/*Empty vecsmall*/
   GEN g;
   if (L[1] > 0) g = gel(G, L[1]);
   else g = afuchconj(X, gel(G, -L[1]));

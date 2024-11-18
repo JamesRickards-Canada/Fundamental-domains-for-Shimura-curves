@@ -159,7 +159,6 @@ static GEN afuch_makenormelts(GEN X);
 static GEN AL_make_norms(GEN B, long split, GEN ideals, long prec);
 
 /*3: ALGEBRA BASIC AUXILLARY METHODS*/
-static GEN afuchid(GEN X);
 static int afuchinnormalizer(GEN X, GEN g);
 static int afuchisparabolic(GEN X, GEN g);
 static GEN afuchnorm_fast(GEN X, GEN g);
@@ -3897,7 +3896,7 @@ afuchconj(GEN X, GEN g)
 }
 
 /*Returns the identity element*/
-static GEN
+GEN
 afuchid(GEN X)
 {
   return col_ei(lg(alg_get_tracebasis(afuch_get_alg(X))) - 1, 1);
