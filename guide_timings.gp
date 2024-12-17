@@ -63,7 +63,7 @@ F = nfinit(y^2 - 11);
 /*Ram at prime over 283*/
 avgtime(fil, [-1, -7*y - 16], tno, testspercase);tno++;/*Area 2067.167966062083951*/
 
-F=nfinit(y^3 - 3*y - 1);
+F = nfinit(y^3 - 3*y - 1);
 /*Ram over 3, 503*/
 avgtime(fil, [-1, -4*y^2 - 80*y - 75], tno, testspercase);tno++;/*Area 350.4621138004613790*/
 

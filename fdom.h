@@ -181,6 +181,7 @@ GEN fincke_pohst_prune(GEN M, GEN C, int prunetype, long PREC);
 
 /*SECTION 1: VISUALIZATION*/
 void afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, int open);
+void afuchfdom_pmovie(GEN X, GEN dat, char *filename, int model, int boundcircle, int compile, int open);
 void afuchfdom_python(GEN X, char *filename);
 void afuchgeodesic_python(GEN X, GEN g, char *filename);
 void fdomviewer(char *input);

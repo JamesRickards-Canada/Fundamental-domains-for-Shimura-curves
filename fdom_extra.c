@@ -102,6 +102,77 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
   set_avma(av);
 }
 
+/*Makes a movie of the fundamental domain, where the point p is moved. dat=[N, p], or can be supplied as a vector of points in the upper half plane.*/
+void afuchfdom_pmovie(GEN X, GEN dat, char *filename, int model, int boundcircle, int compile, int open)
+{
+  pari_sp av = avma;
+  if (model == 2) pari_err(e_MISC, "Upper half plane not yet supported");
+  GEN tol = gdat_get_tol(afuch_get_gdat(X));
+  long prec = realprec(tol);
+  if (typ(dat) != t_VEC) pari_err_TYPE("Please supply a non-empty list of upper half plane points, or [N, p]", dat);
+  long N, i;/*Number of points*/
+  GEN pts;/*Stores the points p*/
+  if (typ(gel(dat, 1)) == t_INT) {/*[N, c, r]*/
+    N = itos(gel(dat, 1));
+    pts = cgetg(N + 1, t_VEC);
+    if (lg(dat) < 3) pari_err_TYPE("Please supply a non-empty list of upper half plane points, or [N, p]", dat);
+    GEN p = gel(dat, 2);
+    GEN th = gdivgs(Pi2n(1, prec), N);/*2*Pi/N*/
+    GEN cth = gcos(th, prec), sth = gsin(th, prec);/*cosine, sine of 2*Pi/N*/
+    for (i = 1; i < N; i++) {
+      gel(pts, i) = p;
+      p = gdiv(gadd(gmul(cth, p), sth), gsub(cth, gmul(sth, p)));/*Apply rotation matrix [cth, sth; -sth, cth]*/
+    }
+    gel(pts, N) = p;
+  }
+  else {/*User supplied list of points*/
+    N = lg(dat) - 1;
+    pts = dat;
+  }
+  int s;
+  /*Now we have the list of points to use. Time to make the domains.*/
+  if (!pari_is_dir("pmovie/build")) {/*Checking the directory*/
+      s = system("mkdir -p pmovie/build");
+      if (s == -1) pari_err(e_MISC, "ERROR CREATING DIRECTORY");
+  }
+  pari_sp av2 = avma;
+  for (i = 1; i <= N; i++) {
+    GEN X2 = afuchnewp(X, gel(pts, i));/*Shift the domain*/
+    char *name = stack_sprintf("%s-%d", filename, i);
+    afuchfdom_latex(X2, name, model, boundcircle, 1, 0);/*Compile it, do not open.*/
+    s = system(stack_sprintf("rm plots/build/%s.tex", name));/*Cleanup files*/
+    s = system(stack_sprintf("rm plots/build/%s.log", name));/*Cleanup files*/
+    s = system(stack_sprintf("rm plots/build/%s.aux", name));/*Cleanup files*/
+    s = system(stack_sprintf("mv -f ./plots/%s.pdf ./pmovie/build/", name));/*Move it here to clean things up.*/
+    set_avma(av2);/*Reset avma*/
+  }
+  /*Time to make the file to compile them all.*/
+  char *plotmake = stack_sprintf("pmovie/build/%s.tex", filename);
+  FILE *f = fopen(plotmake, "w");
+  pari_fprintf(f, "\\pdfminorversion=7\n\\documentclass{article}\n");/*Initial start*/
+  pari_fprintf(f, "\\usepackage{graphicx}\n\\usepackage[paperheight=8.5in,paperwidth=8.5in,margin=0.2in,heightrounded]{geometry}\n\\usepackage{hyperref}\n\n");/*Packages*/
+  pari_fprintf(f, "\\hypersetup{pdfstartview={XYZ null null 0.74}}\n\n\\begin{document}\n\n");/*Final setup*/
+  
+  for (i = 1; i <= N; i++) {/*Print the domains*/
+    char *name = stack_sprintf("%s-%d", filename, i);
+    pari_fprintf(f, "\\clearpage\n\\begin{figure}\n\t\\centering\n\t\\includegraphics[width=0.9\\linewidth]{%s}\n\\end{figure}\n\n", name);
+  }
+  pari_fprintf(f, "\\end{document}");/*Done!*/
+  fclose(f);
+  if (!compile) { set_avma(av); return; }
+  
+  /*Compile and open*/
+  char *line = stack_sprintf("(cd ./pmovie/build && pdflatex --interaction=batchmode -shell-escape %s.tex)", filename);/*Build*/
+  s = system(line);
+  line = stack_sprintf("mv -f ./pmovie/build/%s.pdf ./pmovie/", filename);/*Move the file*/
+  s = system(line);
+  if (open) {
+    line = stack_sprintf("cmd.exe /C start pmovie/%s.pdf", filename);/*Open the file*/
+    s = system(line);
+  }
+  set_avma(av);
+}
+
 /*Writes the fundamental domain corresponding to U to fdoms/filename/dat, to be used with the Python program fdomviewer. We output to the unit disc model.*/
 void
 afuchfdom_python(GEN X, char *filename)

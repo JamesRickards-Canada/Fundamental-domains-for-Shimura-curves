@@ -1,5 +1,5 @@
 print("\n\nType '?fdom' for help.\n\n");
-addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\ndisc_act, klein_act.\ndisc_to_klein, klein_to_disc.\nafuchactions, afuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalginit_Qdisc\nalgeichlerorder\ntune_Cn");
+addhelp(fdom, "This package can be used to compute fundamental domains for congruence Arithmetic Fuchsian groups.\n Installed methods:\ndisc_act, klein_act.\ndisc_to_klein, klein_to_disc.\nafuchactions, afuchinit, afuchnewp, afuchnewtype, afuchmoreprec.\nafuchalg, afucharea, afuchelliptic, afuchelts, afuchelttype, afuchgeodesic, afuchlist, afuchmakefdom, afuchnormalizernorms, afuchorder, afuchpresentation, afuchsides, afuchsignature, afuchspair, afuchvertices, afuchword.\nafuchfindoneelt\nalgab, alg1ijktoalg, alg1ijktobasis, algalgto1ijk, algbasisto1ijk, algmulvec, algisorder, algorderalgtoorder, algordertoalgorder, algorderlevel, algreduceddisc.\nqfminim_prune\nafuchfdom_latex, afuchfdom_pmovie, afuchfdom_python, afuchgeodesic_python, fdomviewer\nalginit_Qdisc\ntune_Cn");
 parigp_version = version();
 fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_version[2], parigp_version[3]);
 
@@ -107,6 +107,8 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
 /*SECTION 1: VISUALIZATION*/
   install(afuchfdom_latex,"vGrD1,L,D1,L,D1,L,D1,L,");
   addhelp(afuchfdom_latex,"afuchfdom_latex(X, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}): writes the fundamental domain of X to a LaTeX document in ./plots/build/filename.tex. If model=0, use the Klein model, if model=1, use the unit disc model, and if model=2, use the upper half plane model. If boundcircle=0, does not print the bounding circle. If compile=1, compiles the document and moves it up to ./plots/filename.pdf. If open=1, also opens the file (WSL only). Requires standalone, which can be found in texlive-latex-extra. NOTE: displaying in the Klein model is not suggested, as points are closer to the unit disc, and it does not show up very well.");
+  install(afuchfdom_pmovie,"vGGrD1,L,D1,L,D1,L,D1,L,");
+  addhelp(afuchfdom_pmovie,"afuchfdom_pmovie(X, dat, filename, {model=1}, {boundcircle=1}, {compile=1}, {open=1}): makes a movie of the Dirichlet domain computed with respect to a moving centre p. The input dat supplies the points p: either a list of points in the upper half plane, or dat=[N, z] representing N equidistant points chosen in a hyperbolic circle with centre I and going through z. The results are saved to ./pmovie/filename.pdf.");
   install(afuchfdom_python,"vGr");
   addhelp(afuchfdom_python,"afuchfdom_python(X, filename): writes the fundamental domain of X to a file ./fdoms/filename.dat, which can be read by the Python program fdomviewer to visualize the domain. Call 'fdomviewer.py filename' to open the Python application. Requires having both numpy and mathplotlib installed.");
   install(afuchgeodesic_python,"vGGr");
@@ -126,8 +128,5 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
 
 
 \\\r eichler /*Aurel Page's code to compute Eichler orders; inserted into PARI/GP in 2.18 (Oct 30th 2024 ish)*/
-  
-/*EICHLER ORDERS*/
-  addhelp(algeichlerorder,"algeichlerorder(A, I): returns an Eichler order of level I in A the stored maximal order of A. Currently an unoptimized gp script, but still pretty quick.");
 
 default(parisize, "4096M");
