@@ -1,4 +1,4 @@
-#CONFIGURATION FILE - update to project name.
+#CONFIGURATION FILE - update to project name (make it $(TARGET).cfg, where TARGET is in the Makefile)
 CFIL="fdom.cfg"
 
 #COLOURS
@@ -8,23 +8,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m' 
 PURPLE='\033[0;35m'
-
-#Determining the OS
-printf "Which ${RED}operating system${NC} are you using?\n"
-printf "\t ${PURPLE}1${NC}: ${YELLOW}Linux${NC}\n"
-printf "\t ${PURPLE}2${NC}: ${YELLOW}Windows${NC} (through Windows Subsystem for Linux)\n"
-printf "\t ${PURPLE}3${NC}: ${YELLOW}MacOS${NC}\n"
-printf "\t ${PURPLE}4${NC}: ${YELLOW}Other${NC}\n"
-while true; do
-  read OS
-  case $OS in
-    4 ) printf "This option is ${RED}not supported${NC}. We only support ${YELLOW}Linux${NC}, ${YELLOW}Windows Subsystem for Linux${NC}, and ${YELLOW}MacOS${NC}.\n"; exit;;
-    1 ) printf "OS='linux'\n" > $CFIL; break;;
-    2 ) printf "OS='wsl'\n" > $CFIL; break;;
-    3 ) printf "OS='mac'\n" > $CFIL; break;;
-    * ) printf "Please answer ${PURPLE}1${NC}, ${PURPLE}2${NC}, ${PURPLE}3${NC}, or ${PURPLE}4${NC}.\n";;
-  esac
-done
 
 #Finding pari.cfg location.
 printf "We need to find the location of the ${RED}configuration file${NC} (${GREEN}pari.cfg${NC}), which contains the location of the ${RED}compiled library${NC} (${GREEN}libpari.so${NC} and the ${RED}header files${NC}. The standard location is:\n\t${GREEN}/usr/local/lib/pari/pari.cfg${NC},\nbut this can depend on the system.\n"
@@ -77,5 +60,5 @@ while true; do
 done
 
 #Save the CFG location.
-printf "CFG='${CFGLOC}'\n" >> $CFIL
+printf "CFG='${CFGLOC}'\n" > $CFIL
 printf "${RED}Setup complete${NC}!\n"
