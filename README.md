@@ -37,10 +37,3 @@ The code in the "paper" branch matches the code when the paper was written, and 
 ## How to use the methods
 
 Full instructions can be found in the [User's Manual](Documentation/QuaternionAlgebras_PARIGP.pdf).
-
-## Gif
-
-Fundamental domains for all Shimura curves of genus 2 (266 up to isomorphism):
-
-![gen2](https://github.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves/assets/29377834/510045e2-d544-4a0f-ab7e-2df6ee6a4150)
-
