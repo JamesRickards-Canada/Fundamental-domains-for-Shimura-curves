@@ -127,6 +127,6 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(alginit_Qdisc,"alginit_Qdisc(D): returns the quaternion algebra over Q with discriminant being the product of the prime factors of D. Can also pass in D as a vector of the prime factors");
 
 
-/*\r eichler Aurel Page's code to compute Eichler orders; inserted into PARI/GP in 2.18 (Oct 30th 2024 ish)*/
+if (lex(parigp_version[1..3], [2, 17, 1]) <= 0, read("eichler.gp"));/*Access to Eichler orders pre-2.17.3*/
 
 if (externstr("uname") == ["Darwin"], printf("You should set a default parisize of at least 1G in your .gprc file."), default(parisize, "4G"));
