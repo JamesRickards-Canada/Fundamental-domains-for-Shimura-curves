@@ -1,5 +1,4 @@
 #Call ./testing/fdom-slow from one directory up to test the fundamental domain methods. fdom-slow_in is the tests, fdom-slow_out is the expected results
-#If your pari.cfg file is NOT in the standard location (/usr/local/lib/pari/pari.cfg), you need to call "make setup" first.
 
 #Exit if we interrupt.
 trap exit 2
@@ -19,12 +18,7 @@ file_test=$testdir/$testname-actual.out
 file_diff=$testdir/$testname.diff
 
 #Finding locations of the required files and commands.
-PARI_CFG_LOC=./paricfg_loc.txt
-if test -e $PARI_CFG_LOC; then
-  PARI_CFG=$(<$PARI_CFG_LOC)
-else
-  PARI_CFG=/usr/local/lib/pari/pari.cfg
-fi
+PARI_CFG=`grep "CFG=" "fdom.cfg" -s | cut -d"'" -f2`
 GPLOC=`grep bindir= $PARI_CFG -s | cut -d"'" -f2`
 gp=$GPLOC/gp
 VER=`grep pari_release= $PARI_CFG -s | cut -d"'" -f2 | tr . - | cut -d"-" -f1,2,3`

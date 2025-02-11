@@ -3,7 +3,7 @@
 Type '?fdom' for help.
 
 
-  ***   Warning: new stack size = 4096000000 (3906.250 Mbytes).
+  ***   Warning: new stack size = 4000000000 (3814.697 Mbytes).
 [0, Vecsmall([2, 3]), 1]
 [0, Vecsmall([2, 2, 3, 3]), 0]
 [4, Vecsmall([]), 0]
