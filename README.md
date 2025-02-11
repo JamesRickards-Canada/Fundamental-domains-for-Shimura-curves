@@ -2,7 +2,17 @@
 
 ## References
 The code is originally based on the paper [Improved computation of fundamental domains for arithmetic Fuchsian groups](https://doi.org/10.1090/mcom/3777) ([Arxiv](https://arxiv.org/abs/2110.11503)), which builds off of the papers [Computing fundamental domains
-for Fuchsian groups](https://math.dartmouth.edu/~jvoight/articles/funddom-jtnb-fixederrata.pdf) and [Computing arithmetic Kleinian groups](http://www.normalesup.org/~page/Recherche/Documents/articles/kln_gps.pdf). If you make use of the code, please cite this paper, as well as the GitHub repository.
+for Fuchsian groups](https://math.dartmouth.edu/~jvoight/articles/funddom-jtnb-fixederrata.pdf) and [Computing arithmetic Kleinian groups](http://www.normalesup.org/~page/Recherche/Documents/articles/kln_gps.pdf). If you make use of the code, please cite this paper, as well as the GitHub repository. A suggested Bibtex entry for this repository is
+```
+@misc{FundamentalDomains,
+  AUTHOR = {Rickards, James},
+  TITLE = {Fundamental domains for {S}himura curves},
+  YEAR = {2025},
+  PUBLISHER = {GitHub},
+  JOURNAL = {GitHub repository},
+  HOWPUBLISHED = {\url{https://github.com/JamesRickards-Canada/Fundamental-domains-for-Shimura-curves}},
+}
+```
 
 ## Installation Instructions
 The code in the "paper" branch matches the code when the paper was written, and data in the paper can be recreated using this branch. This branch is no longer updated. The default branch, klein, is a significantly improved version of this code, and should be the branch of choice for most of users.
@@ -18,15 +28,16 @@ The code in the "paper" branch matches the code when the paper was written, and 
 * **Mac** - You need to have [Homebrew](https://brew.sh/) installed. This is also an easy way to install PARI/GP: ```brew install pari```
 
 ### Where is pari.cfg?
+* The configuration file will search for this, but it is preferrable to not search your entire hard drive (as this can be very slow). So, you should at least supply a guess as to the location of ```pari.cfg```. Often only the top-level folder (e.g. ```/usr``` or ```/opt```) suffices.
 * On Linux or WSL, if you build PARI/GP from source, it should be located in ```/usr/local/lib/pari/pari.cfg```, or at least somewhere in the ```/usr``` folder.
-* On a Mac, if you install with Homebrew, it may be found in a folder like ```/opt/homebrew/Cellar/pari/VERSION/lib/pari```
+* On a Mac, if you install PARI/GP with Homebrew, it may be found in a folder like ```/opt/homebrew/Cellar/pari/VERSION/lib/pari```. Searching ```/opt/homebrew``` should be fine.
 * If you are obtaining it through SageMath, it might be found where the library files of SageMath are
-* Assuming you open PARI/GP with the command ```gp```, try ```type -a gp```, which will display where this command lives. The corresponding file(s) are likely symbolic links, and you can call ```readlink -f LOCATION``` on each of them to see where it lives.
-* In absolute doubt, the configuration method allows you to search the entire system for the file. This should only be done as a last resort, as the search could be quite slow!
+* Assuming you open PARI/GP with the command ```gp```, try ```type -a gp```, which will display where this command lives. The corresponding file(s) are likely symbolic links, and you can call ```readlink -f LOCATION``` on each of them to see where it lives. This can provide a clue as to the place to search for ```pari.cfg```.
 
 ### Configuring and building the package
-* Call ```./configure``` to initialize the project. This helps you search for ```pari.cfg```, and stores the location to a file. It displays the corresponding versions of the found files, so if you have multiple versions, you can choose the correct one.
-* As long as the location of the installation of PARI/GP does not change, you do not need to reconfigure ever.
+* Call ```./configure``` to initialize the project. This helps you search for ```pari.cfg```, and stores the location to a file. You should supply it with a folder to search in!
+* It displays the corresponding versions of the found files, so if you have multiple versions, you can choose the correct one. This can be useful if you keep multiple copies of PARI/GP around.
+* If the location of the installation of PARI/GP does not change, you do not need to reconfigure. If when you update PARI/GP there is a new location (e.g. if the version number is in the file path), you should call ```./configure``` again.
 * Call ```make``` to build the project, and ```make clean``` to remove all .o object files. If you update to a new version of PARI/GP, you must remake the project.
 * Once this is done, a call to ```gp fdom``` starts gp with the package installed!
 
