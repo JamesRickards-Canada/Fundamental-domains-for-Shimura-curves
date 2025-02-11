@@ -129,8 +129,4 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
 
 /*\r eichler Aurel Page's code to compute Eichler orders; inserted into PARI/GP in 2.18 (Oct 30th 2024 ish)*/
 
-if (externstr("uname") == ["Darwin"],
-  printf("You should set a default parisize of at least 1G in your .gprc file.");
-,
-  default(parisize, "4G");
-);
+if (externstr("uname") == ["Darwin"], printf("You should set a default parisize of at least 1G in your .gprc file."), default(parisize, "4G"));
