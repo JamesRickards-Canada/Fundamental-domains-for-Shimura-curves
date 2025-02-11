@@ -118,7 +118,7 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
 
 /*SECTION 2: TESTING AND TUNING*/
   install(afuchcheck,"lG");
-  addhelp(afuchcheck,"afuchcheck(X):runs a series of checks on X with the fundamental domain and presentation initialized. Returns 0 if all passed, and something non-zero else. These return codes are:\n\t1: signature area formula does not match computed area;\n\t2: presentation has wrong number of generators;\n\t3: presentation has wrong number of relations;\n\t4: one of the relations fails;\n\t5: one of the side pairing element relations fails;\n\t6: afuchfdomword fails on a random element (15 random elements tested).\n\t7: there are too many / few elliptic elements, or some of their orders are wrong.");
+  addhelp(afuchcheck,"afuchcheck(X): runs a series of checks on X with the fundamental domain and presentation initialized. Returns 0 if all passed, and something non-zero else. These return codes are:\n\t1: signature area formula does not match computed area;\n\t2: presentation has wrong number of generators;\n\t3: presentation has wrong number of relations;\n\t4: one of the relations fails;\n\t5: one of the side pairing element relations fails;\n\t6: afuchfdomword fails on a random element (15 random elements tested).\n\t7: there are too many / few elliptic elements, or some of their orders are wrong.");
   install(tune_Cn,"LGGD4,L,D20,L,p");
   addhelp(tune_Cn,"tune_Cn(n, Cmin, Cmax, {testsperalg=4}, {tests=20}): For the degree n (between 1 and 9), we compute the fundamental domains for a range of algebras with C_n between Cmin and Cmax. We return the values of C_n and the total time taken for each one. This is used to determine the best value of C_n.");
 
@@ -127,6 +127,10 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
   addhelp(alginit_Qdisc,"alginit_Qdisc(D): returns the quaternion algebra over Q with discriminant being the product of the prime factors of D. Can also pass in D as a vector of the prime factors");
 
 
-\\\r eichler /*Aurel Page's code to compute Eichler orders; inserted into PARI/GP in 2.18 (Oct 30th 2024 ish)*/
+/*\r eichler Aurel Page's code to compute Eichler orders; inserted into PARI/GP in 2.18 (Oct 30th 2024 ish)*/
 
-default(parisize, "4096M");
+if (externstr("uname") == ["Darwin"],
+  printf("You should set a default parisize of at least 1G in your .gprc file.");
+,
+  default(parisize, "4G");
+);
