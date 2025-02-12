@@ -23,7 +23,7 @@ while true; do
   
   #Test if anything was found
   if [ "${FOUNDLOCS}" = "" ]; then
-    printf "${RED}No file found${NC}. Perhaps PARI/GP is installed in a different directory than what you supplied? Try supplying another directory or searching in '/', which may be very slow. The command ${RED}type -a gp${NC} may also help you get an idea of approximately where to look. If this is a link, call ${RED}readlink -f (insert location)${NC} to see where it is linked to.\n\n\n"
+    printf "${RED}No file found${NC}. Perhaps PARI/GP is installed in a different directory than what you supplied? Try supplying another directory or searching in '/', which may be very slow.\nThe command ${RED}type -a gp${NC} may also help you get an idea of approximately where to look. If this is a link, call ${RED}readlink -f (insert location)${NC} to see where it is linked to.\nSimilarly, ${RED}open gp${NC}, and type in ${RED}default()${NC}. Look at the values of ${RED}datadir${NC} and ${RED}help${NC}. The file is often located in ${RED}(path to help)/../../lib/pari/pari.cfg${NC}, or at least, in a nearby folder.\n\n\n"
     continue
   fi
   
@@ -51,7 +51,7 @@ while true; do
 
   #User selected none
   if test $CFGNUM -eq 0; then
-    printf "${RED}No file selected${NC}. Perhaps PARI/GP is installed in a different directory than what you supplied? Try supplying another directory or searching in '/', which may be very slow. The command ${RED}type -a gp${NC} may also help you get an idea of approximately where to look. If this is a link, call ${RED}readlink -f (insert location)${NC} to see where it is linked to.\n\n\n"
+    printf "${RED}No file selected${NC}. Perhaps PARI/GP is installed in a different directory than what you supplied? Try supplying another directory or searching in '/', which may be very slow.\nThe command ${RED}type -a gp${NC} may also help you get an idea of approximately where to look. If this is a link, call ${RED}readlink -f (insert location)${NC} to see where it is linked to.\nSimilarly, ${RED}open gp${NC}, and type in ${RED}default()${NC}. Look at the values of ${RED}datadir${NC} and ${RED}help${NC}. The file is often located in ${RED}(path to help)/../../lib/pari/pari.cfg${NC}, or at least, in a nearby folder.\n\n\n"
   else
     ((CFGNUM--))
     CFGLOC=${FOUNDARRAY[${CFGNUM}]}

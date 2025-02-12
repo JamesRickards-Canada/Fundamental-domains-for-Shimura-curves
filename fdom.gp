@@ -128,5 +128,4 @@ fdom_library = strprintf("./libfdom-%d-%d-%d.so", parigp_version[1], parigp_vers
 
 
 if (lex(parigp_version[1..3], [2, 17, 1]) <= 0, read("eichler.gp"));/*Access to Eichler orders pre-2.17.3*/
-
-if (externstr("uname") == ["Darwin"], printf("You should set a default parisize of at least 1G in your .gprc file."), default(parisize, "4G"));
+if (default(parisize) < 1000000000, printf("You should set a default parisize of at least 1G."));
