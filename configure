@@ -61,4 +61,17 @@ done
 
 #Save the CFG location.
 printf "CFG='${CFGLOC}'\n" > $CFIL
+
+#Determine the OS
+UNAME=`uname -a`
+if grep -q Microsoft <<< $UNAME; then
+  OS="WSL"
+elif grep -q Linux <<< $UNAME; then
+  OS="Linux"
+else
+  OS="Mac"
+fi
+printf "OS='${OS}'\n" >> $CFIL
+
+#Done!
 printf "${RED}Setup complete${NC}!\n"
