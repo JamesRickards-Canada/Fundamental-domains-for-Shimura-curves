@@ -8,6 +8,7 @@
 /*STATIC DECLARATIONS*/
 
 /*SECTION 1: VISUALIZATION*/
+static int get_OS();
 /*SECTION 2: TESTING AND TUNING*/
 static int alg_in_centre(GEN A, GEN g);
 static GEN afuchmulvec(GEN X, GEN G, GEN L);
@@ -95,7 +96,9 @@ afuchfdom_latex(GEN X, char *filename, int model, int boundcircle, int compile, 
   s = system(line);
   if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   if (open) {
-    line = stack_sprintf("cmd.exe /C start plots/%s.pdf", filename);/*Open the file*/
+    int OS = get_OS();/*Make line to open the file*/
+    if (OS == 2) line = stack_sprintf("cmd.exe /C start plots/%s.pdf", filename);/*WSL*/
+    else line = stack_sprintf("open plots/%s.pdf", filename);/*May not work on Linux if "open" is not the way to open pdfs.*/
     s = system(line);
     if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   }
@@ -167,7 +170,9 @@ void afuchfdom_pmovie(GEN X, GEN dat, char *filename, int model, int boundcircle
   line = stack_sprintf("mv -f ./pmovie/build/%s.pdf ./pmovie/", filename);/*Move the file*/
   s = system(line);
   if (open) {
-    line = stack_sprintf("cmd.exe /C start pmovie/%s.pdf", filename);/*Open the file*/
+    int OS = get_OS();/*Make line to open the file*/
+    if (OS == 2) line = stack_sprintf("cmd.exe /C start pmovie/%s.pdf", filename);/*WSL*/
+    else line = stack_sprintf("open pmovie/%s.pdf", filename);/*May not work on Linux if "open" is not the way to open pdfs.*/
     s = system(line);
   }
   set_avma(av);
@@ -266,11 +271,29 @@ fdomviewer(char *input)
 {
   pari_sp av = avma;
   char *command;
-  command = stack_sprintf("cmd.exe /C start py fdomviewer.py %s", input);
+  int OS = get_OS();/*Make line to open the file*/
+  if (OS == 2) command = stack_sprintf("cmd.exe /C start py fdomviewer.py %s", input);/*WSL*/
+  else command = stack_sprintf("py fdomviewer.py %s", input);/*Linux and Mac*/
   int s = system(command);
   if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   set_avma(av);
 }
+
+/*Returns the operating system based on the configuration file. 1 = Linux, 2 = WSL, 3 = Mac. Defaults to Linux.*/
+static int
+get_OS()
+{
+  pari_sp av = avma;
+  GEN res = externstr("grep \"OS=\" \"fdom.cfg\" -s | cut -d\"\'\" -f2");
+  if (lg(res) == 1) return gc_int(av, 1);
+  res = gel(res, 1);/*Only one element.*/
+  GEN lin = strtoGENstr("Linux");
+  if (gequal(res, lin)) return gc_int(av, 1);/*Linux*/
+  GEN win = strtoGENstr("WSL");
+  if (gequal(res, win)) return gc_int(av, 2);/*Windows subsystem for Linux*/
+  return gc_int(av, 3);/*Only remaining option is Mac.*/
+}
+
 
 
 /*SECTION 2: TESTING AND TUNING*/
