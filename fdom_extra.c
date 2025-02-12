@@ -273,7 +273,7 @@ fdomviewer(char *input)
   char *command;
   int OS = get_OS();/*Make line to open the file*/
   if (OS == 2) command = stack_sprintf("cmd.exe /C start py fdomviewer.py %s", input);/*WSL*/
-  else command = stack_sprintf("py fdomviewer.py %s", input);/*Linux and Mac*/
+  else command = stack_sprintf("python3 fdomviewer.py %s", input);/*Linux and Mac*/
   int s = system(command);
   if (s == -1) pari_err(e_MISC, "ERROR EXECUTING COMMAND");
   set_avma(av);
