@@ -56,7 +56,7 @@ Ensure that you are on the branch ```klein```. The code in the ```paper``` branc
 
 ### Troubleshooting
 * If you are encoutering unexpected errors or warnings when building, ensure you found the correct ```pari.cfg``` file. You need to configure the project with the same version of PARI/GP you are using.
-* If you upgrade your version of PARI/GP, you should ``make clean```, call ```configure``` again, and remake the project.
+* If you upgrade your version of PARI/GP, you should ```make clean```, call ```configure``` again, and remake the project.
 * If you still have trouble installing or using the package, please get in touch!
 
 ## How to use the methods
