@@ -8,7 +8,7 @@ OBJS = fdom.o fdom_extra.o
 
 #Nothing after here should be modified, unless you know what you are doing.
 
-#PARI_LIB is folder where libpari.so is found, PARI_INCLUDE is where the .h header files are found, and PARI_CFG is the location of pari.cfg.
+#PARI_LIB is folder where libpari.so/libpari.dylib is found, PARI_INCLUDE is where the pari.h header file is found, and PARI_CFG is the location of pari.cfg.
 PARI_LOC = $(TARGET).cfg
 PARI_CFG = $(shell grep "CFG=" "fdom.cfg" -s | cut -d"'" -f2)
 ifeq ($(PARI_CFG), )
@@ -28,7 +28,7 @@ RM = rm -f
 
 #System check as -shared option for linker fails on MacOS
 ifneq ($(shell uname -s), Darwin)
-    OS_FLAG = -shared
+    OS_FLAG = -Wl,-shared
 else
     OS_FLAG =
 endif
@@ -38,7 +38,7 @@ all: $(DYN)
 
 #Build the shared library object
 $(DYN): $(OBJS)
-	$(CC) -o $@ -shared	$(CFLAGS) -Wl,$(OS_FLAG) $(OBJS) -lc -lm -L$(PARI_LIB) -lpari
+	$(CC) -o $@ -shared	$(CFLAGS) $(OS_FLAG) $(OBJS) -lc -lm -L$(PARI_LIB) -lpari
 
 #Make the object files
 %.o: %.c
