@@ -4502,14 +4502,6 @@ algorderlevel(GEN A, GEN O, int factored)
 
 /*4: SUPPORTING METHODS TO FINCKE POHST*/
 
-/* x a t_INT, y  t_INT or t_REAL */
-INLINE GEN
-mulimp(GEN x, GEN y)
-{
-  if (typ(y) == t_INT) return mulii(x, y);
-  return signe(x) ? mulir(x, y): gen_0;
-}
-
 /* x + y*z, x,z two mp's, y a t_INT */
 INLINE GEN
 addmulimp(GEN x, GEN y, GEN z)
