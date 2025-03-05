@@ -3,6 +3,8 @@ Installation: See below.
 
 Using the project (and quaternion algebras in general): [User's Manual](Documentation/QuaternionAlgebras_PARIGP.pdf).
 
+For a sample use of the main methods, see the file ```example.gp```.
+
 ## References
 The code is originally based on the paper [Improved computation of fundamental domains for arithmetic Fuchsian groups](https://doi.org/10.1090/mcom/3777) ([Arxiv](https://arxiv.org/abs/2110.11503)), which builds off of the papers [Computing fundamental domains
 for Fuchsian groups](https://math.dartmouth.edu/~jvoight/articles/funddom-jtnb-fixederrata.pdf) and [Computing arithmetic Kleinian groups](http://www.normalesup.org/~page/Recherche/Documents/articles/kln_gps.pdf). If you make use of the code, please cite this paper, as well as the GitHub repository. A suggested Bibtex entry for this repository is
