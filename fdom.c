@@ -201,8 +201,6 @@ static GEN elementabsmultable_Fp(GEN mt, GEN x, GEN p);
 static GEN algbasismultable(GEN al, GEN x);
 static GEN algtracebasis(GEN al);
 static GEN elementabsmultable_Z(GEN mt, GEN x);
-static GEN FpM_trace(GEN x, GEN p);
-static GEN ZM_trace(GEN x);
 
 /*MAIN BODY*/
 
@@ -4816,27 +4814,6 @@ elementabsmultable_Z(GEN mt, GEN x)
   return z;
 }
 
-static GEN
-FpM_trace(GEN x, GEN p)
-{
-  long i, lx = lg(x);
-  GEN t;
-  if (lx < 3) return lx == 1? gen_0: gcopy(gcoeff(x, 1, 1));
-  t = gcoeff(x, 1, 1);
-  for (i = 2; i < lx; i++) t = Fp_add(t, gcoeff(x, i, i), p);
-  return t;
-}
-
-static GEN
-ZM_trace(GEN x)
-{
-  long i, lx = lg(x);
-  GEN t;
-  if (lx < 3) return lx == 1? gen_0: gcopy(gcoeff(x, 1, 1));
-  t = gcoeff(x, 1, 1);
-  for (i = 2; i < lx; i++) t = addii(t, gcoeff(x, i, i));
-  return t;
-}
 
 
 
